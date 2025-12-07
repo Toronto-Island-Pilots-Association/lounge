@@ -1,0 +1,3 @@
+Anytime you want to use a modal for a CRUD operation, make sure it has a transparent (low opacity) overlay background
+Make sure the modal is a Vercel Drawer component in mobile 
+Don't use the default tailwind rules for text color for input, they are low contrast.
