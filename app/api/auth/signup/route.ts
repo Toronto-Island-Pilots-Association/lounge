@@ -75,6 +75,7 @@ export async function POST(request: Request) {
           const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
             type: 'signup',
             email: data.user.email!,
+            password: password,
             options: {
               redirectTo: redirectTo,
             }

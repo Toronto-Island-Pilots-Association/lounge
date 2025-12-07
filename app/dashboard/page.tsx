@@ -58,7 +58,8 @@ export default async function DashboardPage() {
                 </div>
               </div>
 
-              {!isPaid && (
+              {/* Subscription box hidden for now */}
+              {false && !isPaid && (
                 <div className="bg-blue-50 rounded-lg p-6">
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">
                     Upgrade to Paid Membership

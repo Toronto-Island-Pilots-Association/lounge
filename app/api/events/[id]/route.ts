@@ -5,10 +5,11 @@ import { NextResponse } from 'next/server'
 // DELETE - Delete event (admin only)
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAuth()
+    const { id } = await params
     
     // Check if user is admin
     if (user.profile.role !== 'admin') {
@@ -23,7 +24,7 @@ export async function DELETE(
     const { error } = await supabase
       .from('events')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 })

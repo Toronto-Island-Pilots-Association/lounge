@@ -5,6 +5,14 @@ export interface UserProfile {
   id: string
   email: string
   full_name: string | null
+  first_name: string | null
+  last_name: string | null
+  phone: string | null
+  pilot_license_type: string | null
+  aircraft_type: string | null
+  call_sign: string | null
+  how_often_fly_from_ytz: string | null
+  how_did_you_hear: string | null
   role: UserRole
   membership_level: MembershipLevel
   membership_expires_at: string | null
