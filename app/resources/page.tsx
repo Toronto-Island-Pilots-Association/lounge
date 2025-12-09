@@ -31,40 +31,21 @@ export default async function ResourcesPage() {
             <p className="text-gray-500">No resources available yet.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6">
             {(resources as Resource[]).map((resource) => (
               <div
                 key={resource.id}
                 className="bg-white shadow rounded-lg overflow-hidden hover:shadow-lg transition"
               >
                 <div className="p-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#d9e2e6] text-[#0d1e26]">
-                      {resource.resource_type}
-                    </span>
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">
                     {resource.title}
                   </h3>
                   {resource.description && (
-                    <p className="text-sm text-gray-600 mb-4">
-                      {resource.description}
-                    </p>
-                  )}
-                  {resource.url && (
-                    <a
-                      href={resource.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#0d1e26] hover:text-[#0a171c] text-sm font-medium"
-                    >
-                      Open Resource →
-                    </a>
-                  )}
-                  {resource.content && (
-                    <div className="mt-4 text-sm text-gray-700">
-                      {resource.content}
-                    </div>
+                    <div 
+                      className="prose prose-sm max-w-none text-gray-700"
+                      dangerouslySetInnerHTML={{ __html: resource.description }}
+                    />
                   )}
                 </div>
               </div>

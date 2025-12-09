@@ -25,10 +25,7 @@ export interface UserProfile {
 export interface Resource {
   id: string
   title: string
-  description: string | null
-  url: string | null
-  content: string | null
-  resource_type: 'link' | 'document' | 'video' | 'other'
+  description: string | null // HTML content from rich text editor
   created_at: string
   updated_at: string
 }

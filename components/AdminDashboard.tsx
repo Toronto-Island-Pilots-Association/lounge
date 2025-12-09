@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { UserProfile, Resource, Event, MembershipLevel } from '@/types/database'
+import RichTextEditor from './RichTextEditor'
 
 export default function AdminDashboard() {
   const [members, setMembers] = useState<UserProfile[]>([])
@@ -191,6 +192,30 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleUpdateEvent = async (event: Event, updates: Partial<Event>) => {
+    try {
+      const response = await fetch(`/api/events/${event.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updates),
+      })
+
+      if (response.ok) {
+        await loadData()
+        setEditingEvent(null)
+        setShowEventForm(false)
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Failed to update event')
+      }
+    } catch (error) {
+      console.error('Error updating event:', error)
+      alert('Failed to update event')
+    }
+  }
+
   const handleDeleteEvent = async (id: string) => {
     if (!confirm('Are you sure you want to delete this event?')) return
 
@@ -221,6 +246,9 @@ export default function AdminDashboard() {
       </div>
     )
   }
+
+  // Get top 5 resources for the preview
+  const topResources = resources.slice(0, 5)
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -394,22 +422,52 @@ export default function AdminDashboard() {
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {resources.map((resource) => (
                     <div key={resource.id} className="bg-gray-50 rounded-lg p-4">
-                      <h3 className="font-semibold text-gray-900">{resource.title}</h3>
-                      <p className="text-sm text-gray-600 mt-1">{resource.description}</p>
-                      <div className="mt-4 flex space-x-2">
-                        <button
-                          onClick={() => setEditingResource(resource)}
-                          className="text-blue-600 hover:text-blue-900 text-sm"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteResource(resource.id)}
-                          className="text-red-600 hover:text-red-900 text-sm"
-                        >
-                          Delete
-                        </button>
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-semibold text-gray-900">{resource.title}</h3>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => setEditingResource(resource)}
+                            className="text-[#0d1e26] hover:text-[#0a171c] text-sm"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteResource(resource.id)}
+                            className="text-red-600 hover:text-red-900 text-sm"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
+                      <div className="text-xs text-gray-500 mb-2">
+                        {resource.updated_at && resource.updated_at !== resource.created_at ? (
+                          <>
+                            Updated: {new Date(resource.updated_at).toLocaleDateString('en-US', { 
+                              year: 'numeric', 
+                              month: 'short', 
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </>
+                        ) : (
+                          <>
+                            Published: {new Date(resource.created_at).toLocaleDateString('en-US', { 
+                              year: 'numeric', 
+                              month: 'short', 
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </>
+                        )}
+                      </div>
+                      {resource.description && (
+                        <div 
+                          className="prose prose-sm max-w-none text-gray-700"
+                          dangerouslySetInnerHTML={{ __html: resource.description }}
+                        />
+                      )}
                     </div>
                   ))}
                 </div>
@@ -465,12 +523,20 @@ export default function AdminDashboard() {
                               <p className="text-sm text-gray-600 mt-2">{event.description}</p>
                             )}
                           </div>
-                          <button
-                            onClick={() => handleDeleteEvent(event.id)}
-                            className="text-red-600 hover:text-red-900 text-sm ml-4"
-                          >
-                            Delete
-                          </button>
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => setEditingEvent(event)}
+                              className="text-[#0d1e26] hover:text-[#0a171c] text-sm"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteEvent(event.id)}
+                              className="text-red-600 hover:text-red-900 text-sm"
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </div>
                       </div>
                     )
@@ -520,14 +586,19 @@ export default function AdminDashboard() {
         )}
 
         {/* Event Form Modal */}
-        {showEventForm && (
+        {(showEventForm || editingEvent) && (
           <EventFormModal
+            event={editingEvent}
             onClose={() => {
               setShowEventForm(false)
               setEditingEvent(null)
             }}
             onSave={async (eventData) => {
-              await handleCreateEvent(eventData)
+              if (editingEvent) {
+                await handleUpdateEvent(editingEvent, eventData)
+              } else {
+                await handleCreateEvent(eventData)
+              }
             }}
           />
         )}
@@ -628,14 +699,11 @@ function ResourceFormModal({
   const [formData, setFormData] = useState({
     title: resource?.title || '',
     description: resource?.description || '',
-    url: resource?.url || '',
-    content: resource?.content || '',
-    resource_type: resource?.resource_type || 'link' as const,
   })
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+      <div className="relative top-20 mx-auto p-5 border w-full max-w-3xl shadow-lg rounded-md bg-white">
         <h3 className="text-lg font-bold text-gray-900 mb-4">
           {resource ? 'Edit Resource' : 'Add Resource'}
         </h3>
@@ -652,43 +720,11 @@ function ResourceFormModal({
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-1">Description</label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-              rows={3}
+            <RichTextEditor
+              content={formData.description || ''}
+              onChange={(content) => setFormData({ ...formData, description: content })}
+              placeholder="Enter resource description with rich text formatting..."
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">URL</label>
-            <input
-              type="url"
-              value={formData.url}
-              onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">Content</label>
-            <textarea
-              value={formData.content}
-              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-              rows={4}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">Type</label>
-            <select
-              value={formData.resource_type}
-              onChange={(e) => setFormData({ ...formData, resource_type: e.target.value as any })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="link">Link</option>
-              <option value="document">Document</option>
-              <option value="video">Video</option>
-              <option value="other">Other</option>
-            </select>
           </div>
           <div className="flex justify-end space-x-2">
             <button
@@ -705,7 +741,7 @@ function ResourceFormModal({
                   await onSave({}, formData)
                 }
               }}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+              className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c]"
             >
               {resource ? 'Update' : 'Create'}
             </button>
@@ -800,7 +836,7 @@ function InviteMemberModal({
                   lastName: formData.lastName || undefined,
                 })
               }}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+              className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c]"
             >
               Send Invitation
             </button>
@@ -812,18 +848,32 @@ function InviteMemberModal({
 }
 
 function EventFormModal({
+  event,
   onClose,
   onSave,
 }: {
+  event: Event | null
   onClose: () => void
   onSave: (eventData: Partial<Event>) => Promise<void>
 }) {
+  // Format datetime for input fields (YYYY-MM-DDTHH:mm)
+  const formatDateTimeForInput = (dateString: string) => {
+    if (!dateString) return ''
+    const date = new Date(dateString)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    return `${year}-${month}-${day}T${hours}:${minutes}`
+  }
+
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    location: '',
-    start_time: '',
-    end_time: '',
+    title: event?.title || '',
+    description: event?.description || '',
+    location: event?.location || '',
+    start_time: event ? formatDateTimeForInput(event.start_time) : '',
+    end_time: event?.end_time ? formatDateTimeForInput(event.end_time) : '',
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -838,7 +888,9 @@ function EventFormModal({
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
       <div className="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Create Event</h3>
+        <h3 className="text-lg font-bold text-gray-900 mb-4">
+          {event ? 'Edit Event' : 'Create Event'}
+        </h3>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-1">Title *</label>
@@ -897,9 +949,9 @@ function EventFormModal({
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+              className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c]"
             >
-              Create Event
+              {event ? 'Update Event' : 'Create Event'}
             </button>
           </div>
         </form>
