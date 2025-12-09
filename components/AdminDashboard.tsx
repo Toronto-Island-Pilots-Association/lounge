@@ -259,10 +259,10 @@ export default function AdminDashboard() {
 
         <div className="bg-white shadow rounded-lg">
           <div className="border-b border-gray-200">
-            <nav className="flex -mb-px">
+            <nav className="flex -mb-px overflow-x-auto">
               <button
                 onClick={() => setActiveTab('members')}
-                className={`py-4 px-6 text-sm font-medium border-b-2 ${
+                className={`py-3 px-4 sm:py-4 sm:px-6 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'members'
                     ? 'border-[#0d1e26] text-[#0d1e26]'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -272,7 +272,7 @@ export default function AdminDashboard() {
               </button>
               <button
                 onClick={() => setActiveTab('resources')}
-                className={`py-4 px-6 text-sm font-medium border-b-2 ${
+                className={`py-3 px-4 sm:py-4 sm:px-6 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'resources'
                     ? 'border-[#0d1e26] text-[#0d1e26]'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -282,7 +282,7 @@ export default function AdminDashboard() {
               </button>
               <button
                 onClick={() => setActiveTab('events')}
-                className={`py-4 px-6 text-sm font-medium border-b-2 ${
+                className={`py-3 px-4 sm:py-4 sm:px-6 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'events'
                     ? 'border-[#0d1e26] text-[#0d1e26]'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -292,7 +292,7 @@ export default function AdminDashboard() {
               </button>
               <button
                 onClick={() => setActiveTab('settings')}
-                className={`py-4 px-6 text-sm font-medium border-b-2 ${
+                className={`py-3 px-4 sm:py-4 sm:px-6 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'settings'
                     ? 'border-[#0d1e26] text-[#0d1e26]'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -303,10 +303,10 @@ export default function AdminDashboard() {
             </nav>
           </div>
 
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {activeTab === 'members' && (
               <div className="space-y-4">
-                <div className="flex justify-end gap-2">
+                <div className="flex flex-col sm:flex-row justify-end gap-2">
                   <button
                     onClick={async () => {
                       try {
@@ -334,74 +334,112 @@ export default function AdminDashboard() {
                         alert('Failed to export members')
                       }
                     }}
-                    className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center gap-2"
+                    className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center justify-center gap-2 text-sm"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    Export Members
+                    <span className="hidden sm:inline">Export Members</span>
+                    <span className="sm:hidden">Export</span>
                   </button>
                   <button
                     onClick={() => setShowInviteForm(true)}
-                    className="bg-[#0d1e26] text-white px-4 py-2 rounded-md hover:bg-[#0a171c]"
+                    className="bg-[#0d1e26] text-white px-4 py-2 rounded-md hover:bg-[#0a171c] text-sm"
                   >
                     Invite New Member
                   </button>
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Name
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Email
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Role
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Membership
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {members.map((member) => (
-                        <tr key={member.id}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {member.full_name || 'N/A'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {member.email}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {member.role}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              member.membership_level === 'cadet' || member.membership_level === 'captain'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {member.membership_level ? member.membership_level.charAt(0).toUpperCase() + member.membership_level.slice(1) : 'Basic'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button
-                              onClick={() => setEditingMember(member)}
-                              className="text-[#0d1e26] hover:text-[#0a171c]"
-                            >
-                              Edit
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="overflow-x-auto -mx-4 sm:mx-0">
+                  <div className="inline-block min-w-full align-middle">
+                    <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
+                      {/* Mobile Card View */}
+                      <div className="sm:hidden space-y-3">
+                        {members.map((member) => (
+                          <div key={member.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                            <div className="flex justify-between items-start mb-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-gray-900 truncate">{member.full_name || 'N/A'}</div>
+                                <div className="text-xs text-gray-500 mt-1 truncate">{member.email}</div>
+                              </div>
+                              <button
+                                onClick={() => setEditingMember(member)}
+                                className="ml-2 text-[#0d1e26] hover:text-[#0a171c] text-sm shrink-0"
+                              >
+                                Edit
+                              </button>
+                            </div>
+                            <div className="flex flex-wrap gap-2 text-xs">
+                              <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded">
+                                {member.role}
+                              </span>
+                              <span className={`px-2 py-1 rounded-full ${
+                                member.membership_level === 'cadet' || member.membership_level === 'captain'
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {member.membership_level ? member.membership_level.charAt(0).toUpperCase() + member.membership_level.slice(1) : 'Basic'}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* Desktop Table View */}
+                      <table className="min-w-full divide-y divide-gray-200 hidden sm:table">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Name
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Email
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Role
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Membership
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Actions
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {members.map((member) => (
+                            <tr key={member.id}>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {member.full_name || 'N/A'}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {member.email}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {member.role}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <span className={`px-2 py-1 text-xs rounded-full ${
+                                  member.membership_level === 'cadet' || member.membership_level === 'captain'
+                                    ? 'bg-green-100 text-green-800'
+                                    : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {member.membership_level ? member.membership_level.charAt(0).toUpperCase() + member.membership_level.slice(1) : 'Basic'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <button
+                                  onClick={() => setEditingMember(member)}
+                                  className="text-[#0d1e26] hover:text-[#0a171c]"
+                                >
+                                  Edit
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -414,7 +452,7 @@ export default function AdminDashboard() {
                       setEditingResource(null)
                       setShowResourceForm(true)
                     }}
-                    className="bg-[#0d1e26] text-white px-4 py-2 rounded-md hover:bg-[#0a171c]"
+                    className="bg-[#0d1e26] text-white px-4 py-2 rounded-md hover:bg-[#0a171c] text-sm w-full sm:w-auto"
                   >
                     Add Resource
                   </button>
@@ -482,7 +520,7 @@ export default function AdminDashboard() {
                       setEditingEvent(null)
                       setShowEventForm(true)
                     }}
-                    className="bg-[#0d1e26] text-white px-4 py-2 rounded-md hover:bg-[#0a171c]"
+                    className="bg-[#0d1e26] text-white px-4 py-2 rounded-md hover:bg-[#0a171c] text-sm w-full sm:w-auto"
                   >
                     Create Event
                   </button>
@@ -493,9 +531,9 @@ export default function AdminDashboard() {
                     const endDate = event.end_time ? new Date(event.end_time) : null
                     return (
                       <div key={event.id} className="bg-gray-50 rounded-lg p-4 border-l-4 border-[#0d1e26]">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900 text-lg">{event.title}</h3>
+                        <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-gray-900 text-base sm:text-lg">{event.title}</h3>
                             <p className="text-sm text-gray-600 mt-1">
                               <strong>Date:</strong> {startDate.toLocaleDateString('en-US', {
                                 weekday: 'long',
@@ -523,7 +561,7 @@ export default function AdminDashboard() {
                               <p className="text-sm text-gray-600 mt-2">{event.description}</p>
                             )}
                           </div>
-                          <div className="flex space-x-2">
+                          <div className="flex space-x-2 shrink-0">
                             <button
                               onClick={() => setEditingEvent(event)}
                               className="text-[#0d1e26] hover:text-[#0a171c] text-sm"
@@ -632,7 +670,7 @@ function MemberEditModal({
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+      <div className="relative top-4 sm:top-20 mx-auto p-4 sm:p-5 border w-full max-w-md sm:w-96 shadow-lg rounded-md bg-white m-4">
         <h3 className="text-lg font-bold text-gray-900 mb-4">Edit Member</h3>
         <div className="space-y-4">
           <div>
@@ -703,7 +741,7 @@ function ResourceFormModal({
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-5 border w-full max-w-3xl shadow-lg rounded-md bg-white">
+      <div className="relative top-4 sm:top-20 mx-auto p-4 sm:p-5 border w-full max-w-3xl shadow-lg rounded-md bg-white m-4">
         <h3 className="text-lg font-bold text-gray-900 mb-4">
           {resource ? 'Edit Resource' : 'Add Resource'}
         </h3>
@@ -772,7 +810,7 @@ function InviteMemberModal({
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+      <div className="relative top-4 sm:top-20 mx-auto p-4 sm:p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white m-4">
         <h3 className="text-lg font-bold text-gray-900 mb-4">Invite New Member</h3>
         <div className="space-y-4">
           <p className="text-sm text-gray-600 mb-4">
@@ -882,12 +920,22 @@ function EventFormModal({
       alert('Title and start time are required')
       return
     }
-    await onSave(formData)
+    
+    // Convert datetime-local strings to ISO strings with timezone
+    // datetime-local gives us local time without timezone, so we need to create a Date object
+    // and convert it to ISO string which includes timezone info
+    const submitData = {
+      ...formData,
+      start_time: formData.start_time ? new Date(formData.start_time).toISOString() : '',
+      end_time: formData.end_time ? new Date(formData.end_time).toISOString() : null,
+    }
+    
+    await onSave(submitData)
   }
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+      <div className="relative top-4 sm:top-20 mx-auto p-4 sm:p-5 border w-full max-w-md shadow-lg rounded-md bg-white m-4">
         <h3 className="text-lg font-bold text-gray-900 mb-4">
           {event ? 'Edit Event' : 'Create Event'}
         </h3>

@@ -66,7 +66,55 @@ ON CONFLICT (key) DO NOTHING;
 -- Create function to automatically create user profile on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+  v_full_name TEXT;
+  v_first_name TEXT;
+  v_last_name TEXT;
+  v_phone TEXT;
+  v_pilot_license_type TEXT;
+  v_aircraft_type TEXT;
+  v_call_sign TEXT;
+  v_how_often_fly_from_ytz TEXT;
+  v_how_did_you_hear TEXT;
+  v_role TEXT;
+  v_membership_level TEXT;
 BEGIN
+  -- Helper function to convert empty strings to NULL
+  -- NULLIF converts empty string to NULL, then COALESCE handles NULL
+  v_full_name := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'full_name', '')), '');
+  v_first_name := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'first_name', '')), '');
+  v_last_name := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'last_name', '')), '');
+  v_phone := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'phone', '')), '');
+  v_pilot_license_type := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'pilot_license_type', '')), '');
+  v_aircraft_type := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'aircraft_type', '')), '');
+  v_call_sign := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'call_sign', '')), '');
+  v_how_often_fly_from_ytz := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'how_often_fly_from_ytz', '')), '');
+  v_how_did_you_hear := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'how_did_you_hear', '')), '');
+  -- Ensure role and membership_level match the CHECK constraints exactly
+  v_role := COALESCE(
+    NULLIF(LOWER(TRIM(COALESCE(NEW.raw_user_meta_data->>'role', ''))), ''),
+    'member'
+  );
+  -- Ensure it's one of the valid values
+  IF v_role NOT IN ('member', 'admin') THEN
+    v_role := 'member';
+  END IF;
+  
+  v_membership_level := COALESCE(
+    NULLIF(LOWER(TRIM(COALESCE(NEW.raw_user_meta_data->>'membership_level', ''))), ''),
+    'basic'
+  );
+  -- Ensure it's one of the valid values
+  IF v_membership_level NOT IN ('basic', 'cadet', 'captain') THEN
+    v_membership_level := 'basic';
+  END IF;
+
+  -- Ensure email is not null (should never happen, but safety check)
+  IF NEW.email IS NULL OR TRIM(NEW.email) = '' THEN
+    RAISE EXCEPTION 'Email cannot be null or empty';
+  END IF;
+
+  -- Insert user profile with error handling
   INSERT INTO public.user_profiles (
     id, 
     email, 
@@ -84,20 +132,30 @@ BEGIN
   )
   VALUES (
     NEW.id,
-    NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', NULL),
-    COALESCE(NEW.raw_user_meta_data->>'first_name', NULL),
-    COALESCE(NEW.raw_user_meta_data->>'last_name', NULL),
-    COALESCE(NEW.raw_user_meta_data->>'phone', NULL),
-    COALESCE(NEW.raw_user_meta_data->>'pilot_license_type', NULL),
-    COALESCE(NEW.raw_user_meta_data->>'aircraft_type', NULL),
-    COALESCE(NEW.raw_user_meta_data->>'call_sign', NULL),
-    COALESCE(NEW.raw_user_meta_data->>'how_often_fly_from_ytz', NULL),
-    COALESCE(NEW.raw_user_meta_data->>'how_did_you_hear', NULL),
-    COALESCE(NEW.raw_user_meta_data->>'role', 'member')::TEXT,
-    COALESCE(NEW.raw_user_meta_data->>'membership_level', 'basic')::TEXT
-  );
+    LOWER(TRIM(NEW.email)),
+    v_full_name,
+    v_first_name,
+    v_last_name,
+    v_phone,
+    v_pilot_license_type,
+    v_aircraft_type,
+    v_call_sign,
+    v_how_often_fly_from_ytz,
+    v_how_did_you_hear,
+    v_role,
+    v_membership_level
+  )
+  ON CONFLICT (id) DO NOTHING; -- Prevent duplicate inserts if trigger runs twice
+
   RETURN NEW;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Log the error but don't fail the user creation
+    -- This allows the user to be created even if profile creation fails
+    -- We'll catch this error in the application and create the profile manually
+    RAISE WARNING 'Error creating user profile for user %: %', NEW.id, SQLERRM;
+    -- Return NEW to allow user creation to proceed
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

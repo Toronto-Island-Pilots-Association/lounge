@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { getCurrentUser } from '@/lib/auth'
 import { getMembershipFee } from '@/lib/settings'
 import { createClient } from '@/lib/supabase/server'
@@ -51,33 +52,91 @@ export default async function DashboardPage() {
                 </h1>
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                      Membership Status
-                    </h2>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Role:</span>
-                        <span className="font-medium text-gray-900">
-                          {user.profile.role.toUpperCase()}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Level:</span>
-                        <span className="font-medium text-gray-900">
-                          {user.profile.membership_level ? user.profile.membership_level.charAt(0).toUpperCase() + user.profile.membership_level.slice(1) : 'Basic'}
-                        </span>
-                      </div>
-                      {user.profile.membership_expires_at && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Expires:</span>
-                          <span className={`font-medium ${
-                            isExpired ? 'text-red-600' : 'text-gray-900'
-                          }`}>
-                            {new Date(user.profile.membership_expires_at).toLocaleDateString()}
-                          </span>
+                  {/* Wallet-Sized Membership Card */}
+                  <div className="relative">
+                    <div className="relative bg-gradient-to-br from-[#0d1e26] via-[#0a171c] to-[#0d1e26] rounded-2xl shadow-2xl overflow-hidden" style={{ aspectRatio: '1.586 / 1' }}>
+                      {/* Card Content */}
+                      <div className="relative h-full p-6 flex flex-col justify-between text-white">
+                        {/* Top Section */}
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <div className="text-xs uppercase tracking-widest text-white/70 mb-1">TIPA</div>
+                            <div className="text-[10px] uppercase tracking-wide text-white/60">Toronto Island Pilots Association</div>
+                          </div>
+                          {/* Logo in Chip Area */}
+                          <div className="relative">
+                            <div className="w-12 h-10 bg-gradient-to-br rounded-md border border-yellow-400/30 flex items-center justify-center p-1">
+                              <div className="relative w-full h-full">
+                                <Image
+                                  src="/logo.png"
+                                  alt="TIPA Logo"
+                                  fill
+                                  className="object-contain"
+                                />
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      )}
+
+                        {/* Middle Section - Member Name */}
+                        <div className="my-4">
+                          <div className="text-[10px] uppercase tracking-widest text-white/60 mb-2">Member</div>
+                          <div className="text-2xl font-bold tracking-wide" style={{ fontFamily: 'monospace', letterSpacing: '2px' }}>
+                            {user.profile.full_name?.toUpperCase() || user.profile.email.toUpperCase()}
+                          </div>
+                        </div>
+
+                        {/* Bottom Section */}
+                        <div className="flex items-end justify-between mb-3">
+                          <div className="flex-1">
+                            {/* Membership Level and Status */}
+                            <div className="flex items-center gap-4">
+                              <div>
+                                <div className="text-[8px] uppercase tracking-widest text-white/60 mb-0.5">Level</div>
+                                <div className="text-xs font-semibold uppercase tracking-wide">
+                                  {user.profile.membership_level ? user.profile.membership_level.toUpperCase() : 'BASIC'}
+                                </div>
+                              </div>
+                              <div className="h-4 w-px bg-white/30"></div>
+                              <div>
+                                <div className="text-[8px] uppercase tracking-widest text-white/60 mb-0.5">Status</div>
+                                <div className={`text-xs font-semibold uppercase tracking-wide ${
+                                  isPaid && !isExpired ? 'text-green-300' : isExpired ? 'text-red-300' : 'text-white'
+                                }`}>
+                                  {isPaid && !isExpired ? 'ACTIVE' : isExpired ? 'EXPIRED' : 'ACTIVE'}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Expiration Date */}
+                          {user.profile.membership_expires_at && (
+                            <div className="text-right">
+                              <div className="text-[8px] uppercase tracking-widest text-white/60 mb-0.5">Valid Thru</div>
+                              <div className={`text-xs font-mono ${isExpired ? 'text-red-300' : 'text-white'}`}>
+                                {new Date(user.profile.membership_expires_at).toLocaleDateString('en-US', { 
+                                  month: '2-digit', 
+                                  year: '2-digit' 
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Member Since - Small text at very bottom */}
+                        {user.profile.created_at && (
+                          <div className="absolute bottom-4 left-6 text-[7px] text-white/50 uppercase tracking-widest">
+                            Member Since {new Date(user.profile.created_at).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric',
+                              year: 'numeric' 
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Magnetic Stripe Area (Visual Element) */}
+                      <div className="absolute bottom-0 left-0 right-0 h-2 bg-black/40"></div>
                     </div>
                   </div>
 
