@@ -158,16 +158,6 @@ export default async function DashboardPage() {
                     </div>
                   )}
 
-                  {isPaid && !isExpired && (
-                    <div className="bg-green-50 rounded-lg p-6">
-                      <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                        Active {user.profile.membership_level === 'captain' ? 'Captain' : 'Cadet'} Membership
-                      </h2>
-                      <p className="text-sm text-gray-600">
-                        Thank you for your support! You have access to all premium features.
-                      </p>
-                    </div>
-                  )}
                 </div>
 
                 <div className="mt-8">

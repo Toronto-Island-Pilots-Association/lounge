@@ -32,7 +32,80 @@ export default async function MembersPage() {
             <p className="text-gray-500">No members found.</p>
           </div>
         ) : (
-          <div className="bg-white shadow rounded-lg overflow-hidden">
+          <>
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-4">
+              {(members as UserProfile[]).map((member) => (
+                <div key={member.id} className="bg-white shadow rounded-lg p-4">
+                  <div className="flex items-start space-x-4">
+                    {member.profile_picture_url ? (
+                      <div className="relative w-16 h-16 rounded-full overflow-hidden border border-gray-300 flex-shrink-0">
+                        <Image
+                          src={member.profile_picture_url}
+                          alt={member.full_name || member.email || 'Member'}
+                          fill
+                          className="object-cover"
+                          sizes="64px"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center border border-gray-300 flex-shrink-0">
+                        <svg
+                          className="w-8 h-8 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                          />
+                        </svg>
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-base font-medium text-gray-900 truncate">
+                            {member.full_name || `${member.first_name || ''} ${member.last_name || ''}`.trim() || 'N/A'}
+                          </div>
+                          {member.role === 'admin' && (
+                            <div className="text-xs text-[#0d1e26] mt-0.5">Admin</div>
+                          )}
+                        </div>
+                        <span className={`ml-2 px-2 py-1 text-xs rounded-full flex-shrink-0 ${
+                          member.membership_level === 'cadet' || member.membership_level === 'captain'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {member.membership_level ? member.membership_level.charAt(0).toUpperCase() + member.membership_level.slice(1) : 'Basic'}
+                        </span>
+                      </div>
+                      <div className="mt-2 space-y-1">
+                        <div className="text-sm text-gray-600 truncate">
+                          <span className="font-medium">Email:</span> {member.email}
+                        </div>
+                        {member.call_sign && (
+                          <div className="text-sm text-gray-600">
+                            <span className="font-medium">Call Sign:</span> {member.call_sign}
+                          </div>
+                        )}
+                        {member.aircraft_type && (
+                          <div className="text-sm text-gray-600">
+                            <span className="font-medium">Aircraft:</span> {member.aircraft_type}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block bg-white shadow rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -121,6 +194,7 @@ export default async function MembersPage() {
               </table>
             </div>
           </div>
+          </>
         )}
       </div>
     </div>

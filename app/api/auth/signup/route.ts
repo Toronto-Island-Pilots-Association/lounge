@@ -179,8 +179,24 @@ export async function POST(request: Request) {
         
         // Append to Google Sheets if profile was found (non-blocking)
         if (profile) {
+          console.log('[Signup] Attempting to append member to Google Sheets', {
+            userId: data.user.id,
+            email: data.user.email,
+            profileId: profile.id,
+          })
           appendMemberToSheet(profile).catch(err => {
-            console.error('Failed to append member to Google Sheet:', err)
+            console.error('[Signup] Failed to append member to Google Sheet (non-blocking)', {
+              userId: data.user.id,
+              email: data.user.email,
+              profileId: profile.id,
+              error: err?.message,
+              errorCode: err?.code,
+            })
+          })
+        } else {
+          console.warn('[Signup] Skipping Google Sheets append - profile not found', {
+            userId: data.user.id,
+            email: data.user.email,
           })
         }
       }
