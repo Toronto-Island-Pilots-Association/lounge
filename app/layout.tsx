@@ -12,6 +12,9 @@ const interTight = Inter_Tight({
 export const metadata: Metadata = {
   title: "Toronto Island Pilots Association",
   description: "TIPA is dedicated to the preservation and promotion of general aviation at Billy Bishop Toronto City Airport (CYTZ).",
+  icons: {
+    icon: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({
