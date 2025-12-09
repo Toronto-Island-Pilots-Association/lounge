@@ -70,6 +70,16 @@ export default function Home() {
             </p>
           </div>
         </div>
+
+        {/* Become a Member Button */}
+        <div className="text-center mt-12">
+          <Link
+            href="/become-a-member"
+            className="inline-block px-8 py-3 bg-[#0d1e26] text-white font-semibold rounded-lg hover:bg-[#0a171c] transition-colors shadow-lg"
+          >
+            Become a Member
+          </Link>
+        </div>
       </div>
 
       {/* How You Can Get Involved Section */}

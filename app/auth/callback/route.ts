@@ -143,34 +143,14 @@ export async function GET(request: Request) {
 
       // Append to Google Sheets only for NEW users (non-blocking)
       if (profile && isNewUser) {
-        console.log('[OAuth Callback] Attempting to append new member to Google Sheets', {
-          userId: data.user.id,
-          email: data.user.email,
-          profileId: profile.id,
-          isNewUser,
-        })
         appendMemberToSheet(profile).catch(err => {
-          console.error('[OAuth Callback] Failed to append member to Google Sheet (non-blocking)', {
-            userId: data.user.id,
-            email: data.user.email,
-            profileId: profile.id,
-            isNewUser,
-            error: err?.message,
-            errorCode: err?.code,
-          })
+          console.error('Failed to append member to Google Sheet:', err)
         })
       } else if (!profile) {
-        console.warn('[OAuth Callback] User profile not found/created for OAuth user', {
+        console.warn('User profile not found/created for OAuth user:', {
           userId: data.user.id,
           email: data.user.email,
           profileError: profileError
-        })
-      } else if (!isNewUser) {
-        console.log('[OAuth Callback] Skipping Google Sheets append - user is not new', {
-          userId: data.user.id,
-          email: data.user.email,
-          profileId: profile.id,
-          isNewUser,
         })
       }
     }
