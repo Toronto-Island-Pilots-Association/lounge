@@ -123,14 +123,6 @@ export default function Navbar() {
                 >
                   Members
                 </Link>
-                {profile?.role === 'admin' && (
-                  <Link
-                    href="/admin"
-                    className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                  >
-                    Admin
-                  </Link>
-                )}
                 <div className="relative ml-2 pl-4 border-l border-gray-200" data-user-menu>
                   <button
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
@@ -194,6 +186,15 @@ export default function Navbar() {
                       >
                         Settings
                       </Link>
+                      {profile?.role === 'admin' && (
+                        <Link
+                          href="/admin"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          Admin
+                        </Link>
+                      )}
                       <button
                         onClick={handleLogout}
                         className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -266,15 +267,6 @@ export default function Navbar() {
                 >
                   Members
                 </Link>
-                {profile?.role === 'admin' && (
-                  <Link
-                    href="/admin"
-                    onClick={handleLinkClick}
-                    className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
-                  >
-                    Admin
-                  </Link>
-                )}
                 <div className="px-3 py-2 border-t border-gray-200 mt-2 pt-2">
                   <div className="flex items-center space-x-3 mb-2">
                     {profile?.profile_picture_url ? (
@@ -326,6 +318,15 @@ export default function Navbar() {
                   >
                     Settings
                   </Link>
+                  {profile?.role === 'admin' && (
+                    <Link
+                      href="/admin"
+                      onClick={handleLinkClick}
+                      className="block w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                    >
+                      Admin
+                    </Link>
+                  )}
                   <button
                     onClick={handleLogout}
                     className="w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors mt-1"
