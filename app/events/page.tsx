@@ -205,7 +205,7 @@ export default function EventsPage() {
                         className={`bg-white rounded-lg shadow-md p-6 border-l-4 ${
                           group.isPast
                             ? 'border-gray-300 opacity-75'
-                            : 'border-blue-500'
+                            : 'border-[#0d1e26]'
                         }`}
                       >
                         <div className="flex justify-between items-start">
@@ -233,7 +233,7 @@ export default function EventsPage() {
                           <div className="ml-6">
                             <button
                               onClick={() => downloadICal(event)}
-                              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
+                              className="px-4 py-2 bg-[#0d1e26] text-white rounded-md hover:bg-[#0a171c] text-sm font-medium"
                             >
                               Add to Calendar
                             </button>

@@ -159,7 +159,7 @@ export default function ProfilePictureUpload({
         <div className="flex flex-col space-y-2">
           <label
             htmlFor="profile-picture-upload"
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-center"
+            className="px-4 py-2 bg-[#0d1e26] text-white rounded-md hover:bg-[#0a171c] text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-center"
           >
             {uploading ? 'Uploading...' : preview ? 'Change Picture' : 'Upload Picture'}
           </label>

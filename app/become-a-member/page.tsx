@@ -110,7 +110,7 @@ export default function BecomeMemberPage() {
             <p className="text-lg text-gray-700 mb-2">
               We've sent a confirmation email to:
             </p>
-            <p className="text-lg font-semibold text-blue-600 mb-6">
+            <p className="text-lg font-semibold text-[#0d1e26] mb-6">
               {userEmail}
             </p>
             <div className="bg-white rounded-lg p-6 mb-6 text-left">
@@ -128,14 +128,14 @@ export default function BecomeMemberPage() {
                 Didn't receive the email? Check your spam folder or{' '}
                 <button
                   onClick={() => setSuccess(false)}
-                  className="text-blue-600 hover:text-blue-700 font-medium underline"
+                  className="text-[#0d1e26] hover:text-[#0a171c] font-medium underline"
                 >
                   try again
                 </button>
               </p>
               <Link
                 href="/login"
-                className="inline-block px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                className="inline-block px-6 py-3 bg-[#0d1e26] text-white font-semibold rounded-lg hover:bg-[#0a171c] transition-colors"
               >
                 Go to Login
               </Link>
@@ -162,7 +162,7 @@ export default function BecomeMemberPage() {
                   name="firstName"
                   type="text"
                   required
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
                   value={formData.firstName}
                   onChange={handleChange}
                 />
@@ -176,7 +176,7 @@ export default function BecomeMemberPage() {
                   name="lastName"
                   type="text"
                   required
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
                   value={formData.lastName}
                   onChange={handleChange}
                 />
@@ -190,7 +190,7 @@ export default function BecomeMemberPage() {
                   name="email"
                   type="email"
                   required
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
                   value={formData.email}
                   onChange={handleChange}
                 />
@@ -203,7 +203,7 @@ export default function BecomeMemberPage() {
                   id="phone"
                   name="phone"
                   type="tel"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
                   value={formData.phone}
                   onChange={handleChange}
                 />
@@ -225,7 +225,7 @@ export default function BecomeMemberPage() {
                   type="password"
                   required
                   minLength={6}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
                   value={formData.password}
                   onChange={handleChange}
                 />
@@ -244,7 +244,7 @@ export default function BecomeMemberPage() {
                 <select
                   id="pilotLicenseType"
                   name="pilotLicenseType"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
                   value={formData.pilotLicenseType}
                   onChange={handleChange}
                 >
@@ -264,7 +264,7 @@ export default function BecomeMemberPage() {
                   id="aircraftType"
                   name="aircraftType"
                   type="text"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
                   placeholder="e.g., Cessna 172, Piper Cherokee"
                   value={formData.aircraftType}
                   onChange={handleChange}
@@ -278,7 +278,7 @@ export default function BecomeMemberPage() {
                   id="callSign"
                   name="callSign"
                   type="text"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
                   placeholder="e.g., C-GABC"
                   value={formData.callSign}
                   onChange={handleChange}
@@ -291,7 +291,7 @@ export default function BecomeMemberPage() {
                 <select
                   id="howOftenFlyFromYTZ"
                   name="howOftenFlyFromYTZ"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
                   value={formData.howOftenFlyFromYTZ}
                   onChange={handleChange}
                 >
@@ -341,7 +341,7 @@ export default function BecomeMemberPage() {
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              className="px-6 py-3 bg-[#0d1e26] text-white font-semibold rounded-lg hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0d1e26] disabled:opacity-50"
             >
               {loading ? 'Creating account...' : 'Become a Member'}
             </button>
@@ -349,7 +349,7 @@ export default function BecomeMemberPage() {
 
           <p className="text-center text-sm text-gray-600">
             Already have an account?{' '}
-            <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
+            <Link href="/login" className="font-medium text-[#0d1e26] hover:text-[#416e82]">
               Sign in
             </Link>
           </p>

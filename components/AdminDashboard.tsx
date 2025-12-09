@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { UserProfile, Resource, Event } from '@/types/database'
+import { UserProfile, Resource, Event, MembershipLevel } from '@/types/database'
 
 export default function AdminDashboard() {
   const [members, setMembers] = useState<UserProfile[]>([])
@@ -10,7 +10,6 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'members' | 'resources' | 'events' | 'settings'>('members')
   const [settings, setSettings] = useState<Record<string, string>>({})
-  const [membershipFee, setMembershipFee] = useState('99')
   const [editingMember, setEditingMember] = useState<UserProfile | null>(null)
   const [editingResource, setEditingResource] = useState<Resource | null>(null)
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
@@ -40,7 +39,6 @@ export default function AdminDashboard() {
       setResources(resourcesData.resources || [])
       setEvents(eventsData.events || [])
       setSettings(settingsData.settings || {})
-      setMembershipFee(settingsData.settings?.annual_membership_fee || '99')
     } catch (error) {
       console.error('Error loading data:', error)
     } finally {
@@ -52,14 +50,6 @@ export default function AdminDashboard() {
     email: string
     firstName?: string
     lastName?: string
-    phone?: string
-    pilotLicenseType?: string
-    aircraftType?: string
-    callSign?: string
-    howOftenFlyFromYTZ?: string
-    howDidYouHear?: string
-    role?: string
-    membershipLevel?: string
   }) => {
     try {
       const response = await fetch('/api/admin/invite-member', {
@@ -76,7 +66,10 @@ export default function AdminDashboard() {
         alert('Invitation sent successfully!')
       } else {
         const error = await response.json()
-        alert(error.error || 'Failed to send invitation')
+        const errorMessage = error.details 
+          ? `${error.error}\n\n${error.details}`
+          : error.error || 'Failed to send invitation'
+        alert(errorMessage)
       }
     } catch (error) {
       console.error('Error inviting member:', error)
@@ -218,37 +211,6 @@ export default function AdminDashboard() {
     }
   }
 
-  const handleUpdateMembershipFee = async () => {
-    const fee = parseFloat(membershipFee)
-    if (isNaN(fee) || fee < 0) {
-      alert('Please enter a valid membership fee')
-      return
-    }
-
-    try {
-      const response = await fetch('/api/settings', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          key: 'annual_membership_fee',
-          value: fee.toString(),
-        }),
-      })
-
-      if (response.ok) {
-        await loadData()
-        alert('Membership fee updated successfully!')
-      } else {
-        const error = await response.json()
-        alert(error.error || 'Failed to update membership fee')
-      }
-    } catch (error) {
-      console.error('Error updating membership fee:', error)
-      alert('Failed to update membership fee')
-    }
-  }
 
   if (loading) {
     return (
@@ -274,7 +236,7 @@ export default function AdminDashboard() {
                 onClick={() => setActiveTab('members')}
                 className={`py-4 px-6 text-sm font-medium border-b-2 ${
                   activeTab === 'members'
-                    ? 'border-blue-500 text-blue-600'
+                    ? 'border-[#0d1e26] text-[#0d1e26]'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -284,7 +246,7 @@ export default function AdminDashboard() {
                 onClick={() => setActiveTab('resources')}
                 className={`py-4 px-6 text-sm font-medium border-b-2 ${
                   activeTab === 'resources'
-                    ? 'border-blue-500 text-blue-600'
+                    ? 'border-[#0d1e26] text-[#0d1e26]'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -294,7 +256,7 @@ export default function AdminDashboard() {
                 onClick={() => setActiveTab('events')}
                 className={`py-4 px-6 text-sm font-medium border-b-2 ${
                   activeTab === 'events'
-                    ? 'border-blue-500 text-blue-600'
+                    ? 'border-[#0d1e26] text-[#0d1e26]'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -304,7 +266,7 @@ export default function AdminDashboard() {
                 onClick={() => setActiveTab('settings')}
                 className={`py-4 px-6 text-sm font-medium border-b-2 ${
                   activeTab === 'settings'
-                    ? 'border-blue-500 text-blue-600'
+                    ? 'border-[#0d1e26] text-[#0d1e26]'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -353,7 +315,7 @@ export default function AdminDashboard() {
                   </button>
                   <button
                     onClick={() => setShowInviteForm(true)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                    className="bg-[#0d1e26] text-white px-4 py-2 rounded-md hover:bg-[#0a171c]"
                   >
                     Invite New Member
                   </button>
@@ -393,17 +355,17 @@ export default function AdminDashboard() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             <span className={`px-2 py-1 text-xs rounded-full ${
-                              member.membership_level === 'paid'
+                              member.membership_level === 'cadet' || member.membership_level === 'captain'
                                 ? 'bg-green-100 text-green-800'
                                 : 'bg-gray-100 text-gray-800'
                             }`}>
-                              {member.membership_level}
+                              {member.membership_level ? member.membership_level.charAt(0).toUpperCase() + member.membership_level.slice(1) : 'Basic'}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <button
                               onClick={() => setEditingMember(member)}
-                              className="text-blue-600 hover:text-blue-900"
+                              className="text-[#0d1e26] hover:text-[#0a171c]"
                             >
                               Edit
                             </button>
@@ -424,7 +386,7 @@ export default function AdminDashboard() {
                       setEditingResource(null)
                       setShowResourceForm(true)
                     }}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                    className="bg-[#0d1e26] text-white px-4 py-2 rounded-md hover:bg-[#0a171c]"
                   >
                     Add Resource
                   </button>
@@ -462,7 +424,7 @@ export default function AdminDashboard() {
                       setEditingEvent(null)
                       setShowEventForm(true)
                     }}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                    className="bg-[#0d1e26] text-white px-4 py-2 rounded-md hover:bg-[#0a171c]"
                   >
                     Create Event
                   </button>
@@ -472,7 +434,7 @@ export default function AdminDashboard() {
                     const startDate = new Date(event.start_time)
                     const endDate = event.end_time ? new Date(event.end_time) : null
                     return (
-                      <div key={event.id} className="bg-gray-50 rounded-lg p-4 border-l-4 border-blue-500">
+                      <div key={event.id} className="bg-gray-50 rounded-lg p-4 border-l-4 border-[#0d1e26]">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
                             <h3 className="font-semibold text-gray-900 text-lg">{event.title}</h3>
@@ -519,40 +481,8 @@ export default function AdminDashboard() {
 
             {activeTab === 'settings' && (
               <div className="space-y-6">
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900 mb-4">Membership Settings</h2>
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Annual Membership Fee (USD)
-                        </label>
-                        <div className="flex items-center space-x-4">
-                          <div className="flex items-center">
-                            <span className="text-gray-500 mr-2">$</span>
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={membershipFee}
-                              onChange={(e) => setMembershipFee(e.target.value)}
-                              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-32 text-gray-900 bg-white"
-                            />
-                            <span className="text-gray-500 ml-2">/year</span>
-                          </div>
-                          <button
-                            onClick={handleUpdateMembershipFee}
-                            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-                          >
-                            Save
-                          </button>
-                        </div>
-                        <p className="mt-2 text-sm text-gray-500">
-                          This fee will be displayed to members when they upgrade to paid membership.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                <div className="text-center py-12 text-gray-500">
+                  <p>No settings available at this time.</p>
                 </div>
               </div>
             )}
@@ -640,7 +570,7 @@ function MemberEditModal({
               type="text"
               value={formData.full_name}
               onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
             />
           </div>
           <div>
@@ -648,7 +578,7 @@ function MemberEditModal({
             <select
               value={formData.role}
               onChange={(e) => setFormData({ ...formData, role: e.target.value as 'member' | 'admin' })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
             >
               <option value="member">Member</option>
               <option value="admin">Admin</option>
@@ -658,11 +588,12 @@ function MemberEditModal({
             <label className="block text-sm font-medium text-gray-900 mb-1">Membership Level</label>
             <select
               value={formData.membership_level}
-              onChange={(e) => setFormData({ ...formData, membership_level: e.target.value as 'free' | 'paid' })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              onChange={(e) => setFormData({ ...formData, membership_level: e.target.value as MembershipLevel })}
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
             >
-              <option value="free">Free</option>
-              <option value="paid">Paid</option>
+              <option value="basic">Basic</option>
+              <option value="cadet">Cadet</option>
+              <option value="captain">Captain</option>
             </select>
           </div>
           <div className="flex justify-end space-x-2">
@@ -674,7 +605,7 @@ function MemberEditModal({
             </button>
             <button
               onClick={() => onSave(member, formData)}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+              className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c]"
             >
               Save
             </button>
@@ -715,7 +646,7 @@ function ResourceFormModal({
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
               required
             />
           </div>
@@ -724,7 +655,7 @@ function ResourceFormModal({
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
               rows={3}
             />
           </div>
@@ -734,7 +665,7 @@ function ResourceFormModal({
               type="url"
               value={formData.url}
               onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
             />
           </div>
           <div>
@@ -742,7 +673,7 @@ function ResourceFormModal({
             <textarea
               value={formData.content}
               onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
               rows={4}
             />
           </div>
@@ -795,36 +726,23 @@ function InviteMemberModal({
     email: string
     firstName?: string
     lastName?: string
-    phone?: string
-    pilotLicenseType?: string
-    aircraftType?: string
-    callSign?: string
-    howOftenFlyFromYTZ?: string
-    howDidYouHear?: string
-    role?: string
-    membershipLevel?: string
   }) => Promise<void>
 }) {
   const [formData, setFormData] = useState({
     email: '',
     firstName: '',
     lastName: '',
-    phone: '',
-    pilotLicenseType: '',
-    aircraftType: '',
-    callSign: '',
-    howOftenFlyFromYTZ: '',
-    howDidYouHear: '',
-    role: 'member' as 'member' | 'admin',
-    membershipLevel: 'free' as 'free' | 'paid',
   })
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
       <div className="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
         <h3 className="text-lg font-bold text-gray-900 mb-4">Invite New Member</h3>
-        <div className="space-y-4 max-h-[70vh] overflow-y-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 mb-4">
+            Send an invitation email with a link to the TIPA landing page. The recipient can then sign up on their own.
+          </p>
+          <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1">
                 Email <span className="text-red-500">*</span>
@@ -834,122 +752,33 @@ function InviteMemberModal({
                 required
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                placeholder="member@example.com"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1">
-                First Name
+                First Name (optional)
               </label>
               <input
                 type="text"
                 value={formData.firstName}
                 onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                placeholder="John"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1">
-                Last Name
+                Last Name (optional)
               </label>
               <input
                 type="text"
                 value={formData.lastName}
                 onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                placeholder="Doe"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">
-                Phone
-              </label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">
-                Pilot License Type
-              </label>
-              <input
-                type="text"
-                value={formData.pilotLicenseType}
-                onChange={(e) => setFormData({ ...formData, pilotLicenseType: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">
-                Aircraft Type
-              </label>
-              <input
-                type="text"
-                value={formData.aircraftType}
-                onChange={(e) => setFormData({ ...formData, aircraftType: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">
-                Call Sign
-              </label>
-              <input
-                type="text"
-                value={formData.callSign}
-                onChange={(e) => setFormData({ ...formData, callSign: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">
-                How Often Fly From YTZ
-              </label>
-              <input
-                type="text"
-                value={formData.howOftenFlyFromYTZ}
-                onChange={(e) => setFormData({ ...formData, howOftenFlyFromYTZ: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">
-                How Did You Hear
-              </label>
-              <input
-                type="text"
-                value={formData.howDidYouHear}
-                onChange={(e) => setFormData({ ...formData, howDidYouHear: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">
-                Role
-              </label>
-              <select
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value as 'member' | 'admin' })}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="member">Member</option>
-                <option value="admin">Admin</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">
-                Membership Level
-              </label>
-              <select
-                value={formData.membershipLevel}
-                onChange={(e) => setFormData({ ...formData, membershipLevel: e.target.value as 'free' | 'paid' })}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="free">Free</option>
-                <option value="paid">Paid</option>
-              </select>
             </div>
           </div>
           <div className="flex justify-end space-x-2 pt-4 border-t">
@@ -969,14 +798,6 @@ function InviteMemberModal({
                   email: formData.email,
                   firstName: formData.firstName || undefined,
                   lastName: formData.lastName || undefined,
-                  phone: formData.phone || undefined,
-                  pilotLicenseType: formData.pilotLicenseType || undefined,
-                  aircraftType: formData.aircraftType || undefined,
-                  callSign: formData.callSign || undefined,
-                  howOftenFlyFromYTZ: formData.howOftenFlyFromYTZ || undefined,
-                  howDidYouHear: formData.howDidYouHear || undefined,
-                  role: formData.role,
-                  membershipLevel: formData.membershipLevel,
                 })
               }}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
@@ -1025,7 +846,7 @@ function EventFormModal({
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
               required
             />
           </div>
@@ -1034,7 +855,7 @@ function EventFormModal({
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
               rows={3}
             />
           </div>
@@ -1044,7 +865,7 @@ function EventFormModal({
               type="text"
               value={formData.location}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
             />
           </div>
           <div>

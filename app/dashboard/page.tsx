@@ -11,7 +11,7 @@ export default async function DashboardPage() {
   }
 
   const membershipFee = await getMembershipFee()
-  const isPaid = user.profile.membership_level === 'paid'
+  const isPaid = user.profile.membership_level === 'cadet' || user.profile.membership_level === 'captain'
   const isExpired = user.profile.membership_expires_at
     ? new Date(user.profile.membership_expires_at) < new Date()
     : false
@@ -32,17 +32,15 @@ export default async function DashboardPage() {
                 </h2>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Level:</span>
-                    <span className={`font-medium ${
-                      isPaid ? 'text-green-600' : 'text-gray-900'
-                    }`}>
-                      {user.profile.membership_level.toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
                     <span className="text-gray-600">Role:</span>
                     <span className="font-medium text-gray-900">
                       {user.profile.role.toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Level:</span>
+                    <span className="font-medium text-gray-900">
+                      {user.profile.membership_level ? user.profile.membership_level.charAt(0).toUpperCase() + user.profile.membership_level.slice(1) : 'Basic'}
                     </span>
                   </div>
                   {user.profile.membership_expires_at && (
@@ -60,14 +58,14 @@ export default async function DashboardPage() {
 
               {/* Subscription box hidden for now */}
               {false && !isPaid && (
-                <div className="bg-blue-50 rounded-lg p-6">
+                <div className="bg-[#f0f4f6] rounded-lg p-6">
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">
                     Upgrade to Paid Membership
                   </h2>
                   <p className="text-sm text-gray-600 mb-4">
                     Unlock exclusive content and benefits with a paid membership.
                   </p>
-                  <div className="border-t border-blue-200 pt-4">
+                  <div className="border-t border-[#d9e2e6] pt-4">
                     <p className="text-sm font-medium text-gray-900 mb-2">
                       Annual Membership: ${membershipFee.toFixed(2)}/year
                     </p>
@@ -79,7 +77,7 @@ export default async function DashboardPage() {
               {isPaid && !isExpired && (
                 <div className="bg-green-50 rounded-lg p-6">
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                    Active Paid Membership
+                    Active {user.profile.membership_level === 'captain' ? 'Captain' : 'Cadet'} Membership
                   </h2>
                   <p className="text-sm text-gray-600">
                     Thank you for your support! You have access to all premium features.
@@ -95,7 +93,7 @@ export default async function DashboardPage() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <a
                   href="/resources"
-                  className="block p-4 bg-white border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-md transition"
+                  className="block p-4 bg-white border border-gray-200 rounded-lg hover:border-[#0d1e26] hover:shadow-md transition"
                 >
                   <h3 className="font-medium text-gray-900">Resources</h3>
                   <p className="mt-1 text-sm text-gray-500">
@@ -105,7 +103,7 @@ export default async function DashboardPage() {
                 {user.profile.role === 'admin' && (
                   <a
                     href="/admin"
-                    className="block p-4 bg-white border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-md transition"
+                    className="block p-4 bg-white border border-gray-200 rounded-lg hover:border-[#0d1e26] hover:shadow-md transition"
                   >
                     <h3 className="font-medium text-gray-900">Admin Panel</h3>
                     <p className="mt-1 text-sm text-gray-500">

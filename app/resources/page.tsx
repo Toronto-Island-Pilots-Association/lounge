@@ -39,7 +39,7 @@ export default async function ResourcesPage() {
               >
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#d9e2e6] text-[#0d1e26]">
                       {resource.resource_type}
                     </span>
                   </div>
@@ -56,7 +56,7 @@ export default async function ResourcesPage() {
                       href={resource.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      className="text-[#0d1e26] hover:text-[#0a171c] text-sm font-medium"
                     >
                       Open Resource →
                     </a>

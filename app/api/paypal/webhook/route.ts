@@ -17,7 +17,7 @@ export async function POST(request: Request) {
         await supabase
           .from('user_profiles')
           .update({
-            membership_level: 'free',
+            membership_level: 'basic',
             paypal_subscription_id: null,
             membership_expires_at: null,
           })

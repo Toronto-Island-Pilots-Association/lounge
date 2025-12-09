@@ -175,17 +175,7 @@ export async function sendMembershipUpgradeEmail(email: string, name: string) {
 export async function sendInvitationEmail(
   email: string,
   name: string,
-  invitationLink: string,
-  memberInfo?: {
-    firstName?: string | null
-    lastName?: string | null
-    phone?: string | null
-    pilotLicenseType?: string | null
-    aircraftType?: string | null
-    callSign?: string | null
-    howOftenFlyFromYTZ?: string | null
-    howDidYouHear?: string | null
-  }
+  landingPageUrl: string
 ) {
   return sendEmail({
     to: email,
@@ -209,17 +199,17 @@ export async function sendInvitationEmail(
           <li>Connection with other GA pilots in Toronto</li>
         </ul>
         <p style="margin: 30px 0;">
-          <strong>To complete your membership, please click the link below to set up your account:</strong>
+          <strong>To learn more and join our community, please visit our website:</strong>
         </p>
         <p style="margin: 20px 0;">
-          <a href="${invitationLink}" 
+          <a href="${landingPageUrl}" 
              style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
-            Accept Invitation & Set Up Account
+            Visit TIPA Website
           </a>
         </p>
         <p style="margin: 20px 0; color: #666; font-size: 14px;">
           Or copy and paste this link into your browser:<br>
-          <span style="word-break: break-all; color: #2563eb;">${invitationLink}</span>
+          <span style="word-break: break-all; color: #2563eb;">${landingPageUrl}</span>
         </p>
         <p style="margin-top: 30px; color: #374151; line-height: 1.6;">
           We look forward to seeing you at our events and working together to support general aviation at Billy Bishop Toronto City Airport.

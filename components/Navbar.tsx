@@ -91,7 +91,7 @@ export default function Navbar() {
               alt="TIPA Logo"
               width={100}
               height={100}
-              className="h-12 sm:h-16 w-auto object-contain"
+              className="h-10 sm:h-14 w-auto object-contain"
             />
           </a>
           
@@ -134,7 +134,7 @@ export default function Navbar() {
                 <div className="relative ml-2 pl-4 border-l border-gray-200" data-user-menu>
                   <button
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className="flex items-center space-x-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-md p-1"
+                    className="flex items-center space-x-2 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:ring-offset-2 rounded-md p-1"
                     aria-label="User menu"
                     aria-expanded={userMenuOpen}
                   >
@@ -217,7 +217,7 @@ export default function Navbar() {
           {/* Mobile menu button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+            className="md:hidden p-2 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#0d1e26]"
             aria-label="Toggle menu"
             aria-expanded={mobileMenuOpen}
           >
@@ -310,11 +310,11 @@ export default function Navbar() {
                           {profile?.full_name || user.email}
                         </span>
                         <span className={`px-2 py-1 text-xs rounded-full ml-2 flex-shrink-0 ${
-                          profile?.membership_level === 'paid'
+                          profile?.membership_level === 'cadet' || profile?.membership_level === 'captain'
                             ? 'bg-green-100 text-green-800'
                             : 'bg-gray-100 text-gray-800'
                         }`}>
-                          {profile?.membership_level || 'free'}
+                          {profile?.membership_level ? profile.membership_level.charAt(0).toUpperCase() + profile.membership_level.slice(1) : 'Basic'}
                         </span>
                       </div>
                     </div>

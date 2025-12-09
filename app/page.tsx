@@ -5,7 +5,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <div className="relative bg-gradient-to-br from-blue-600 to-blue-800 text-white overflow-hidden">
+      <div className="relative bg-gradient-to-br from-[#0d1e26] to-[#0a171c] text-white overflow-hidden">
         <div className="absolute inset-0 opacity-20">
           <Image
             src="/airport/pfacfet7v5eahcl6su5nfvcgsm-1.avif"
@@ -14,30 +14,6 @@ export default function Home() {
             className="object-cover"
             priority
           />
-        </div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold sm:text-5xl md:text-6xl mb-6">
-              TORONTO ISLAND PILOTS ASSOCIATION
-            </h1>
-            <p className="mt-6 text-xl text-blue-100 max-w-3xl mx-auto mb-8">
-              Whether you fly every weekend or simply believe in the value of accessible aviation, be part of the community that supports GA in the city.
-            </p>
-            <div className="mt-10 space-x-4">
-              <Link
-                href="/become-a-member"
-                className="inline-block px-8 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors shadow-lg"
-              >
-                Become a Member
-              </Link>
-              <Link
-                href="/login"
-                className="inline-block px-8 py-3 border-2 border-white text-white font-semibold rounded-lg hover:bg-white/10 transition-colors"
-              >
-                Member Login
-              </Link>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -60,7 +36,7 @@ export default function Home() {
               />
             </div>
             <div className="mb-4">
-              <svg className="h-12 w-12 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-12 w-12 text-[#0d1e26]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
             </div>
@@ -82,7 +58,7 @@ export default function Home() {
               />
             </div>
             <div className="mb-4">
-              <svg className="h-12 w-12 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-12 w-12 text-[#0d1e26]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
             </div>
@@ -140,6 +116,13 @@ export default function Home() {
                 Help spread the word to other pilots and aviation supporters
               </h3>
             </div>
+
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+              <div className="text-4xl mb-4">🤝</div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Join TIPA and become a member of our growing community
+              </h3>
+            </div>
           </div>
         </div>
       </div>
@@ -155,7 +138,7 @@ export default function Home() {
           </p>
           <Link
             href="/become-a-member"
-            className="inline-block px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-lg"
+            className="inline-block px-8 py-3 bg-[#0d1e26] text-white font-semibold rounded-lg hover:bg-[#0a171c] transition-colors shadow-lg"
           >
             Get Started
           </Link>
@@ -163,10 +146,10 @@ export default function Home() {
       </div>
 
       {/* Mission Statement */}
-      <div className="bg-blue-600 text-white py-12">
+      <div className="bg-[#0d1e26] text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h3 className="text-2xl font-bold mb-4">OUR MISSION</h3>
-          <p className="text-xl text-blue-100 max-w-4xl mx-auto">
+          <p className="text-xl text-gray-200 max-w-4xl mx-auto">
             TIPA is dedicated to the preservation and promotion of general aviation at Billy Bishop Toronto City Airport (CYTZ).
           </p>
         </div>

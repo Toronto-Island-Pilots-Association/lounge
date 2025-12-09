@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   how_often_fly_from_ytz TEXT,
   how_did_you_hear TEXT,
   role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('member', 'admin')),
-  membership_level TEXT NOT NULL DEFAULT 'free' CHECK (membership_level IN ('free', 'paid')),
+  membership_level TEXT NOT NULL DEFAULT 'basic' CHECK (membership_level IN ('basic', 'cadet', 'captain')),
   membership_expires_at TIMESTAMPTZ,
   paypal_subscription_id TEXT,
   profile_picture_url TEXT,
@@ -95,7 +95,7 @@ BEGIN
     COALESCE(NEW.raw_user_meta_data->>'how_often_fly_from_ytz', NULL),
     COALESCE(NEW.raw_user_meta_data->>'how_did_you_hear', NULL),
     COALESCE(NEW.raw_user_meta_data->>'role', 'member')::TEXT,
-    COALESCE(NEW.raw_user_meta_data->>'membership_level', 'free')::TEXT
+    COALESCE(NEW.raw_user_meta_data->>'membership_level', 'basic')::TEXT
   );
   RETURN NEW;
 END;

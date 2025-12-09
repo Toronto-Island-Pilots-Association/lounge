@@ -94,7 +94,7 @@ export default async function MembersPage() {
                           {member.full_name || `${member.first_name || ''} ${member.last_name || ''}`.trim() || 'N/A'}
                         </div>
                         {member.role === 'admin' && (
-                          <div className="text-xs text-blue-600 mt-1">Admin</div>
+                          <div className="text-xs text-[#0d1e26] mt-1">Admin</div>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -108,11 +108,11 @@ export default async function MembersPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 text-xs rounded-full ${
-                          member.membership_level === 'paid'
+                          member.membership_level === 'cadet' || member.membership_level === 'captain'
                             ? 'bg-green-100 text-green-800'
                             : 'bg-gray-100 text-gray-800'
                         }`}>
-                          {member.membership_level}
+                          {member.membership_level ? member.membership_level.charAt(0).toUpperCase() + member.membership_level.slice(1) : 'Basic'}
                         </span>
                       </td>
                     </tr>

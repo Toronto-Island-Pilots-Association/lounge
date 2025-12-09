@@ -42,7 +42,7 @@ export async function POST(request: Request) {
           how_often_fly_from_ytz: howOftenFlyFromYTZ || null,
           how_did_you_hear: howDidYouHear || null,
           role: 'member',
-          membership_level: 'free',
+          membership_level: 'basic',
         },
       },
     })

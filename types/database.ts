@@ -1,4 +1,4 @@
-export type MembershipLevel = 'free' | 'paid'
+export type MembershipLevel = 'basic' | 'cadet' | 'captain'
 export type UserRole = 'member' | 'admin'
 
 export interface UserProfile {
