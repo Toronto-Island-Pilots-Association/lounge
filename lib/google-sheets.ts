@@ -12,15 +12,15 @@ import type { UserProfile } from '@/types/database'
  * The service account email must have edit access to the Google Sheet
  */
 export async function appendMemberToSheet(member: UserProfile): Promise<void> {
-  try {
-    const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID
-    const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
-    const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n')
+  const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID
+  const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
+  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n')
 
-    if (!spreadsheetId || !serviceAccountEmail || !privateKey) {
-      console.error('Missing Google Sheets configuration. Skipping sheet append.')
-      return
-    }
+  if (!spreadsheetId || !serviceAccountEmail || !privateKey) {
+    return
+  }
+
+  try {
 
     // Create JWT client for service account authentication
     const auth = new google.auth.JWT({
@@ -58,6 +58,21 @@ export async function appendMemberToSheet(member: UserProfile): Promise<void> {
     // Defaults to Sheet1, but you can configure the sheet name via env var
     const sheetName = process.env.GOOGLE_SHEETS_SHEET_NAME || 'Sheet1'
     
+    // First, verify we can access the spreadsheet
+    try {
+      const spreadsheetInfo = await sheets.spreadsheets.get({
+        spreadsheetId,
+      })
+      
+      // Verify the sheet exists
+      const sheet = spreadsheetInfo.data.sheets?.find(s => s.properties?.title === sheetName)
+      if (!sheet) {
+        return
+      }
+    } catch (accessError: any) {
+      return
+    }
+
     await sheets.spreadsheets.values.append({
       spreadsheetId,
       range: `${sheetName}!A:A`, // Start from column A, will auto-detect columns
@@ -67,12 +82,8 @@ export async function appendMemberToSheet(member: UserProfile): Promise<void> {
         values: [rowData],
       },
     })
-
-    console.log(`Successfully appended member ${member.email} to Google Sheet`)
-  } catch (error) {
-    // Log error but don't throw - we don't want to break the signup flow
-    console.error('Error appending member to Google Sheet:', error)
-    // Optionally, you could send this to an error tracking service
+  } catch (error: any) {
+    // Silently fail - we don't want to break the signup flow
   }
 }
 
