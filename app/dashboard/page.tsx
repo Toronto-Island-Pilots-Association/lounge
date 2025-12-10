@@ -39,6 +39,40 @@ export default async function DashboardPage() {
   const topResources = (resources as Resource[]) || []
   const upcomingEvents = (events as Event[]) || []
 
+  // Fetch top threads
+  const { data: threads } = await supabase
+    .from('threads')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(5)
+
+  // Get author info for threads
+  const threadUserIds = [...new Set(threads?.map(t => t.created_by) || [])]
+  const { data: threadAuthors } = await supabase
+    .from('user_profiles')
+    .select('id, full_name, email')
+    .in('id', threadUserIds)
+
+  const threadAuthorsMap = new Map(threadAuthors?.map(a => [a.id, a]) || [])
+
+  // Get comment counts for threads
+  const threadIds = threads?.map(t => t.id) || []
+  const { data: threadCommentCounts } = await supabase
+    .from('comments')
+    .select('thread_id')
+    .in('thread_id', threadIds)
+
+  const threadCountsMap = new Map<string, number>()
+  threadCommentCounts?.forEach(c => {
+    threadCountsMap.set(c.thread_id, (threadCountsMap.get(c.thread_id) || 0) + 1)
+  })
+
+  const topThreads = threads?.map(thread => ({
+    ...thread,
+    comment_count: threadCountsMap.get(thread.id) || 0,
+    author: threadAuthorsMap.get(thread.created_by)
+  })) || []
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -192,8 +226,67 @@ export default async function DashboardPage() {
           </div>
 
           {/* Sidebar */}
-          {(topResources.length > 0 || upcomingEvents.length > 0) && (
+          {(topResources.length > 0 || upcomingEvents.length > 0 || topThreads.length > 0) && (
             <div className="lg:col-span-1 space-y-6">
+              {/* Top Threads Section */}
+              {topThreads.length > 0 && (
+                <div className="bg-white shadow rounded-lg">
+                  <div className="px-4 py-5 sm:p-6">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                      Recent Threads
+                    </h2>
+                    <div className="space-y-3">
+                      {topThreads.map((thread) => {
+                        const formatDate = (dateString: string) => {
+                          const date = new Date(dateString)
+                          const now = new Date()
+                          const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+                          
+                          if (diffInSeconds < 60) return 'just now'
+                          if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`
+                          if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`
+                          if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`
+                          
+                          return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                        }
+                        return (
+                          <Link
+                            key={thread.id}
+                            href={`/discussion/${thread.id}`}
+                            className="block text-sm text-[#0d1e26] hover:text-[#0a171c] hover:underline py-2 border-b border-gray-200 last:border-b-0"
+                          >
+                            <div className="font-medium line-clamp-1">{thread.title}</div>
+                            <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                              <span>{thread.author?.full_name || thread.author?.email || 'Anonymous'}</span>
+                              <span>•</span>
+                              <span>{formatDate(thread.created_at)}</span>
+                              <span>•</span>
+                              <span className="flex items-center gap-1">
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                </svg>
+                                {thread.comment_count || 0}
+                              </span>
+                            </div>
+                          </Link>
+                        )
+                      })}
+                    </div>
+                    <Link
+                      href="/discussion"
+                      className="mt-4 block text-sm font-medium text-[#0d1e26] hover:text-[#0a171c] flex items-center gap-1"
+                    >
+                      See More
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Link>
+                  </div>
+                </div>
+              )}
               {/* Events Section */}
               {upcomingEvents.length > 0 && (
                 <div className="bg-white shadow rounded-lg">

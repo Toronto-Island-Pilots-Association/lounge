@@ -58,6 +58,37 @@ CREATE TABLE IF NOT EXISTS settings (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Create threads table for discussion board
+CREATE TABLE IF NOT EXISTS threads (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  created_by UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create comments table for discussion board
+CREATE TABLE IF NOT EXISTS comments (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  thread_id UUID REFERENCES threads(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  created_by UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create reactions table for threads and comments
+CREATE TABLE IF NOT EXISTS reactions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  thread_id UUID REFERENCES threads(id) ON DELETE CASCADE,
+  comment_id UUID REFERENCES comments(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  reaction_type TEXT NOT NULL CHECK (reaction_type IN ('like', 'upvote', 'downvote')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(thread_id, comment_id, user_id, reaction_type)
+);
+
 -- Insert default membership fee setting
 INSERT INTO settings (key, value, description)
 VALUES ('annual_membership_fee', '99', 'Annual membership fee in USD')
@@ -206,6 +237,16 @@ CREATE TRIGGER update_settings_updated_at
   BEFORE UPDATE ON settings
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_threads_updated_at ON threads;
+CREATE TRIGGER update_threads_updated_at
+  BEFORE UPDATE ON threads
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_comments_updated_at ON comments;
+CREATE TRIGGER update_comments_updated_at
+  BEFORE UPDATE ON comments
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
 -- Row Level Security (RLS) Policies
 
 -- Enable RLS
@@ -213,6 +254,9 @@ ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE resources ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE threads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reactions ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies if they exist (for clean re-runs)
 DROP POLICY IF EXISTS "Users can view own profile" ON user_profiles;
@@ -230,6 +274,20 @@ DROP POLICY IF EXISTS "Admins can update events" ON events;
 DROP POLICY IF EXISTS "Admins can delete events" ON events;
 DROP POLICY IF EXISTS "All users can view settings" ON settings;
 DROP POLICY IF EXISTS "Admins can update settings" ON settings;
+DROP POLICY IF EXISTS "Authenticated users can view threads" ON threads;
+DROP POLICY IF EXISTS "Authenticated users can create threads" ON threads;
+DROP POLICY IF EXISTS "Users can update own threads" ON threads;
+DROP POLICY IF EXISTS "Users can delete own threads" ON threads;
+DROP POLICY IF EXISTS "Admins can delete threads" ON threads;
+DROP POLICY IF EXISTS "Authenticated users can view comments" ON comments;
+DROP POLICY IF EXISTS "Authenticated users can create comments" ON comments;
+DROP POLICY IF EXISTS "Users can update own comments" ON comments;
+DROP POLICY IF EXISTS "Users can delete own comments" ON comments;
+DROP POLICY IF EXISTS "Admins can delete comments" ON comments;
+DROP POLICY IF EXISTS "Authenticated users can view reactions" ON reactions;
+DROP POLICY IF EXISTS "Authenticated users can create reactions" ON reactions;
+DROP POLICY IF EXISTS "Users can delete own reactions" ON reactions;
+DROP POLICY IF EXISTS "Admins can delete reactions" ON reactions;
 
 -- User profiles policies
 -- All authenticated users can view all profiles
@@ -299,4 +357,79 @@ CREATE POLICY "All users can view settings"
 -- Only admins can update settings
 CREATE POLICY "Admins can update settings"
   ON settings FOR UPDATE
+  USING (public.is_admin(auth.uid()));
+
+-- Threads policies
+-- All authenticated users can view threads
+CREATE POLICY "Authenticated users can view threads"
+  ON threads FOR SELECT
+  USING (auth.role() = 'authenticated');
+
+-- All authenticated users can create threads
+CREATE POLICY "Authenticated users can create threads"
+  ON threads FOR INSERT
+  WITH CHECK (auth.role() = 'authenticated' AND auth.uid() = created_by);
+
+-- Users can update their own threads
+CREATE POLICY "Users can update own threads"
+  ON threads FOR UPDATE
+  USING (auth.uid() = created_by)
+  WITH CHECK (auth.uid() = created_by);
+
+-- Users can delete their own threads
+CREATE POLICY "Users can delete own threads"
+  ON threads FOR DELETE
+  USING (auth.uid() = created_by);
+
+-- Admins can delete any thread
+CREATE POLICY "Admins can delete threads"
+  ON threads FOR DELETE
+  USING (public.is_admin(auth.uid()));
+
+-- Comments policies
+-- All authenticated users can view comments
+CREATE POLICY "Authenticated users can view comments"
+  ON comments FOR SELECT
+  USING (auth.role() = 'authenticated');
+
+-- All authenticated users can create comments
+CREATE POLICY "Authenticated users can create comments"
+  ON comments FOR INSERT
+  WITH CHECK (auth.role() = 'authenticated' AND auth.uid() = created_by);
+
+-- Users can update their own comments
+CREATE POLICY "Users can update own comments"
+  ON comments FOR UPDATE
+  USING (auth.uid() = created_by)
+  WITH CHECK (auth.uid() = created_by);
+
+-- Users can delete their own comments
+CREATE POLICY "Users can delete own comments"
+  ON comments FOR DELETE
+  USING (auth.uid() = created_by);
+
+-- Admins can delete any comment
+CREATE POLICY "Admins can delete comments"
+  ON comments FOR DELETE
+  USING (public.is_admin(auth.uid()));
+
+-- Reactions policies
+-- All authenticated users can view reactions
+CREATE POLICY "Authenticated users can view reactions"
+  ON reactions FOR SELECT
+  USING (auth.role() = 'authenticated');
+
+-- All authenticated users can create reactions
+CREATE POLICY "Authenticated users can create reactions"
+  ON reactions FOR INSERT
+  WITH CHECK (auth.role() = 'authenticated' AND auth.uid() = user_id);
+
+-- Users can delete their own reactions
+CREATE POLICY "Users can delete own reactions"
+  ON reactions FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- Admins can delete any reaction
+CREATE POLICY "Admins can delete reactions"
+  ON reactions FOR DELETE
   USING (public.is_admin(auth.uid()));

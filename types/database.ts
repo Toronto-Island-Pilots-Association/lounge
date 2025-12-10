@@ -42,3 +42,35 @@ export interface Event {
   updated_at: string
 }
 
+export interface Thread {
+  id: string
+  title: string
+  content: string
+  created_by: string
+  created_at: string
+  updated_at: string
+  author?: UserProfile
+  comment_count?: number
+}
+
+export interface Comment {
+  id: string
+  thread_id: string
+  content: string
+  created_by: string
+  created_at: string
+  updated_at: string
+  author?: UserProfile
+}
+
+export type ReactionType = 'like' | 'upvote' | 'downvote'
+
+export interface Reaction {
+  id: string
+  thread_id: string | null
+  comment_id: string | null
+  user_id: string
+  reaction_type: ReactionType
+  created_at: string
+}
+
