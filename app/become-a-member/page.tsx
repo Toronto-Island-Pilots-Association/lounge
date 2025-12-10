@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
-export default function BecomeMemberPage() {
+function BecomeMemberForm() {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -22,6 +22,17 @@ export default function BecomeMemberPage() {
   const [success, setSuccess] = useState(false)
   const [userEmail, setUserEmail] = useState('')
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // Check for error in URL params (e.g., from Google OAuth redirect)
+  useEffect(() => {
+    const errorParam = searchParams.get('error')
+    if (errorParam) {
+      setError(decodeURIComponent(errorParam))
+      // Clean up URL
+      router.replace('/become-a-member', { scroll: false })
+    }
+  }, [searchParams, router])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData({
@@ -107,32 +118,13 @@ export default function BecomeMemberPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
               Registration Successful!
             </h2>
-            <p className="text-lg text-gray-700 mb-2">
-              We've sent a confirmation email to:
+            <p className="text-lg text-gray-700 mb-6">
+              Your account has been created successfully. You can now log in to access your account.
             </p>
-            <p className="text-lg font-semibold text-[#0d1e26] mb-6">
-              {userEmail}
+            <p className="text-sm text-gray-600 mb-6">
+              We've sent a welcome email to <strong>{userEmail}</strong>. Please note that your account is pending admin approval before you can access all features.
             </p>
-            <div className="bg-white rounded-lg p-6 mb-6 text-left">
-              <p className="text-gray-700 mb-4">
-                <strong>Please check your email and:</strong>
-              </p>
-              <ol className="list-decimal list-inside space-y-2 text-gray-700">
-                <li>Open the welcome email from TIPA</li>
-                <li>Click the "Confirm Email Address" button</li>
-                <li>Once confirmed, you can log in to your account</li>
-              </ol>
-            </div>
             <div className="space-y-3">
-              <p className="text-sm text-gray-600 mb-4">
-                Didn't receive the email? Check your spam folder or{' '}
-                <button
-                  onClick={() => setSuccess(false)}
-                  className="text-[#0d1e26] hover:text-[#0a171c] font-medium underline"
-                >
-                  try again
-                </button>
-              </p>
               <Link
                 href="/login"
                 className="inline-block px-6 py-3 bg-[#0d1e26] text-white font-semibold rounded-lg hover:bg-[#0a171c] transition-colors"
@@ -357,6 +349,21 @@ export default function BecomeMemberPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function BecomeMemberPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0d1e26] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <BecomeMemberForm />
+    </Suspense>
   )
 }
 

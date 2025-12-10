@@ -20,9 +20,16 @@ export async function sendEmail({
     return { success: false, error: 'Resend not configured' }
   }
 
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@example.com'
+  
+  // Warn if using default/unverified domain
+  if (fromEmail.includes('example.com') || fromEmail.includes('resend.dev')) {
+    console.warn('⚠️  Using unverified email address. Please verify your domain in Resend to improve deliverability.')
+  }
+
   try {
     const emailOptions: any = {
-      from: process.env.RESEND_FROM_EMAIL || 'noreply@example.com',
+      from: fromEmail,
       to,
       subject,
       html,
@@ -38,14 +45,22 @@ export async function sendEmail({
     const { data, error } = await resend.emails.send(emailOptions)
 
     if (error) {
-      console.error('Error sending email:', error)
+      console.error('Error sending email to', to, ':', error)
+      // Log specific error details for debugging
+      if (error.message) {
+        console.error('Error details:', error.message)
+      }
       return { success: false, error }
     }
 
+    console.log(`✅ Email sent successfully to ${to}`)
     return { success: true, data }
-  } catch (error) {
-    console.error('Error sending email:', error)
-    return { success: false, error }
+  } catch (error: any) {
+    console.error('Error sending email to', to, ':', error)
+    if (error.message) {
+      console.error('Error details:', error.message)
+    }
+    return { success: false, error: error.message || error }
   }
 }
 
@@ -105,29 +120,7 @@ export function generateICal({
   return ical.join('\r\n')
 }
 
-export async function sendWelcomeEmail(email: string, name: string, confirmationLink?: string) {
-  const confirmationSection = confirmationLink
-    ? `
-      <p style="margin: 20px 0;">
-        <strong>Please confirm your email address to complete your registration:</strong>
-      </p>
-      <p style="margin: 20px 0;">
-        <a href="${confirmationLink}" 
-           style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
-          Confirm Email Address
-        </a>
-      </p>
-      <p style="margin: 20px 0; color: #666; font-size: 14px;">
-        Or copy and paste this link into your browser:<br>
-        <span style="word-break: break-all; color: #2563eb;">${confirmationLink}</span>
-      </p>
-    `
-    : `
-      <p style="margin: 20px 0;">
-        Please check your email for a confirmation link from Supabase to verify your account.
-      </p>
-    `
-
+export async function sendWelcomeEmail(email: string, name: string) {
   return sendEmail({
     to: email,
     subject: 'Welcome to Toronto Island Pilots Association!',
@@ -146,8 +139,10 @@ export async function sendWelcomeEmail(email: string, name: string, confirmation
           <li>Advocacy efforts for GA at CYTZ</li>
           <li>Connection with other GA pilots in Toronto</li>
         </ul>
-        ${confirmationSection}
         <p style="margin-top: 30px; color: #374151; line-height: 1.6;">
+          Your account is now active. You can log in to access all member features. Please note that your account is pending admin approval before you can access all features.
+        </p>
+        <p style="margin-top: 20px; color: #374151; line-height: 1.6;">
           We look forward to seeing you at our events and working together to support general aviation at Billy Bishop Toronto City Airport.
         </p>
         <p style="margin-top: 20px; color: #374151; line-height: 1.6;">
@@ -210,6 +205,95 @@ export async function sendInvitationEmail(
         <p style="margin: 20px 0; color: #666; font-size: 14px;">
           Or copy and paste this link into your browser:<br>
           <span style="word-break: break-all; color: #2563eb;">${landingPageUrl}</span>
+        </p>
+        <p style="margin-top: 30px; color: #374151; line-height: 1.6;">
+          We look forward to seeing you at our events and working together to support general aviation at Billy Bishop Toronto City Airport.
+        </p>
+        <p style="margin-top: 20px; color: #374151; line-height: 1.6;">
+          Best regards,<br>
+          <strong>The TIPA Team</strong>
+        </p>
+      </div>
+    `,
+  })
+}
+
+export async function sendNewMemberNotificationToAdmins(
+  memberEmail: string,
+  memberName: string | null,
+  memberDetails: {
+    call_sign?: string | null
+    aircraft_type?: string | null
+    pilot_license_type?: string | null
+    phone?: string | null
+  },
+  adminEmail: string
+) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const adminUrl = `${appUrl}/admin`
+
+  return sendEmail({
+    to: adminEmail,
+    subject: `New Member Pending Approval: ${memberName || memberEmail}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #1f2937; margin-bottom: 20px;">New Member Pending Approval</h1>
+        <p style="color: #374151; line-height: 1.6;">
+          A new member has signed up and is waiting for approval:
+        </p>
+        <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 8px 0; color: #374151;">
+            <strong>Name:</strong> ${memberName || 'N/A'}<br>
+            <strong>Email:</strong> ${memberEmail}
+          </p>
+          ${memberDetails.call_sign ? `<p style="margin: 8px 0; color: #374151;"><strong>Call Sign:</strong> ${memberDetails.call_sign}</p>` : ''}
+          ${memberDetails.aircraft_type ? `<p style="margin: 8px 0; color: #374151;"><strong>Aircraft Type:</strong> ${memberDetails.aircraft_type}</p>` : ''}
+          ${memberDetails.pilot_license_type ? `<p style="margin: 8px 0; color: #374151;"><strong>Pilot License:</strong> ${memberDetails.pilot_license_type}</p>` : ''}
+          ${memberDetails.phone ? `<p style="margin: 8px 0; color: #374151;"><strong>Phone:</strong> ${memberDetails.phone}</p>` : ''}
+        </div>
+        <p style="margin: 20px 0;">
+          <a href="${adminUrl}" 
+             style="display: inline-block; padding: 12px 24px; background-color: #0d1e26; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
+            Review Member
+          </a>
+        </p>
+        <p style="margin-top: 20px; color: #374151; line-height: 1.6;">
+          Best regards,<br>
+          <strong>TIPA System</strong>
+        </p>
+      </div>
+    `,
+  })
+}
+
+export async function sendMemberApprovalEmail(email: string, name: string | null) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const dashboardUrl = `${appUrl}/dashboard`
+
+  return sendEmail({
+    to: email,
+    subject: 'Your TIPA Membership Has Been Approved!',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #1f2937; margin-bottom: 20px;">Welcome to TIPA, ${name || 'Member'}!</h1>
+        <p style="color: #374151; line-height: 1.6;">
+          Great news! Your membership application has been approved. You now have full access to the Toronto Island Pilots Association platform.
+        </p>
+        <p style="color: #374151; line-height: 1.6;">
+          As an approved member, you can now:
+        </p>
+        <ul style="color: #374151; line-height: 1.8; margin-left: 20px;">
+          <li>Access member resources and exclusive content</li>
+          <li>Participate in community discussions</li>
+          <li>View and RSVP to events</li>
+          <li>Connect with other GA pilots in Toronto</li>
+          <li>Stay informed on advocacy efforts for GA at CYTZ</li>
+        </ul>
+        <p style="margin: 30px 0;">
+          <a href="${dashboardUrl}" 
+             style="display: inline-block; padding: 12px 24px; background-color: #0d1e26; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
+            Access Your Dashboard
+          </a>
         </p>
         <p style="margin-top: 30px; color: #374151; line-height: 1.6;">
           We look forward to seeing you at our events and working together to support general aviation at Billy Bishop Toronto City Airport.

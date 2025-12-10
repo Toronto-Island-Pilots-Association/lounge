@@ -1,11 +1,14 @@
-import { requireAuth } from '@/lib/auth'
+import { getCurrentUserIncludingPending } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
-// GET - Get current user profile
+// GET - Get current user profile (allows pending users)
 export async function GET() {
   try {
-    const user = await requireAuth()
+    const user = await getCurrentUserIncludingPending()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     const supabase = await createClient()
 
     const { data, error } = await supabase
@@ -27,10 +30,13 @@ export async function GET() {
   }
 }
 
-// PATCH - Update user profile
+// PATCH - Update user profile (allows pending users)
 export async function PATCH(request: Request) {
   try {
-    const user = await requireAuth()
+    const user = await getCurrentUserIncludingPending()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     const supabase = await createClient()
 
     const body = await request.json()

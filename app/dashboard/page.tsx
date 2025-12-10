@@ -1,18 +1,20 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUserIncludingPending } from '@/lib/auth'
 import { getMembershipFee } from '@/lib/settings'
 import { createClient } from '@/lib/supabase/server'
 import { Resource, Event } from '@/types/database'
 import PayPalButton from '@/components/PayPalButton'
 
 export default async function DashboardPage() {
-  const user = await getCurrentUser()
+  const user = await getCurrentUserIncludingPending()
 
   if (!user) {
     redirect('/login')
   }
+
+  const isPending = user.profile.status !== 'approved' && user.profile.role !== 'admin'
 
   const membershipFee = await getMembershipFee()
   const isPaid = user.profile.membership_level === 'cadet' || user.profile.membership_level === 'captain'
@@ -123,22 +125,17 @@ export default async function DashboardPage() {
                         {/* Bottom Section */}
                         <div className="flex items-end justify-between mb-3">
                           <div className="flex-1">
-                            {/* Membership Level and Status */}
-                            <div className="flex items-center gap-4">
-                              <div>
-                                <div className="text-[8px] uppercase tracking-widest text-white/60 mb-0.5">Level</div>
-                                <div className="text-xs font-semibold uppercase tracking-wide">
-                                  {user.profile.membership_level ? user.profile.membership_level.toUpperCase() : 'BASIC'}
-                                </div>
-                              </div>
-                              <div className="h-4 w-px bg-white/30"></div>
-                              <div>
-                                <div className="text-[8px] uppercase tracking-widest text-white/60 mb-0.5">Status</div>
-                                <div className={`text-xs font-semibold uppercase tracking-wide ${
-                                  isPaid && !isExpired ? 'text-green-300' : isExpired ? 'text-red-300' : 'text-white'
-                                }`}>
-                                  {isPaid && !isExpired ? 'ACTIVE' : isExpired ? 'EXPIRED' : 'ACTIVE'}
-                                </div>
+                            {/* Status */}
+                            <div>
+                              <div className="text-[8px] uppercase tracking-widest text-white/60 mb-0.5">Status</div>
+                              <div className={`text-xs font-semibold uppercase tracking-wide ${
+                                isPending ? 'text-yellow-300' :
+                                isPaid && !isExpired ? 'text-green-300' : 
+                                isExpired ? 'text-red-300' : 'text-white'
+                              }`}>
+                                {isPending ? 'PENDING' :
+                                 isPaid && !isExpired ? 'ACTIVE' : 
+                                 isExpired ? 'EXPIRED' : 'ACTIVE'}
                               </div>
                             </div>
                           </div>
@@ -194,39 +191,60 @@ export default async function DashboardPage() {
 
                 </div>
 
-                <div className="mt-8">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                    Quick Links
-                  </h2>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <a
-                      href="/resources"
-                      className="block p-4 bg-white border border-gray-200 rounded-lg hover:border-[#0d1e26] hover:shadow-md transition"
-                    >
-                      <h3 className="font-medium text-gray-900">Resources</h3>
-                      <p className="mt-1 text-sm text-gray-500">
-                        Access member resources
-                      </p>
-                    </a>
-                    {user.profile.role === 'admin' && (
+                {isPending ? (
+                  <div className="mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                    <div className="flex items-start gap-4">
+                      <svg className="w-6 h-6 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-yellow-900 mb-2">
+                          Account Pending Approval
+                        </h3>
+                        <p className="text-yellow-800 mb-4">
+                          Thank you for joining TIPA! Your account is currently pending review by an administrator.
+                        </p>
+                        <p className="text-sm text-yellow-700">
+                          You will receive access to all platform features once your account has been approved. This usually takes 1-2 business days.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-8">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                      Quick Links
+                    </h2>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <a
-                        href="/admin"
+                        href="/resources"
                         className="block p-4 bg-white border border-gray-200 rounded-lg hover:border-[#0d1e26] hover:shadow-md transition"
                       >
-                        <h3 className="font-medium text-gray-900">Admin Panel</h3>
+                        <h3 className="font-medium text-gray-900">Resources</h3>
                         <p className="mt-1 text-sm text-gray-500">
-                          Manage members and resources
+                          Access member resources
                         </p>
                       </a>
-                    )}
+                      {user.profile.role === 'admin' && (
+                        <a
+                          href="/admin"
+                          className="block p-4 bg-white border border-gray-200 rounded-lg hover:border-[#0d1e26] hover:shadow-md transition"
+                        >
+                          <h3 className="font-medium text-gray-900">Admin Panel</h3>
+                          <p className="mt-1 text-sm text-gray-500">
+                            Manage members and resources
+                          </p>
+                        </a>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
 
           {/* Sidebar */}
-          {(topResources.length > 0 || upcomingEvents.length > 0 || topThreads.length > 0) && (
+          {!isPending && (topResources.length > 0 || upcomingEvents.length > 0 || topThreads.length > 0) && (
             <div className="lg:col-span-1 space-y-6">
               {/* Top Threads Section */}
               {topThreads.length > 0 && (

@@ -1,5 +1,6 @@
 export type MembershipLevel = 'basic' | 'cadet' | 'captain'
 export type UserRole = 'member' | 'admin'
+export type UserStatus = 'pending' | 'approved' | 'rejected'
 
 export interface UserProfile {
   id: string
@@ -15,6 +16,7 @@ export interface UserProfile {
   how_did_you_hear: string | null
   role: UserRole
   membership_level: MembershipLevel
+  status: UserStatus
   membership_expires_at: string | null
   paypal_subscription_id: string | null
   profile_picture_url: string | null
@@ -46,7 +48,8 @@ export interface Thread {
   id: string
   title: string
   content: string
-  created_by: string
+  created_by: string | null
+  author_email?: string | null
   created_at: string
   updated_at: string
   author?: UserProfile
@@ -57,7 +60,8 @@ export interface Comment {
   id: string
   thread_id: string
   content: string
-  created_by: string
+  created_by: string | null
+  author_email?: string | null
   created_at: string
   updated_at: string
   author?: UserProfile

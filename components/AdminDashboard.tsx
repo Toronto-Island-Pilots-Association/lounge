@@ -306,6 +306,77 @@ export default function AdminDashboard() {
           <div className="p-4 sm:p-6">
             {activeTab === 'members' && (
               <div className="space-y-4">
+                {/* Pending Review Section */}
+                {members.filter(m => m.status === 'pending').length > 0 && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                    <h3 className="text-lg font-semibold text-yellow-900 mb-3">
+                      Pending Review ({members.filter(m => m.status === 'pending').length})
+                    </h3>
+                    <div className="space-y-3">
+                      {members.filter(m => m.status === 'pending').map((member) => (
+                        <div key={member.id} className="bg-white rounded-lg p-4 border border-yellow-200">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900">{member.full_name || 'N/A'}</div>
+                              <div className="text-sm text-gray-600">{member.email}</div>
+                              {member.call_sign && (
+                                <div className="text-xs text-gray-500 mt-1">Call Sign: {member.call_sign}</div>
+                              )}
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const response = await fetch('/api/admin/members', {
+                                      method: 'PATCH',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ id: member.id, status: 'approved' }),
+                                    })
+                                    if (response.ok) {
+                                      loadData()
+                                    } else {
+                                      alert('Failed to approve member')
+                                    }
+                                  } catch (error) {
+                                    console.error('Error approving member:', error)
+                                    alert('Failed to approve member')
+                                  }
+                                }}
+                                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (!confirm('Are you sure you want to reject this member?')) return
+                                  try {
+                                    const response = await fetch('/api/admin/members', {
+                                      method: 'PATCH',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ id: member.id, status: 'rejected' }),
+                                    })
+                                    if (response.ok) {
+                                      loadData()
+                                    } else {
+                                      alert('Failed to reject member')
+                                    }
+                                  } catch (error) {
+                                    console.error('Error rejecting member:', error)
+                                    alert('Failed to reject member')
+                                  }
+                                }}
+                                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium"
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex flex-col sm:flex-row justify-end gap-2">
                   <button
                     onClick={async () => {
@@ -369,6 +440,13 @@ export default function AdminDashboard() {
                               </button>
                             </div>
                             <div className="flex flex-wrap gap-2 text-xs">
+                              <span className={`px-2 py-1 rounded ${
+                                member.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                member.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-red-100 text-red-800'
+                              }`}>
+                                {member.status ? member.status.charAt(0).toUpperCase() + member.status.slice(1) : 'Pending'}
+                              </span>
                               <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded">
                                 {member.role}
                               </span>
@@ -395,6 +473,9 @@ export default function AdminDashboard() {
                               Email
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Status
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Role
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -415,6 +496,15 @@ export default function AdminDashboard() {
                                 {member.email}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <span className={`px-2 py-1 text-xs rounded ${
+                                  member.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                  member.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                  {member.status ? member.status.charAt(0).toUpperCase() + member.status.slice(1) : 'Pending'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {member.role}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -427,6 +517,55 @@ export default function AdminDashboard() {
                                 </span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                {member.status === 'pending' && (
+                                  <>
+                                    <button
+                                      onClick={async () => {
+                                        try {
+                                          const response = await fetch('/api/admin/members', {
+                                            method: 'PATCH',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ id: member.id, status: 'approved' }),
+                                          })
+                                          if (response.ok) {
+                                            loadData()
+                                          } else {
+                                            alert('Failed to approve member')
+                                          }
+                                        } catch (error) {
+                                          console.error('Error approving member:', error)
+                                          alert('Failed to approve member')
+                                        }
+                                      }}
+                                      className="text-green-600 hover:text-green-900 mr-3"
+                                    >
+                                      Approve
+                                    </button>
+                                    <button
+                                      onClick={async () => {
+                                        if (!confirm('Are you sure you want to reject this member?')) return
+                                        try {
+                                          const response = await fetch('/api/admin/members', {
+                                            method: 'PATCH',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ id: member.id, status: 'rejected' }),
+                                          })
+                                          if (response.ok) {
+                                            loadData()
+                                          } else {
+                                            alert('Failed to reject member')
+                                          }
+                                        } catch (error) {
+                                          console.error('Error rejecting member:', error)
+                                          alert('Failed to reject member')
+                                        }
+                                      }}
+                                      className="text-red-600 hover:text-red-900 mr-3"
+                                    >
+                                      Reject
+                                    </button>
+                                  </>
+                                )}
                                 <button
                                   onClick={() => setEditingMember(member)}
                                   className="text-[#0d1e26] hover:text-[#0a171c]"

@@ -25,15 +25,17 @@ export default async function MembersPage({
 
   const supabase = await createClient()
   
-  // Get total count
+  // Get total count of approved members only
   const { count } = await supabase
     .from('user_profiles')
     .select('*', { count: 'exact', head: true })
+    .eq('status', 'approved')
 
-  // Get paginated members
+  // Get paginated members (only approved)
   const { data: members } = await supabase
     .from('user_profiles')
     .select('*')
+    .eq('status', 'approved')
     .order('created_at', { ascending: false })
     .range(from, to)
 

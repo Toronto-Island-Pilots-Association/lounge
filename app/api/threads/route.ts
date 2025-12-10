@@ -69,12 +69,20 @@ export async function POST(request: Request) {
 
     const supabase = await createClient()
 
+    // Get user email before creating thread
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('email')
+      .eq('id', user.id)
+      .single()
+
     const { data, error } = await supabase
       .from('threads')
       .insert({
         title,
         content,
-        created_by: user.id
+        created_by: user.id,
+        author_email: userProfile?.email || user.email || null
       })
       .select('*')
       .single()

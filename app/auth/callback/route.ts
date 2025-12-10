@@ -87,49 +87,25 @@ export async function GET(request: Request) {
         }
       }
 
-      // Track if this is a new user (profile was just created)
-      let isNewUser = false
-
-      // If profile doesn't exist, create it
+      // Check if profile exists - if not, this is a new user trying to sign up via Google
+      // We want to restrict Google OAuth to login only, so redirect new users to /become-a-member
       const isProfileNotFound = profileError && (
         (typeof profileError === 'object' && 'code' in profileError && profileError.code === 'PGRST116') ||
         (typeof profileError === 'object' && 'message' in profileError && String(profileError.message).includes('No rows'))
       )
       
       if (!profile && isProfileNotFound) {
-        const userMetadata = data.user.user_metadata || {}
-        const email = data.user.email || ''
-        
-        // Extract name from metadata (Google provides name, full_name, etc.)
-        const fullName = userMetadata.full_name || userMetadata.name || null
-        const firstName = userMetadata.first_name || (fullName ? fullName.split(' ')[0] : null)
-        const lastName = userMetadata.last_name || (fullName ? fullName.split(' ').slice(1).join(' ') : null)
+        // New user trying to sign up via Google - redirect to become-a-member page
+        // First, sign them out since we don't want them logged in
+        await supabase.auth.signOut()
+        return NextResponse.redirect(new URL('/become-a-member?error=' + encodeURIComponent('Please sign up using email and password. Google login is only available for existing members.'), requestUrl.origin))
+      }
 
-        const clientToUse = adminClient || supabase
-        const { data: createdProfile, error: insertError } = await clientToUse
-          .from('user_profiles')
-          .insert({
-            id: data.user.id,
-            email: email.toLowerCase().trim(),
-            full_name: fullName,
-            first_name: firstName,
-            last_name: lastName,
-            role: 'member',
-            membership_level: 'basic',
-          })
-          .select()
-          .single()
-
-        if (!insertError && createdProfile) {
-          profile = createdProfile
-          isNewUser = true // Mark as new user since we just created the profile
-          console.log('Successfully created user profile for OAuth user')
-        } else {
-          console.error('Error creating user profile:', insertError)
-          // Continue anyway - profile might be created by trigger
-        }
-      } else if (profile) {
-        // Profile already exists - check if user was created recently (within last 5 seconds)
+      // Track if this is a new user (profile was just created by trigger)
+      let isNewUser = false
+      
+      if (profile) {
+        // Profile exists - check if user was created recently (within last 5 seconds)
         // This handles the case where the trigger created the profile
         const userCreatedAt = data.user.created_at ? new Date(data.user.created_at).getTime() : 0
         const now = Date.now()
@@ -146,6 +122,47 @@ export async function GET(request: Request) {
         appendMemberToSheet(profile).catch(err => {
           console.error('Failed to append member to Google Sheet:', err)
         })
+
+        // Notify admins about new member (non-blocking)
+        // Try to get admin emails - use adminClient if available, otherwise use regular client
+        const clientForAdmins = adminClient || supabase
+        try {
+          const { data: admins } = await clientForAdmins
+            .from('user_profiles')
+            .select('email')
+            .eq('role', 'admin')
+            .eq('status', 'approved')
+
+          if (admins && admins.length > 0) {
+            const { sendNewMemberNotificationToAdmins } = await import('@/lib/resend')
+            const adminEmails = admins.map(a => a.email).filter(Boolean)
+            
+            // Send notification to each admin
+            Promise.all(
+              adminEmails.map(adminEmail =>
+                sendNewMemberNotificationToAdmins(
+                  profile.email,
+                  profile.full_name || profile.first_name || null,
+                  {
+                    call_sign: profile.call_sign,
+                    aircraft_type: profile.aircraft_type,
+                    pilot_license_type: profile.pilot_license_type,
+                    phone: profile.phone,
+                  },
+                  adminEmail
+                ).catch(err => {
+                  console.error(`Failed to notify admin ${adminEmail}:`, err)
+                })
+              )
+            ).catch(err => {
+              console.error('Error sending admin notifications:', err)
+            })
+          } else {
+            console.warn('No admin emails found to notify about new member')
+          }
+        } catch (err) {
+          console.error('Error fetching admin emails for notification:', err)
+        }
       } else if (!profile) {
         console.warn('User profile not found/created for OAuth user:', {
           userId: data.user.id,

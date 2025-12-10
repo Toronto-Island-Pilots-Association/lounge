@@ -70,6 +70,7 @@ export async function getCurrentUser() {
           how_did_you_hear: toNullIfEmpty(metadata.how_did_you_hear || metadata.howDidYouHear),
           role: userRole as string,
           membership_level: membershipLevel as string,
+          status: 'pending' as string,
         }
         
         console.log('Attempting to create profile with data:', {
@@ -109,6 +110,44 @@ export async function getCurrentUser() {
 
   if (!profile) return null
 
+  // Check if user is approved (admins are always approved)
+  if (profile.role !== 'admin' && profile.status !== 'approved') {
+    // User is not approved - return null to block access
+    return null
+  }
+
+  return {
+    ...user,
+    profile: profile as UserProfile,
+  }
+}
+
+export async function getCurrentUserIncludingPending() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  if (!user || authError) return null
+
+  // Try to get profile
+  let { data: profile, error: profileError } = await supabase
+    .from('user_profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single()
+
+  if (profileError && (profileError.code === 'PGRST116' || profileError.message?.includes('No rows'))) {
+    return null
+  } else if (profileError) {
+    console.error('Error fetching user profile:', profileError)
+    return null
+  }
+
+  if (!profile) return null
+
+  // Return user even if pending (for pending approval page)
   return {
     ...user,
     profile: profile as UserProfile,

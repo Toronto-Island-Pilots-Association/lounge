@@ -75,12 +75,20 @@ export async function POST(
       return NextResponse.json({ error: 'Thread not found' }, { status: 404 })
     }
 
+    // Get user email before creating comment
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('email')
+      .eq('id', user.id)
+      .single()
+
     const { data, error } = await supabase
       .from('comments')
       .insert({
         thread_id: id,
         content: content.trim(),
-        created_by: user.id
+        created_by: user.id,
+        author_email: userProfile?.email || user.email || null
       })
       .select('*')
       .single()

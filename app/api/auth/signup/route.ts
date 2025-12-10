@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { sendWelcomeEmail } from '@/lib/resend'
+import { sendWelcomeEmail, sendNewMemberNotificationToAdmins } from '@/lib/resend'
 import { appendMemberToSheet } from '@/lib/google-sheets'
 import { NextResponse } from 'next/server'
 
@@ -98,8 +98,8 @@ export async function POST(request: Request) {
       
       // Wait for the database trigger to create the profile
       // Retry logic to handle potential timing issues
-      let profile = null
-      let profileError = null
+      let profile: any = null
+      let profileError: any = null
       
       if (adminClient) {
         // Try to fetch profile with retries (trigger might take a moment)
@@ -153,6 +153,7 @@ export async function POST(request: Request) {
                 how_did_you_hear: toNullIfEmpty(howDidYouHear),
                 role: userRole,
                 membership_level: membershipLevel,
+                status: 'pending',
               })
               .select()
               .single()
@@ -182,47 +183,72 @@ export async function POST(request: Request) {
           appendMemberToSheet(profile).catch(err => {
             console.error('Failed to append member to Google Sheet:', err)
           })
+
+          // Notify admins about new member (non-blocking)
+          // Try to get admin emails - use adminClient if available, otherwise use regular client
+          const clientForAdmins = adminClient || supabase
+          try {
+            const { data: admins } = await clientForAdmins
+              .from('user_profiles')
+              .select('email')
+              .eq('role', 'admin')
+              .eq('status', 'approved')
+
+            if (admins && admins.length > 0) {
+              const adminEmails = admins.map(a => a.email).filter(Boolean)
+              
+              // Send notification to each admin
+              Promise.all(
+                adminEmails.map(adminEmail =>
+                  sendNewMemberNotificationToAdmins(
+                    profile.email,
+                    profile.full_name || profile.first_name || null,
+                    {
+                      call_sign: profile.call_sign,
+                      aircraft_type: profile.aircraft_type,
+                      pilot_license_type: profile.pilot_license_type,
+                      phone: profile.phone,
+                    },
+                    adminEmail
+                  ).catch(err => {
+                    console.error(`Failed to notify admin ${adminEmail}:`, err)
+                  })
+                )
+              ).catch(err => {
+                console.error('Error sending admin notifications:', err)
+              })
+            } else {
+              console.warn('No admin emails found to notify about new member')
+            }
+          } catch (err) {
+            console.error('Error fetching admin emails for notification:', err)
+          }
         }
       }
       
-      // Handle email confirmation and welcome email
-      if (data.user && !data.user.email_confirmed_at) {
-        // Generate email confirmation link using Supabase admin API
-        let confirmationLink = ''
-        const redirectTo = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard`
-        
-        if (adminClient) {
-          try {
-            const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
-              type: 'signup',
-              email: data.user.email!,
-              password: password,
-              options: {
-                redirectTo: redirectTo,
-              }
-            })
-            
-            if (!linkError && linkData?.properties?.action_link) {
-              confirmationLink = linkData.properties.action_link
-            }
-          } catch (error) {
-            console.error('Error generating confirmation link:', error)
-          }
+    }
+    
+    // Handle welcome email
+    if (data.user) {
+      const displayName = fullName || `${firstName || ''} ${lastName || ''}`.trim() || 'Member'
+      
+      // Send welcome email
+      try {
+        const result = await sendWelcomeEmail(data.user.email!, displayName)
+        if (result.success) {
+          console.log('Welcome email sent successfully to:', data.user.email)
+        } else {
+          console.error('Welcome email failed to send:', result.error)
         }
-        
-        // Send welcome email with confirmation link
-        const displayName = fullName || `${firstName || ''} ${lastName || ''}`.trim() || 'Member'
-        await sendWelcomeEmail(data.user.email!, displayName, confirmationLink)
-      } else if (data.user) {
-        // User already confirmed, just send welcome email
-        const displayName = fullName || `${firstName || ''} ${lastName || ''}`.trim() || 'Member'
-        await sendWelcomeEmail(data.user.email!, displayName)
+      } catch (emailError) {
+        console.error('Error sending welcome email:', emailError)
+        // Don't fail the signup if email fails
       }
     }
 
     return NextResponse.json({
       user: data.user,
-      message: 'Sign up successful. Please check your email to verify your account.',
+      message: 'Sign up successful. You can now log in to your account.',
     })
   } catch (error: any) {
     console.error('Signup error:', error)

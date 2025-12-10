@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   how_did_you_hear TEXT,
   role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('member', 'admin')),
   membership_level TEXT NOT NULL DEFAULT 'basic' CHECK (membership_level IN ('basic', 'cadet', 'captain')),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
   membership_expires_at TIMESTAMPTZ,
   paypal_subscription_id TEXT,
   profile_picture_url TEXT,
@@ -64,6 +65,7 @@ CREATE TABLE IF NOT EXISTS threads (
   title TEXT NOT NULL,
   content TEXT NOT NULL,
   created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  author_email TEXT, -- Store email for deleted users
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -74,6 +76,7 @@ CREATE TABLE IF NOT EXISTS comments (
   thread_id UUID REFERENCES threads(id) ON DELETE CASCADE,
   content TEXT NOT NULL,
   created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  author_email TEXT, -- Store email for deleted users
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -159,7 +162,8 @@ BEGIN
     how_often_fly_from_ytz,
     how_did_you_hear,
     role, 
-    membership_level
+    membership_level,
+    status
   )
   VALUES (
     NEW.id,
@@ -174,7 +178,8 @@ BEGIN
     v_how_often_fly_from_ytz,
     v_how_did_you_hear,
     v_role,
-    v_membership_level
+    v_membership_level,
+    'pending'
   )
   ON CONFLICT (id) DO NOTHING; -- Prevent duplicate inserts if trigger runs twice
 

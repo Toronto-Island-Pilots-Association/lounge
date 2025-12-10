@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Event } from '@/types/database'
 import { generateICal } from '@/lib/resend'
+import { createClient } from '@/lib/supabase/client'
 
 type GroupedEvents = {
   date: string
@@ -18,8 +19,33 @@ export default function EventsPage() {
   const router = useRouter()
 
   useEffect(() => {
+    checkUserStatus()
     loadEvents()
   }, [])
+
+  const checkUserStatus = async () => {
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        router.push('/login')
+        return
+      }
+
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('status, role')
+        .eq('id', user.id)
+        .single()
+
+      if (profile && profile.status !== 'approved' && profile.role !== 'admin') {
+        router.push('/pending-approval')
+      }
+    } catch (error) {
+      console.error('Error checking user status:', error)
+    }
+  }
 
   const loadEvents = async () => {
     try {

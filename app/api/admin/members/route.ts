@@ -1,5 +1,6 @@
 import { requireAdmin } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
+import { sendMemberApprovalEmail } from '@/lib/resend'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
@@ -36,6 +37,13 @@ export async function PATCH(request: Request) {
 
     const supabase = await createClient()
 
+    // Get current member data to check if status is changing to approved
+    const { data: currentMember } = await supabase
+      .from('user_profiles')
+      .select('status, email, full_name, first_name')
+      .eq('id', id)
+      .single()
+
     const { data, error } = await supabase
       .from('user_profiles')
       .update(updates)
@@ -45,6 +53,14 @@ export async function PATCH(request: Request) {
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+
+    // Send approval email if status changed to 'approved'
+    if (updates.status === 'approved' && currentMember && currentMember.status !== 'approved') {
+      const memberName = data.full_name || data.first_name || null
+      sendMemberApprovalEmail(data.email, memberName).catch(err => {
+        console.error('Failed to send approval email:', err)
+      })
     }
 
     return NextResponse.json({ member: data })

@@ -18,6 +18,11 @@ export default async function DiscussionPage({
     redirect('/login')
   }
 
+  // Redirect pending users to approval page
+  if (user.profile.status !== 'approved' && user.profile.role !== 'admin') {
+    redirect('/pending-approval')
+  }
+
   const supabase = await createClient()
   const params = await searchParams
   const sortBy = params?.sort || 'latest'
@@ -228,8 +233,10 @@ export default async function DiscussionPage({
                         </p>
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs sm:text-sm text-gray-500">
                           <div className="flex items-center gap-1.5">
-                            <span className="font-medium text-gray-700">
-                              {author.full_name || author.email || 'Anonymous'}
+                            <span className={`font-medium ${!thread.created_by && thread.author_email ? 'text-gray-600 italic' : 'text-gray-700'}`}>
+                              {!thread.created_by && thread.author_email 
+                                ? `${thread.author_email} (deleted)`
+                                : (author.full_name || author.email || 'Anonymous')}
                             </span>
                           </div>
                           <div className="flex items-center gap-1.5">

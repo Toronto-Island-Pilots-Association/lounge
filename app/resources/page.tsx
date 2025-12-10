@@ -10,6 +10,11 @@ export default async function ResourcesPage() {
     redirect('/login')
   }
 
+  // Redirect pending users to approval page
+  if (user.profile.status !== 'approved' && user.profile.role !== 'admin') {
+    redirect('/pending-approval')
+  }
+
   const supabase = await createClient()
   const { data: resources } = await supabase
     .from('resources')

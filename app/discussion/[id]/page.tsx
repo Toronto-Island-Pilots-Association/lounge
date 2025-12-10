@@ -51,6 +51,12 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
     .select('id, full_name, email, profile_picture_url')
     .eq('id', thread.created_by)
     .single() : { data: null }
+  
+  // If user is deleted but we have author_email, show email with (deleted)
+  const isThreadAuthorDeleted = !thread.created_by && thread.author_email
+  const threadDisplayName = isThreadAuthorDeleted
+    ? `${thread.author_email} (deleted)`
+    : (author?.full_name || author?.email || 'Anonymous')
 
   // Get comments
   const { data: comments, error: commentsError } = await supabase
@@ -193,8 +199,8 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
               </div>
             )}
             <div>
-              <div className="text-sm font-medium text-gray-900">
-                {threadAuthor.full_name || threadAuthor.email || 'Anonymous'}
+              <div className={`text-sm font-medium ${isThreadAuthorDeleted ? 'text-gray-600 italic' : 'text-gray-900'}`}>
+                {threadDisplayName}
               </div>
               <div className="text-xs text-gray-500">{formatDate(threadWithAuthor.created_at)}</div>
             </div>
@@ -231,8 +237,14 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
             <p className="text-gray-500 text-center py-8">No comments yet. Be the first to comment!</p>
           ) : (
             <div className="space-y-6">
-              {commentsWithReactions.map((comment: Comment & { author?: any; reactionCounts?: any; userReaction?: string | null }) => {
+              {commentsWithReactions.map((comment: Comment & { author?: any; author_email?: string | null; reactionCounts?: any; userReaction?: string | null }) => {
                 const commentAuthor = comment.author || {}
+                // If user is deleted (created_by is null) but we have author_email, show email with (deleted)
+                const isDeleted = !comment.created_by && comment.author_email
+                const displayName = isDeleted 
+                  ? `${comment.author_email} (deleted)`
+                  : (commentAuthor.full_name || commentAuthor.email || 'Anonymous')
+                
                 return (
                   <div key={comment.id} className="border-t border-gray-200 pt-6 first:border-t-0 first:pt-0">
                     <div className="flex items-start gap-3">
@@ -266,8 +278,8 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <div className="text-sm font-medium text-gray-900">
-                              {commentAuthor.full_name || commentAuthor.email || 'Anonymous'}
+                            <div className={`text-sm font-medium ${isDeleted ? 'text-gray-600 italic' : 'text-gray-900'}`}>
+                              {displayName}
                             </div>
                             <div className="text-xs text-gray-500">{formatDate(comment.created_at)}</div>
                           </div>
