@@ -22,11 +22,11 @@ export async function GET(
     }
 
     // Get author info for each comment
-    const userIds = [...new Set(comments?.map(c => c.created_by) || [])]
-    const { data: authors } = await supabase
+    const userIds = [...new Set(comments?.map(c => c.created_by).filter((id): id is string => id !== null) || [])]
+    const { data: authors } = userIds.length > 0 ? await supabase
       .from('user_profiles')
       .select('id, full_name, email, profile_picture_url')
-      .in('id', userIds)
+      .in('id', userIds) : { data: [] }
 
     const authorsMap = new Map(authors?.map(a => [a.id, a]) || [])
 

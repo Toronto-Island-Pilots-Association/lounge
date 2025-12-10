@@ -45,12 +45,12 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
     )
   }
 
-  // Get author info
-  const { data: author } = await supabase
+  // Get author info (if created_by is not null)
+  const { data: author } = thread.created_by ? await supabase
     .from('user_profiles')
     .select('id, full_name, email, profile_picture_url')
     .eq('id', thread.created_by)
-    .single()
+    .single() : { data: null }
 
   // Get comments
   const { data: comments, error: commentsError } = await supabase
@@ -64,11 +64,11 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
   }
 
   // Get author info for each comment
-  const commentUserIds = [...new Set(comments?.map(c => c.created_by) || [])]
-  const { data: commentAuthors } = await supabase
+  const commentUserIds = [...new Set(comments?.map(c => c.created_by).filter((id): id is string => id !== null) || [])]
+  const { data: commentAuthors } = commentUserIds.length > 0 ? await supabase
     .from('user_profiles')
     .select('id, full_name, email, profile_picture_url')
-    .in('id', commentUserIds)
+    .in('id', commentUserIds) : { data: [] }
 
   const commentAuthorsMap = new Map(commentAuthors?.map(a => [a.id, a]) || [])
 
@@ -159,7 +159,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
             <h1 className="text-2xl font-bold text-gray-900 flex-1">{threadWithAuthor.title}</h1>
             <DeleteThreadButton
               threadId={id}
-              isOwner={thread.created_by === user.id}
+              isOwner={thread.created_by === user.id && thread.created_by !== null}
               isAdmin={user.profile.role === 'admin'}
             />
           </div>
@@ -273,7 +273,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
                           </div>
                           <DeleteCommentButton
                             commentId={comment.id}
-                            isOwner={comment.created_by === user.id}
+                            isOwner={comment.created_by === user.id && comment.created_by !== null}
                             isAdmin={user.profile.role === 'admin'}
                           />
                         </div>

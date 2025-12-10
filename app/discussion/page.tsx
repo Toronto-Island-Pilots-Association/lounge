@@ -33,11 +33,11 @@ export default async function DiscussionPage({
   }
 
   // Get author info for each thread
-  const userIds = [...new Set(threads?.map(t => t.created_by) || [])]
-  const { data: authors } = await supabase
+  const userIds = [...new Set(threads?.map(t => t.created_by).filter((id): id is string => id !== null) || [])]
+  const { data: authors } = userIds.length > 0 ? await supabase
     .from('user_profiles')
     .select('id, full_name, email, profile_picture_url')
-    .in('id', userIds)
+    .in('id', userIds) : { data: [] }
 
   const authorsMap = new Map(authors?.map(a => [a.id, a]) || [])
 
@@ -135,9 +135,6 @@ export default async function DiscussionPage({
         <div className="mb-6 sm:mb-8">
           <div className="mb-4">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Discussion Board</h1>
-            <p className="mt-1.5 text-sm sm:text-base text-gray-600">
-              Connect with other TIPA members and share your thoughts
-            </p>
           </div>
           {threadsWithData.length > 0 && (
             <div className="flex items-center justify-end gap-3">
