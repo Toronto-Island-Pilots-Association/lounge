@@ -70,8 +70,21 @@ export async function POST(request: Request) {
 
     if (uploadError) {
       console.error('Upload error:', uploadError)
+      // Check if it's an authorization error or bucket doesn't exist
+      const errorMessage = uploadError.message || ''
+      if (errorMessage.includes('401') || 
+          errorMessage.includes('unauthorized') ||
+          errorMessage.includes('Bucket not found') ||
+          errorMessage.includes('does not exist')) {
+        // Log technical details server-side only
+        console.error('Storage bucket configuration issue:', errorMessage)
+        return NextResponse.json(
+          { error: 'Unable to upload photo. Please contact support if this issue persists.' },
+          { status: 401 }
+        )
+      }
       return NextResponse.json(
-        { error: uploadError.message || 'Failed to upload file' },
+        { error: 'Failed to upload photo. Please try again.' },
         { status: 500 }
       )
     }
