@@ -1,5 +1,6 @@
 import { getCurrentUserIncludingPending } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
+import { appendMemberToSheet } from '@/lib/google-sheets'
 import { NextResponse } from 'next/server'
 
 // GET - Get current user profile (allows pending users)
@@ -64,6 +65,13 @@ export async function PATCH(request: Request) {
     if (how_often_fly_from_ytz !== undefined) updates.how_often_fly_from_ytz = how_often_fly_from_ytz || null
     if (how_did_you_hear !== undefined) updates.how_did_you_hear = how_did_you_hear || null
 
+    // Get current profile to check if this is the first time completing it
+    const { data: currentProfile } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+
     const { data, error } = await supabase
       .from('user_profiles')
       .update(updates)
@@ -73,6 +81,39 @@ export async function PATCH(request: Request) {
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+
+    // Check if this is the first time the profile is being updated after creation
+    // This ensures Google Sheets append happens after profile completion phase
+    const profileAge = currentProfile && currentProfile.created_at 
+      ? Date.now() - new Date(currentProfile.created_at).getTime()
+      : null
+    
+    // Check if profile was created recently (within last 5 minutes)
+    // This catches both OAuth users completing their profile and password users updating after signup
+    const isRecentProfile = profileAge !== null && profileAge < 300000 // 5 minutes
+    
+    // Check if key profile fields are now present (indicating profile completion)
+    const hasKeyFields = data && (
+      (data.first_name || data.full_name) &&
+      (data.phone || data.pilot_license_type || data.aircraft_type)
+    )
+    
+    // Check if profile already had key fields before this update (for password signups)
+    const alreadyHadKeyFields = currentProfile && (
+      (currentProfile.first_name || currentProfile.full_name) &&
+      (currentProfile.phone || currentProfile.pilot_license_type || currentProfile.aircraft_type)
+    )
+
+    // Append to Google Sheets after profile completion (non-blocking)
+    // Trigger if:
+    // 1. Profile is recent AND has key fields (new completion)
+    // 2. OR profile is recent AND already had key fields (password signup with complete profile)
+    // This ensures it happens after the "complete profile phase" for both signup types
+    if (data && isRecentProfile && (hasKeyFields || alreadyHadKeyFields)) {
+      appendMemberToSheet(data).catch(err => {
+        console.error('Failed to append member to Google Sheet:', err)
+      })
     }
 
     return NextResponse.json({ profile: data })

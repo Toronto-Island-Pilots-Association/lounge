@@ -12,7 +12,22 @@ export default function Navbar() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [isDevEnvironment, setIsDevEnvironment] = useState(false)
   const router = useRouter()
+
+  // Check if we're in a dev environment
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname
+      const isDev = 
+        hostname === 'localhost' || 
+        hostname === '127.0.0.1' ||
+        hostname.includes('lounge-dev.tipa.ca') ||
+        hostname.includes('dev') ||
+        hostname.includes('staging')
+      setIsDevEnvironment(isDev)
+    }
+  }, [])
 
   useEffect(() => {
     const supabase = createClient()
@@ -77,23 +92,30 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="bg-white border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16 sm:h-20">
-          <a 
-            href="https://tipa.ca" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="flex items-center hover:opacity-80 transition-opacity"
-          >
-            <Image
-              src="/logo.png"
-              alt="TIPA Logo"
-              width={100}
-              height={100}
-              className="h-10 sm:h-14 w-auto object-contain"
-            />
-          </a>
+    <>
+      {/* Dev Environment Banner */}
+      {isDevEnvironment && (
+        <div className="bg-yellow-400 text-yellow-900 text-center py-1.5 px-4 text-xs font-semibold">
+          🚧 DEVELOPMENT ENVIRONMENT 🚧
+        </div>
+      )}
+      <nav className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16 sm:h-20">
+            <a 
+              href="https://tipa.ca" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center hover:opacity-80 transition-opacity"
+            >
+              <Image
+                src="/logo.png"
+                alt="TIPA Logo"
+                width={100}
+                height={100}
+                className="h-10 sm:h-14 w-auto object-contain"
+              />
+            </a>
           
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-4">
@@ -434,6 +456,7 @@ export default function Navbar() {
         )}
       </div>
     </nav>
+    </>
   )
 }
 
