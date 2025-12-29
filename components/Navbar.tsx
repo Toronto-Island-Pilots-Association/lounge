@@ -241,12 +241,20 @@ export default function Navbar() {
                 </div>
               </>
             ) : (
-              <Link
-                href="/login"
-                className="text-gray-700 hover:text-gray-900 px-4 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                Login
-              </Link>
+              <>
+                <Link
+                  href="/become-a-member"
+                  className="text-gray-700 hover:text-gray-900 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                >
+                  Become a Member
+                </Link>
+                <Link
+                  href="/login"
+                  className="text-gray-700 hover:text-gray-900 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                >
+                  Login
+                </Link>
+              </>
             )}
           </div>
 
@@ -269,12 +277,20 @@ export default function Navbar() {
               )}
             </button>
           ) : (
-            <Link
-              href="/login"
-              className="md:hidden text-gray-700 hover:text-gray-900 px-4 py-2 rounded-md text-sm font-medium transition-colors"
-            >
-              Login
-            </Link>
+            <div className="md:hidden flex items-center gap-2">
+              <Link
+                href="/become-a-member"
+                className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+              >
+                Join
+              </Link>
+              <Link
+                href="/login"
+                className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+              >
+                Login
+              </Link>
+            </div>
           )}
         </div>
 

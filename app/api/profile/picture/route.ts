@@ -1,4 +1,4 @@
-import { requireAuth } from '@/lib/auth'
+import { getCurrentUserIncludingPending } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
@@ -8,8 +8,26 @@ const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'
 // POST - Upload profile picture
 export async function POST(request: Request) {
   try {
-    const user = await requireAuth()
+    // Verify authentication first (allow pending users to upload profile pictures)
+    const user = await getCurrentUserIncludingPending()
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized: Please log in to upload photos' },
+        { status: 401 }
+      )
+    }
+    
     const supabase = await createClient()
+    
+    // Verify the session is valid for storage operations
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError || !session) {
+      console.error('Session error in picture upload:', sessionError)
+      return NextResponse.json(
+        { error: 'Session expired. Please refresh the page and try again.' },
+        { status: 401 }
+      )
+    }
 
     const formData = await request.formData()
     const file = formData.get('file') as File | null
@@ -116,9 +134,17 @@ export async function POST(request: Request) {
       message: 'Profile picture updated successfully' 
     })
   } catch (error: any) {
+    console.error('Profile picture upload error:', error)
+    // Check if it's an authentication error
+    if (error.message === 'Unauthorized' || error.message?.includes('Unauthorized')) {
+      return NextResponse.json(
+        { error: 'Unauthorized: Please log in to upload photos' },
+        { status: 401 }
+      )
+    }
     return NextResponse.json(
-      { error: error.message || 'An error occurred' },
-      { status: error.message === 'Unauthorized' ? 401 : 500 }
+      { error: error.message || 'An error occurred while uploading the photo' },
+      { status: 500 }
     )
   }
 }
@@ -126,7 +152,14 @@ export async function POST(request: Request) {
 // DELETE - Remove profile picture
 export async function DELETE() {
   try {
-    const user = await requireAuth()
+    // Allow pending users to remove profile pictures
+    const user = await getCurrentUserIncludingPending()
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized: Please log in to remove photos' },
+        { status: 401 }
+      )
+    }
     const supabase = await createClient()
 
     // Get current profile picture URL

@@ -36,10 +36,14 @@ export async function POST(request: Request) {
       return value && value.trim() ? value.trim() : null
     }
 
+    // Disable Supabase's default confirmation email by setting emailRedirectTo
+    // We'll handle confirmation in our welcome email instead
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     const { data, error } = await supabase.auth.signUp({
       email: normalizedEmail,
       password,
       options: {
+        emailRedirectTo: `${appUrl}/auth/callback?type=signup`,
         data: {
           full_name: toNullIfEmpty(fullName) || toNullIfEmpty(`${firstName || ''} ${lastName || ''}`.trim()) || null,
           first_name: toNullIfEmpty(firstName),
@@ -226,10 +230,50 @@ export async function POST(request: Request) {
         }
       }
       
-    }
-    
-    // Handle welcome email
-    if (data.user) {
+      // Auto-confirm email using admin API to skip Supabase's default confirmation email
+      // This allows us to merge confirmation with the welcome email
+      let emailConfirmed = false
+      if (adminClient && data.user.id) {
+        try {
+          const { data: updatedUser, error: confirmError } = await adminClient.auth.admin.updateUserById(
+            data.user.id,
+            {
+              email_confirm: true
+            }
+          )
+          
+          if (confirmError) {
+            console.error('Error auto-confirming email:', confirmError)
+            console.error('Error details:', JSON.stringify(confirmError, null, 2))
+          } else {
+            emailConfirmed = !!updatedUser?.user?.email_confirmed_at
+            if (emailConfirmed) {
+              console.log('✅ Email auto-confirmed for user:', data.user.id)
+              console.log('Email confirmed at:', updatedUser?.user?.email_confirmed_at)
+            } else {
+              console.warn('⚠️ Email confirmation update returned but email_confirmed_at is still null')
+            }
+          }
+        } catch (confirmError: any) {
+          console.error('Exception while auto-confirming email:', confirmError)
+          console.error('Error message:', confirmError?.message)
+          console.error('Error stack:', confirmError?.stack)
+        }
+      } else {
+        if (!adminClient) {
+          console.warn('⚠️ Admin client not available - cannot auto-confirm email. SUPABASE_SERVICE_ROLE_KEY may be missing.')
+        }
+        if (!data.user?.id) {
+          console.warn('⚠️ User ID not available - cannot auto-confirm email')
+        }
+      }
+      
+      // Log final email confirmation status
+      if (!emailConfirmed) {
+        console.warn('⚠️ Email was NOT auto-confirmed. User may need to confirm via Supabase email.')
+      }
+      
+      // Handle welcome email (now includes confirmation since email is auto-confirmed)
       const displayName = fullName || `${firstName || ''} ${lastName || ''}`.trim() || 'Member'
       
       // Send welcome email
