@@ -134,7 +134,7 @@ export async function sendWelcomeEmail(email: string, name: string) {
         </p>
         <div style="background-color: #f0f9ff; border-left: 4px solid #0d1e26; padding: 16px; margin: 20px 0; border-radius: 4px;">
           <p style="color: #374151; line-height: 1.6; margin: 0;">
-            <strong>Your email has been verified!</strong> You can log in to your account, but your access will be limited until an admin approves your membership.
+            <strong>Your account is ready!</strong> Your email has been verified and you can log in immediately. Your access will be limited until an admin approves your membership.
           </p>
         </div>
         <div style="margin: 30px 0; text-align: center;">

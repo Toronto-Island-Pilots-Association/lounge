@@ -87,18 +87,27 @@ export async function GET(request: Request) {
         }
       }
 
-      // Check if profile exists - if not, this is a new user trying to sign up via Google
-      // We want to restrict Google OAuth to login only, so redirect new users to /become-a-member
+      // Check if profile exists - if not, this is a new user signing up via Google
+      // Redirect them to complete their profile
       const isProfileNotFound = profileError && (
         (typeof profileError === 'object' && 'code' in profileError && profileError.code === 'PGRST116') ||
         (typeof profileError === 'object' && 'message' in profileError && String(profileError.message).includes('No rows'))
       )
       
       if (!profile && isProfileNotFound) {
-        // New user trying to sign up via Google - redirect to become-a-member page
-        // First, sign them out since we don't want them logged in
-        await supabase.auth.signOut()
-        return NextResponse.redirect(new URL('/become-a-member?error=' + encodeURIComponent('Please sign up using email and password. Google login is only available for existing members.'), requestUrl.origin))
+        // New user signing up via Google - redirect to complete profile page
+        // The profile will be created by the database trigger, but we need to wait a moment
+        // For now, redirect to complete-profile page where they can fill in additional info
+        return NextResponse.redirect(new URL('/complete-profile', requestUrl.origin))
+      }
+      
+      // Check if existing profile is incomplete (missing key fields)
+      // Redirect to complete profile if needed
+      if (profile) {
+        const isIncomplete = !profile.phone && !profile.pilot_license_type && !profile.aircraft_type
+        if (isIncomplete) {
+          return NextResponse.redirect(new URL('/complete-profile', requestUrl.origin))
+        }
       }
 
       // Track if this is a new user (profile was just created by trigger)
@@ -122,6 +131,20 @@ export async function GET(request: Request) {
         appendMemberToSheet(profile).catch(err => {
           console.error('Failed to append member to Google Sheet:', err)
         })
+
+        // Send welcome email to new OAuth users
+        try {
+          const { sendWelcomeEmail } = await import('@/lib/resend')
+          const displayName = profile.full_name || profile.first_name || profile.email || 'Member'
+          const result = await sendWelcomeEmail(profile.email, displayName)
+          if (result.success) {
+            console.log('Welcome email sent successfully to OAuth user:', profile.email)
+          } else {
+            console.error('Welcome email failed to send:', result.error)
+          }
+        } catch (emailError) {
+          console.error('Error sending welcome email to OAuth user:', emailError)
+        }
 
         // Notify admins about new member (non-blocking)
         // Try to get admin emails - use adminClient if available, otherwise use regular client
