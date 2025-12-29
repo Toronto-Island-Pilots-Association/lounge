@@ -36,10 +36,14 @@ export async function POST(request: Request) {
       return value && value.trim() ? value.trim() : null
     }
 
+    // Disable Supabase's default confirmation email by setting emailRedirectTo
+    // We'll handle confirmation in our welcome email instead
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     const { data, error } = await supabase.auth.signUp({
       email: normalizedEmail,
       password,
       options: {
+        emailRedirectTo: `${appUrl}/auth/callback?type=signup`,
         data: {
           full_name: toNullIfEmpty(fullName) || toNullIfEmpty(`${firstName || ''} ${lastName || ''}`.trim()) || null,
           first_name: toNullIfEmpty(firstName),
@@ -228,7 +232,21 @@ export async function POST(request: Request) {
       
     }
     
-    // Handle welcome email
+    // Auto-confirm email using admin API to skip Supabase's default confirmation email
+    // This allows us to merge confirmation with the welcome email
+    if (adminClient && data.user?.id) {
+      try {
+        await adminClient.auth.admin.updateUserById(data.user.id, {
+          email_confirm: true
+        })
+        console.log('Email auto-confirmed for user:', data.user.id)
+      } catch (confirmError) {
+        console.error('Error auto-confirming email:', confirmError)
+        // Continue anyway - the welcome email will still be sent
+      }
+    }
+    
+    // Handle welcome email (now includes confirmation since email is auto-confirmed)
     if (data.user) {
       const displayName = fullName || `${firstName || ''} ${lastName || ''}`.trim() || 'Member'
       

@@ -121,6 +121,8 @@ export function generateICal({
 }
 
 export async function sendWelcomeEmail(email: string, name: string) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  
   return sendEmail({
     to: email,
     subject: 'Welcome to Toronto Island Pilots Association!',
@@ -131,6 +133,14 @@ export async function sendWelcomeEmail(email: string, name: string) {
           Thank you for joining the Toronto Island Pilots Association. We're excited to have you as a member of our community.
         </p>
         <p style="color: #374151; line-height: 1.6;">
+          <strong>Your email has been confirmed and your account is now active!</strong> You can log in to access all member features.
+        </p>
+        <div style="margin: 30px 0; text-align: center;">
+          <a href="${appUrl}/login" style="display: inline-block; background-color: #0d1e26; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+            Log In to Your Account
+          </a>
+        </div>
+        <p style="color: #374151; line-height: 1.6;">
           As a member, you'll have access to:
         </p>
         <ul style="color: #374151; line-height: 1.8; margin-left: 20px;">
@@ -140,7 +150,7 @@ export async function sendWelcomeEmail(email: string, name: string) {
           <li>Connection with other GA pilots in Toronto</li>
         </ul>
         <p style="margin-top: 30px; color: #374151; line-height: 1.6;">
-          Your account is now active. You can log in to access all member features. Please note that your account is pending admin approval before you can access all features.
+          Please note that your account is pending admin approval before you can access all features. You'll be notified once your account has been approved.
         </p>
         <p style="margin-top: 20px; color: #374151; line-height: 1.6;">
           We look forward to seeing you at our events and working together to support general aviation at Billy Bishop Toronto City Airport.
