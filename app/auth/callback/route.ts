@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { appendMemberToSheet } from '@/lib/google-sheets'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
@@ -126,13 +125,9 @@ export async function GET(request: Request) {
         }
       }
 
-      // Append to Google Sheets only for NEW users (non-blocking)
+      // Send welcome email to new OAuth users
+      // Note: Google Sheets append happens after profile completion, not during OAuth callback
       if (profile && isNewUser) {
-        appendMemberToSheet(profile).catch(err => {
-          console.error('Failed to append member to Google Sheet:', err)
-        })
-
-        // Send welcome email to new OAuth users
         try {
           const { sendWelcomeEmail } = await import('@/lib/resend')
           const displayName = profile.full_name || profile.first_name || profile.email || 'Member'
