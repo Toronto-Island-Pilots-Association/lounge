@@ -230,24 +230,21 @@ export async function POST(request: Request) {
         }
       }
       
-    }
-    
-    // Auto-confirm email using admin API to skip Supabase's default confirmation email
-    // This allows us to merge confirmation with the welcome email
-    if (adminClient && data.user?.id) {
-      try {
-        await adminClient.auth.admin.updateUserById(data.user.id, {
-          email_confirm: true
-        })
-        console.log('Email auto-confirmed for user:', data.user.id)
-      } catch (confirmError) {
-        console.error('Error auto-confirming email:', confirmError)
-        // Continue anyway - the welcome email will still be sent
+      // Auto-confirm email using admin API to skip Supabase's default confirmation email
+      // This allows us to merge confirmation with the welcome email
+      if (adminClient && data.user.id) {
+        try {
+          await adminClient.auth.admin.updateUserById(data.user.id, {
+            email_confirm: true
+          })
+          console.log('Email auto-confirmed for user:', data.user.id)
+        } catch (confirmError) {
+          console.error('Error auto-confirming email:', confirmError)
+          // Continue anyway - the welcome email will still be sent
+        }
       }
-    }
-    
-    // Handle welcome email (now includes confirmation since email is auto-confirmed)
-    if (data.user) {
+      
+      // Handle welcome email (now includes confirmation since email is auto-confirmed)
       const displayName = fullName || `${firstName || ''} ${lastName || ''}`.trim() || 'Member'
       
       // Send welcome email
