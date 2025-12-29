@@ -1,0 +1,15 @@
+name: "Source Branch Gatekeeper"
+on:
+  pull_request:
+    branches:
+      - main # Only runs when someone tries to merge into main
+
+jobs:
+  check_source_branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify Source Branch
+        if: github.head_ref != 'dev'
+        run: |
+          echo "Error: Only 'dev' is allowed to merge into 'main'."
+          exit 1
