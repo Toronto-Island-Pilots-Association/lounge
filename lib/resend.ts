@@ -132,16 +132,18 @@ export async function sendWelcomeEmail(email: string, name: string) {
         <p style="color: #374151; line-height: 1.6;">
           Thank you for joining the Toronto Island Pilots Association. We're excited to have you as a member of our community.
         </p>
-        <p style="color: #374151; line-height: 1.6;">
-          <strong>Your email has been confirmed and your account is now active!</strong> You can log in to access all member features.
-        </p>
+        <div style="background-color: #f0f9ff; border-left: 4px solid #0d1e26; padding: 16px; margin: 20px 0; border-radius: 4px;">
+          <p style="color: #374151; line-height: 1.6; margin: 0;">
+            <strong>Your email has been verified!</strong> You can log in to your account, but your access will be limited until an admin approves your membership.
+          </p>
+        </div>
         <div style="margin: 30px 0; text-align: center;">
           <a href="${appUrl}/login" style="display: inline-block; background-color: #0d1e26; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
             Log In to Your Account
           </a>
         </div>
         <p style="color: #374151; line-height: 1.6;">
-          As a member, you'll have access to:
+          Once your account is approved by an admin, you'll have access to:
         </p>
         <ul style="color: #374151; line-height: 1.8; margin-left: 20px;">
           <li>Member resources and exclusive content</li>
@@ -150,7 +152,7 @@ export async function sendWelcomeEmail(email: string, name: string) {
           <li>Connection with other GA pilots in Toronto</li>
         </ul>
         <p style="margin-top: 30px; color: #374151; line-height: 1.6;">
-          Please note that your account is pending admin approval before you can access all features. You'll be notified once your account has been approved.
+          <strong>What's next?</strong> Your membership application is currently pending admin approval. You'll receive an email notification once your account has been approved and you'll have full access to all member features.
         </p>
         <p style="margin-top: 20px; color: #374151; line-height: 1.6;">
           We look forward to seeing you at our events and working together to support general aviation at Billy Bishop Toronto City Airport.
