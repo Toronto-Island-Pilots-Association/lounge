@@ -1,5 +1,7 @@
 # Membership App
 
+[![Tests](https://github.com/YOUR_USERNAME/tipa/actions/workflows/test.yml/badge.svg)](https://github.com/YOUR_USERNAME/tipa/actions/workflows/test.yml)
+
 A feature-rich membership management application for non-profit organizations built with Next.js, Supabase, PayPal, and Resend.
 
 ## Features

@@ -4,7 +4,7 @@ import Image from 'next/image'
 import { getCurrentUserIncludingPending } from '@/lib/auth'
 import { getMembershipFee } from '@/lib/settings'
 import { createClient } from '@/lib/supabase/server'
-import { appendMemberToSheet } from '@/lib/google-sheets'
+// import { appendMemberToSheet } from '@/lib/google-sheets' // Not used - Google Sheets append happens on status change
 import { Resource, Event } from '@/types/database'
 import PayPalButton from '@/components/PayPalButton'
 

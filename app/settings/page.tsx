@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { UserProfile } from '@/types/database'
 import ProfilePictureUpload from '@/components/ProfilePictureUpload'
+import Loading from '@/components/Loading'
 
 export default function SettingsPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -103,7 +104,7 @@ export default function SettingsPage() {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">Loading...</div>
+          <Loading message="Loading..." />
         </div>
       </div>
     )

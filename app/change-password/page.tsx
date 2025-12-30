@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import Loading from '@/components/Loading'
 
 function ChangePasswordContent() {
   const [passwordError, setPasswordError] = useState<string | null>(null)
@@ -114,7 +115,7 @@ function ChangePasswordContent() {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">Loading...</div>
+          <Loading message="Loading..." />
         </div>
       </div>
     )
@@ -245,7 +246,7 @@ export default function ChangePasswordPage() {
     <Suspense fallback={
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">Loading...</div>
+          <Loading message="Loading..." />
         </div>
       </div>
     }>
