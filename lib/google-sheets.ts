@@ -17,6 +17,11 @@ export async function appendMemberToSheet(member: UserProfile): Promise<void> {
   const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n')
 
   if (!spreadsheetId || !serviceAccountEmail || !privateKey) {
+    console.warn('Google Sheets not configured - missing environment variables:', {
+      hasSpreadsheetId: !!spreadsheetId,
+      hasServiceAccountEmail: !!serviceAccountEmail,
+      hasPrivateKey: !!privateKey
+    })
     return
   }
 
@@ -66,15 +71,17 @@ export async function appendMemberToSheet(member: UserProfile): Promise<void> {
       // Verify the sheet exists
       const sheet = spreadsheetInfo.data.sheets?.find(s => s.properties?.title === sheetName)
       if (!sheet) {
+        console.error(`Google Sheet "${sheetName}" not found in spreadsheet ${spreadsheetId}`)
         return
       }
     } catch (accessError: any) {
+      console.error('Error accessing Google Sheet:', accessError.message)
       return
     }
 
     // Use the sheet name only (without range) to append to the next available row
     // This works regardless of headers and will append after the last row
-    await sheets.spreadsheets.values.append({
+    const response = await sheets.spreadsheets.values.append({
       spreadsheetId,
       range: sheetName, // Just the sheet name - will append to next available row
       valueInputOption: 'USER_ENTERED',
@@ -83,8 +90,14 @@ export async function appendMemberToSheet(member: UserProfile): Promise<void> {
         values: [rowData],
       },
     })
+    
   } catch (error: any) {
-    // Silently fail - we don't want to break the signup flow
+    // Log error but don't break the signup flow
+    console.error('❌ Error appending member to Google Sheet:', {
+      email: member.email,
+      error: error.message,
+      details: error.response?.data || error
+    })
   }
 }
 

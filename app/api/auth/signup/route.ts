@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { sendWelcomeEmail, sendNewMemberNotificationToAdmins } from '@/lib/resend'
+import { appendMemberToSheet } from '@/lib/google-sheets'
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
@@ -163,7 +164,6 @@ export async function POST(request: Request) {
             
             if (!createError && createdProfile) {
               profile = createdProfile
-              console.log('Successfully created user profile manually')
             } else {
               console.error('Failed to create user profile manually:', createError)
             }
@@ -181,9 +181,18 @@ export async function POST(request: Request) {
           })
         }
         
-        // Notify admins about new member (non-blocking)
-        // Note: Google Sheets append happens after profile completion, not during signup
+        // Append to Google Sheets for password signups (profile is complete during signup)
+        // For OAuth users, this happens when they complete their profile
         if (profile) {
+          // Check if profile has key fields (password signups have all data during signup)
+          const hasKeyFields = profile.first_name || profile.full_name || profile.last_name
+          if (hasKeyFields) {
+            appendMemberToSheet(profile).catch(err => {
+              console.error('Failed to append member to Google Sheet during signup:', err)
+            })
+          }
+          
+          // Notify admins about new member (non-blocking)
           // Try to get admin emails - use adminClient if available, otherwise use regular client
           const clientForAdmins = adminClient || supabase
           try {
@@ -239,33 +248,22 @@ export async function POST(request: Request) {
           
           if (confirmError) {
             console.error('Error auto-confirming email:', confirmError)
-            console.error('Error details:', JSON.stringify(confirmError, null, 2))
           } else {
             emailConfirmed = !!updatedUser?.user?.email_confirmed_at
-            if (emailConfirmed) {
-              console.log('✅ Email auto-confirmed for user:', data.user.id)
-              console.log('Email confirmed at:', updatedUser?.user?.email_confirmed_at)
-            } else {
-              console.warn('⚠️ Email confirmation update returned but email_confirmed_at is still null')
+            if (!emailConfirmed) {
+              console.warn('Email confirmation update returned but email_confirmed_at is still null')
             }
           }
         } catch (confirmError: any) {
           console.error('Exception while auto-confirming email:', confirmError)
-          console.error('Error message:', confirmError?.message)
-          console.error('Error stack:', confirmError?.stack)
         }
       } else {
         if (!adminClient) {
-          console.warn('⚠️ Admin client not available - cannot auto-confirm email. SUPABASE_SERVICE_ROLE_KEY may be missing.')
+          console.warn('Admin client not available - cannot auto-confirm email. SUPABASE_SERVICE_ROLE_KEY may be missing.')
         }
         if (!data.user?.id) {
-          console.warn('⚠️ User ID not available - cannot auto-confirm email')
+          console.warn('User ID not available - cannot auto-confirm email')
         }
-      }
-      
-      // Log final email confirmation status
-      if (!emailConfirmed) {
-        console.warn('⚠️ Email was NOT auto-confirmed. User may need to confirm via Supabase email.')
       }
       
       // Handle welcome email (now includes confirmation since email is auto-confirmed)
@@ -274,9 +272,7 @@ export async function POST(request: Request) {
       // Send welcome email
       try {
         const result = await sendWelcomeEmail(data.user.email!, displayName)
-        if (result.success) {
-          console.log('Welcome email sent successfully to:', data.user.email)
-        } else {
+        if (!result.success) {
           console.error('Welcome email failed to send:', result.error)
         }
       } catch (emailError) {
