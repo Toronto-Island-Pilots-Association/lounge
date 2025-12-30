@@ -132,7 +132,7 @@ export async function getCurrentUserIncludingPending() {
   if (!user || authError) return null
 
   // Try to get profile
-  let { data: profile, error: profileError } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('user_profiles')
     .select('*')
     .eq('id', user.id)

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { UserProfile, Resource, Event, MembershipLevel } from '@/types/database'
 import RichTextEditor from './RichTextEditor'
+import Loading from './Loading'
 
 export default function AdminDashboard() {
   const [members, setMembers] = useState<UserProfile[]>([])
@@ -274,12 +275,11 @@ export default function AdminDashboard() {
     }
   }
 
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">Loading...</div>
+          <Loading message="Loading..." />
         </div>
       </div>
     )

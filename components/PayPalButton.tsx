@@ -3,6 +3,7 @@
 import { PayPalButtons, usePayPalScriptReducer } from '@paypal/react-paypal-js'
 import { useState, useEffect } from 'react'
 import { isPayPalEnabled } from '@/lib/paypal'
+import Loading from './Loading'
 
 interface PayPalButtonProps {
   onSuccess?: () => void
@@ -87,7 +88,7 @@ export default function PayPalButton({ onSuccess }: PayPalButtonProps) {
   }
 
   if (loadingPlan) {
-    return <div className="text-center py-4">Loading subscription plan...</div>
+    return <Loading message="Loading subscription plan..." size="sm" className="py-4" />
   }
 
   if (!planId || !planValidation?.valid) {
@@ -209,7 +210,7 @@ Please verify your PayPal plan settings and ensure the plan is active with CAD c
   }
 
   if (isPending) {
-    return <div className="text-center py-4">Loading PayPal...</div>
+    return <Loading message="Loading PayPal..." size="sm" className="py-4" />
   }
 
   return (

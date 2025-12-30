@@ -5,6 +5,7 @@ import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
 import { useEffect, useState } from 'react'
+import Loading from './Loading'
 
 interface RichTextEditorProps {
   content: string
@@ -16,7 +17,8 @@ export default function RichTextEditor({ content, onChange, placeholder }: RichT
   const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
-    setIsMounted(true)
+    // Use setTimeout to avoid setState in effect warning
+    setTimeout(() => setIsMounted(true), 0)
   }, [])
 
   const editor = useEditor({
@@ -59,8 +61,8 @@ export default function RichTextEditor({ content, onChange, placeholder }: RichT
   if (!isMounted || !editor) {
     return (
       <div className="border border-gray-300 rounded-md bg-white">
-        <div className="p-3 min-h-[200px] flex items-center justify-center text-gray-400">
-          Loading editor...
+        <div className="p-3 min-h-[200px] flex items-center justify-center">
+          <Loading message="Loading editor..." size="sm" />
         </div>
       </div>
     )

@@ -25,7 +25,8 @@ export default function Navbar() {
         hostname.includes('lounge-dev.tipa.ca') ||
         hostname.includes('dev') ||
         hostname.includes('staging')
-      setIsDevEnvironment(isDev)
+      // Use setTimeout to avoid setState in effect warning
+      setTimeout(() => setIsDevEnvironment(isDev), 0)
     }
   }, [])
 

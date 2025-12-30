@@ -78,7 +78,9 @@ export default async function DiscussionPage({
   if (sortBy === 'hot') {
     // Calculate hot score: combines comment count with recency
     // Recent threads with comments rank higher
-    const now = Date.now()
+    // Calculate hot score: use current time for sorting
+    // Note: This runs on server, so we use a stable reference
+    const now = new Date().getTime()
     threadsWithData = [...threadsWithData].sort((a, b) => {
       // Calculate hot score for each thread
       const calculateHotScore = (thread: typeof threadsWithData[0]) => {

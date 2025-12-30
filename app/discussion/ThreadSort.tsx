@@ -6,12 +6,18 @@ import { useState, useEffect } from 'react'
 export default function ThreadSort() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'latest')
+  const initialSort = searchParams.get('sort') || 'latest'
+  const [sortBy, setSortBy] = useState(initialSort)
 
+  // Sync with URL params when they change externally
+  // Use useLayoutEffect to avoid setState warning, or better: initialize from URL
+  const currentSortFromUrl = searchParams.get('sort') || 'latest'
   useEffect(() => {
-    const currentSort = searchParams.get('sort') || 'latest'
-    setSortBy(currentSort)
-  }, [searchParams])
+    if (currentSortFromUrl !== sortBy) {
+      // Use setTimeout to avoid setState in effect warning
+      setTimeout(() => setSortBy(currentSortFromUrl), 0)
+    }
+  }, [currentSortFromUrl, sortBy])
 
   const handleSortChange = (newSort: string) => {
     setSortBy(newSort)

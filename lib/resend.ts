@@ -89,7 +89,7 @@ export function generateICal({
   const dtstart = formatDate(startTime)
   const dtend = endTime ? formatDate(endTime) : formatDate(new Date(new Date(startTime).getTime() + 60 * 60 * 1000).toISOString())
 
-  let ical = [
+  const ical = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//TIPA//Event Calendar//EN',
