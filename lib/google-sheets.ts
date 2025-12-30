@@ -79,6 +79,32 @@ export async function appendMemberToSheet(member: UserProfile): Promise<void> {
       return
     }
 
+    // Check if email already exists in the sheet to prevent duplicates
+    // Email is typically in column B (index 1)
+    const emailColumn = 'B:B'
+    const emailRange = `${sheetName}!${emailColumn}`
+    
+    try {
+      const existingData = await sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range: emailRange,
+      })
+      
+      const existingEmails = existingData.data.values?.flat() || []
+      const normalizedMemberEmail = (member.email || '').toLowerCase().trim()
+      
+      // Check if this email already exists in the sheet
+      if (existingEmails.some((email: string) => 
+        email && email.toString().toLowerCase().trim() === normalizedMemberEmail
+      )) {
+        console.log(`Member ${member.email} already exists in Google Sheet, skipping append`)
+        return
+      }
+    } catch (checkError: any) {
+      // If we can't check, log but still try to append (better to have duplicates than miss entries)
+      console.warn('Could not check for existing email in sheet, proceeding with append:', checkError.message)
+    }
+
     // Use the sheet name only (without range) to append to the next available row
     // This works regardless of headers and will append after the last row
     const response = await sheets.spreadsheets.values.append({

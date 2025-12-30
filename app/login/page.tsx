@@ -59,8 +59,13 @@ export default function LoginPage() {
         throw new Error(data.error || 'Login failed')
       }
 
-      // Use window.location for a full page reload to ensure cookies are set
-      window.location.href = '/dashboard'
+      // If user needs to change password, redirect to change password page
+      if (data.requiresPasswordChange) {
+        window.location.href = '/change-password?required=true'
+      } else {
+        // Use window.location for a full page reload to ensure cookies are set
+        window.location.href = '/dashboard'
+      }
     } catch (err: any) {
       setError(err.message)
     } finally {

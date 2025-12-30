@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import Image from 'next/image'
 import { UserProfile } from '@/types/database'
 import ProfilePictureUpload from '@/components/ProfilePictureUpload'
@@ -132,18 +133,20 @@ export default function SettingsPage() {
 
         <div className="bg-white shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6 space-y-8">
-            {/* Profile Picture Section */}
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Profile Picture
-              </h2>
-              {profile && (
-                <ProfilePictureUpload
-                  currentPictureUrl={profile.profile_picture_url}
-                  userId={profile.id}
-                  onUpdate={loadProfile}
-                />
-              )}
+            <div className="border-t border-gray-200 pt-8">
+              {/* Profile Picture Section */}
+              <div className="mb-8">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  Profile Picture
+                </h2>
+                {profile && (
+                  <ProfilePictureUpload
+                    currentPictureUrl={profile.profile_picture_url}
+                    userId={profile.id}
+                    onUpdate={loadProfile}
+                  />
+                )}
+              </div>
             </div>
 
             <div className="border-t border-gray-200 pt-8">
@@ -360,6 +363,24 @@ export default function SettingsPage() {
                   </button>
                 </div>
               </form>
+            </div>
+
+            {/* Account Security Section */}
+            <div className="border-t border-gray-200 pt-8">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Account Security
+              </h2>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-sm text-gray-600 mb-4">
+                  Keep your account secure by regularly updating your password.
+                </p>
+                <Link
+                  href="/change-password"
+                  className="inline-block px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#0d1e26] hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0d1e26]"
+                >
+                  Change Password
+                </Link>
+              </div>
             </div>
           </div>
         </div>
