@@ -132,9 +132,7 @@ export async function GET(request: Request) {
           const { sendWelcomeEmail } = await import('@/lib/resend')
           const displayName = profile.full_name || profile.first_name || profile.email || 'Member'
           const result = await sendWelcomeEmail(profile.email, displayName)
-          if (result.success) {
-            console.log('Welcome email sent successfully to OAuth user:', profile.email)
-          } else {
+          if (!result.success) {
             console.error('Welcome email failed to send:', result.error)
           }
         } catch (emailError) {
