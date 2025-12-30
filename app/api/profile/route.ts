@@ -89,20 +89,21 @@ export async function PATCH(request: Request) {
       ? Date.now() - new Date(currentProfile.created_at).getTime()
       : null
     
-    // Check if profile was created recently (within last 5 minutes)
+    // Check if profile was created recently (within last 30 minutes to be more lenient)
     // This catches both OAuth users completing their profile and password users updating after signup
-    const isRecentProfile = profileAge !== null && profileAge < 300000 // 5 minutes
+    const isRecentProfile = profileAge !== null && profileAge < 1800000 // 30 minutes
     
     // Check if key profile fields are now present (indicating profile completion)
+    // At minimum, we need a name (first_name or full_name) to add to sheets
     const hasKeyFields = data && (
-      (data.first_name || data.full_name) &&
-      (data.phone || data.pilot_license_type || data.aircraft_type)
+      (data.first_name || data.full_name || data.last_name) &&
+      (data.phone || data.pilot_license_type || data.aircraft_type || data.first_name || data.last_name)
     )
     
     // Check if profile already had key fields before this update (for password signups)
     const alreadyHadKeyFields = currentProfile && (
-      (currentProfile.first_name || currentProfile.full_name) &&
-      (currentProfile.phone || currentProfile.pilot_license_type || currentProfile.aircraft_type)
+      (currentProfile.first_name || currentProfile.full_name || currentProfile.last_name) &&
+      (currentProfile.phone || currentProfile.pilot_license_type || currentProfile.aircraft_type || currentProfile.first_name || currentProfile.last_name)
     )
 
     // Append to Google Sheets after profile completion (non-blocking)

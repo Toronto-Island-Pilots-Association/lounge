@@ -14,7 +14,8 @@ export default async function DashboardPage() {
     redirect('/login')
   }
 
-  const isPending = user.profile.status !== 'approved' && user.profile.role !== 'admin'
+  const isPending = user.profile.status === 'pending' && user.profile.role !== 'admin'
+  const isRejected = user.profile.status === 'rejected' && user.profile.role !== 'admin'
 
   const membershipFee = await getMembershipFee()
   const isPaid = user.profile.membership_level === 'cadet' || user.profile.membership_level === 'captain'
@@ -129,11 +130,13 @@ export default async function DashboardPage() {
                             <div>
                               <div className="text-[8px] uppercase tracking-widest text-white/60 mb-0.5">Status</div>
                               <div className={`text-xs font-semibold uppercase tracking-wide ${
+                                isRejected ? 'text-red-300' :
                                 isPending ? 'text-yellow-300' :
                                 isPaid && !isExpired ? 'text-green-300' : 
                                 isExpired ? 'text-red-300' : 'text-white'
                               }`}>
-                                {isPending ? 'PENDING' :
+                                {isRejected ? 'REJECTED' :
+                                 isPending ? 'PENDING' :
                                  isPaid && !isExpired ? 'ACTIVE' : 
                                  isExpired ? 'EXPIRED' : 'ACTIVE'}
                               </div>

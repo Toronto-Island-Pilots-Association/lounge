@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter_Tight } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import PayPalProvider from "@/components/PayPalProvider";
@@ -31,6 +32,7 @@ export default function RootLayout({
           <Navbar />
           {children}
         </PayPalProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
