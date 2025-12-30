@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { sendWelcomeEmail, sendNewMemberNotificationToAdmins } from '@/lib/resend'
-import { appendMemberToSheet } from '@/lib/google-sheets'
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
@@ -181,18 +180,11 @@ export async function POST(request: Request) {
           })
         }
         
-        // Append to Google Sheets for password signups (profile is complete during signup)
-        // For OAuth users, this happens when they complete their profile
+        // Note: Google Sheets append happens when status changes from 'pending' to 'approved'
+        // This ensures users are only added after admin approval
+        
+        // Notify admins about new member (non-blocking)
         if (profile) {
-          // Check if profile has key fields (password signups have all data during signup)
-          const hasKeyFields = profile.first_name || profile.full_name || profile.last_name
-          if (hasKeyFields) {
-            appendMemberToSheet(profile).catch(err => {
-              console.error('Failed to append member to Google Sheet during signup:', err)
-            })
-          }
-          
-          // Notify admins about new member (non-blocking)
           // Try to get admin emails - use adminClient if available, otherwise use regular client
           const clientForAdmins = adminClient || supabase
           try {

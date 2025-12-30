@@ -18,20 +18,14 @@ export default async function DashboardPage() {
   const isPending = user.profile.status === 'pending' && user.profile.role !== 'admin'
   const isRejected = user.profile.status === 'rejected' && user.profile.role !== 'admin'
 
-  // Fallback: Append to Google Sheets if user skipped complete-profile but has a name
-  // This ensures OAuth users who skip the form still get added to the sheet
-  const profileAge = user.profile.created_at 
-    ? Date.now() - new Date(user.profile.created_at).getTime()
-    : null
-  const isRecentProfile = profileAge !== null && profileAge < 1800000 // 30 minutes
-  const hasName = user.profile.first_name || user.profile.full_name || user.profile.last_name
-  
-  if (isRecentProfile && hasName) {
-    // Non-blocking append - don't wait for it
-    appendMemberToSheet(user.profile).catch(err => {
-      console.error('Failed to append member to Google Sheet from dashboard:', err)
-    })
-  }
+  // Check if user was invited and needs to change password
+  const wasInvited = user.user_metadata?.invited_by_admin === true
+  const needsPasswordChange = wasInvited && user.profile.status === 'pending'
+
+  // Note: Google Sheets append is handled in:
+  // 1. /api/auth/signup - for password signups
+  // 2. /api/profile PATCH - when profile is completed
+  // The appendMemberToSheet function now checks for duplicates before appending
 
   const membershipFee = await getMembershipFee()
   const isPaid = user.profile.membership_level === 'cadet' || user.profile.membership_level === 'captain'
@@ -210,7 +204,29 @@ export default async function DashboardPage() {
 
                 </div>
 
-                {isPending ? (
+                {needsPasswordChange ? (
+                  <div className="mt-8 bg-yellow-50 border-l-4 border-yellow-400 rounded-lg p-6">
+                    <div className="flex items-start gap-4">
+                      <svg className="w-6 h-6 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-yellow-900 mb-2">
+                          Action Required: Change Your Password
+                        </h3>
+                        <p className="text-yellow-800 mb-4">
+                          You were invited by an administrator. Please change your temporary password to secure your account and activate full access.
+                        </p>
+                        <Link
+                          href="/change-password"
+                          className="inline-block px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 text-sm font-medium transition-colors"
+                        >
+                          Change Password Now
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                ) : isPending ? (
                   <div className="mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-6">
                     <div className="flex items-start gap-4">
                       <svg className="w-6 h-6 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -17,6 +17,7 @@ export default function AdminDashboard() {
   const [showResourceForm, setShowResourceForm] = useState(false)
   const [showEventForm, setShowEventForm] = useState(false)
   const [showInviteForm, setShowInviteForm] = useState(false)
+  const [showBulkInviteForm, setShowBulkInviteForm] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -64,17 +65,54 @@ export default function AdminDashboard() {
       if (response.ok) {
         await loadData()
         setShowInviteForm(false)
-        alert('Invitation sent successfully!')
+        alert('Account created and invitation email sent successfully!')
       } else {
         const error = await response.json()
         const errorMessage = error.details 
           ? `${error.error}\n\n${error.details}`
-          : error.error || 'Failed to send invitation'
+          : error.error || 'Failed to create account'
         alert(errorMessage)
       }
     } catch (error) {
       console.error('Error inviting member:', error)
-      alert('Failed to send invitation')
+      alert('Failed to create account')
+    }
+  }
+
+  const handleBulkInvite = async (file: File) => {
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/admin/bulk-invite', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        await loadData()
+        setShowBulkInviteForm(false)
+        
+        const message = `Bulk invite completed!\n\n` +
+          `Total: ${data.results.total}\n` +
+          `Success: ${data.results.success}\n` +
+          `Skipped: ${data.results.skipped}\n` +
+          `Errors: ${data.results.errors}`
+        
+        alert(message)
+        
+        // Show detailed results if there are errors or skipped
+        if (data.results.details.errors.length > 0 || data.results.details.skipped.length > 0) {
+          console.log('Detailed results:', data.results.details)
+        }
+      } else {
+        alert(data.error || 'Failed to process bulk invite')
+      }
+    } catch (error) {
+      console.error('Error processing bulk invite:', error)
+      alert('Failed to process bulk invite')
     }
   }
 
@@ -417,7 +455,13 @@ export default function AdminDashboard() {
                     onClick={() => setShowInviteForm(true)}
                     className="bg-[#0d1e26] text-white px-4 py-2 rounded-md hover:bg-[#0a171c] text-sm"
                   >
-                    Invite New Member
+                    Invite Member
+                  </button>
+                  <button
+                    onClick={() => setShowBulkInviteForm(true)}
+                    className="bg-[#0d1e26] text-white px-4 py-2 rounded-md hover:bg-[#0a171c] text-sm"
+                  >
+                    Bulk Invite (CSV)
                   </button>
                 </div>
                 <div className="overflow-x-auto -mx-4 sm:mx-0">
@@ -787,6 +831,14 @@ export default function AdminDashboard() {
             onSave={handleInviteMember}
           />
         )}
+
+        {/* Bulk Invite Modal */}
+        {showBulkInviteForm && (
+          <BulkInviteModal
+            onClose={() => setShowBulkInviteForm(false)}
+            onSave={handleBulkInvite}
+          />
+        )}
       </div>
     </div>
   )
@@ -953,7 +1005,7 @@ function InviteMemberModal({
         <h3 className="text-lg font-bold text-gray-900 mb-4">Invite New Member</h3>
         <div className="space-y-4">
           <p className="text-sm text-gray-600 mb-4">
-            Send an invitation email with a link to the TIPA landing page. The recipient can then sign up on their own.
+            Create an account for a new member. A temporary password will be sent to their email. They can also sign in with Google if their email matches.
           </p>
           <div className="space-y-4">
             <div>
@@ -1015,7 +1067,110 @@ function InviteMemberModal({
               }}
               className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c]"
             >
-              Send Invitation
+              Create Account & Send Invitation
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function BulkInviteModal({
+  onClose,
+  onSave,
+}: {
+  onClose: () => void
+  onSave: (file: File) => Promise<void>
+}) {
+  const [file, setFile] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0]
+    if (selectedFile) {
+      if (!selectedFile.name.endsWith('.csv')) {
+        alert('Please select a CSV file')
+        return
+      }
+      setFile(selectedFile)
+    }
+  }
+
+  const handleSubmit = async () => {
+    if (!file) {
+      alert('Please select a CSV file')
+      return
+    }
+
+    setUploading(true)
+    try {
+      await onSave(file)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div className="relative top-4 sm:top-20 mx-auto p-4 sm:p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white m-4">
+        <h3 className="text-lg font-bold text-gray-900 mb-4">Bulk Invite Members (CSV)</h3>
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 mb-4">
+            Upload a CSV file with member information. Accounts will be created with temporary passwords sent via email.
+          </p>
+          
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-4">
+            <p className="text-sm font-semibold text-blue-900 mb-2">CSV Format:</p>
+            <p className="text-sm text-gray-700 mb-2">
+              Your CSV should have the following columns (header row optional):
+            </p>
+            <ul className="text-sm text-gray-700 list-disc list-inside space-y-1 mb-3">
+              <li><strong className="text-gray-900">Column 1:</strong> Email (required)</li>
+              <li><strong className="text-gray-900">Column 2:</strong> First Name (optional)</li>
+              <li><strong className="text-gray-900">Column 3:</strong> Last Name (optional)</li>
+            </ul>
+            <p className="text-sm font-medium text-gray-900 mt-3 mb-1">
+              Example:
+            </p>
+            <pre className="text-xs text-gray-900 bg-gray-100 border border-gray-300 p-2 rounded mt-1 overflow-x-auto font-mono">
+{`email,firstName,lastName
+john@example.com,John,Doe
+jane@example.com,Jane,Smith`}
+            </pre>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-1">
+              CSV File <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              onChange={handleFileChange}
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+            />
+            {file && (
+              <p className="mt-2 text-sm text-gray-600">
+                Selected: {file.name} ({(file.size / 1024).toFixed(2)} KB)
+              </p>
+            )}
+          </div>
+
+          <div className="flex justify-end space-x-2 pt-4 border-t">
+            <button
+              onClick={onClose}
+              disabled={uploading}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={!file || uploading}
+              className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {uploading ? 'Processing...' : 'Upload & Process'}
             </button>
           </div>
         </div>
