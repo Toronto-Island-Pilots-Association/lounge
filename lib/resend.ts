@@ -281,11 +281,6 @@ export async function sendInvitationWithPasswordEmail(
           <li>Advocacy efforts for GA at CYTZ</li>
           <li>Connection with other GA pilots in Toronto</li>
         </ul>
-        <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0; border-radius: 4px;">
-          <p style="color: #374151; line-height: 1.6; margin: 0;">
-            <strong>Note:</strong> Your account is currently pending admin approval. You'll receive an email notification once your account has been approved and you'll have full access to all member features.
-          </p>
-        </div>
         <p style="margin-top: 30px; color: #374151; line-height: 1.6;">
           We look forward to seeing you at our events and working together to support general aviation at Billy Bishop Toronto City Airport.
         </p>
