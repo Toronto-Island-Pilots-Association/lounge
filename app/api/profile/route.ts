@@ -94,16 +94,14 @@ export async function PATCH(request: Request) {
     const isRecentProfile = profileAge !== null && profileAge < 1800000 // 30 minutes
     
     // Check if key profile fields are now present (indicating profile completion)
-    // At minimum, we need a name (first_name or full_name) to add to sheets
+    // At minimum, we need a name (first_name, last_name, or full_name) to add to sheets
     const hasKeyFields = data && (
-      (data.first_name || data.full_name || data.last_name) &&
-      (data.phone || data.pilot_license_type || data.aircraft_type || data.first_name || data.last_name)
+      data.first_name || data.full_name || data.last_name
     )
     
     // Check if profile already had key fields before this update (for password signups)
     const alreadyHadKeyFields = currentProfile && (
-      (currentProfile.first_name || currentProfile.full_name || currentProfile.last_name) &&
-      (currentProfile.phone || currentProfile.pilot_license_type || currentProfile.aircraft_type || currentProfile.first_name || currentProfile.last_name)
+      currentProfile.first_name || currentProfile.full_name || currentProfile.last_name
     )
 
     // Append to Google Sheets after profile completion (non-blocking)

@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { getCurrentUserIncludingPending } from '@/lib/auth'
 import { getMembershipFee } from '@/lib/settings'
 import { createClient } from '@/lib/supabase/server'
+import { appendMemberToSheet } from '@/lib/google-sheets'
 import { Resource, Event } from '@/types/database'
 import PayPalButton from '@/components/PayPalButton'
 
@@ -16,6 +17,21 @@ export default async function DashboardPage() {
 
   const isPending = user.profile.status === 'pending' && user.profile.role !== 'admin'
   const isRejected = user.profile.status === 'rejected' && user.profile.role !== 'admin'
+
+  // Fallback: Append to Google Sheets if user skipped complete-profile but has a name
+  // This ensures OAuth users who skip the form still get added to the sheet
+  const profileAge = user.profile.created_at 
+    ? Date.now() - new Date(user.profile.created_at).getTime()
+    : null
+  const isRecentProfile = profileAge !== null && profileAge < 1800000 // 30 minutes
+  const hasName = user.profile.first_name || user.profile.full_name || user.profile.last_name
+  
+  if (isRecentProfile && hasName) {
+    // Non-blocking append - don't wait for it
+    appendMemberToSheet(user.profile).catch(err => {
+      console.error('Failed to append member to Google Sheet from dashboard:', err)
+    })
+  }
 
   const membershipFee = await getMembershipFee()
   const isPaid = user.profile.membership_level === 'cadet' || user.profile.membership_level === 'captain'
