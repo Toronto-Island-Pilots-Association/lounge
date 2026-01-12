@@ -29,9 +29,15 @@ export default async function Sidebar({ currentCategory }: { currentCategory?: C
   const categoryCounts = new Map<ClassifiedCategory | 'all', number>()
   categoryCounts.set('all', threads?.length || 0)
   
+  const validCategories: ClassifiedCategory[] = ['aircraft_shares', 'instructor_availability', 'gear_for_sale', 'lounge_feedback', 'other']
+  
   threads?.forEach(thread => {
-    const count = categoryCounts.get(thread.category as ClassifiedCategory) || 0
-    categoryCounts.set(thread.category as ClassifiedCategory, count + 1)
+    const category = thread.category as string
+    if (validCategories.includes(category as ClassifiedCategory)) {
+      const typedCategory = category as ClassifiedCategory
+      const count = categoryCounts.get(typedCategory) || 0
+      categoryCounts.set(typedCategory, count + 1)
+    }
   })
 
   // Get recent threads for sidebar
@@ -55,6 +61,14 @@ export default async function Sidebar({ currentCategory }: { currentCategory?: C
 
   const categories: (ClassifiedCategory | 'all')[] = ['all', 'aircraft_shares', 'instructor_availability', 'gear_for_sale', 'lounge_feedback', 'other']
   const selectedCategory = currentCategory || 'all'
+  
+  // Helper to safely get category icon
+  const getCategoryIcon = (category: string): string => {
+    if (validCategories.includes(category as ClassifiedCategory)) {
+      return CATEGORY_ICONS[category as ClassifiedCategory]
+    }
+    return '📋'
+  }
 
   return (
     <div className="space-y-6">
@@ -110,7 +124,7 @@ export default async function Sidebar({ currentCategory }: { currentCategory?: C
               >
                 <div className="flex items-start gap-2">
                   <span className="text-sm flex-shrink-0 mt-0.5">
-                    {CATEGORY_ICONS[thread.category as ClassifiedCategory]}
+                    {getCategoryIcon(thread.category)}
                   </span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-gray-900 group-hover:text-[#0d1e26] line-clamp-2 font-medium transition-colors">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ClassifiedCategory } from '@/types/database'
 
@@ -12,7 +12,7 @@ const CATEGORY_LABELS: Record<ClassifiedCategory, string> = {
   other: 'Other',
 }
 
-export default function NewClassifiedPage() {
+function NewClassifiedForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [title, setTitle] = useState('')
@@ -61,32 +61,7 @@ export default function NewClassifiedPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Create New Classified</h1>
-          <p className="mt-2 text-gray-600">
-            Post a new classified ad to the TIPA community
-          </p>
-        </div>
-
-        {/* Community Guidelines Disclaimer */}
-        <div className="mb-6 bg-blue-50 border-l-4 border-blue-400 rounded-r-md p-4">
-          <div className="flex items-start gap-3">
-            <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div className="flex-1">
-              <p className="text-sm text-gray-700 leading-relaxed">
-                <strong className="text-gray-900">Community Guidelines:</strong> Please maintain a respectful and professional environment. 
-                Harassment, discrimination, or sharing sensitive personal information is not permitted. 
-                All classifieds should be conducted with mutual respect and consideration for fellow members.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="bg-white shadow rounded-lg p-6">
+    <form onSubmit={handleSubmit} className="bg-white shadow rounded-lg p-6">
           {error && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-sm text-red-800">{error}</p>
@@ -159,6 +134,48 @@ export default function NewClassifiedPage() {
             </button>
           </div>
         </form>
+  )
+}
+
+export default function NewClassifiedPage() {
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Create New Classified</h1>
+          <p className="mt-2 text-gray-600">
+            Post a new classified ad to the TIPA community
+          </p>
+        </div>
+
+        {/* Community Guidelines Disclaimer */}
+        <div className="mb-6 bg-blue-50 border-l-4 border-blue-400 rounded-r-md p-4">
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="flex-1">
+              <p className="text-sm text-gray-700 leading-relaxed">
+                <strong className="text-gray-900">Community Guidelines:</strong> Please maintain a respectful and professional environment. 
+                Harassment, discrimination, or sharing sensitive personal information is not permitted. 
+                All classifieds should be conducted with mutual respect and consideration for fellow members.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <Suspense fallback={
+          <div className="bg-white shadow rounded-lg p-6">
+            <div className="animate-pulse space-y-4">
+              <div className="h-10 bg-gray-200 rounded"></div>
+              <div className="h-10 bg-gray-200 rounded"></div>
+              <div className="h-40 bg-gray-200 rounded"></div>
+              <div className="h-10 bg-gray-200 rounded w-32"></div>
+            </div>
+          </div>
+        }>
+          <NewClassifiedForm />
+        </Suspense>
       </div>
     </div>
   )

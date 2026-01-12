@@ -138,7 +138,7 @@ export default async function ClassifiedPage({ params }: { params: Promise<{ id:
     }
   })
 
-  const threadWithAuthor = { ...thread, author }
+  const threadWithAuthor: Thread & { author?: any } = { ...thread, author }
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -173,7 +173,7 @@ export default async function ClassifiedPage({ params }: { params: Promise<{ id:
             <div className="flex-1">
               <h1 className="text-2xl font-bold text-gray-900 mb-2">{threadWithAuthor.title}</h1>
               <span className="inline-block px-3 py-1 text-sm font-medium bg-[#0d1e26]/10 text-[#0d1e26] rounded-md">
-                {CATEGORY_LABELS[thread.category]}
+                {CATEGORY_LABELS[thread.category as ClassifiedCategory]}
               </span>
             </div>
             <DeleteThreadButton

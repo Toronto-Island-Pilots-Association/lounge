@@ -4,7 +4,7 @@ import Image from 'next/image'
 import { Suspense } from 'react'
 import { getCurrentUser } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
-import { Thread, ClassifiedCategory } from '@/types/database'
+import { Thread, ClassifiedCategory, ThreadWithData, ThreadAuthor } from '@/types/database'
 import ThreadSort from './ThreadSort'
 import Sidebar from './Sidebar'
 
@@ -35,7 +35,10 @@ export default async function ClassifiedsPage({
   const supabase = await createClient()
   const params = await searchParams
   const sortBy = params?.sort || 'latest'
-  const categoryFilter = params?.category as ClassifiedCategory | undefined
+  const categoryParam = params?.category
+  const categoryFilter = categoryParam && categoryParam !== 'all' 
+    ? (categoryParam as ClassifiedCategory)
+    : undefined
 
   // Build query
   let query = supabase
@@ -44,7 +47,7 @@ export default async function ClassifiedsPage({
     .order('created_at', { ascending: false })
 
   // Apply category filter if specified
-  if (categoryFilter && categoryFilter !== 'all') {
+  if (categoryFilter) {
     query = query.eq('category', categoryFilter)
   }
 
@@ -54,6 +57,9 @@ export default async function ClassifiedsPage({
   if (threadsError) {
     console.error('Error fetching threads:', threadsError)
   }
+
+  // Type the threads as Thread[]
+  const typedThreads = (threads || []) as Thread[]
 
   // Get author info for each thread
   const userIds = [...new Set(threads?.map(t => t.created_by).filter((id): id is string => id !== null) || [])]
@@ -65,7 +71,7 @@ export default async function ClassifiedsPage({
   const authorsMap = new Map(authors?.map(a => [a.id, a]) || [])
 
   // Get comment data for each thread (count and most recent comment time)
-  const threadIds = threads?.map(t => t.id) || []
+  const threadIds = typedThreads.map(t => t.id)
   const { data: comments } = await supabase
     .from('comments')
     .select('thread_id, created_at')
@@ -85,12 +91,22 @@ export default async function ClassifiedsPage({
   })
 
   // Add comment counts and author info to threads
-  let threadsWithData = threads?.map(thread => ({
-    ...thread,
-    comment_count: countsMap.get(thread.id) || 0,
-    latest_comment_at: latestCommentMap.get(thread.id) || null,
-    author: authorsMap.get(thread.created_by)
-  })) || []
+  let threadsWithData: ThreadWithData[] = typedThreads.map(thread => {
+    const author = authorsMap.get(thread.created_by) as ThreadAuthor | undefined
+    return {
+      id: thread.id,
+      title: thread.title,
+      content: thread.content,
+      category: thread.category,
+      created_by: thread.created_by,
+      author_email: thread.author_email,
+      created_at: thread.created_at,
+      updated_at: thread.updated_at,
+      comment_count: countsMap.get(thread.id) || 0,
+      latest_comment_at: latestCommentMap.get(thread.id) || null,
+      author
+    }
+  })
 
   // Sort threads based on sortBy parameter
   if (sortBy === 'hot') {
@@ -101,7 +117,7 @@ export default async function ClassifiedsPage({
     const now = new Date().getTime()
     threadsWithData = [...threadsWithData].sort((a, b) => {
       // Calculate hot score for each thread
-      const calculateHotScore = (thread: typeof threadsWithData[0]) => {
+      const calculateHotScore = (thread: ThreadWithData) => {
         const commentCount = thread.comment_count || 0
         const threadAge = now - new Date(thread.created_at).getTime()
         const hoursSinceThread = threadAge / (1000 * 60 * 60)
@@ -168,7 +184,7 @@ export default async function ClassifiedsPage({
                 </Suspense>
               )}
               <Link
-                href={categoryFilter && categoryFilter !== 'all' 
+                href={categoryFilter 
                   ? `/classifieds/new?category=${categoryFilter}`
                   : '/classifieds/new'}
                 className="inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-[#0d1e26] text-white text-sm font-medium rounded-lg hover:bg-[#0a171c] transition-colors shadow-sm hover:shadow-md whitespace-nowrap ml-auto sm:ml-0"
@@ -181,7 +197,7 @@ export default async function ClassifiedsPage({
               </Link>
             </div>
           </div>
-          {categoryFilter && categoryFilter !== 'all' && (
+          {categoryFilter && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">Filtered by:</span>
               <span className="px-3 py-1 text-sm font-medium bg-[#0d1e26]/10 text-[#0d1e26] rounded-md">
@@ -216,12 +232,12 @@ export default async function ClassifiedsPage({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                   <p className="text-gray-600 mb-6">
-                    {categoryFilter && categoryFilter !== 'all'
+                    {categoryFilter
                       ? `No classifieds in this category yet. Be the first to post!`
                       : 'No classifieds yet. Be the first to post a classified!'}
                   </p>
                   <Link
-                    href={categoryFilter && categoryFilter !== 'all' 
+                    href={categoryFilter 
                       ? `/classifieds/new?category=${categoryFilter}`
                       : '/classifieds/new'}
                     className="inline-flex items-center px-5 py-2.5 bg-[#0d1e26] text-white text-sm font-semibold rounded-lg hover:bg-[#0a171c] transition-colors shadow-sm hover:shadow-md"
@@ -247,8 +263,8 @@ export default async function ClassifiedsPage({
 
                 {/* Forum Threads */}
                 <div className="divide-y divide-gray-200">
-                  {threadsWithData.map((thread: Thread & { author?: any; comment_count?: number; latest_comment_at?: Date | null }) => {
-                    const author = thread.author || {}
+                  {threadsWithData.map((thread) => {
+                    const author = thread.author
                     const lastActivity = thread.latest_comment_at || new Date(thread.created_at)
                     
                     return (
@@ -262,11 +278,11 @@ export default async function ClassifiedsPage({
                           <div className="col-span-6 min-w-0">
                             <div className="flex items-start gap-3">
                               <div className="flex-shrink-0 mt-1">
-                                {author.profile_picture_url ? (
+                                {author?.profile_picture_url ? (
                                   <div className="relative w-8 h-8 rounded-full overflow-hidden border border-gray-300">
                                     <Image
-                                      src={author.profile_picture_url}
-                                      alt={author.full_name || author.email || 'User'}
+                                      src={author?.profile_picture_url}
+                                      alt={author?.full_name || author?.email || 'User'}
                                       fill
                                       className="object-cover"
                                       sizes="32px"
@@ -302,7 +318,7 @@ export default async function ClassifiedsPage({
                               <div className={`font-medium ${!thread.created_by && thread.author_email ? 'text-gray-500 italic' : 'text-gray-900'}`}>
                                 {!thread.created_by && thread.author_email 
                                   ? `${thread.author_email.split('@')[0]}...`
-                                  : (author.full_name?.split(' ')[0] || author.email?.split('@')[0] || 'Anonymous')}
+                                  : (author?.full_name?.split(' ')[0] || author?.email?.split('@')[0] || 'Anonymous')}
                               </div>
                             </div>
                           </div>

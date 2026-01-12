@@ -59,6 +59,21 @@ export interface Thread {
   comment_count?: number
 }
 
+// Partial author type for thread listings (only fields we select)
+export type ThreadAuthor = {
+  id: string
+  full_name: string | null
+  email: string
+  profile_picture_url: string | null
+}
+
+// Extended thread type with additional computed fields
+export type ThreadWithData = Omit<Thread, 'author' | 'comment_count'> & {
+  comment_count: number
+  latest_comment_at: Date | null
+  author?: ThreadAuthor
+}
+
 export interface Comment {
   id: string
   thread_id: string
