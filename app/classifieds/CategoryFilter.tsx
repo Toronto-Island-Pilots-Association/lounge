@@ -8,7 +8,7 @@ const CATEGORY_LABELS: Record<ClassifiedCategory | 'all', string> = {
   aircraft_shares: 'Aircraft Shares / Block Time',
   instructor_availability: 'Instructor Availability',
   gear_for_sale: 'Gear for Sale',
-  member_feedback: 'Member Feedback',
+  lounge_feedback: 'Lounge Feedback',
   other: 'Other',
 }
 
