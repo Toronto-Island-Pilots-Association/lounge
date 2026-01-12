@@ -44,10 +44,13 @@ export interface Event {
   updated_at: string
 }
 
+export type ClassifiedCategory = 'aircraft_shares' | 'instructor_availability' | 'gear_for_sale' | 'lounge_feedback' | 'other'
+
 export interface Thread {
   id: string
   title: string
   content: string
+  category: ClassifiedCategory
   created_by: string | null
   author_email?: string | null
   created_at: string

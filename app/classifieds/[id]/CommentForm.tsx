@@ -90,4 +90,3 @@ export default function CommentForm({ threadId }: { threadId: string }) {
     </form>
   )
 }
-

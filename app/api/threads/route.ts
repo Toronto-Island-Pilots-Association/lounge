@@ -58,7 +58,7 @@ export async function POST(request: Request) {
   try {
     const user = await requireAuth()
     const body = await request.json()
-    const { title, content } = body
+    const { title, content, category } = body
 
     if (!title || !content) {
       return NextResponse.json(
@@ -66,6 +66,10 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
+
+    // Validate category
+    const validCategories = ['aircraft_shares', 'instructor_availability', 'gear_for_sale', 'lounge_feedback', 'other']
+    const threadCategory = category && validCategories.includes(category) ? category : 'other'
 
     const supabase = await createClient()
 
@@ -81,6 +85,7 @@ export async function POST(request: Request) {
       .insert({
         title,
         content,
+        category: threadCategory,
         created_by: user.id,
         author_email: userProfile?.email || user.email || null
       })

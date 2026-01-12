@@ -1,14 +1,36 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { ClassifiedCategory } from '@/types/database'
 
-export default function NewThreadPage() {
+const CATEGORY_LABELS: Record<ClassifiedCategory, string> = {
+  aircraft_shares: 'Aircraft Shares / Block Time',
+  instructor_availability: 'Instructor Availability',
+  gear_for_sale: 'Gear for Sale',
+  lounge_feedback: 'Lounge Feedback',
+  other: 'Other',
+}
+
+export default function NewClassifiedPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
+  const [category, setCategory] = useState<ClassifiedCategory>('other')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Pre-fill category from URL parameter
+  useEffect(() => {
+    const categoryParam = searchParams.get('category')
+    if (categoryParam) {
+      const validCategories: ClassifiedCategory[] = ['aircraft_shares', 'instructor_availability', 'gear_for_sale', 'lounge_feedback', 'other']
+      if (validCategories.includes(categoryParam as ClassifiedCategory)) {
+        setCategory(categoryParam as ClassifiedCategory)
+      }
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -21,16 +43,16 @@ export default function NewThreadPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ title, content }),
+        body: JSON.stringify({ title, content, category }),
       })
 
       const data = await res.json()
 
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to create thread')
+        throw new Error(data.error || 'Failed to create classified')
       }
 
-      router.push(`/discussion/${data.thread.id}`)
+      router.push(`/classifieds/${data.thread.id}`)
       router.refresh()
     } catch (err: any) {
       setError(err.message || 'An error occurred')
@@ -42,9 +64,9 @@ export default function NewThreadPage() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Create New Thread</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Create New Classified</h1>
           <p className="mt-2 text-gray-600">
-            Start a new discussion with the TIPA community
+            Post a new classified ad to the TIPA community
           </p>
         </div>
 
@@ -58,7 +80,7 @@ export default function NewThreadPage() {
               <p className="text-sm text-gray-700 leading-relaxed">
                 <strong className="text-gray-900">Community Guidelines:</strong> Please maintain a respectful and professional environment. 
                 Harassment, discrimination, or sharing sensitive personal information is not permitted. 
-                All discussions should be conducted with mutual respect and consideration for fellow members.
+                All classifieds should be conducted with mutual respect and consideration for fellow members.
               </p>
             </div>
           </div>
@@ -72,6 +94,25 @@ export default function NewThreadPage() {
           )}
 
           <div className="mb-6">
+            <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
+              Category
+            </label>
+            <select
+              id="category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value as ClassifiedCategory)}
+              required
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-transparent"
+            >
+              {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mb-6">
             <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
               Title
             </label>
@@ -82,13 +123,13 @@ export default function NewThreadPage() {
               onChange={(e) => setTitle(e.target.value)}
               required
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-transparent"
-              placeholder="Enter thread title..."
+              placeholder="Enter classified title..."
             />
           </div>
 
           <div className="mb-6">
             <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
-              Content
+              Description
             </label>
             <textarea
               id="content"
@@ -97,7 +138,7 @@ export default function NewThreadPage() {
               required
               rows={10}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-transparent"
-              placeholder="Share your thoughts..."
+              placeholder="Describe your classified ad..."
             />
           </div>
 
@@ -107,7 +148,7 @@ export default function NewThreadPage() {
               disabled={loading}
               className="px-6 py-2 bg-[#0d1e26] text-white font-semibold rounded-lg hover:bg-[#0a171c] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Creating...' : 'Create Thread'}
+              {loading ? 'Creating...' : 'Create Classified'}
             </button>
             <button
               type="button"
@@ -122,4 +163,3 @@ export default function NewThreadPage() {
     </div>
   )
 }
-

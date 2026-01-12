@@ -3,13 +3,21 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { getCurrentUser } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
-import { Thread, Comment } from '@/types/database'
+import { Thread, Comment, ClassifiedCategory } from '@/types/database'
 import CommentForm from './CommentForm'
 import ReactionButton from './ReactionButton'
 import DeleteThreadButton from './DeleteThreadButton'
 import DeleteCommentButton from './DeleteCommentButton'
 
-export default async function ThreadPage({ params }: { params: Promise<{ id: string }> }) {
+const CATEGORY_LABELS: Record<ClassifiedCategory, string> = {
+  aircraft_shares: 'Aircraft Shares / Block Time',
+  instructor_availability: 'Instructor Availability',
+  gear_for_sale: 'Gear for Sale',
+  lounge_feedback: 'Lounge Feedback',
+  other: 'Other',
+}
+
+export default async function ClassifiedPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser()
 
   if (!user) {
@@ -31,13 +39,13 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-white shadow rounded-lg p-8 text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Thread Not Found</h2>
-            <p className="text-gray-600 mb-6">The thread you're looking for doesn't exist.</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Classified Not Found</h2>
+            <p className="text-gray-600 mb-6">The classified you're looking for doesn't exist.</p>
             <Link
-              href="/discussion"
+              href="/classifieds"
               className="inline-block px-6 py-2 bg-[#0d1e26] text-white font-semibold rounded-lg hover:bg-[#0a171c] transition-colors"
             >
-              Back to Discussion Board
+              Back to Classifieds
             </Link>
           </div>
         </div>
@@ -152,17 +160,22 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-6">
           <Link
-            href="/discussion"
+            href="/classifieds"
             className="text-[#0d1e26] hover:text-[#0a171c] text-sm font-medium"
           >
-            ← Back to Discussion Board
+            ← Back to Classifieds
           </Link>
         </div>
 
         {/* Thread */}
         <div className="bg-white shadow rounded-lg p-6 mb-6">
           <div className="flex items-start justify-between mb-4">
-            <h1 className="text-2xl font-bold text-gray-900 flex-1">{threadWithAuthor.title}</h1>
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">{threadWithAuthor.title}</h1>
+              <span className="inline-block px-3 py-1 text-sm font-medium bg-[#0d1e26]/10 text-[#0d1e26] rounded-md">
+                {CATEGORY_LABELS[thread.category]}
+              </span>
+            </div>
             <DeleteThreadButton
               threadId={id}
               isOwner={thread.created_by === user.id && thread.created_by !== null}
@@ -313,4 +326,3 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
     </div>
   )
 }
-
