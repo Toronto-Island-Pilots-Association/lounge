@@ -64,10 +64,10 @@ export default function MembershipCard({ user, isPending, isRejected, isPaid, is
   }, [tilt.x, tilt.y])
 
   return (
-    <div className="relative">
+    <div className="relative w-full">
       <div
         ref={cardRef}
-        className="relative bg-gradient-to-br from-[#0d1e26] via-[#0a171c] to-[#0d1e26] rounded-2xl overflow-hidden transition-all duration-300 ease-out shadow-2xl"
+        className="relative bg-gradient-to-br from-[#0d1e26] via-[#0a171c] to-[#0d1e26] rounded-2xl overflow-hidden transition-all duration-300 ease-out shadow-2xl sm:min-w-[380px]"
         style={{
           aspectRatio: '1.586 / 1',
           transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale3d(1.02, 1.02, 1.02)`,
@@ -86,16 +86,16 @@ export default function MembershipCard({ user, isPending, isRejected, isPaid, is
         />
         
         {/* Card Content */}
-        <div className="relative h-full p-6 flex flex-col justify-between text-white z-10">
+        <div className="relative h-full p-[clamp(1rem,4vw,1.5rem)] flex flex-col justify-between text-white z-10 overflow-hidden">
           {/* Top Section */}
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="text-xs uppercase tracking-widest text-white/70 mb-1">TIPA</div>
-              <div className="text-[10px] uppercase tracking-wide text-white/60">Toronto Island Pilots Association</div>
+          <div className="flex items-start justify-between gap-[clamp(0.5rem,2vw,0.75rem)] min-w-0 flex-shrink-0">
+            <div className="min-w-0 flex-1 pr-2">
+              <div className="text-[clamp(0.875rem,2vw,0.75rem)] uppercase tracking-widest text-white/70 mb-1">TIPA</div>
+              <div className="text-[clamp(0.75rem,1.5vw,0.625rem)] uppercase tracking-wide text-white/60 break-words leading-tight">Toronto Island Pilots Association</div>
             </div>
             {/* Logo in Chip Area */}
-            <div className="relative">
-              <div className={`w-12 h-10 bg-gradient-to-br rounded-md border flex items-center justify-center p-1 ${
+            <div className="relative flex-shrink-0">
+              <div className={`w-[clamp(2.5rem,8vw,3rem)] h-[clamp(2rem,6.5vw,2.5rem)] bg-gradient-to-br rounded-md border flex items-center justify-center p-1 ${
                 isRejected ? 'border-red-400/50' :
                 isPending ? 'border-yellow-400/50' :
                 isExpired ? 'border-red-400/50' :
@@ -115,45 +115,68 @@ export default function MembershipCard({ user, isPending, isRejected, isPaid, is
           </div>
 
           {/* Middle Section - Member Name */}
-          <div className="my-4">
-            <div className="text-[10px] uppercase tracking-widest text-white/60 mb-2">Member</div>
-            <div className="text-2xl font-bold tracking-wide" style={{ fontFamily: 'monospace', letterSpacing: '2px' }}>
-              {user.profile.full_name?.toUpperCase() || user.profile.email.toUpperCase()}
+          <div className="my-[clamp(0.75rem,3vw,1rem)] min-w-0 flex-1 flex flex-col justify-center">
+            <div className="text-[clamp(0.75rem,1.5vw,0.625rem)] uppercase tracking-widest text-white/60 mb-[clamp(0.25rem,1vw,0.5rem)]">Member</div>
+            <div 
+              className="font-bold break-words overflow-hidden leading-[1.1]" 
+              style={{ 
+                fontFamily: 'monospace', 
+                fontSize: 'clamp(1.25rem, 4vw, 1.5rem)',
+                letterSpacing: 'clamp(1px, 0.2vw, 2px)',
+                wordBreak: 'break-word',
+                hyphens: 'auto',
+              }}
+            >
+              <span className="block">
+                {user.profile.full_name?.toUpperCase() || user.profile.email.toUpperCase()}
+              </span>
             </div>
           </div>
 
           {/* Bottom Section */}
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
+          <div className="flex items-start justify-between gap-[clamp(0.5rem,2vw,0.75rem)] min-w-0 flex-shrink-0">
+            <div className="flex-1 min-w-0">
               {/* Membership Level and Member Number - Side by Side */}
-              <div className="flex items-start gap-4 mb-2">
-                <div>
-                  <div className="text-[8px] uppercase tracking-widest text-white/60 mb-0.5">Level</div>
+              <div className="flex items-start gap-[clamp(0.5rem,2vw,1rem)] mb-[clamp(0.25rem,1vw,0.5rem)]">
+                <div className="min-w-0 flex-1">
+                  <div className="text-[clamp(0.625rem,1.2vw,0.5rem)] uppercase tracking-widest text-white/60 mb-0.5">Level</div>
                   {/* Show status instead of level if pending/rejected */}
                   {(isPending || isRejected) ? (
-                    <div className={`text-xs font-semibold uppercase tracking-wide ${
-                      isRejected ? 'text-red-300' :
-                      isPending ? 'text-yellow-300' : 'text-white'
-                    }`}>
+                    <div 
+                      className={`font-semibold uppercase tracking-wide break-words ${
+                        isRejected ? 'text-red-300' :
+                        isPending ? 'text-yellow-300' : 'text-white'
+                      }`}
+                      style={{ fontSize: 'clamp(0.875rem, 2vw, 0.75rem)' }}
+                    >
                       {isRejected ? 'REJECTED' : 'PENDING'}
                     </div>
                   ) : (
-                    <div className="text-xs font-semibold uppercase tracking-wide text-white">
+                    <div 
+                      className="font-semibold uppercase tracking-wide text-white break-words"
+                      style={{ fontSize: 'clamp(0.875rem, 2vw, 0.75rem)' }}
+                    >
                       {getMembershipLevelLabel(user.profile.membership_level)}
                     </div>
                   )}
                 </div>
                 {user.profile.member_number ? (
-                  <div>
-                    <div className="text-[8px] uppercase tracking-widest text-white/60 mb-0.5">Number</div>
-                    <div className="text-xs font-semibold uppercase tracking-wide text-white font-mono">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[clamp(0.625rem,1.2vw,0.5rem)] uppercase tracking-widest text-white/60 mb-0.5">Number</div>
+                    <div 
+                      className="font-semibold uppercase tracking-wide text-white font-mono break-all"
+                      style={{ fontSize: 'clamp(0.875rem, 2vw, 0.75rem)' }}
+                    >
                       {user.profile.member_number}
                     </div>
                   </div>
                 ) : (
-                  <div>
-                    <div className="text-[8px] uppercase tracking-widest text-white/60 mb-0.5">Number</div>
-                    <div className="text-xs font-semibold uppercase tracking-wide text-white font-mono">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[clamp(0.625rem,1.2vw,0.5rem)] uppercase tracking-widest text-white/60 mb-0.5">Number</div>
+                    <div 
+                      className="font-semibold uppercase tracking-wide text-white font-mono"
+                      style={{ fontSize: 'clamp(0.875rem, 2vw, 0.75rem)' }}
+                    >
                       —
                     </div>
                   </div>
@@ -161,7 +184,10 @@ export default function MembershipCard({ user, isPending, isRejected, isPaid, is
               </div>
               {/* Member Since - Below Level and Number */}
               {user.profile.created_at && (
-                <div className="text-[7px] text-white/50 uppercase tracking-widest mt-1">
+                <div 
+                  className="text-white/50 uppercase tracking-widest mt-[clamp(0.125rem,0.5vw,0.25rem)] break-words leading-tight"
+                  style={{ fontSize: 'clamp(0.625rem, 1vw, 0.4375rem)' }}
+                >
                   Member Since {new Date(user.profile.created_at).toLocaleDateString('en-US', { 
                     month: 'short', 
                     day: 'numeric',
@@ -173,9 +199,12 @@ export default function MembershipCard({ user, isPending, isRejected, isPaid, is
 
             {/* Expiration Date */}
             {user.profile.membership_expires_at && (
-              <div className="text-right">
-                <div className="text-[8px] uppercase tracking-widest text-white/60 mb-0.5">Valid Thru</div>
-                <div className={`text-xs font-mono ${isExpired ? 'text-red-300' : 'text-white'}`}>
+              <div className="text-right flex-shrink-0">
+                <div className="text-[clamp(0.625rem,1.2vw,0.5rem)] uppercase tracking-widest text-white/60 mb-0.5">Valid Thru</div>
+                <div 
+                  className={`font-mono ${isExpired ? 'text-red-300' : 'text-white'}`}
+                  style={{ fontSize: 'clamp(0.875rem, 2vw, 0.75rem)' }}
+                >
                   {new Date(user.profile.membership_expires_at).toLocaleDateString('en-US', { 
                     month: '2-digit', 
                     year: '2-digit' 

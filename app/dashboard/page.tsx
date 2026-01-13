@@ -234,9 +234,9 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          {/* Sidebar */}
+          {/* Sidebar - Hidden on Mobile */}
           {!isPending && !isRejected && (
-            <div className="lg:col-span-1 space-y-6 order-1 lg:order-2">
+            <div className="hidden lg:block lg:col-span-1 space-y-6 order-1 lg:order-2">
               {/* Top Threads Section */}
               {topThreads.length > 0 && (
                 <div className="bg-white shadow rounded-lg">
