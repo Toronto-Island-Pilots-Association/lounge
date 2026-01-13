@@ -250,8 +250,8 @@ export default async function DiscussionsPage({
               </div>
             ) : (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                {/* Forum Header */}
-                <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
+                {/* Forum Header - Desktop Only */}
+                <div className="hidden md:block bg-gray-50 border-b border-gray-200 px-4 py-3">
                   <div className="grid grid-cols-12 gap-4 text-xs font-semibold text-gray-600 uppercase tracking-wide">
                     <div className="col-span-6">Topic</div>
                     <div className="col-span-2 text-center">Author</div>
@@ -270,9 +270,60 @@ export default async function DiscussionsPage({
                       <Link
                         key={thread.id}
                         href={`/discussions/${thread.id}`}
-                        className="block hover:bg-gray-50 transition-colors"
+                        className="block hover:bg-gray-50 transition-colors touch-manipulation"
                       >
-                        <div className="grid grid-cols-12 gap-4 px-4 py-4 items-center">
+                        {/* Mobile Card Layout - Topics First */}
+                        <div className="md:hidden p-4 sm:p-5 active:bg-gray-100 transition-colors">
+                          {/* Topic Title - Most Prominent */}
+                          <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 line-clamp-3 leading-snug">
+                            {thread.title}
+                          </h3>
+                          
+                          {/* Category and Metadata Row */}
+                          <div className="flex items-center gap-2 flex-wrap mb-3">
+                            <span className="px-2.5 py-1 text-xs font-semibold bg-[#0d1e26]/10 text-[#0d1e26] rounded-md">
+                              {CATEGORY_LABELS[thread.category]}
+                            </span>
+                            <div className="flex items-center gap-1 text-xs text-gray-500">
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                              </svg>
+                              <span className="font-medium text-gray-700">{thread.comment_count || 0}</span>
+                            </div>
+                            <span className="text-xs text-gray-500">
+                              {formatDate(thread.latest_comment_at ? new Date(thread.latest_comment_at).toISOString() : thread.created_at)}
+                            </span>
+                          </div>
+                          
+                          {/* Author Info - Secondary */}
+                          <div className="flex items-center gap-2">
+                            {author?.profile_picture_url ? (
+                              <div className="relative w-6 h-6 rounded-full overflow-hidden border border-gray-300 flex-shrink-0">
+                                <Image
+                                  src={author?.profile_picture_url}
+                                  alt={author?.full_name || author?.email || 'User'}
+                                  fill
+                                  className="object-cover"
+                                  sizes="24px"
+                                />
+                              </div>
+                            ) : (
+                              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center border border-gray-300 flex-shrink-0">
+                                <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                              </div>
+                            )}
+                            <span className={`text-xs ${!thread.created_by && thread.author_email ? 'text-gray-500 italic' : 'text-gray-600'}`}>
+                              {!thread.created_by && thread.author_email 
+                                ? `${thread.author_email.split('@')[0]}...`
+                                : (author?.full_name?.split(' ')[0] || author?.email?.split('@')[0] || 'Anonymous')}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Desktop Table Layout */}
+                        <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-4 items-center">
                           {/* Topic */}
                           <div className="col-span-6 min-w-0">
                             <div className="flex items-start gap-3">

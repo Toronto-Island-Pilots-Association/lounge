@@ -137,12 +137,12 @@ export default function EventsPageClient() {
           const startDate = new Date(event.start_time)
           const endDate = event.end_time ? new Date(event.end_time) : null
           return (
-            <div key={event.id} className="bg-gray-50 rounded-lg p-4 border-l-4 border-[#0d1e26]">
+            <div key={event.id} className="bg-gray-50 rounded-lg p-3 sm:p-4 border-l-4 border-[#0d1e26]">
               <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
-                <div className="flex-1 min-w-0 flex gap-4">
+                <div className="flex-1 min-w-0 flex flex-col sm:flex-row gap-3 sm:gap-4">
                   {/* Always render image container to maintain consistent layout */}
                   <div
-                    className={`relative w-24 h-24 sm:w-32 sm:h-32 rounded-lg overflow-hidden border border-gray-300 flex-shrink-0 bg-gray-100 ${
+                    className={`relative w-full sm:w-24 md:w-32 h-48 sm:h-24 md:h-32 rounded-lg overflow-hidden border border-gray-300 flex-shrink-0 bg-gray-100 ${
                       event.image_url && event.image_url.trim() !== '' ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''
                     }`}
                     onClick={() => event.image_url && event.image_url.trim() !== '' && setPreviewImageUrl(event.image_url)}
@@ -153,7 +153,7 @@ export default function EventsPageClient() {
                         alt={event.title}
                         fill
                         className="object-cover"
-                        sizes="(max-width: 640px) 96px, 128px"
+                        sizes="(max-width: 640px) 100vw, (max-width: 768px) 96px, 128px"
                         unoptimized // For signed URLs from private buckets
                       />
                     ) : (
@@ -204,16 +204,16 @@ export default function EventsPageClient() {
                     )}
                   </div>
                 </div>
-                <div className="flex space-x-2 shrink-0">
+                <div className="flex flex-col sm:flex-row gap-2 sm:space-x-2 shrink-0 w-full sm:w-auto">
                   <button
                     onClick={() => setEditingEvent(event)}
-                    className="text-[#0d1e26] hover:text-[#0a171c] text-sm"
+                    className="text-[#0d1e26] hover:text-[#0a171c] text-sm px-3 py-2 sm:px-0 sm:py-0 border border-[#0d1e26] sm:border-0 rounded-md sm:rounded-none hover:bg-[#0d1e26] hover:text-white sm:hover:bg-transparent sm:hover:text-[#0a171c] transition-colors"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => handleDeleteEvent(event.id)}
-                    className="text-red-600 hover:text-red-900 text-sm"
+                    className="text-red-600 hover:text-red-900 text-sm px-3 py-2 sm:px-0 sm:py-0 border border-red-600 sm:border-0 rounded-md sm:rounded-none hover:bg-red-600 hover:text-white sm:hover:bg-transparent sm:hover:text-red-900 transition-colors"
                   >
                     Delete
                   </button>

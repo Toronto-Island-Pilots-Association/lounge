@@ -5,7 +5,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <div className="relative bg-gradient-to-br from-[#0d1e26] to-[#0a171c] text-white overflow-hidden">
+      <div className="relative bg-gradient-to-br from-[#0d1e26] to-[#0a171c] text-white overflow-hidden min-h-[200px] sm:min-h-[300px] md:min-h-[400px]">
         <div className="absolute inset-0 opacity-20">
           <Image
             src="/airport/pfacfet7v5eahcl6su5nfvcgsm-1.avif"
@@ -13,7 +13,18 @@ export default function Home() {
             fill
             className="object-cover"
             priority
+            sizes="100vw"
           />
+        </div>
+        <div className="relative z-10 px-6 sm:px-8 py-12 sm:py-16 md:py-20">
+          <div className="max-w-7xl mx-auto text-center">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 sm:mb-6">
+              Welcome to TIPA
+            </h1>
+            <p className="text-lg sm:text-xl md:text-2xl text-gray-200 max-w-3xl mx-auto">
+              Toronto Island Pilots Association
+            </p>
+          </div>
         </div>
       </div>
 

@@ -227,11 +227,11 @@ export default function EventsPage() {
                             : 'border-[#0d1e26]'
                         }`}
                       >
-                        <div className="p-6">
-                          <div className="flex gap-4">
-                            {/* Always render image container to maintain consistent layout */}
+                        <div className="p-4 sm:p-6">
+                          <div className="flex flex-col sm:flex-row gap-4">
+                            {/* Image - Full width on mobile, fixed width on desktop */}
                             <div
-                              className={`relative w-32 h-32 sm:w-40 sm:h-40 rounded-lg overflow-hidden border border-gray-300 flex-shrink-0 bg-gray-100 ${
+                              className={`relative w-full sm:w-32 md:w-40 h-48 sm:h-32 md:h-40 rounded-lg overflow-hidden border border-gray-300 flex-shrink-0 bg-gray-100 ${
                                 event.image_url ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''
                               }`}
                               onClick={() => event.image_url && setPreviewImageUrl(event.image_url)}
@@ -242,7 +242,7 @@ export default function EventsPage() {
                                   alt={event.title}
                                   fill
                                   className="object-cover"
-                                  sizes="(max-width: 640px) 128px, 160px"
+                                  sizes="(max-width: 640px) 100vw, (max-width: 768px) 128px, 160px"
                                   unoptimized // For signed URLs from private buckets
                                 />
                               ) : (
@@ -264,12 +264,12 @@ export default function EventsPage() {
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="flex justify-between items-start gap-4">
+                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                                 <div className="flex-1">
-                                  <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
                                     {event.title}
                                   </h3>
-                                  <div className="space-y-2 text-gray-600">
+                                  <div className="space-y-2 text-sm sm:text-base text-gray-600">
                                     <p>
                                       <strong className="text-gray-900">Time:</strong>{' '}
                                       {formatTime(event.start_time)}
@@ -289,7 +289,7 @@ export default function EventsPage() {
                                 <div className="flex-shrink-0">
                                   <button
                                     onClick={() => downloadICal(event)}
-                                    className="px-4 py-2 bg-[#0d1e26] text-white rounded-md hover:bg-[#0a171c] text-sm font-medium"
+                                    className="w-full sm:w-auto px-4 py-2 bg-[#0d1e26] text-white rounded-md hover:bg-[#0a171c] text-sm font-medium transition-colors"
                                   >
                                     Add to Calendar
                                   </button>

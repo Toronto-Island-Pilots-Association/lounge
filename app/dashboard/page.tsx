@@ -98,18 +98,18 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Main Content */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 order-2 lg:order-1">
             <div className="bg-white shadow rounded-lg">
               <div className="px-4 py-5 sm:p-6">
-                <h1 className="text-2xl font-bold text-gray-900 mb-6">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">
                   Welcome, {user.profile.full_name || user.profile.email}!
                 </h1>
 
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-2">
                   {/* Wallet-Sized Membership Card - Only for approved members */}
                   {!isPending && !isRejected && (
                     <MembershipCard
@@ -206,7 +206,7 @@ export default async function DashboardPage() {
                     <h2 className="text-lg font-semibold text-gray-900 mb-4">
                       Quick Links
                     </h2>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <a
                         href="/resources"
                         className="block p-4 bg-white border border-gray-200 rounded-lg hover:border-[#0d1e26] hover:shadow-md transition"
@@ -236,7 +236,7 @@ export default async function DashboardPage() {
 
           {/* Sidebar */}
           {!isPending && !isRejected && (
-            <div className="lg:col-span-1 space-y-6">
+            <div className="lg:col-span-1 space-y-6 order-1 lg:order-2">
               {/* Top Threads Section */}
               {topThreads.length > 0 && (
                 <div className="bg-white shadow rounded-lg">

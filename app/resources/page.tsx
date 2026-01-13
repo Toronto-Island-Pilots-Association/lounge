@@ -115,11 +115,11 @@ export default function ResourcesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 py-6 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Resources</h1>
-          <p className="mt-2 text-gray-600">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Resources</h1>
+          <p className="mt-2 text-sm sm:text-base text-gray-600">
             Access all available resources for members
           </p>
         </div>
@@ -199,16 +199,16 @@ export default function ResourcesPage() {
                 
                 const ResourceRow = (
                   <div className="p-4 sm:p-6 hover:bg-gray-50 transition-colors">
-                    <div className="flex gap-4">
-                      {/* Thumbnail - Always render to maintain consistent layout */}
-                      <div className="relative w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0 rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      {/* Thumbnail - Full width on mobile, fixed width on desktop */}
+                      <div className="relative w-full sm:w-24 md:w-32 h-48 sm:h-24 md:h-32 flex-shrink-0 rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
                         {resource.image_url ? (
                           <Image
                             src={resource.image_url}
                             alt={resource.title}
                             fill
                             className="object-cover"
-                            sizes="(max-width: 640px) 96px, 128px"
+                            sizes="(max-width: 640px) 100vw, (max-width: 768px) 96px, 128px"
                             unoptimized
                           />
                         ) : (
@@ -232,8 +232,8 @@ export default function ResourcesPage() {
                       
                       {/* Content */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-3 mb-2">
-                          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 flex-1">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 mb-2">
+                          <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 flex-1">
                             {resource.title}
                           </h3>
                           {isExternalLink && (
