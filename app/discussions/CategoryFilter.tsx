@@ -1,9 +1,9 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ClassifiedCategory } from '@/types/database'
+import { DiscussionCategory } from '@/types/database'
 
-const CATEGORY_LABELS: Record<ClassifiedCategory | 'all', string> = {
+const CATEGORY_LABELS: Record<DiscussionCategory | 'all', string> = {
   all: 'All Categories',
   aircraft_shares: 'Aircraft Shares / Block Time',
   instructor_availability: 'Instructor Availability',
@@ -12,11 +12,11 @@ const CATEGORY_LABELS: Record<ClassifiedCategory | 'all', string> = {
   other: 'Other',
 }
 
-export default function CategoryFilter({ currentCategory }: { currentCategory?: ClassifiedCategory | 'all' }) {
+export default function CategoryFilter({ currentCategory }: { currentCategory?: DiscussionCategory | 'all' }) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  const handleCategoryChange = (category: ClassifiedCategory | 'all') => {
+  const handleCategoryChange = (category: DiscussionCategory | 'all') => {
     const params = new URLSearchParams(searchParams.toString())
     if (category === 'all') {
       params.delete('category')
@@ -24,10 +24,10 @@ export default function CategoryFilter({ currentCategory }: { currentCategory?: 
       params.set('category', category)
     }
     // Preserve sort parameter
-    router.push(`/classifieds?${params.toString()}`)
+    router.push(`/discussions?${params.toString()}`)
   }
 
-  const categories: (ClassifiedCategory | 'all')[] = ['all', 'aircraft_shares', 'instructor_availability', 'gear_for_sale', 'lounge_feedback', 'other']
+  const categories: (DiscussionCategory | 'all')[] = ['all', 'aircraft_shares', 'instructor_availability', 'gear_for_sale', 'lounge_feedback', 'other']
   const selectedCategory = currentCategory || 'all'
 
   return (

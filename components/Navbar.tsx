@@ -4,8 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { UserProfile } from '@/types/database'
+import { UserProfile, getMembershipLevelLabel } from '@/types/database'
 
 export default function Navbar() {
   const [user, setUser] = useState<any>(null)
@@ -13,6 +12,7 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [isDevEnvironment, setIsDevEnvironment] = useState(false)
+  const [pendingCount, setPendingCount] = useState<number>(0)
   const router = useRouter()
 
   // Check if we're in a dev environment
@@ -31,34 +31,60 @@ export default function Navbar() {
   }, [])
 
   useEffect(() => {
-    const supabase = createClient()
-    
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user)
-      if (user) {
-        supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single()
-          .then(({ data }) => setProfile(data))
-      }
-    })
-
-    supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data }) => setProfile(data))
-      } else {
+    const loadUserData = async (shouldFetchPendingCount = false) => {
+      try {
+        const response = await fetch('/api/profile')
+        if (response.ok) {
+          const data = await response.json()
+          setProfile(data.profile)
+          setUser({ id: data.profile.id, email: data.profile.email })
+          
+          // Fetch pending count if admin (only on initial load)
+          if (shouldFetchPendingCount && data.profile?.role === 'admin') {
+            fetchPendingCount()
+          } else if (data.profile?.role !== 'admin') {
+            setPendingCount(0)
+          }
+        } else {
+          setProfile(null)
+          setUser(null)
+          setPendingCount(0)
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error)
         setProfile(null)
+        setUser(null)
+        setPendingCount(0)
       }
-    })
+    }
+
+    // Initial load - fetch pending count
+    loadUserData(true)
+
+    // Poll for auth state changes every 5 seconds (don't fetch pending count)
+    const authCheckInterval = setInterval(() => {
+      loadUserData(false)
+    }, 5000)
+
+    return () => {
+      clearInterval(authCheckInterval)
+    }
   }, [])
+
+  const fetchPendingCount = async () => {
+    try {
+      const response = await fetch('/api/admin/pending-count')
+      if (response.ok) {
+        const data = await response.json()
+        setPendingCount(data.count || 0)
+      } else {
+        setPendingCount(0)
+      }
+    } catch (error) {
+      console.error('Error fetching pending count:', error)
+      setPendingCount(0)
+    }
+  }
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -79,12 +105,18 @@ export default function Navbar() {
   }, [userMenuOpen])
 
   const handleLogout = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    setMobileMenuOpen(false)
-    setUserMenuOpen(false)
-    router.push('/')
-    router.refresh()
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+      setMobileMenuOpen(false)
+      setUserMenuOpen(false)
+      router.push('/')
+      router.refresh()
+    } catch (error) {
+      console.error('Error logging out:', error)
+      // Still redirect even if logout fails
+      router.push('/')
+      router.refresh()
+    }
   }
 
   const handleLinkClick = () => {
@@ -134,13 +166,13 @@ export default function Navbar() {
                 {profile && (profile.status === 'approved' || profile.role === 'admin') && (
                   <>
                     <Link
-                      href="/classifieds"
+                      href="/discussions"
                       className="flex items-center gap-1.5 text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
-                      Classifieds
+                      Discussions
                     </Link>
                     <Link
                       href="/events"
@@ -229,16 +261,31 @@ export default function Navbar() {
                         </svg>
                         Settings
                       </Link>
+                      <Link
+                        href="/discussions/new?category=lounge_feedback"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                        </svg>
+                        Feedback
+                      </Link>
                       {profile?.role === 'admin' && (
                         <Link
                           href="/admin"
                           onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 relative"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                           </svg>
-                          Admin
+                          <span>Admin</span>
+                          {pendingCount > 0 && (
+                            <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-yellow-500 text-gray-900 text-[10px] font-bold rounded-full leading-none border border-yellow-600">
+                              {pendingCount > 99 ? '99+' : pendingCount}
+                            </span>
+                          )}
                         </Link>
                       )}
                       <button
@@ -325,14 +372,14 @@ export default function Navbar() {
                 {profile && (profile.status === 'approved' || profile.role === 'admin') && (
                   <>
                     <Link
-                      href="/classifieds"
+                      href="/discussions"
                       onClick={handleLinkClick}
                       className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
-                      Classifieds
+                      Discussions
                     </Link>
                     <Link
                       href="/events"
@@ -391,11 +438,11 @@ export default function Navbar() {
                           {profile?.full_name || user.email}
                         </span>
                         <span className={`px-2 py-1 text-xs rounded-full ml-2 flex-shrink-0 ${
-                          profile?.membership_level === 'cadet' || profile?.membership_level === 'captain'
+                          profile?.membership_level === 'Active' || profile?.membership_level === 'Lifetime'
                             ? 'bg-green-100 text-green-800'
                             : 'bg-gray-100 text-gray-800'
                         }`}>
-                          {profile?.membership_level ? profile.membership_level.charAt(0).toUpperCase() + profile.membership_level.slice(1) : 'Basic'}
+                          {profile?.membership_level ? getMembershipLevelLabel(profile.membership_level) : 'Regular'}
                         </span>
                       </div>
                     </div>
@@ -411,16 +458,31 @@ export default function Navbar() {
                     </svg>
                     Settings
                   </Link>
+                  <Link
+                    href="/discussions/new?category=lounge_feedback"
+                    onClick={handleLinkClick}
+                    className="flex items-center gap-2 w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                    </svg>
+                    Feedback
+                  </Link>
                   {profile?.role === 'admin' && (
                     <Link
                       href="/admin"
                       onClick={handleLinkClick}
-                      className="flex items-center gap-2 w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                      className="flex items-center gap-2 w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors relative"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                       </svg>
-                      Admin
+                      <span>Admin</span>
+                      {pendingCount > 0 && (
+                        <span className="ml-auto flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-yellow-500 text-gray-900 text-[10px] font-bold rounded-full leading-none border border-yellow-600">
+                          {pendingCount > 99 ? '99+' : pendingCount}
+                        </span>
+                      )}
                     </Link>
                   )}
                   <button

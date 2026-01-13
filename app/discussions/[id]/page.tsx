@@ -3,13 +3,15 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { getCurrentUser } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
-import { Thread, Comment, ClassifiedCategory } from '@/types/database'
+import { Thread, Comment, DiscussionCategory } from '@/types/database'
 import CommentForm from './CommentForm'
 import ReactionButton from './ReactionButton'
 import DeleteThreadButton from './DeleteThreadButton'
 import DeleteCommentButton from './DeleteCommentButton'
+import ThreadImages from '@/components/ThreadImages'
+import LinkifiedText from '@/components/LinkifiedText'
 
-const CATEGORY_LABELS: Record<ClassifiedCategory, string> = {
+const CATEGORY_LABELS: Record<DiscussionCategory, string> = {
   aircraft_shares: 'Aircraft Shares / Block Time',
   instructor_availability: 'Instructor Availability',
   gear_for_sale: 'Gear for Sale',
@@ -17,11 +19,16 @@ const CATEGORY_LABELS: Record<ClassifiedCategory, string> = {
   other: 'Other',
 }
 
-export default async function ClassifiedPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function DiscussionPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser()
 
   if (!user) {
     redirect('/login')
+  }
+
+  // Redirect rejected/pending users to approval page
+  if (user.profile.status !== 'approved' && user.profile.role !== 'admin') {
+    redirect('/pending-approval')
   }
 
   const { id } = await params
@@ -39,13 +46,13 @@ export default async function ClassifiedPage({ params }: { params: Promise<{ id:
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-white shadow rounded-lg p-8 text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Classified Not Found</h2>
-            <p className="text-gray-600 mb-6">The classified you're looking for doesn't exist.</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Discussion Not Found</h2>
+            <p className="text-gray-600 mb-6">The discussion you're looking for doesn't exist.</p>
             <Link
-              href="/classifieds"
+              href="/discussions"
               className="inline-block px-6 py-2 bg-[#0d1e26] text-white font-semibold rounded-lg hover:bg-[#0a171c] transition-colors"
             >
-              Back to Classifieds
+              Back to Discussions
             </Link>
           </div>
         </div>
@@ -160,10 +167,10 @@ export default async function ClassifiedPage({ params }: { params: Promise<{ id:
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-6">
           <Link
-            href="/classifieds"
+            href="/discussions"
             className="text-[#0d1e26] hover:text-[#0a171c] text-sm font-medium"
           >
-            ← Back to Classifieds
+            ← Back to Discussions
           </Link>
         </div>
 
@@ -173,7 +180,7 @@ export default async function ClassifiedPage({ params }: { params: Promise<{ id:
             <div className="flex-1">
               <h1 className="text-2xl font-bold text-gray-900 mb-2">{threadWithAuthor.title}</h1>
               <span className="inline-block px-3 py-1 text-sm font-medium bg-[#0d1e26]/10 text-[#0d1e26] rounded-md">
-                {CATEGORY_LABELS[thread.category as ClassifiedCategory]}
+                {CATEGORY_LABELS[thread.category as DiscussionCategory]}
               </span>
             </div>
             <DeleteThreadButton
@@ -220,8 +227,13 @@ export default async function ClassifiedPage({ params }: { params: Promise<{ id:
           </div>
 
           <div className="prose max-w-none text-gray-700 whitespace-pre-wrap mb-4">
-            {threadWithAuthor.content}
+            <LinkifiedText text={threadWithAuthor.content} />
           </div>
+
+          {/* Thread Images */}
+          {thread.image_urls && thread.image_urls.length > 0 && (
+            <ThreadImages imageUrls={thread.image_urls} />
+          )}
 
           {/* Thread Reactions */}
           <div className="mt-4 pt-4 border-t border-gray-200">
@@ -303,7 +315,7 @@ export default async function ClassifiedPage({ params }: { params: Promise<{ id:
                           />
                         </div>
                         <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap mb-3">
-                          {comment.content}
+                          <LinkifiedText text={comment.content} />
                         </div>
                         {/* Comment Reactions */}
                         <div className="mt-2">

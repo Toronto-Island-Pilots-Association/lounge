@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
 import Loading from '@/components/Loading'
 
 export default function LoginPage() {
@@ -16,13 +15,17 @@ export default function LoginPage() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (session?.user) {
-        // Only redirect if we have a valid session
-        window.location.href = '/dashboard'
-      } else {
+      try {
+        const response = await fetch('/api/auth/session')
+        const data = await response.json()
+        
+        if (data.authenticated) {
+          // Only redirect if we have a valid session
+          window.location.href = '/dashboard'
+        } else {
+          setCheckingAuth(false)
+        }
+      } catch (error) {
         setCheckingAuth(false)
       }
     }
@@ -79,16 +82,18 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const supabase = createClient()
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      })
+      const response = await fetch(`/api/auth/oauth?provider=google&redirectTo=${encodeURIComponent(`${window.location.origin}/auth/callback`)}`)
+      const data = await response.json()
 
-      if (error) {
-        throw error
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to initiate Google login')
+      }
+
+      // Redirect to OAuth URL
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        throw new Error('No OAuth URL returned')
       }
     } catch (err: any) {
       setError(err.message || 'Failed to initiate Google login')

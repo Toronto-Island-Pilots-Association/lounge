@@ -1,8 +1,8 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { ClassifiedCategory } from '@/types/database'
+import { DiscussionCategory } from '@/types/database'
 
-const CATEGORY_LABELS: Record<ClassifiedCategory, string> = {
+const CATEGORY_LABELS: Record<DiscussionCategory, string> = {
   aircraft_shares: 'Aircraft Shares / Block Time',
   instructor_availability: 'Instructor Availability',
   gear_for_sale: 'Gear for Sale',
@@ -10,7 +10,7 @@ const CATEGORY_LABELS: Record<ClassifiedCategory, string> = {
   other: 'Other',
 }
 
-const CATEGORY_ICONS: Record<ClassifiedCategory, string> = {
+const CATEGORY_ICONS: Record<DiscussionCategory, string> = {
   aircraft_shares: '✈️',
   instructor_availability: '👨‍✈️',
   gear_for_sale: '🛒',
@@ -18,7 +18,7 @@ const CATEGORY_ICONS: Record<ClassifiedCategory, string> = {
   other: '📋',
 }
 
-export default async function Sidebar({ currentCategory }: { currentCategory?: ClassifiedCategory | 'all' }) {
+export default async function Sidebar({ currentCategory }: { currentCategory?: DiscussionCategory | 'all' }) {
   const supabase = await createClient()
 
   // Get category counts
@@ -26,15 +26,15 @@ export default async function Sidebar({ currentCategory }: { currentCategory?: C
     .from('threads')
     .select('category')
 
-  const categoryCounts = new Map<ClassifiedCategory | 'all', number>()
+  const categoryCounts = new Map<DiscussionCategory | 'all', number>()
   categoryCounts.set('all', threads?.length || 0)
   
-  const validCategories: ClassifiedCategory[] = ['aircraft_shares', 'instructor_availability', 'gear_for_sale', 'lounge_feedback', 'other']
+  const validCategories: DiscussionCategory[] = ['aircraft_shares', 'instructor_availability', 'gear_for_sale', 'lounge_feedback', 'other']
   
   threads?.forEach(thread => {
     const category = thread.category as string
-    if (validCategories.includes(category as ClassifiedCategory)) {
-      const typedCategory = category as ClassifiedCategory
+    if (validCategories.includes(category as DiscussionCategory)) {
+      const typedCategory = category as DiscussionCategory
       const count = categoryCounts.get(typedCategory) || 0
       categoryCounts.set(typedCategory, count + 1)
     }
@@ -59,13 +59,13 @@ export default async function Sidebar({ currentCategory }: { currentCategory?: C
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
 
-  const categories: (ClassifiedCategory | 'all')[] = ['all', 'aircraft_shares', 'instructor_availability', 'gear_for_sale', 'lounge_feedback', 'other']
+  const categories: (DiscussionCategory | 'all')[] = ['all', 'aircraft_shares', 'instructor_availability', 'gear_for_sale', 'lounge_feedback', 'other']
   const selectedCategory = currentCategory || 'all'
   
   // Helper to safely get category icon
   const getCategoryIcon = (category: string): string => {
-    if (validCategories.includes(category as ClassifiedCategory)) {
-      return CATEGORY_ICONS[category as ClassifiedCategory]
+    if (validCategories.includes(category as DiscussionCategory)) {
+      return CATEGORY_ICONS[category as DiscussionCategory]
     }
     return '📋'
   }
@@ -83,7 +83,7 @@ export default async function Sidebar({ currentCategory }: { currentCategory?: C
             return (
               <Link
                 key={category}
-                href={category === 'all' ? '/classifieds' : `/classifieds?category=${category}`}
+                href={category === 'all' ? '/discussions' : `/discussions?category=${category}`}
                 className={`flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${
                   isActive
                     ? 'bg-[#0d1e26] text-white font-medium'
@@ -119,7 +119,7 @@ export default async function Sidebar({ currentCategory }: { currentCategory?: C
             {recentThreads.map((thread) => (
               <Link
                 key={thread.id}
-                href={`/classifieds/${thread.id}`}
+                href={`/discussions/${thread.id}`}
                 className="block group"
               >
                 <div className="flex items-start gap-2">
@@ -146,12 +146,8 @@ export default async function Sidebar({ currentCategory }: { currentCategory?: C
         <h3 className="text-sm font-semibold text-gray-900 mb-3 uppercase tracking-wide">Statistics</h3>
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">Total Classifieds</span>
+            <span className="text-gray-600">Total Discussions</span>
             <span className="font-semibold text-gray-900">{categoryCounts.get('all') || 0}</span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">Categories</span>
-            <span className="font-semibold text-gray-900">{categories.length - 1}</span>
           </div>
         </div>
       </div>

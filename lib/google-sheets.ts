@@ -51,7 +51,7 @@ export async function appendMemberToSheet(member: UserProfile): Promise<void> {
       member.call_sign || '',
       member.how_often_fly_from_ytz || '',
       member.how_did_you_hear || '',
-      member.membership_level || 'basic',
+      member.membership_level || 'Regular',
       member.role || 'member',
       member.membership_expires_at 
         ? new Date(member.membership_expires_at).toLocaleString() 

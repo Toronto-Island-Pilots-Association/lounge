@@ -164,7 +164,7 @@ export async function POST(request: Request) {
             first_name: user.firstName || null,
             last_name: user.lastName || null,
             role: 'member',
-            membership_level: 'basic',
+            membership_level: 'Regular',
             invited_by_admin: true,
           }
         })
@@ -215,7 +215,7 @@ export async function POST(request: Request) {
               first_name: user.firstName || null,
               last_name: user.lastName || null,
               role: 'member',
-              membership_level: 'basic',
+              membership_level: 'Regular',
               status: 'pending', // Will be updated to 'approved' when they log in
             })
 

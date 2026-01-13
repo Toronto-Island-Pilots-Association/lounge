@@ -3,7 +3,6 @@
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
 import Loading from '@/components/Loading'
 
 function ChangePasswordContent() {
@@ -33,11 +32,10 @@ function ChangePasswordContent() {
 
   const checkIfInvited = async () => {
     try {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const invited = user.user_metadata?.invited_by_admin === true
-        setWasInvited(invited)
+      const response = await fetch('/api/auth/check-invited')
+      if (response.ok) {
+        const data = await response.json()
+        setWasInvited(data.wasInvited || false)
       }
     } catch (error) {
       console.error('Error checking if user was invited:', error)

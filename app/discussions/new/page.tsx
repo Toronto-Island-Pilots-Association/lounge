@@ -2,9 +2,10 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ClassifiedCategory } from '@/types/database'
+import { DiscussionCategory } from '@/types/database'
+import ThreadImageUpload from '@/components/ThreadImageUpload'
 
-const CATEGORY_LABELS: Record<ClassifiedCategory, string> = {
+const CATEGORY_LABELS: Record<DiscussionCategory, string> = {
   aircraft_shares: 'Aircraft Shares / Block Time',
   instructor_availability: 'Instructor Availability',
   gear_for_sale: 'Gear for Sale',
@@ -12,12 +13,13 @@ const CATEGORY_LABELS: Record<ClassifiedCategory, string> = {
   other: 'Other',
 }
 
-function NewClassifiedForm() {
+function NewDiscussionForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
-  const [category, setCategory] = useState<ClassifiedCategory>('other')
+  const [category, setCategory] = useState<DiscussionCategory>('other')
+  const [imageUrls, setImageUrls] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -25,9 +27,9 @@ function NewClassifiedForm() {
   useEffect(() => {
     const categoryParam = searchParams.get('category')
     if (categoryParam) {
-      const validCategories: ClassifiedCategory[] = ['aircraft_shares', 'instructor_availability', 'gear_for_sale', 'lounge_feedback', 'other']
-      if (validCategories.includes(categoryParam as ClassifiedCategory)) {
-        setCategory(categoryParam as ClassifiedCategory)
+      const validCategories: DiscussionCategory[] = ['aircraft_shares', 'instructor_availability', 'gear_for_sale', 'lounge_feedback', 'other']
+      if (validCategories.includes(categoryParam as DiscussionCategory)) {
+        setCategory(categoryParam as DiscussionCategory)
       }
     }
   }, [searchParams])
@@ -43,16 +45,16 @@ function NewClassifiedForm() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ title, content, category }),
+        body: JSON.stringify({ title, content, category, image_urls: imageUrls }),
       })
 
       const data = await res.json()
 
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to create classified')
+        throw new Error(data.error || 'Failed to create discussion')
       }
 
-      router.push(`/classifieds/${data.thread.id}`)
+      router.push(`/discussions/${data.thread.id}`)
       router.refresh()
     } catch (err: any) {
       setError(err.message || 'An error occurred')
@@ -75,7 +77,7 @@ function NewClassifiedForm() {
             <select
               id="category"
               value={category}
-              onChange={(e) => setCategory(e.target.value as ClassifiedCategory)}
+              onChange={(e) => setCategory(e.target.value as DiscussionCategory)}
               required
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-transparent"
             >
@@ -98,7 +100,7 @@ function NewClassifiedForm() {
               onChange={(e) => setTitle(e.target.value)}
               required
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-transparent"
-              placeholder="Enter classified title..."
+              placeholder="Enter discussion title..."
             />
           </div>
 
@@ -113,7 +115,14 @@ function NewClassifiedForm() {
               required
               rows={10}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-transparent"
-              placeholder="Describe your classified ad..."
+              placeholder="Describe your discussion..."
+            />
+          </div>
+
+          <div className="mb-6">
+            <ThreadImageUpload
+              onImagesChange={setImageUrls}
+              maxImages={5}
             />
           </div>
 
@@ -123,7 +132,7 @@ function NewClassifiedForm() {
               disabled={loading}
               className="px-6 py-2 bg-[#0d1e26] text-white font-semibold rounded-lg hover:bg-[#0a171c] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Creating...' : 'Create Classified'}
+              {loading ? 'Creating...' : 'Start Discussion'}
             </button>
             <button
               type="button"
@@ -137,14 +146,14 @@ function NewClassifiedForm() {
   )
 }
 
-export default function NewClassifiedPage() {
+export default function NewDiscussionPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Create New Classified</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Start New Discussion</h1>
           <p className="mt-2 text-gray-600">
-            Post a new classified ad to the TIPA community
+            Start a new discussion in the TIPA community
           </p>
         </div>
 
@@ -158,7 +167,7 @@ export default function NewClassifiedPage() {
               <p className="text-sm text-gray-700 leading-relaxed">
                 <strong className="text-gray-900">Community Guidelines:</strong> Please maintain a respectful and professional environment. 
                 Harassment, discrimination, or sharing sensitive personal information is not permitted. 
-                All classifieds should be conducted with mutual respect and consideration for fellow members.
+                All discussions should be conducted with mutual respect and consideration for fellow members.
               </p>
             </div>
           </div>
@@ -174,7 +183,7 @@ export default function NewClassifiedPage() {
             </div>
           </div>
         }>
-          <NewClassifiedForm />
+          <NewDiscussionForm />
         </Suspense>
       </div>
     </div>

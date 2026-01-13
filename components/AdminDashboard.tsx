@@ -1,9 +1,33 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { UserProfile, Resource, Event, MembershipLevel } from '@/types/database'
-import RichTextEditor from './RichTextEditor'
+import { useEffect, useState, Suspense, useMemo, useCallback } from 'react'
+import dynamic from 'next/dynamic'
+import { UserProfile, Resource, Event, MembershipLevel, getMembershipLevelLabel } from '@/types/database'
 import Loading from './Loading'
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerFooter,
+  DrawerClose,
+} from '@/components/ui/drawer'
+
+// Lazy load heavy components - only load when modals are opened
+const RichTextEditor = dynamic(() => import('./RichTextEditor'), {
+  ssr: false,
+  loading: () => <div className="h-32 bg-gray-100 animate-pulse rounded" />
+})
+
+const AdminImageUpload = dynamic(() => import('./AdminImageUpload'), {
+  ssr: false,
+  loading: () => <div className="h-24 bg-gray-100 animate-pulse rounded" />
+})
+
+const AdminFileUpload = dynamic(() => import('./AdminFileUpload'), {
+  ssr: false,
+  loading: () => <div className="h-24 bg-gray-100 animate-pulse rounded" />
+})
 
 export default function AdminDashboard() {
   const [members, setMembers] = useState<UserProfile[]>([])
@@ -20,23 +44,28 @@ export default function AdminDashboard() {
   const [showInviteForm, setShowInviteForm] = useState(false)
   const [showBulkInviteForm, setShowBulkInviteForm] = useState(false)
 
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
-      const [membersRes, resourcesRes, eventsRes, settingsRes] = await Promise.all([
+      // Load data in parallel with error handling
+      const [membersRes, resourcesRes, eventsRes, settingsRes] = await Promise.allSettled([
         fetch('/api/admin/members'),
         fetch('/api/resources'),
         fetch('/api/events'),
         fetch('/api/settings'),
       ])
 
-      const membersData = await membersRes.json()
-      const resourcesData = await resourcesRes.json()
-      const eventsData = await eventsRes.json()
-      const settingsData = await settingsRes.json()
+      const membersData = membersRes.status === 'fulfilled' 
+        ? await membersRes.value.json().catch(() => ({ members: [] }))
+        : { members: [] }
+      const resourcesData = resourcesRes.status === 'fulfilled'
+        ? await resourcesRes.value.json().catch(() => ({ resources: [] }))
+        : { resources: [] }
+      const eventsData = eventsRes.status === 'fulfilled'
+        ? await eventsRes.value.json().catch(() => ({ events: [] }))
+        : { events: [] }
+      const settingsData = settingsRes.status === 'fulfilled'
+        ? await settingsRes.value.json().catch(() => ({ settings: {} }))
+        : { settings: {} }
 
       setMembers(membersData.members || [])
       setResources(resourcesData.resources || [])
@@ -47,7 +76,27 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  // Memoize expensive computations - MUST be before any conditional returns
+  const pendingMembers = useMemo(() => 
+    members.filter(m => m.status === 'pending'), 
+    [members]
+  )
+
+  const topResources = useMemo(() => 
+    resources.slice(0, 5), 
+    [resources]
+  )
+
+  // Memoize callbacks to prevent unnecessary re-renders
+  const handleSetActiveTab = useCallback((tab: 'members' | 'resources' | 'events' | 'settings') => {
+    setActiveTab(tab)
+  }, [])
 
   const handleInviteMember = async (memberData: {
     email: string
@@ -285,9 +334,6 @@ export default function AdminDashboard() {
     )
   }
 
-  // Get top 5 resources for the preview
-  const topResources = resources.slice(0, 5)
-
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -299,7 +345,7 @@ export default function AdminDashboard() {
           <div className="border-b border-gray-200">
             <nav className="flex -mb-px overflow-x-auto">
               <button
-                onClick={() => setActiveTab('members')}
+                onClick={() => handleSetActiveTab('members')}
                 className={`py-3 px-4 sm:py-4 sm:px-6 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'members'
                     ? 'border-[#0d1e26] text-[#0d1e26]'
@@ -319,7 +365,7 @@ export default function AdminDashboard() {
                 Resources ({resources.length})
               </button>
               <button
-                onClick={() => setActiveTab('events')}
+                onClick={() => handleSetActiveTab('events')}
                 className={`py-3 px-4 sm:py-4 sm:px-6 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'events'
                     ? 'border-[#0d1e26] text-[#0d1e26]'
@@ -345,13 +391,13 @@ export default function AdminDashboard() {
             {activeTab === 'members' && (
               <div className="space-y-4">
                 {/* Pending Review Section */}
-                {members.filter(m => m.status === 'pending').length > 0 && (
+                {pendingMembers.length > 0 && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
                     <h3 className="text-lg font-semibold text-yellow-900 mb-3">
-                      Pending Review ({members.filter(m => m.status === 'pending').length})
+                      Pending Review ({pendingMembers.length})
                     </h3>
                     <div className="space-y-3">
-                      {members.filter(m => m.status === 'pending').map((member) => (
+                      {pendingMembers.map((member) => (
                         <div key={member.id} className="bg-white rounded-lg p-4 border border-yellow-200">
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                             <div className="flex-1">
@@ -495,11 +541,11 @@ export default function AdminDashboard() {
                                 {member.role}
                               </span>
                               <span className={`px-2 py-1 rounded-full ${
-                                member.membership_level === 'cadet' || member.membership_level === 'captain'
+                                member.membership_level === 'Active' || member.membership_level === 'Lifetime'
                                   ? 'bg-green-100 text-green-800'
                                   : 'bg-gray-100 text-gray-800'
                               }`}>
-                                {member.membership_level ? member.membership_level.charAt(0).toUpperCase() + member.membership_level.slice(1) : 'Basic'}
+                                {member.membership_level ? getMembershipLevelLabel(member.membership_level) : 'Regular'}
                               </span>
                             </div>
                           </div>
@@ -553,11 +599,11 @@ export default function AdminDashboard() {
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 <span className={`px-2 py-1 text-xs rounded-full ${
-                                  member.membership_level === 'cadet' || member.membership_level === 'captain'
+                                  member.membership_level === 'Active' || member.membership_level === 'Lifetime'
                                     ? 'bg-green-100 text-green-800'
                                     : 'bg-gray-100 text-gray-800'
                                 }`}>
-                                  {member.membership_level ? member.membership_level.charAt(0).toUpperCase() + member.membership_level.slice(1) : 'Basic'}
+                                  {member.membership_level ? getMembershipLevelLabel(member.membership_level) : 'Regular'}
                                 </span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -787,41 +833,45 @@ export default function AdminDashboard() {
 
         {/* Resource Form Modal */}
         {(showResourceForm || editingResource) && (
-          <ResourceFormModal
-            resource={editingResource}
-            onClose={() => {
-              setShowResourceForm(false)
-              setEditingResource(null)
-            }}
-            onSave={editingResource 
-              ? async (resource, updates) => {
-                  if ('id' in resource && resource.id) {
-                    await handleUpdateResource(resource as Resource, updates)
+          <Suspense fallback={<div className="fixed inset-0 bg-gray-600 bg-opacity-10 z-50 flex items-center justify-center"><Loading message="Loading form..." /></div>}>
+            <ResourceFormModal
+              resource={editingResource}
+              onClose={() => {
+                setShowResourceForm(false)
+                setEditingResource(null)
+              }}
+              onSave={editingResource 
+                ? async (resource, updates) => {
+                    if ('id' in resource && resource.id) {
+                      await handleUpdateResource(resource as Resource, updates)
+                    }
                   }
-                }
-              : async (_, updates) => {
-                  await handleCreateResource(updates)
-                }
-            }
-          />
+                : async (_, updates) => {
+                    await handleCreateResource(updates)
+                  }
+              }
+            />
+          </Suspense>
         )}
 
         {/* Event Form Modal */}
         {(showEventForm || editingEvent) && (
-          <EventFormModal
-            event={editingEvent}
-            onClose={() => {
-              setShowEventForm(false)
-              setEditingEvent(null)
-            }}
-            onSave={async (eventData) => {
-              if (editingEvent) {
-                await handleUpdateEvent(editingEvent, eventData)
-              } else {
-                await handleCreateEvent(eventData)
-              }
-            }}
-          />
+          <Suspense fallback={<div className="fixed inset-0 bg-gray-600 bg-opacity-10 z-50 flex items-center justify-center"><Loading message="Loading form..." /></div>}>
+            <EventFormModal
+              event={editingEvent}
+              onClose={() => {
+                setShowEventForm(false)
+                setEditingEvent(null)
+              }}
+              onSave={async (eventData) => {
+                if (editingEvent) {
+                  await handleUpdateEvent(editingEvent, eventData)
+                } else {
+                  await handleCreateEvent(eventData)
+                }
+              }}
+            />
+          </Suspense>
         )}
 
         {/* Invite Member Modal */}
@@ -860,10 +910,12 @@ function MemberEditModal({
   })
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-4 sm:top-20 mx-auto p-4 sm:p-5 border w-full max-w-md sm:w-96 shadow-lg rounded-md bg-white m-4">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Edit Member</h3>
-        <div className="space-y-4">
+    <Drawer open={true} onOpenChange={(open) => !open && onClose()}>
+      <DrawerContent className="max-h-[90vh]">
+        <DrawerHeader>
+          <DrawerTitle>Edit Member</DrawerTitle>
+        </DrawerHeader>
+        <div className="px-4 pb-4 space-y-4 overflow-y-auto">
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-1">Full Name</label>
             <input
@@ -891,28 +943,35 @@ function MemberEditModal({
               onChange={(e) => setFormData({ ...formData, membership_level: e.target.value as MembershipLevel })}
               className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
             >
-              <option value="basic">Basic</option>
-              <option value="cadet">Cadet</option>
-              <option value="captain">Captain</option>
+              <option value="Active">Active</option>
+              <option value="Regular">Regular</option>
+              <option value="Resident">Resident</option>
+              <option value="Retired">Retired</option>
+              <option value="Student">Student</option>
+              <option value="Lifetime">Lifetime</option>
             </select>
           </div>
+        </div>
+        <DrawerFooter>
           <div className="flex justify-end space-x-2">
+            <DrawerClose asChild>
+              <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">
+                Cancel
+              </button>
+            </DrawerClose>
             <button
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => onSave(member, formData)}
+              onClick={() => {
+                onSave(member, formData)
+                onClose()
+              }}
               className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c]"
             >
               Save
             </button>
           </div>
-        </div>
-      </div>
-    </div>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   )
 }
 
@@ -925,18 +984,27 @@ function ResourceFormModal({
   onClose: () => void
   onSave: (resource: Resource | Partial<Resource>, updates: Partial<Resource>) => Promise<void>
 }) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    title: string
+    description: string
+    image_url: string | null
+    file_url: string | null
+    file_name: string | null
+  }>({
     title: resource?.title || '',
     description: resource?.description || '',
+    image_url: resource?.image_url || null,
+    file_url: (resource as any)?.file_url || null,
+    file_name: (resource as any)?.file_name || null,
   })
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-4 sm:top-20 mx-auto p-4 sm:p-5 border w-full max-w-3xl shadow-lg rounded-md bg-white m-4">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">
-          {resource ? 'Edit Resource' : 'Add Resource'}
-        </h3>
-        <div className="space-y-4">
+    <Drawer open={true} onOpenChange={(open) => !open && onClose()}>
+      <DrawerContent className="max-h-[90vh]">
+        <DrawerHeader>
+          <DrawerTitle>{resource ? 'Edit Resource' : 'Add Resource'}</DrawerTitle>
+        </DrawerHeader>
+        <div className="px-4 pb-4 space-y-4 overflow-y-auto">
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-1">Title</label>
             <input
@@ -955,13 +1023,31 @@ function ResourceFormModal({
               placeholder="Enter resource description with rich text formatting..."
             />
           </div>
+          <div>
+            <AdminImageUpload
+              currentImageUrl={formData.image_url}
+              onImageChange={(url) => setFormData({ ...formData, image_url: url })}
+              uploadEndpoint="/api/resources/upload-image"
+              label="Resource Image"
+            />
+          </div>
+          <div>
+            <AdminFileUpload
+              currentFileUrl={formData.file_url}
+              currentFileName={formData.file_name}
+              onFileChange={(url, fileName) => setFormData({ ...formData, file_url: url, file_name: fileName || null })}
+              uploadEndpoint="/api/resources/upload-file"
+              label="File Attachment"
+            />
+          </div>
+        </div>
+        <DrawerFooter>
           <div className="flex justify-end space-x-2">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-            >
-              Cancel
-            </button>
+            <DrawerClose asChild>
+              <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">
+                Cancel
+              </button>
+            </DrawerClose>
             <button
               onClick={async () => {
                 if (resource) {
@@ -969,15 +1055,16 @@ function ResourceFormModal({
                 } else {
                   await onSave({}, formData)
                 }
+                onClose()
               }}
               className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c]"
             >
               {resource ? 'Update' : 'Create'}
             </button>
           </div>
-        </div>
-      </div>
-    </div>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   )
 }
 
@@ -1000,11 +1087,13 @@ function InviteMemberModal({
   })
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-4 sm:top-20 mx-auto p-4 sm:p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white m-4">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Invite New Member</h3>
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600 mb-4">
+    <Drawer open={true} onOpenChange={(open) => !open && onClose()}>
+      <DrawerContent className="max-h-[90vh]">
+        <DrawerHeader>
+          <DrawerTitle>Invite New Member</DrawerTitle>
+        </DrawerHeader>
+        <div className="px-4 pb-4 space-y-4 overflow-y-auto">
+          <p className="text-sm text-gray-600">
             Create an account for a new member. A temporary password will be sent to their email. They can also sign in with Google if their email matches.
           </p>
           <div className="space-y-4">
@@ -1046,13 +1135,14 @@ function InviteMemberModal({
               />
             </div>
           </div>
-          <div className="flex justify-end space-x-2 pt-4 border-t">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-            >
-              Cancel
-            </button>
+        </div>
+        <DrawerFooter>
+          <div className="flex justify-end space-x-2">
+            <DrawerClose asChild>
+              <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">
+                Cancel
+              </button>
+            </DrawerClose>
             <button
               onClick={async () => {
                 if (!formData.email) {
@@ -1064,15 +1154,16 @@ function InviteMemberModal({
                   firstName: formData.firstName || undefined,
                   lastName: formData.lastName || undefined,
                 })
+                onClose()
               }}
               className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c]"
             >
               Create Account & Send Invitation
             </button>
           </div>
-        </div>
-      </div>
-    </div>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   )
 }
 
@@ -1106,21 +1197,24 @@ function BulkInviteModal({
     setUploading(true)
     try {
       await onSave(file)
+      onClose()
     } finally {
       setUploading(false)
     }
   }
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-4 sm:top-20 mx-auto p-4 sm:p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white m-4">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Bulk Invite Members (CSV)</h3>
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600 mb-4">
+    <Drawer open={true} onOpenChange={(open) => !open && onClose()}>
+      <DrawerContent className="max-h-[90vh]">
+        <DrawerHeader>
+          <DrawerTitle>Bulk Invite Members (CSV)</DrawerTitle>
+        </DrawerHeader>
+        <div className="px-4 pb-4 space-y-4 overflow-y-auto">
+          <p className="text-sm text-gray-600">
             Upload a CSV file with member information. Accounts will be created with temporary passwords sent via email.
           </p>
           
-          <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
             <p className="text-sm font-semibold text-blue-900 mb-2">CSV Format:</p>
             <p className="text-sm text-gray-700 mb-2">
               Your CSV should have the following columns (header row optional):
@@ -1156,15 +1250,17 @@ jane@example.com,Jane,Smith`}
               </p>
             )}
           </div>
-
-          <div className="flex justify-end space-x-2 pt-4 border-t">
-            <button
-              onClick={onClose}
-              disabled={uploading}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 disabled:opacity-50"
-            >
-              Cancel
-            </button>
+        </div>
+        <DrawerFooter>
+          <div className="flex justify-end space-x-2">
+            <DrawerClose asChild>
+              <button
+                disabled={uploading}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </DrawerClose>
             <button
               onClick={handleSubmit}
               disabled={!file || uploading}
@@ -1173,9 +1269,9 @@ jane@example.com,Jane,Smith`}
               {uploading ? 'Processing...' : 'Upload & Process'}
             </button>
           </div>
-        </div>
-      </div>
-    </div>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   )
 }
 
@@ -1206,6 +1302,7 @@ function EventFormModal({
     location: event?.location || '',
     start_time: event ? formatDateTimeForInput(event.start_time) : '',
     end_time: event?.end_time ? formatDateTimeForInput(event.end_time) : '',
+    image_url: event?.image_url || null,
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1228,76 +1325,96 @@ function EventFormModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-4 sm:top-20 mx-auto p-4 sm:p-5 border w-full max-w-md shadow-lg rounded-md bg-white m-4">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">
-          {event ? 'Edit Event' : 'Create Event'}
-        </h3>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">Title *</label>
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-              required
-            />
+    <Drawer open={true} onOpenChange={(open) => !open && onClose()}>
+      <DrawerContent className="max-h-[90vh]">
+        <DrawerHeader>
+          <DrawerTitle>{event ? 'Edit Event' : 'Create Event'}</DrawerTitle>
+        </DrawerHeader>
+        <form 
+          onSubmit={async (e) => {
+            e.preventDefault()
+            await handleSubmit(e)
+            onClose()
+          }} 
+          className="flex flex-col flex-1 min-h-0"
+        >
+          <div className="px-4 pb-4 space-y-4 overflow-y-auto flex-1">
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">Title *</label>
+              <input
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">Description</label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                rows={3}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">Location</label>
+              <input
+                type="text"
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">Start Time *</label>
+              <input
+                type="datetime-local"
+                value={formData.start_time}
+                onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">End Time</label>
+              <input
+                type="datetime-local"
+                value={formData.end_time}
+                onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <AdminImageUpload
+                currentImageUrl={formData.image_url}
+                onImageChange={(url) => setFormData({ ...formData, image_url: url })}
+                uploadEndpoint="/api/events/upload-image"
+                label="Event Image"
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">Description</label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-              rows={3}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">Location</label>
-            <input
-              type="text"
-              value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">Start Time *</label>
-            <input
-              type="datetime-local"
-              value={formData.start_time}
-              onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">End Time</label>
-            <input
-              type="datetime-local"
-              value={formData.end_time}
-              onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          <div className="flex justify-end space-x-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c]"
-            >
-              {event ? 'Update Event' : 'Create Event'}
-            </button>
-          </div>
+          <DrawerFooter>
+            <div className="flex justify-end space-x-2">
+              <DrawerClose asChild>
+                <button
+                  type="button"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+              </DrawerClose>
+              <button
+                type="submit"
+                className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c]"
+              >
+                {event ? 'Update Event' : 'Create Event'}
+              </button>
+            </div>
+          </DrawerFooter>
         </form>
-      </div>
-    </div>
+      </DrawerContent>
+    </Drawer>
   )
 }

@@ -27,7 +27,7 @@ export default function ThreadSort() {
     } else {
       params.set('sort', newSort)
     }
-    router.push(`/classifieds?${params.toString()}`)
+    router.push(`/discussions?${params.toString()}`)
   }
 
   return (

@@ -54,7 +54,7 @@ export async function POST(request: Request) {
           how_often_fly_from_ytz: toNullIfEmpty(howOftenFlyFromYTZ),
           how_did_you_hear: toNullIfEmpty(howDidYouHear),
           role: 'member',
-          membership_level: 'basic',
+          membership_level: 'Regular',
         },
       },
     })
@@ -137,7 +137,7 @@ export async function POST(request: Request) {
           console.warn('Profile not created by trigger, attempting manual creation')
           try {
             // Ensure membership_level and role match the database constraints exactly
-            const membershipLevel: 'basic' | 'cadet' | 'captain' = 'basic'
+            const membershipLevel: 'Active' | 'Regular' | 'Resident' | 'Retired' | 'Student' | 'Lifetime' = 'Regular'
             const userRole: 'member' | 'admin' = 'member'
             
             const { data: createdProfile, error: createError } = await adminClient

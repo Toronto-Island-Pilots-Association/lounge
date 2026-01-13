@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { Event } from '@/types/database'
 import { generateICal } from '@/lib/resend'
-import { createClient } from '@/lib/supabase/client'
 import Loading from '@/components/Loading'
+import ImagePreviewModal from '@/components/ImagePreviewModal'
 
 type GroupedEvents = {
   date: string
@@ -17,6 +18,7 @@ type GroupedEvents = {
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -26,25 +28,28 @@ export default function EventsPage() {
 
   const checkUserStatus = async () => {
     try {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user) {
+      const response = await fetch('/api/profile')
+      if (!response.ok) {
         router.push('/login')
         return
       }
 
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('status, role')
-        .eq('id', user.id)
-        .single()
+      const data = await response.json()
+      const profile = data.profile
 
       if (profile && profile.status !== 'approved' && profile.role !== 'admin') {
         router.push('/pending-approval')
+        return
+      }
+      
+      // If rejected, stop loading and show error
+      if (profile && profile.status === 'rejected') {
+        setLoading(false)
+        return
       }
     } catch (error) {
       console.error('Error checking user status:', error)
+      router.push('/login')
     }
   }
 
@@ -216,41 +221,81 @@ export default function EventsPage() {
                     return (
                       <div
                         key={event.id}
-                        className={`bg-white rounded-lg shadow-md p-6 border-l-4 ${
+                        className={`bg-white rounded-lg shadow-md overflow-hidden border-l-4 ${
                           group.isPast
                             ? 'border-gray-300 opacity-75'
                             : 'border-[#0d1e26]'
                         }`}
                       >
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                              {event.title}
-                            </h3>
-                            <div className="space-y-2 text-gray-600">
-                              <p>
-                                <strong className="text-gray-900">Time:</strong>{' '}
-                                {formatTime(event.start_time)}
-                                {endDate && ` - ${formatTime(event.end_time!)}`}
-                              </p>
-                              {event.location && (
-                                <p>
-                                  <strong className="text-gray-900">Location:</strong>{' '}
-                                  {event.location}
-                                </p>
-                              )}
-                              {event.description && (
-                                <p className="mt-4 text-gray-700">{event.description}</p>
+                        <div className="p-6">
+                          <div className="flex gap-4">
+                            {/* Always render image container to maintain consistent layout */}
+                            <div
+                              className={`relative w-32 h-32 sm:w-40 sm:h-40 rounded-lg overflow-hidden border border-gray-300 flex-shrink-0 bg-gray-100 ${
+                                event.image_url ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''
+                              }`}
+                              onClick={() => event.image_url && setPreviewImageUrl(event.image_url)}
+                            >
+                              {event.image_url ? (
+                                <Image
+                                  src={event.image_url}
+                                  alt={event.title}
+                                  fill
+                                  className="object-cover"
+                                  sizes="(max-width: 640px) 128px, 160px"
+                                  unoptimized // For signed URLs from private buckets
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <svg
+                                    className="w-12 h-12 text-gray-400"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                    />
+                                  </svg>
+                                </div>
                               )}
                             </div>
-                          </div>
-                          <div className="ml-6">
-                            <button
-                              onClick={() => downloadICal(event)}
-                              className="px-4 py-2 bg-[#0d1e26] text-white rounded-md hover:bg-[#0a171c] text-sm font-medium"
-                            >
-                              Add to Calendar
-                            </button>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between items-start gap-4">
+                                <div className="flex-1">
+                                  <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                                    {event.title}
+                                  </h3>
+                                  <div className="space-y-2 text-gray-600">
+                                    <p>
+                                      <strong className="text-gray-900">Time:</strong>{' '}
+                                      {formatTime(event.start_time)}
+                                      {endDate && ` - ${formatTime(event.end_time!)}`}
+                                    </p>
+                                    {event.location && (
+                                      <p>
+                                        <strong className="text-gray-900">Location:</strong>{' '}
+                                        {event.location}
+                                      </p>
+                                    )}
+                                    {event.description && (
+                                      <p className="mt-4 text-gray-700">{event.description}</p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex-shrink-0">
+                                  <button
+                                    onClick={() => downloadICal(event)}
+                                    className="px-4 py-2 bg-[#0d1e26] text-white rounded-md hover:bg-[#0a171c] text-sm font-medium"
+                                  >
+                                    Add to Calendar
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -260,6 +305,14 @@ export default function EventsPage() {
               </div>
             ))}
           </div>
+        )}
+
+        {previewImageUrl && (
+          <ImagePreviewModal
+            images={[previewImageUrl]}
+            currentIndex={0}
+            onClose={() => setPreviewImageUrl(null)}
+          />
         )}
       </div>
     </div>

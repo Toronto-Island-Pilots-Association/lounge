@@ -15,11 +15,12 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   how_often_fly_from_ytz TEXT,
   how_did_you_hear TEXT,
   role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('member', 'admin')),
-  membership_level TEXT NOT NULL DEFAULT 'basic' CHECK (membership_level IN ('basic', 'cadet', 'captain')),
+  membership_level TEXT NOT NULL DEFAULT 'Regular' CHECK (membership_level IN ('Active', 'Regular', 'Resident', 'Retired', 'Student', 'Lifetime')),
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
   membership_expires_at TIMESTAMPTZ,
   paypal_subscription_id TEXT,
   profile_picture_url TEXT,
+  member_number TEXT UNIQUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -59,7 +60,7 @@ CREATE TABLE IF NOT EXISTS settings (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Create threads table for classifieds board
+-- Create threads table for discussions board
 CREATE TABLE IF NOT EXISTS threads (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   title TEXT NOT NULL,
@@ -98,6 +99,28 @@ INSERT INTO settings (key, value, description)
 VALUES ('annual_membership_fee', '99', 'Annual membership fee in USD')
 ON CONFLICT (key) DO NOTHING;
 
+-- Create function to generate next member number
+CREATE OR REPLACE FUNCTION public.generate_member_number()
+RETURNS TEXT AS $$
+DECLARE
+  next_number INTEGER;
+  formatted_number TEXT;
+BEGIN
+  -- Get the highest existing member number, or start from 0 (will become 1)
+  SELECT COALESCE(MAX(CAST(member_number AS INTEGER)), 0) + 1
+  INTO next_number
+  FROM user_profiles
+  WHERE member_number IS NOT NULL 
+    AND member_number ~ '^[0-9]+$'  -- Only consider numeric member numbers
+    AND LENGTH(member_number) <= 6; -- Only consider 6-digit or less numbers
+  
+  -- Format as 6-digit string with leading zeros (starts from 000001)
+  formatted_number := LPAD(next_number::TEXT, 6, '0');
+  
+  RETURN formatted_number;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Create function to automatically create user profile on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
@@ -113,6 +136,7 @@ DECLARE
   v_how_did_you_hear TEXT;
   v_role TEXT;
   v_membership_level TEXT;
+  v_member_number TEXT;
 BEGIN
   -- Helper function to convert empty strings to NULL
   -- NULLIF converts empty string to NULL, then COALESCE handles NULL
@@ -136,13 +160,16 @@ BEGIN
   END IF;
   
   v_membership_level := COALESCE(
-    NULLIF(LOWER(TRIM(COALESCE(NEW.raw_user_meta_data->>'membership_level', ''))), ''),
-    'basic'
+    NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'membership_level', '')), ''),
+    'Regular'
   );
   -- Ensure it's one of the valid values
-  IF v_membership_level NOT IN ('basic', 'cadet', 'captain') THEN
-    v_membership_level := 'basic';
+  IF v_membership_level NOT IN ('Active', 'Regular', 'Resident', 'Retired', 'Student', 'Lifetime') THEN
+    v_membership_level := 'Regular';
   END IF;
+
+  -- Generate unique member number
+  v_member_number := public.generate_member_number();
 
   -- Ensure email is not null (should never happen, but safety check)
   IF NEW.email IS NULL OR TRIM(NEW.email) = '' THEN
@@ -164,6 +191,7 @@ BEGIN
     how_did_you_hear,
     role, 
     membership_level,
+    member_number,
     status
   )
   VALUES (
@@ -180,6 +208,7 @@ BEGIN
     v_how_did_you_hear,
     v_role,
     v_membership_level,
+    NULL,  -- Member number will be assigned on approval
     'pending'
   )
   ON CONFLICT (id) DO NOTHING; -- Prevent duplicate inserts if trigger runs twice
@@ -201,6 +230,33 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Create function to assign member number when status changes to approved
+CREATE OR REPLACE FUNCTION public.assign_member_number_on_approval()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Only assign member number if:
+  -- 1. Status is being changed to 'approved'
+  -- 2. Member number is currently NULL
+  -- 3. Previous status was not 'approved' (to avoid reassigning on re-approval)
+  IF NEW.status = 'approved' 
+     AND (NEW.member_number IS NULL OR NEW.member_number = '')
+     AND (OLD.status IS NULL OR OLD.status != 'approved') THEN
+    
+    -- Generate and assign member number
+    NEW.member_number := public.generate_member_number();
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create trigger that assigns member number when status changes to approved
+DROP TRIGGER IF EXISTS assign_member_number_on_approval_trigger ON public.user_profiles;
+CREATE TRIGGER assign_member_number_on_approval_trigger
+  BEFORE UPDATE ON public.user_profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION public.assign_member_number_on_approval();
 
 -- Create function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION public.update_updated_at_column()
@@ -493,3 +549,119 @@ CREATE POLICY "Users can delete their own profile pictures"
 CREATE POLICY "Public can view profile pictures"
   ON storage.objects FOR SELECT
   USING (bucket_id = 'profile-pictures');
+
+-- Storage Bucket Setup for Thread Images
+-- Note: The threads bucket should be created as a private bucket
+-- INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+-- VALUES (
+--   'threads',
+--   'threads',
+--   false, -- Private bucket
+--   10485760, -- 10MB limit per file
+--   ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+-- )
+-- ON CONFLICT (id) DO NOTHING;
+
+-- Storage RLS Policies for threads bucket
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can upload thread images" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete their own thread images" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can view thread images" ON storage.objects;
+
+-- Policy: Authenticated users can upload images to their own folder in threads bucket
+-- Files are stored as: threads/{user_id}/{timestamp}-{random}.{ext}
+CREATE POLICY "Users can upload thread images"
+  ON storage.objects FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    bucket_id = 'threads' AND
+    (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+-- Policy: Users can delete their own thread images
+CREATE POLICY "Users can delete their own thread images"
+  ON storage.objects FOR DELETE
+  TO authenticated
+  USING (
+    bucket_id = 'threads' AND
+    (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+-- Policy: Authenticated users can view thread images (for private bucket with RLS)
+CREATE POLICY "Authenticated users can view thread images"
+  ON storage.objects FOR SELECT
+  TO authenticated
+  USING (
+    bucket_id = 'threads'
+  );
+
+-- Storage Bucket Setup for Resources and Events Images
+-- Note: The resources and events buckets should be created as private buckets in Supabase Dashboard
+-- This schema only sets up the RLS policies
+
+-- Storage RLS Policies for resources bucket
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Admins can upload resource images" ON storage.objects;
+DROP POLICY IF EXISTS "Admins can delete resource images" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can view resource images" ON storage.objects;
+
+-- Policy: Admins can upload images to resources bucket
+CREATE POLICY "Admins can upload resource images"
+  ON storage.objects FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    bucket_id = 'resources' AND
+    public.is_admin(auth.uid())
+  );
+
+-- Policy: Admins can delete resource images
+CREATE POLICY "Admins can delete resource images"
+  ON storage.objects FOR DELETE
+  TO authenticated
+  USING (
+    bucket_id = 'resources' AND
+    public.is_admin(auth.uid())
+  );
+
+-- Policy: Authenticated users can view resource images
+CREATE POLICY "Authenticated users can view resource images"
+  ON storage.objects FOR SELECT
+  TO authenticated
+  USING (
+    bucket_id = 'resources'
+  );
+
+-- Storage RLS Policies for events bucket
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Admins can upload event images" ON storage.objects;
+DROP POLICY IF EXISTS "Admins can delete event images" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can view event images" ON storage.objects;
+
+-- Policy: Admins can upload images to events bucket
+CREATE POLICY "Admins can upload event images"
+  ON storage.objects FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    bucket_id = 'events' AND
+    public.is_admin(auth.uid())
+  );
+
+-- Policy: Admins can delete event images
+CREATE POLICY "Admins can delete event images"
+  ON storage.objects FOR DELETE
+  TO authenticated
+  USING (
+    bucket_id = 'events' AND
+    public.is_admin(auth.uid())
+  );
+
+-- Policy: Authenticated users can view event images
+CREATE POLICY "Authenticated users can view event images"
+  ON storage.objects FOR SELECT
+  TO authenticated
+  USING (
+    bucket_id = 'events'
+  );

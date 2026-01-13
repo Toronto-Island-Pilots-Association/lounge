@@ -3,6 +3,33 @@ import { createClient } from '@/lib/supabase/server'
 import { sendEventNotificationEmail } from '@/lib/resend'
 import { NextResponse } from 'next/server'
 
+// Helper function to get signed URL for event image
+async function getEventImageUrl(supabase: any, imageUrl: string | null): Promise<string | null> {
+  if (!imageUrl) return null
+  
+  // If it's already a full URL (signed URL), return as-is
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    return imageUrl
+  }
+  
+  // Otherwise, it's a storage path - create signed URL
+  try {
+    const { data, error } = await supabase.storage
+      .from('events')
+      .createSignedUrl(imageUrl, 3600) // 1 hour expiration
+    
+    if (error || !data) {
+      console.error('Error creating signed URL for event image:', error)
+      return null
+    }
+    
+    return data.signedUrl
+  } catch (error) {
+    console.error('Error getting event image URL:', error)
+    return null
+  }
+}
+
 // GET - Get all events (authenticated users)
 export async function GET() {
   try {
@@ -18,7 +45,18 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    return NextResponse.json({ events: data })
+    // Get signed URLs for all images
+    const eventsWithSignedUrls = await Promise.all(
+      (data || []).map(async (event) => {
+        const signedImageUrl = await getEventImageUrl(supabase, event.image_url)
+        return {
+          ...event,
+          image_url: signedImageUrl,
+        }
+      })
+    )
+
+    return NextResponse.json({ events: eventsWithSignedUrls })
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || 'Unauthorized' },
@@ -40,7 +78,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const { title, description, location, start_time, end_time } = await request.json()
+    const { title, description, location, start_time, end_time, image_url } = await request.json()
 
     if (!title || !start_time) {
       return NextResponse.json(
@@ -51,6 +89,13 @@ export async function POST(request: Request) {
 
     const supabase = await createClient()
 
+    // Only save storage paths, not signed URLs (which expire)
+    // If image_url is a signed URL (starts with http:// or https://), don't save it
+    // This prevents saving expired signed URLs
+    const imagePath = image_url && !image_url.startsWith('http://') && !image_url.startsWith('https://')
+      ? image_url
+      : null
+
     const { data, error } = await supabase
       .from('events')
       .insert({
@@ -59,6 +104,7 @@ export async function POST(request: Request) {
         location: location || null,
         start_time,
         end_time: end_time || null,
+        image_url: imagePath,
         created_by: user.id,
       })
       .select()

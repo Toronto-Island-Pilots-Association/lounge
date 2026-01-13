@@ -4,11 +4,11 @@ import Image from 'next/image'
 import { Suspense } from 'react'
 import { getCurrentUser } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
-import { Thread, ClassifiedCategory, ThreadWithData, ThreadAuthor } from '@/types/database'
+import { Thread, DiscussionCategory, ThreadWithData, ThreadAuthor } from '@/types/database'
 import ThreadSort from './ThreadSort'
 import Sidebar from './Sidebar'
 
-const CATEGORY_LABELS: Record<ClassifiedCategory, string> = {
+const CATEGORY_LABELS: Record<DiscussionCategory, string> = {
   aircraft_shares: 'Aircraft Shares / Block Time',
   instructor_availability: 'Instructor Availability',
   gear_for_sale: 'Gear for Sale',
@@ -16,7 +16,7 @@ const CATEGORY_LABELS: Record<ClassifiedCategory, string> = {
   other: 'Other',
 }
 
-export default async function ClassifiedsPage({
+export default async function DiscussionsPage({
   searchParams,
 }: {
   searchParams: Promise<{ sort?: string; category?: string }>
@@ -37,7 +37,7 @@ export default async function ClassifiedsPage({
   const sortBy = params?.sort || 'latest'
   const categoryParam = params?.category
   const categoryFilter = categoryParam && categoryParam !== 'all' 
-    ? (categoryParam as ClassifiedCategory)
+    ? (categoryParam as DiscussionCategory)
     : undefined
 
   // Build query
@@ -176,7 +176,7 @@ export default async function ClassifiedsPage({
         {/* Header */}
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Classifieds</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Discussions</h1>
             <div className="flex items-center gap-3 w-full sm:w-auto sm:ml-auto">
               {threadsWithData.length > 0 && (
                 <Suspense fallback={<div className="h-8 w-32 bg-gray-100 rounded-lg animate-pulse" />}>
@@ -185,8 +185,8 @@ export default async function ClassifiedsPage({
               )}
               <Link
                 href={categoryFilter 
-                  ? `/classifieds/new?category=${categoryFilter}`
-                  : '/classifieds/new'}
+                  ? `/discussions/new?category=${categoryFilter}`
+                  : '/discussions/new'}
                 className="inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-[#0d1e26] text-white text-sm font-medium rounded-lg hover:bg-[#0a171c] transition-colors shadow-sm hover:shadow-md whitespace-nowrap ml-auto sm:ml-0"
               >
                 <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -199,12 +199,11 @@ export default async function ClassifiedsPage({
           </div>
           {categoryFilter && (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Filtered by:</span>
               <span className="px-3 py-1 text-sm font-medium bg-[#0d1e26]/10 text-[#0d1e26] rounded-md">
                 {CATEGORY_LABELS[categoryFilter]}
               </span>
               <Link
-                href="/classifieds"
+                href="/discussions"
                 className="text-sm text-[#0d1e26] hover:text-[#0a171c] hover:underline"
               >
                 Clear filter
@@ -233,19 +232,19 @@ export default async function ClassifiedsPage({
                   </svg>
                   <p className="text-gray-600 mb-6">
                     {categoryFilter
-                      ? `No classifieds in this category yet. Be the first to post!`
-                      : 'No classifieds yet. Be the first to post a classified!'}
+                      ? `No discussions in this category yet. Be the first to post!`
+                      : 'No discussions yet. Be the first to start a discussion!'}
                   </p>
                   <Link
                     href={categoryFilter 
-                      ? `/classifieds/new?category=${categoryFilter}`
-                      : '/classifieds/new'}
+                      ? `/discussions/new?category=${categoryFilter}`
+                      : '/discussions/new'}
                     className="inline-flex items-center px-5 py-2.5 bg-[#0d1e26] text-white text-sm font-semibold rounded-lg hover:bg-[#0a171c] transition-colors shadow-sm hover:shadow-md"
                   >
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
-                    Create First Classified
+                    Start First Discussion
                   </Link>
                 </div>
               </div>
@@ -270,7 +269,7 @@ export default async function ClassifiedsPage({
                     return (
                       <Link
                         key={thread.id}
-                        href={`/classifieds/${thread.id}`}
+                        href={`/discussions/${thread.id}`}
                         className="block hover:bg-gray-50 transition-colors"
                       >
                         <div className="grid grid-cols-12 gap-4 px-4 py-4 items-center">

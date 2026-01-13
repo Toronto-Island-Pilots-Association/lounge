@@ -1,4 +1,9 @@
-export type MembershipLevel = 'basic' | 'cadet' | 'captain'
+export type MembershipLevel = 'Active' | 'Regular' | 'Resident' | 'Retired' | 'Student' | 'Lifetime'
+
+// Helper function to get display name for membership level (now just returns the value)
+export function getMembershipLevelLabel(level: MembershipLevel): string {
+  return level
+}
 export type UserRole = 'member' | 'admin'
 export type UserStatus = 'pending' | 'approved' | 'rejected'
 
@@ -20,14 +25,25 @@ export interface UserProfile {
   membership_expires_at: string | null
   paypal_subscription_id: string | null
   profile_picture_url: string | null
+  member_number: string | null
   created_at: string
   updated_at: string
 }
 
+export type ResourceType = 'link' | 'document' | 'video' | 'other'
+export type ResourceCategory = 'cytz' | 'general_aviation' | 'tipa' | 'aviation_news' | 'other'
+
 export interface Resource {
   id: string
   title: string
-  description: string | null // HTML content from rich text editor
+  description: string | null // HTML content from rich text editor (preview/short description)
+  content: string | null // Full blog post content (HTML)
+  url: string | null // External link URL (if resource is an external link)
+  resource_type: ResourceType
+  category: ResourceCategory
+  image_url: string | null
+  file_url: string | null
+  file_name: string | null
   created_at: string
   updated_at: string
 }
@@ -37,6 +53,7 @@ export interface Event {
   title: string
   description: string | null
   location: string | null
+  image_url: string | null
   start_time: string
   end_time: string | null
   created_by: string | null
@@ -44,15 +61,16 @@ export interface Event {
   updated_at: string
 }
 
-export type ClassifiedCategory = 'aircraft_shares' | 'instructor_availability' | 'gear_for_sale' | 'lounge_feedback' | 'other'
+export type DiscussionCategory = 'aircraft_shares' | 'instructor_availability' | 'gear_for_sale' | 'lounge_feedback' | 'other'
 
 export interface Thread {
   id: string
   title: string
   content: string
-  category: ClassifiedCategory
+  category: DiscussionCategory
   created_by: string | null
   author_email?: string | null
+  image_urls?: string[] | null
   created_at: string
   updated_at: string
   author?: UserProfile

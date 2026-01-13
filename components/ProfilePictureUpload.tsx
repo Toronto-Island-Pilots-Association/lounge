@@ -2,7 +2,6 @@
 
 import { useState, useRef } from 'react'
 import Image from 'next/image'
-import { createClient } from '@/lib/supabase/client'
 
 interface ProfilePictureUploadProps {
   currentPictureUrl: string | null

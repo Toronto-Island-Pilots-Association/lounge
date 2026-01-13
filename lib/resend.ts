@@ -359,7 +359,7 @@ export async function sendMemberApprovalEmail(email: string, name: string | null
         </p>
         <ul style="color: #374151; line-height: 1.8; margin-left: 20px;">
           <li>Access member resources and exclusive content</li>
-          <li>Browse and post classifieds</li>
+          <li>Browse and post discussions</li>
           <li>View and RSVP to events</li>
           <li>Connect with other GA pilots in Toronto</li>
           <li>Stay informed on advocacy efforts for GA at CYTZ</li>

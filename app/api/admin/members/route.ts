@@ -45,6 +45,7 @@ export async function PATCH(request: Request) {
       .eq('id', id)
       .single()
 
+    // Update the member (database trigger will assign member number if status changes to approved)
     const { data, error } = await supabase
       .from('user_profiles')
       .update(updates)

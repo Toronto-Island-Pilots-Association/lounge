@@ -19,7 +19,7 @@ export default function DeleteThreadButton({ threadId, isOwner, isAdmin }: Delet
   }
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this classified? This action cannot be undone.')) {
+    if (!confirm('Are you sure you want to delete this discussion? This action cannot be undone.')) {
       return
     }
 
@@ -32,13 +32,13 @@ export default function DeleteThreadButton({ threadId, isOwner, isAdmin }: Delet
       const data = await res.json()
 
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to delete classified')
+        throw new Error(data.error || 'Failed to delete discussion')
       }
 
-      router.push('/classifieds')
+      router.push('/discussions')
       router.refresh()
     } catch (err: any) {
-      alert(err.message || 'Failed to delete classified')
+      alert(err.message || 'Failed to delete discussion')
       setLoading(false)
     }
   }
@@ -48,7 +48,7 @@ export default function DeleteThreadButton({ threadId, isOwner, isAdmin }: Delet
       onClick={handleDelete}
       disabled={loading}
       className="text-red-600 hover:text-red-700 text-sm font-medium disabled:opacity-50"
-      title="Delete classified"
+      title="Delete discussion"
     >
       {loading ? 'Deleting...' : 'Delete'}
     </button>

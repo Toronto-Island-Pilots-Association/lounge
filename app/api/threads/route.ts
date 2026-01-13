@@ -58,7 +58,7 @@ export async function POST(request: Request) {
   try {
     const user = await requireAuth()
     const body = await request.json()
-    const { title, content, category } = body
+    const { title, content, category, image_urls } = body
 
     if (!title || !content) {
       return NextResponse.json(
@@ -70,6 +70,11 @@ export async function POST(request: Request) {
     // Validate category
     const validCategories = ['aircraft_shares', 'instructor_availability', 'gear_for_sale', 'lounge_feedback', 'other']
     const threadCategory = category && validCategories.includes(category) ? category : 'other'
+
+    // Validate image_urls (should be an array of strings, max 5)
+    const imageUrls = Array.isArray(image_urls) 
+      ? image_urls.filter((url): url is string => typeof url === 'string').slice(0, 5)
+      : []
 
     const supabase = await createClient()
 
@@ -86,6 +91,7 @@ export async function POST(request: Request) {
         title,
         content,
         category: threadCategory,
+        image_urls: imageUrls.length > 0 ? imageUrls : null,
         created_by: user.id,
         author_email: userProfile?.email || user.email || null
       })
