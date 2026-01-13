@@ -111,7 +111,15 @@ export default function ResourcesPage() {
   }
 
   if (loading) {
-    return <Loading message="Loading resources..." />
+    return (
+      <div className="min-h-screen bg-gray-50 py-6 sm:py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="pt-16 sm:pt-24">
+            <Loading message="Loading resources..." />
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

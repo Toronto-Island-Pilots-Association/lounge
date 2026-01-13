@@ -284,6 +284,7 @@ function EventFormModal({
     start_time: event ? formatDateTimeForInput(event.start_time) : '',
     end_time: event?.end_time ? formatDateTimeForInput(event.end_time) : '',
     image_url: event?.image_url || null,
+    send_notifications: true, // Default to true for new events, not applicable for edits
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -301,6 +302,7 @@ function EventFormModal({
       start_time: formData.start_time ? new Date(formData.start_time).toISOString() : '',
       end_time: formData.end_time ? new Date(formData.end_time).toISOString() : null,
       image_url: formData.image_url !== undefined && formData.image_url !== '' ? formData.image_url : null,
+      send_notifications: event ? false : formData.send_notifications, // Only send notifications for new events
     }
     
     await onSave(submitData)
@@ -350,7 +352,23 @@ function EventFormModal({
         <input
           type="datetime-local"
           value={formData.start_time}
-          onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+          onChange={(e) => {
+            const newStartTime = e.target.value
+            // Auto-fill end time: start time + 1 hour
+            let newEndTime = formData.end_time
+            if (newStartTime) {
+              const startDate = new Date(newStartTime)
+              startDate.setHours(startDate.getHours() + 1)
+              // Format for datetime-local input (YYYY-MM-DDTHH:mm)
+              const year = startDate.getFullYear()
+              const month = String(startDate.getMonth() + 1).padStart(2, '0')
+              const day = String(startDate.getDate()).padStart(2, '0')
+              const hours = String(startDate.getHours()).padStart(2, '0')
+              const minutes = String(startDate.getMinutes()).padStart(2, '0')
+              newEndTime = `${year}-${month}-${day}T${hours}:${minutes}`
+            }
+            setFormData({ ...formData, start_time: newStartTime, end_time: newEndTime })
+          }}
           className="w-full px-3 py-2 border rounded-md"
           required
         />
@@ -374,6 +392,20 @@ function EventFormModal({
           />
         </Suspense>
       </div>
+      {!event && (
+        <div className="flex items-center gap-2 pt-2">
+          <input
+            type="checkbox"
+            id="send-notifications"
+            checked={formData.send_notifications}
+            onChange={(e) => setFormData({ ...formData, send_notifications: e.target.checked })}
+            className="w-4 h-4 text-[#0d1e26] border-gray-300 rounded focus:ring-[#0d1e26]"
+          />
+          <label htmlFor="send-notifications" className="text-sm text-gray-700 cursor-pointer">
+            Send email notifications to members
+          </label>
+        </div>
+      )}
     </form>
   )
 

@@ -190,6 +190,21 @@ export default function EventsPage() {
     window.URL.revokeObjectURL(url)
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900">TIPA Events</h1>
+          </div>
+          <div className="pt-16 sm:pt-24">
+            <Loading message="Loading events..." />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -286,14 +301,16 @@ export default function EventsPage() {
                                     )}
                                   </div>
                                 </div>
-                                <div className="flex-shrink-0">
-                                  <button
-                                    onClick={() => downloadICal(event)}
-                                    className="w-full sm:w-auto px-4 py-2 bg-[#0d1e26] text-white rounded-md hover:bg-[#0a171c] text-sm font-medium transition-colors"
-                                  >
-                                    Add to Calendar
-                                  </button>
-                                </div>
+                                {!group.isPast && (
+                                  <div className="flex-shrink-0">
+                                    <button
+                                      onClick={() => downloadICal(event)}
+                                      className="w-full sm:w-auto px-4 py-2 bg-[#0d1e26] text-white rounded-md hover:bg-[#0a171c] text-sm font-medium transition-colors"
+                                    >
+                                      Add to Calendar
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>

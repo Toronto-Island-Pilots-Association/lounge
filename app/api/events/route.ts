@@ -78,7 +78,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const { title, description, location, start_time, end_time, image_url } = await request.json()
+    const { title, description, location, start_time, end_time, image_url, send_notifications } = await request.json()
 
     if (!title || !start_time) {
       return NextResponse.json(
@@ -114,41 +114,44 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    // Send event notification emails to all members
-    try {
-      const { data: members } = await supabase
-        .from('user_profiles')
-        .select('email, full_name, first_name, last_name')
-        .not('email', 'is', null)
+    // Send event notification emails to all members (only if send_notifications is true)
+    if (send_notifications !== false) {
+      try {
+        const { data: members } = await supabase
+          .from('user_profiles')
+          .select('email, full_name, first_name, last_name')
+          .eq('status', 'approved') // Only send to approved members
+          .not('email', 'is', null)
 
-      if (members && members.length > 0) {
-        // Send emails in parallel (but limit concurrency)
-        const emailPromises = members.map(member => {
-          const name = member.full_name || 
-                      (member.first_name && member.last_name 
-                        ? `${member.first_name} ${member.last_name}` 
-                        : member.email?.split('@')[0] || 'Member')
-          return sendEventNotificationEmail(
-            member.email!,
-            name,
-            {
-              title: data.title,
-              description: data.description,
-              location: data.location,
-              start_time: data.start_time,
-              end_time: data.end_time,
-            }
-          )
-        })
+        if (members && members.length > 0) {
+          // Send emails in parallel (but limit concurrency)
+          const emailPromises = members.map(member => {
+            const name = member.full_name || 
+                        (member.first_name && member.last_name 
+                          ? `${member.first_name} ${member.last_name}` 
+                          : member.email?.split('@')[0] || 'Member')
+            return sendEventNotificationEmail(
+              member.email!,
+              name,
+              {
+                title: data.title,
+                description: data.description,
+                location: data.location,
+                start_time: data.start_time,
+                end_time: data.end_time,
+              }
+            )
+          })
 
-        // Send emails (don't wait for all to complete)
-        Promise.all(emailPromises).catch(err => {
-          console.error('Error sending event notification emails:', err)
-        })
+          // Send emails (don't wait for all to complete)
+          Promise.all(emailPromises).catch(err => {
+            console.error('Error sending event notification emails:', err)
+          })
+        }
+      } catch (emailError) {
+        console.error('Error sending event notifications:', emailError)
+        // Don't fail the request if email sending fails
       }
-    } catch (emailError) {
-      console.error('Error sending event notifications:', emailError)
-      // Don't fail the request if email sending fails
     }
 
     return NextResponse.json({ event: data })
