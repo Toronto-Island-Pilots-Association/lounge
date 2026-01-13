@@ -56,10 +56,11 @@ export default function MembershipCard({ user, isPending, isRejected, isPaid, is
     const bottomRightColor = `rgba(0, 0, 0, ${0.35 + lightIntensity})`
     
     return {
-      borderTop: `1px solid ${topLeftColor}`,
-      borderLeft: `1px solid ${topLeftColor}`,
-      borderBottom: `1px solid ${bottomRightColor}`,
-      borderRight: `1px solid ${bottomRightColor}`,
+      borderWidth: '4px',
+      borderTop: `4px solid ${topLeftColor}`,
+      borderLeft: `2px solid ${topLeftColor}`,
+      borderBottom: `4px solid ${bottomRightColor}`,
+      borderRight: `4px solid ${bottomRightColor}`,
     }
   }, [tilt.x, tilt.y])
 
@@ -67,7 +68,7 @@ export default function MembershipCard({ user, isPending, isRejected, isPaid, is
     <div className="relative w-full">
       <div
         ref={cardRef}
-        className="relative bg-gradient-to-br from-[#0d1e26] via-[#0a171c] to-[#0d1e26] rounded-2xl overflow-hidden transition-all duration-300 ease-out shadow-2xl sm:min-w-[380px]"
+        className="relative bg-gradient-to-br from-[#0d1e26] via-[#0a171c] to-[#0d1e26] rounded-2xl overflow-hidden transition-all duration-300 ease-out shadow-2xl sm:min-w-[380px] border-0"
         style={{
           aspectRatio: '1.586 / 1',
           transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale3d(1.02, 1.02, 1.02)`,
