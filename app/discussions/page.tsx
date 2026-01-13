@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Thread, DiscussionCategory, ThreadWithData, ThreadAuthor } from '@/types/database'
 import ThreadSort from './ThreadSort'
 import Sidebar from './Sidebar'
+import MobileFilters from './MobileFilters'
 
 const CATEGORY_LABELS: Record<DiscussionCategory, string> = {
   aircraft_shares: 'Aircraft Shares / Block Time',
@@ -178,11 +179,22 @@ export default async function DiscussionsPage({
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Discussions</h1>
             <div className="flex items-center gap-3 w-full sm:w-auto sm:ml-auto">
-              {threadsWithData.length > 0 && (
-                <Suspense fallback={<div className="h-8 w-32 bg-gray-100 rounded-lg animate-pulse" />}>
-                  <ThreadSort />
+              {/* Mobile Filters - Combined Category & Sort */}
+              <div className="lg:hidden relative flex-1 sm:flex-initial">
+                <Suspense fallback={<div className="h-10 w-full sm:w-40 bg-gray-100 rounded-lg animate-pulse" />}>
+                  <MobileFilters />
                 </Suspense>
+              </div>
+              
+              {/* Desktop Sort - Hidden on Mobile */}
+              {threadsWithData.length > 0 && (
+                <div className="hidden lg:block">
+                  <Suspense fallback={<div className="h-8 w-32 bg-gray-100 rounded-lg animate-pulse" />}>
+                    <ThreadSort />
+                  </Suspense>
+                </div>
               )}
+              
               <Link
                 href={categoryFilter 
                   ? `/discussions/new?category=${categoryFilter}`
@@ -197,8 +209,9 @@ export default async function DiscussionsPage({
               </Link>
             </div>
           </div>
+          {/* Category Filter Badge - Desktop Only */}
           {categoryFilter && (
-            <div className="flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-2">
               <span className="px-3 py-1 text-sm font-medium bg-[#0d1e26]/10 text-[#0d1e26] rounded-md">
                 {CATEGORY_LABELS[categoryFilter]}
               </span>
@@ -214,14 +227,14 @@ export default async function DiscussionsPage({
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
+          {/* Sidebar - Hidden on Mobile */}
+          <div className="hidden lg:block lg:col-span-1">
             <Suspense fallback={<div className="space-y-6"><div className="h-64 bg-gray-100 rounded-lg animate-pulse" /></div>}>
               <Sidebar currentCategory={categoryFilter} />
             </Suspense>
           </div>
 
-          {/* Main Content */}
+          {/* Main Content - Full Width on Mobile */}
           <div className="lg:col-span-3">
 
             {!threadsWithData || threadsWithData.length === 0 ? (
