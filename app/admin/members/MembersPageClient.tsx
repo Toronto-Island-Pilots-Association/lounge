@@ -159,6 +159,9 @@ export default function MembersPageClient() {
                   <div className="flex-1">
                     <div className="font-medium text-gray-900">{member.full_name || 'N/A'}</div>
                     <div className="text-sm text-gray-600">{member.email}</div>
+                    {member.member_number && (
+                      <div className="text-xs text-gray-500 mt-1">Member #: {member.member_number}</div>
+                    )}
                     {member.call_sign && (
                       <div className="text-xs text-gray-500 mt-1">Call Sign: {member.call_sign}</div>
                     )}
@@ -248,6 +251,9 @@ export default function MembersPageClient() {
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-gray-900 truncate">{member.full_name || 'N/A'}</div>
                       <div className="text-xs text-gray-500 mt-1 truncate">{member.email}</div>
+                      {member.member_number && (
+                        <div className="text-xs text-gray-400 mt-1">Member #: {member.member_number}</div>
+                      )}
                     </div>
                     <button
                       onClick={() => setEditingMember(member)}
@@ -283,6 +289,7 @@ export default function MembersPageClient() {
             <table className="min-w-full divide-y divide-gray-200 hidden sm:table">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member #</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -294,6 +301,9 @@ export default function MembersPageClient() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {members.map((member) => (
                   <tr key={member.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {member.member_number || '-'}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {member.full_name || 'N/A'}
                     </td>

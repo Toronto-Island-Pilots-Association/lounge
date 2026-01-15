@@ -31,7 +31,7 @@ export interface UserProfile {
 }
 
 export type ResourceType = 'link' | 'document' | 'video' | 'other'
-export type ResourceCategory = 'cytz' | 'general_aviation' | 'tipa' | 'aviation_news' | 'other'
+export type ResourceCategory = 'tipa_newsletters' | 'airport_updates' | 'reminder' | 'other'
 
 export interface Resource {
   id: string
@@ -61,7 +61,7 @@ export interface Event {
   updated_at: string
 }
 
-export type DiscussionCategory = 'aircraft_shares' | 'instructor_availability' | 'gear_for_sale' | 'lounge_feedback' | 'other'
+export type DiscussionCategory = 'aircraft_shares' | 'instructor_availability' | 'gear_for_sale' | 'other'
 
 export interface Thread {
   id: string
@@ -103,7 +103,7 @@ export interface Comment {
   author?: UserProfile
 }
 
-export type ReactionType = 'like' | 'upvote' | 'downvote'
+export type ReactionType = 'like'
 
 export interface Reaction {
   id: string

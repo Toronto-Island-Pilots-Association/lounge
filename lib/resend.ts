@@ -474,3 +474,108 @@ export async function sendEventNotificationEmail(
   })
 }
 
+export async function sendDiscussionDigestEmail(
+  email: string,
+  name: string,
+  threads: Array<{
+    id: string
+    title: string
+    content: string
+    category: string
+    created_at: string
+    author?: {
+      full_name: string | null
+      email: string
+    } | null
+    comment_count?: number
+  }>
+) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const discussionsUrl = `${appUrl}/discussions`
+  
+  const CATEGORY_LABELS: Record<string, string> = {
+    aircraft_shares: 'Aircraft Shares / Block Time',
+    instructor_availability: 'Instructor Availability',
+    gear_for_sale: 'Gear for Sale',
+    other: 'Other',
+  }
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(date)
+  }
+
+  // Strip HTML tags and truncate content for preview
+  const stripHtml = (html: string) => {
+    return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()
+  }
+
+  const truncateText = (text: string, maxLength: number = 150) => {
+    if (text.length <= maxLength) return text
+    return text.substring(0, maxLength).trim() + '...'
+  }
+
+  const threadsHtml = threads.map(thread => {
+    const authorName = thread.author?.full_name || thread.author?.email || 'Anonymous'
+    const categoryLabel = CATEGORY_LABELS[thread.category] || thread.category
+    const preview = truncateText(stripHtml(thread.content))
+    const threadUrl = `${discussionsUrl}/${thread.id}`
+    const commentText = thread.comment_count === 1 ? 'comment' : 'comments'
+    
+    return `
+      <div style="border-bottom: 1px solid #e5e7eb; padding: 20px 0; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+          <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #1f2937;">
+            <a href="${threadUrl}" style="color: #2563eb; text-decoration: none;">${thread.title}</a>
+          </h3>
+          <span style="font-size: 12px; color: #6b7280; background-color: #f3f4f6; padding: 4px 8px; border-radius: 4px;">
+            ${categoryLabel}
+          </span>
+        </div>
+        <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 8px 0;">
+          ${preview}
+        </p>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 12px; color: #9ca3af;">
+          <span>By ${authorName} • ${formatDate(thread.created_at)}</span>
+          ${thread.comment_count ? `<span>${thread.comment_count} ${commentText}</span>` : ''}
+        </div>
+      </div>
+    `
+  }).join('')
+
+  return sendEmail({
+    to: email,
+    subject: `TIPA Discussion Digest - ${threads.length} New Discussion${threads.length === 1 ? '' : 's'}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #1f2937; margin-bottom: 20px;">TIPA Discussion Digest</h1>
+        <p style="color: #374151; line-height: 1.6;">Hi ${name},</p>
+        <p style="color: #374151; line-height: 1.6;">
+          Here are the latest discussions from the TIPA community over the past week:
+        </p>
+        <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          ${threadsHtml}
+        </div>
+        <p style="margin-top: 20px;">
+          <a href="${discussionsUrl}" 
+             style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
+            View All Discussions
+          </a>
+        </p>
+        <p style="margin-top: 20px; color: #374151; line-height: 1.6; font-size: 14px;">
+          You're receiving this weekly digest because you're a member of TIPA. 
+          <a href="${appUrl}/settings" style="color: #2563eb;">Manage your email preferences</a>
+        </p>
+        <p style="margin-top: 20px; color: #374151; line-height: 1.6;">
+          Best regards,<br>
+          <strong>The TIPA Team</strong>
+        </p>
+      </div>
+    `,
+  })
+}
+

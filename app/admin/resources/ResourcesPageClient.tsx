@@ -64,7 +64,7 @@ export default function ResourcesPageClient() {
       }
     } catch (error) {
       console.error('Error creating resource:', error)
-      alert('Failed to create resource')
+      alert('Failed to create announcement')
     }
   }
 
@@ -85,12 +85,12 @@ export default function ResourcesPageClient() {
       }
     } catch (error) {
       console.error('Error updating resource:', error)
-      alert('Failed to update resource')
+      alert('Failed to update announcement')
     }
   }
 
   const handleDeleteResource = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this resource?')) return
+    if (!confirm('Are you sure you want to delete this announcement?')) return
 
     try {
       const response = await fetch(`/api/resources/${id}`, {
@@ -105,12 +105,12 @@ export default function ResourcesPageClient() {
       }
     } catch (error) {
       console.error('Error deleting resource:', error)
-      alert('Failed to delete resource')
+      alert('Failed to delete announcement')
     }
   }
 
   if (loading) {
-    return <Loading message="Loading resources..." />
+    return <Loading message="Loading announcements..." />
   }
 
   return (
@@ -123,7 +123,7 @@ export default function ResourcesPageClient() {
           }}
           className="bg-[#0d1e26] text-white px-4 py-2 rounded-md hover:bg-[#0a171c] text-sm w-full sm:w-auto"
         >
-          Add Resource
+          Add Announcement
         </button>
       </div>
       <div className="space-y-4">
@@ -310,7 +310,7 @@ function ResourceFormModal({
     <Drawer open={true} onOpenChange={(open) => !open && onClose()}>
       <DrawerContent className="max-h-[90vh]">
         <DrawerHeader>
-          <DrawerTitle>{resource ? 'Edit Resource' : 'Add Resource'}</DrawerTitle>
+          <DrawerTitle>{resource ? 'Edit Announcement' : 'Add Announcement'}</DrawerTitle>
         </DrawerHeader>
         <div className="px-4 pb-4 space-y-4 overflow-y-auto">
           <div>
@@ -333,10 +333,9 @@ function ResourceFormModal({
               className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
               required
             >
-              <option value="cytz">CYTZ</option>
-              <option value="general_aviation">General Aviation</option>
-              <option value="tipa">TIPA</option>
-              <option value="aviation_news">Aviation News</option>
+              <option value="tipa_newsletters">TIPA Newsletters</option>
+              <option value="airport_updates">Airport Updates</option>
+              <option value="reminder">Reminder</option>
               <option value="other">Other</option>
             </select>
             <p className="mt-1 text-xs text-gray-500">Categorize this resource for easier organization and filtering</p>
@@ -400,7 +399,7 @@ function ResourceFormModal({
                 placeholder={
                   isExternalLink
                     ? "Optional: Add a description or additional information about this external link..."
-                    : "Enter the blog post content. The beginning will be automatically used as a preview on the resources list page..."
+                    : "Enter the announcement content. The beginning will be automatically used as a preview on the announcements list page..."
                 }
               />
             </Suspense>
@@ -420,7 +419,7 @@ function ResourceFormModal({
                 onFileChange={(url, fileName) => setFormData({ ...formData, file_url: url, file_name: fileName || null })}
                 imageUploadEndpoint="/api/resources/upload-image"
                 fileUploadEndpoint="/api/resources/upload-file"
-                label="Resource Image & File Attachment"
+                label="Announcement Image & File Attachment"
               />
             </Suspense>
           </div>

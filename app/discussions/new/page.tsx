@@ -9,7 +9,6 @@ const CATEGORY_LABELS: Record<DiscussionCategory, string> = {
   aircraft_shares: 'Aircraft Shares / Block Time',
   instructor_availability: 'Instructor Availability',
   gear_for_sale: 'Gear for Sale',
-  lounge_feedback: 'Lounge Feedback',
   other: 'Other',
 }
 
@@ -27,7 +26,7 @@ function NewDiscussionForm() {
   useEffect(() => {
     const categoryParam = searchParams.get('category')
     if (categoryParam) {
-      const validCategories: DiscussionCategory[] = ['aircraft_shares', 'instructor_availability', 'gear_for_sale', 'lounge_feedback', 'other']
+      const validCategories: DiscussionCategory[] = ['aircraft_shares', 'instructor_availability', 'gear_for_sale', 'other']
       if (validCategories.includes(categoryParam as DiscussionCategory)) {
         setCategory(categoryParam as DiscussionCategory)
       }

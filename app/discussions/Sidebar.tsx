@@ -6,7 +6,6 @@ const CATEGORY_LABELS: Record<DiscussionCategory, string> = {
   aircraft_shares: 'Aircraft Shares / Block Time',
   instructor_availability: 'Instructor Availability',
   gear_for_sale: 'Gear for Sale',
-  lounge_feedback: 'Lounge Feedback',
   other: 'Other',
 }
 
@@ -14,7 +13,6 @@ const CATEGORY_ICONS: Record<DiscussionCategory, string> = {
   aircraft_shares: '✈️',
   instructor_availability: '👨‍✈️',
   gear_for_sale: '🛒',
-  lounge_feedback: '💬',
   other: '📋',
 }
 
@@ -29,7 +27,7 @@ export default async function Sidebar({ currentCategory }: { currentCategory?: D
   const categoryCounts = new Map<DiscussionCategory | 'all', number>()
   categoryCounts.set('all', threads?.length || 0)
   
-  const validCategories: DiscussionCategory[] = ['aircraft_shares', 'instructor_availability', 'gear_for_sale', 'lounge_feedback', 'other']
+  const validCategories: DiscussionCategory[] = ['aircraft_shares', 'instructor_availability', 'gear_for_sale', 'other']
   
   threads?.forEach(thread => {
     const category = thread.category as string
@@ -59,7 +57,7 @@ export default async function Sidebar({ currentCategory }: { currentCategory?: D
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
 
-  const categories: (DiscussionCategory | 'all')[] = ['all', 'aircraft_shares', 'instructor_availability', 'gear_for_sale', 'lounge_feedback', 'other']
+  const categories: (DiscussionCategory | 'all')[] = ['all', 'aircraft_shares', 'instructor_availability', 'gear_for_sale', 'other']
   const selectedCategory = currentCategory || 'all'
   
   // Helper to safely get category icon

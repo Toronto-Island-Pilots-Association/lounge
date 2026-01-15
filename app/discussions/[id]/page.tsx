@@ -15,7 +15,6 @@ const CATEGORY_LABELS: Record<DiscussionCategory, string> = {
   aircraft_shares: 'Aircraft Shares / Block Time',
   instructor_availability: 'Instructor Availability',
   gear_for_sale: 'Gear for Sale',
-  lounge_feedback: 'Lounge Feedback',
   other: 'Other',
 }
 
@@ -107,11 +106,9 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
 
   const threadReactionCounts = {
     like: threadReactions?.filter(r => r.reaction_type === 'like').length || 0,
-    upvote: threadReactions?.filter(r => r.reaction_type === 'upvote').length || 0,
-    downvote: threadReactions?.filter(r => r.reaction_type === 'downvote').length || 0,
   }
 
-  const userThreadReaction = threadReactions?.find(r => r.user_id === user.id)?.reaction_type || null
+  const userThreadReaction = threadReactions?.find(r => r.user_id === user.id && r.reaction_type === 'like')?.reaction_type || null
 
   // Get reactions for comments
   const commentIds = comments?.map(c => c.id) || []
@@ -133,10 +130,8 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
     const reactions = commentReactionsMap.get(comment.id) || []
     const reactionCounts = {
       like: reactions.filter(r => r.reaction_type === 'like').length,
-      upvote: reactions.filter(r => r.reaction_type === 'upvote').length,
-      downvote: reactions.filter(r => r.reaction_type === 'downvote').length,
     }
-    const userReaction = reactions.find(r => r.user_id === user.id)?.reaction_type || null
+    const userReaction = reactions.find(r => r.user_id === user.id && r.reaction_type === 'like')?.reaction_type || null
 
     return {
       ...comment,
@@ -178,20 +173,22 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
         </div>
 
         {/* Thread */}
-        <div className="bg-white shadow rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-4">
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 break-words">{threadWithAuthor.title}</h1>
-              <span className="inline-block px-3 py-1 text-xs sm:text-sm font-medium bg-[#0d1e26]/10 text-[#0d1e26] rounded-md">
-                {CATEGORY_LABELS[thread.category as DiscussionCategory]}
-              </span>
-            </div>
-            <div className="flex-shrink-0">
+        <div className="bg-white shadow rounded-lg p-4 sm:p-6 mb-4 sm:mb-6 relative">
+          {(thread.created_by === user.id && thread.created_by !== null) || user.profile.role === 'admin' ? (
+            <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
               <DeleteThreadButton
                 threadId={id}
                 isOwner={thread.created_by === user.id && thread.created_by !== null}
                 isAdmin={user.profile.role === 'admin'}
               />
+            </div>
+          ) : null}
+          <div className="flex flex-col gap-3 sm:gap-4 mb-4">
+            <div className="flex-1 min-w-0 pr-10 sm:pr-12">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 break-words">{threadWithAuthor.title}</h1>
+              <span className="inline-block px-3 py-1 text-xs sm:text-sm font-medium bg-[#0d1e26]/10 text-[#0d1e26] rounded-md">
+                {CATEGORY_LABELS[thread.category as DiscussionCategory]}
+              </span>
             </div>
           </div>
           
@@ -276,8 +273,17 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
                   : (commentAuthor.full_name || commentAuthor.email || 'Anonymous')
                 
                 return (
-                  <div key={comment.id} className="border-t border-gray-200 pt-6 first:border-t-0 first:pt-0">
-                    <div className="flex items-start gap-3">
+                  <div key={comment.id} className="border-t border-gray-200 pt-6 first:border-t-0 first:pt-0 relative">
+                    {(comment.created_by === user.id && comment.created_by !== null) || user.profile.role === 'admin' ? (
+                      <div className="absolute top-6 right-0">
+                        <DeleteCommentButton
+                          commentId={comment.id}
+                          isOwner={comment.created_by === user.id && comment.created_by !== null}
+                          isAdmin={user.profile.role === 'admin'}
+                        />
+                      </div>
+                    ) : null}
+                    <div className="flex items-start gap-3 pr-8 sm:pr-10">
                       {commentAuthor.profile_picture_url ? (
                         <div className="relative w-10 h-10 rounded-full overflow-hidden border border-gray-300 flex-shrink-0">
                           <Image
@@ -306,19 +312,12 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
                         </div>
                       )}
                       <div className="flex-1">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
                           <div className="flex items-center gap-2 flex-wrap">
                             <div className={`text-sm font-medium ${isDeleted ? 'text-gray-600 italic' : 'text-gray-900'}`}>
                               {displayName}
                             </div>
                             <div className="text-xs text-gray-500">{formatDate(comment.created_at)}</div>
-                          </div>
-                          <div className="flex-shrink-0">
-                            <DeleteCommentButton
-                              commentId={comment.id}
-                              isOwner={comment.created_by === user.id && comment.created_by !== null}
-                              isAdmin={user.profile.role === 'admin'}
-                            />
                           </div>
                         </div>
                         <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap mb-3">
@@ -329,7 +328,7 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
                           <ReactionButton
                             targetId={comment.id}
                             targetType="comment"
-                            initialReactions={comment.reactionCounts || { like: 0, upvote: 0, downvote: 0 }}
+                            initialReactions={comment.reactionCounts || { like: 0 }}
                             userReaction={comment.userReaction || null}
                           />
                         </div>

@@ -101,10 +101,9 @@ export default function ResourcesPage() {
 
   const getCategoryLabel = (category: Resource['category']): string => {
     const labels: Record<Resource['category'], string> = {
-      cytz: 'CYTZ',
-      general_aviation: 'General Aviation',
-      tipa: 'TIPA',
-      aviation_news: 'Aviation News',
+      tipa_newsletters: 'TIPA Newsletters',
+      airport_updates: 'Airport Updates',
+      reminder: 'Reminder',
       other: 'Other',
     }
     return labels[category] || category
@@ -115,7 +114,7 @@ export default function ResourcesPage() {
       <div className="min-h-screen bg-gray-50 py-6 sm:py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="pt-16 sm:pt-24">
-            <Loading message="Loading resources..." />
+            <Loading message="Loading announcements..." />
           </div>
         </div>
       </div>
@@ -126,9 +125,9 @@ export default function ResourcesPage() {
     <div className="min-h-screen bg-gray-50 py-6 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Resources</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Announcements</h1>
           <p className="mt-2 text-sm sm:text-base text-gray-600">
-            Access all available resources for members
+            View all announcements for members
           </p>
         </div>
 
@@ -155,7 +154,7 @@ export default function ResourcesPage() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search resources..."
+              placeholder="Search announcements..."
               className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-[#0d1e26] focus:border-[#0d1e26] text-gray-900"
             />
           </div>
@@ -192,11 +191,11 @@ export default function ResourcesPage() {
 
         {!resources || resources.length === 0 ? (
           <div className="bg-white shadow rounded-lg p-8 text-center">
-            <p className="text-gray-500">No resources available yet.</p>
+            <p className="text-gray-500">No announcements available yet.</p>
           </div>
         ) : filteredResources.length === 0 ? (
           <div className="bg-white shadow rounded-lg p-8 text-center">
-            <p className="text-gray-500">No resources found matching your search.</p>
+            <p className="text-gray-500">No announcements found matching your search.</p>
           </div>
         ) : (
           <div className="bg-white shadow rounded-lg overflow-hidden">

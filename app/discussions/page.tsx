@@ -13,7 +13,6 @@ const CATEGORY_LABELS: Record<DiscussionCategory, string> = {
   aircraft_shares: 'Aircraft Shares / Block Time',
   instructor_availability: 'Instructor Availability',
   gear_for_sale: 'Gear for Sale',
-  lounge_feedback: 'Lounge Feedback',
   other: 'Other',
 }
 

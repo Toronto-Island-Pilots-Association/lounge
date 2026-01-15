@@ -8,7 +8,6 @@ const CATEGORY_LABELS: Record<DiscussionCategory | 'all', string> = {
   aircraft_shares: 'Aircraft Shares / Block Time',
   instructor_availability: 'Instructor Availability',
   gear_for_sale: 'Gear for Sale',
-  lounge_feedback: 'Lounge Feedback',
   other: 'Other',
 }
 
@@ -27,7 +26,7 @@ export default function CategoryFilter({ currentCategory }: { currentCategory?: 
     router.push(`/discussions?${params.toString()}`)
   }
 
-  const categories: (DiscussionCategory | 'all')[] = ['all', 'aircraft_shares', 'instructor_availability', 'gear_for_sale', 'lounge_feedback', 'other']
+  const categories: (DiscussionCategory | 'all')[] = ['all', 'aircraft_shares', 'instructor_availability', 'gear_for_sale', 'other']
   const selectedCategory = currentCategory || 'all'
 
   return (

@@ -8,7 +8,6 @@ const CATEGORY_LABELS: Record<DiscussionCategory, string> = {
   aircraft_shares: 'Aircraft Shares',
   instructor_availability: 'Instructors',
   gear_for_sale: 'Gear',
-  lounge_feedback: 'Feedback',
   other: 'Other',
 }
 
@@ -16,7 +15,6 @@ const CATEGORY_ICONS: Record<DiscussionCategory, string> = {
   aircraft_shares: '✈️',
   instructor_availability: '👨‍✈️',
   gear_for_sale: '🛒',
-  lounge_feedback: '💬',
   other: '📋',
 }
 
@@ -82,7 +80,7 @@ export default function MobileFilters() {
     setIsOpen(false)
   }
 
-  const categories: (DiscussionCategory | 'all')[] = ['all', 'aircraft_shares', 'instructor_availability', 'gear_for_sale', 'lounge_feedback', 'other']
+  const categories: (DiscussionCategory | 'all')[] = ['all', 'aircraft_shares', 'instructor_availability', 'gear_for_sale', 'other']
 
   return (
     <div className="lg:hidden relative" ref={dropdownRef}>

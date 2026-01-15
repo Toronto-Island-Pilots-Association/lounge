@@ -6,7 +6,7 @@
 -- 4. Member number assignment on approval
 -- 5. Image URLs support for threads, resources, and events
 -- 6. Storage bucket setup for threads, resources, and events
--- 7. Resource categories (cytz, general_aviation, tipa, other)
+-- 7. Resource categories (tipa_newsletters, airport_updates, reminder, other)
 --
 -- This migration is idempotent (safe to run multiple times)
 
@@ -374,18 +374,25 @@ ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'other';
 ALTER TABLE public.resources 
 DROP CONSTRAINT IF EXISTS resources_category_check;
 
--- Add the check constraint with final categories: cytz, general_aviation, tipa, aviation_news, other
+-- Update existing data - map old categories to new ones or set to 'other'
+UPDATE public.resources 
+SET category = CASE
+  WHEN category = 'tipa' THEN 'tipa_newsletters'
+  WHEN category = 'cytz' THEN 'airport_updates'
+  WHEN category = 'general_aviation' THEN 'other'
+  WHEN category = 'aviation_news' THEN 'other'
+  WHEN category IN ('tipa_newsletters', 'airport_updates', 'reminder', 'other') THEN category
+  ELSE 'other'
+END
+WHERE category IS NOT NULL;
+
+-- Add the check constraint with final categories: tipa_newsletters, airport_updates, reminder, other
 ALTER TABLE public.resources 
 ADD CONSTRAINT resources_category_check 
-CHECK (category IN ('cytz', 'general_aviation', 'tipa', 'aviation_news', 'other'));
-
--- Update existing data - set any non-matching categories to 'other'
-UPDATE public.resources 
-SET category = 'other'
-WHERE category NOT IN ('cytz', 'general_aviation', 'tipa', 'aviation_news', 'other');
+CHECK (category IN ('tipa_newsletters', 'airport_updates', 'reminder', 'other'));
 
 -- Add comment for the column
-COMMENT ON COLUMN public.resources.category IS 'Category classification for the resource: cytz (CYTZ), general_aviation (General Aviation), tipa (TIPA), aviation_news (Aviation News), or other (Other)';
+COMMENT ON COLUMN public.resources.category IS 'Category classification for the resource: tipa_newsletters (TIPA Newsletters), airport_updates (Airport Updates), reminder (Reminder), or other (Other)';
 
 -- Create index for better query performance when filtering by category
 CREATE INDEX IF NOT EXISTS idx_resources_category ON public.resources(category);

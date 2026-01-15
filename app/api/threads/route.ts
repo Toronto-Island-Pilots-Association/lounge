@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     }
 
     // Validate category
-    const validCategories = ['aircraft_shares', 'instructor_availability', 'gear_for_sale', 'lounge_feedback', 'other']
+    const validCategories = ['aircraft_shares', 'instructor_availability', 'gear_for_sale', 'other']
     const threadCategory = category && validCategories.includes(category) ? category : 'other'
 
     // Validate image_urls (should be an array of strings, max 5)

@@ -96,7 +96,7 @@ export default async function ResourceDetailPage({
               d="M15 19l-7-7 7-7"
             />
           </svg>
-          Back to Resources
+          Back to Announcements
         </Link>
 
         <article className="bg-white shadow rounded-lg overflow-hidden">
