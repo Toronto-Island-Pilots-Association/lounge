@@ -50,6 +50,9 @@ export async function PATCH(request: Request) {
       call_sign,
       how_often_fly_from_ytz,
       how_did_you_hear,
+      is_student_pilot,
+      flight_school,
+      instructor_name,
     } = body
 
     // Build update object with only provided fields
@@ -63,6 +66,9 @@ export async function PATCH(request: Request) {
     if (call_sign !== undefined) updates.call_sign = call_sign || null
     if (how_often_fly_from_ytz !== undefined) updates.how_often_fly_from_ytz = how_often_fly_from_ytz || null
     if (how_did_you_hear !== undefined) updates.how_did_you_hear = how_did_you_hear || null
+    if (is_student_pilot !== undefined) updates.is_student_pilot = Boolean(is_student_pilot)
+    if (flight_school !== undefined) updates.flight_school = flight_school ? String(flight_school).trim() || null : null
+    if (instructor_name !== undefined) updates.instructor_name = instructor_name ? String(instructor_name).trim() || null : null
 
     const { data, error } = await supabase
       .from('user_profiles')

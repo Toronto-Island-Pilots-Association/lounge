@@ -26,6 +26,8 @@ export default function SettingsPage() {
     call_sign: '',
     how_often_fly_from_ytz: '',
     how_did_you_hear: '',
+    flight_school: '',
+    instructor_name: '',
   })
 
   useEffect(() => {
@@ -48,6 +50,8 @@ export default function SettingsPage() {
           call_sign: data.profile.call_sign || '',
           how_often_fly_from_ytz: data.profile.how_often_fly_from_ytz || '',
           how_did_you_hear: data.profile.how_did_you_hear || '',
+          flight_school: data.profile.flight_school || '',
+          instructor_name: data.profile.instructor_name || '',
         })
       } else if (response.status === 401) {
         router.push('/login')
@@ -72,7 +76,12 @@ export default function SettingsPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          is_student_pilot: formData.pilot_license_type === 'student',
+          flight_school: formData.pilot_license_type === 'student' ? formData.flight_school : '',
+          instructor_name: formData.pilot_license_type === 'student' ? formData.instructor_name : '',
+        }),
       })
 
       const data = await response.json()
@@ -257,15 +266,20 @@ export default function SettingsPage() {
                       >
                         Pilot License Type
                       </label>
-                      <input
-                        type="text"
+                      <select
                         name="pilot_license_type"
                         id="pilot_license_type"
                         value={formData.pilot_license_type}
                         onChange={handleChange}
-                        placeholder="e.g., PPL, CPL, ATPL"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                      />
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                      >
+                        <option value="">Select...</option>
+                        <option value="student">Student Pilot</option>
+                        <option value="private">Private Pilot</option>
+                        <option value="commercial">Commercial Pilot</option>
+                        <option value="atp">Airline Transport Pilot</option>
+                        <option value="other">Other</option>
+                      </select>
                     </div>
 
                     <div>
