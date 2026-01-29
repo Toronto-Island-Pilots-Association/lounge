@@ -17,6 +17,8 @@ function BecomeMemberForm() {
     callSign: '',
     howOftenFlyFromYTZ: '',
     howDidYouHear: '',
+    flightSchool: '',
+    instructorName: '',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -65,6 +67,9 @@ function BecomeMemberForm() {
           callSign: formData.callSign,
           howOftenFlyFromYTZ: formData.howOftenFlyFromYTZ,
           howDidYouHear: formData.howDidYouHear,
+          isStudentPilot: formData.pilotLicenseType === 'student',
+          flightSchool: formData.pilotLicenseType === 'student' ? formData.flightSchool : '',
+          instructorName: formData.pilotLicenseType === 'student' ? formData.instructorName : '',
         }),
       })
 
@@ -89,6 +94,8 @@ function BecomeMemberForm() {
         callSign: '',
         howOftenFlyFromYTZ: '',
         howDidYouHear: '',
+        flightSchool: '',
+        instructorName: '',
       })
     } catch (err: any) {
       setError(err.message)
@@ -298,6 +305,42 @@ function BecomeMemberForm() {
                 </select>
               </div>
             </div>
+
+            {/* Student pilot: show flight school / instructor when License Type is Student Pilot */}
+            {formData.pilotLicenseType === 'student' && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="flightSchool" className="block text-sm font-medium text-gray-700 mb-1">
+                      Flight school
+                    </label>
+                    <input
+                      id="flightSchool"
+                      name="flightSchool"
+                      type="text"
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                      placeholder="e.g., Island Air, Freelance…"
+                      value={formData.flightSchool}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="instructorName" className="block text-sm font-medium text-gray-700 mb-1">
+                      Instructor name
+                    </label>
+                    <input
+                      id="instructorName"
+                      name="instructorName"
+                      type="text"
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                      placeholder="e.g., Jane Smith"
+                      value={formData.instructorName}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Additional Information */}

@@ -1,42 +1,38 @@
 -- Consolidated Migration: Initial Schema Updates
 -- This migration consolidates all schema updates including:
--- 1. Membership level updates
+-- 1. Membership level updates (4 tiers)
 -- 2. Member number field and functions
 -- 3. Discussion categories
 -- 4. Member number assignment on approval
 -- 5. Image URLs support for threads, resources, and events
 -- 6. Storage bucket setup for threads, resources, and events
 -- 7. Resource categories (tipa_newsletters, airport_updates, reminder, other)
+-- 8. User status: add 'expired' (membership lapsed due to non-payment)
 --
 -- This migration is idempotent (safe to run multiple times)
 
 -- ============================================================================
--- PART 1: Update Membership Levels
+-- PART 1: Update Membership Levels (5 tiers)
 -- ============================================================================
--- Changes from: 'basic', 'cadet', 'captain'
--- Changes to: 'Active', 'Regular', 'Resident', 'Retired', 'Student', 'Lifetime'
+-- Changes to: 'Full', 'Student', 'Associate', 'Corporate', 'Honorary'
 
 -- Step 1: Drop the existing CHECK constraint
 ALTER TABLE user_profiles DROP CONSTRAINT IF EXISTS user_profiles_membership_level_check;
 
--- Step 2: Update existing data
+-- Step 2: Set any invalid/old values to default (only new tiers are valid)
 UPDATE user_profiles
-SET membership_level = CASE
-  WHEN membership_level = 'basic' THEN 'Regular'
-  WHEN membership_level = 'cadet' THEN 'Active'
-  WHEN membership_level = 'captain' THEN 'Active'
-  ELSE 'Regular' -- Fallback for any unexpected values
-END
-WHERE membership_level IN ('basic', 'cadet', 'captain');
+SET membership_level = 'Full'
+WHERE membership_level IS NULL
+   OR membership_level NOT IN ('Full', 'Student', 'Associate', 'Corporate', 'Honorary');
 
--- Step 3: Add new CHECK constraint with new values
+-- Step 3: Add new CHECK constraint with 5 values
 ALTER TABLE user_profiles
 ADD CONSTRAINT user_profiles_membership_level_check
-CHECK (membership_level IN ('Active', 'Regular', 'Resident', 'Retired', 'Student', 'Lifetime'));
+CHECK (membership_level IN ('Full', 'Student', 'Associate', 'Corporate', 'Honorary'));
 
 -- Step 4: Update default value
 ALTER TABLE user_profiles
-ALTER COLUMN membership_level SET DEFAULT 'Regular';
+ALTER COLUMN membership_level SET DEFAULT 'Full';
 
 -- ============================================================================
 -- PART 2: Add Member Number Field and Generation Function
@@ -145,10 +141,10 @@ BEGIN
   
   v_membership_level := COALESCE(
     NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'membership_level', '')), ''),
-    'Regular'
+    'Full'
   );
-  IF v_membership_level NOT IN ('Active', 'Regular', 'Resident', 'Retired', 'Student', 'Lifetime') THEN
-    v_membership_level := 'Regular';
+  IF v_membership_level NOT IN ('Full', 'Student', 'Associate', 'Corporate', 'Honorary') THEN
+    v_membership_level := 'Full';
   END IF;
 
   -- Do NOT assign member number here - it will be assigned when status changes to 'approved'
@@ -469,3 +465,133 @@ CREATE POLICY "Authenticated users can view event images"
   USING (
     bucket_id = 'events'
   );
+
+-- ============================================================================
+-- PART 12: Add 'expired' to user_profiles status
+-- ============================================================================
+-- Allows membership that has lapsed (unpaid) to be marked as expired.
+-- Idempotent (safe to run multiple times).
+
+ALTER TABLE public.user_profiles
+DROP CONSTRAINT IF EXISTS user_profiles_status_check;
+
+ALTER TABLE public.user_profiles
+ADD CONSTRAINT user_profiles_status_check
+CHECK (status IN ('pending', 'approved', 'rejected', 'expired'));
+
+-- ============================================================================
+-- PART 13: Add student pilot fields to user_profiles
+-- ============================================================================
+-- Flag student pilots and collect flight school / instructor info at join.
+-- Idempotent (safe to run multiple times).
+
+ALTER TABLE public.user_profiles
+ADD COLUMN IF NOT EXISTS is_student_pilot BOOLEAN NOT NULL DEFAULT false;
+
+ALTER TABLE public.user_profiles
+ADD COLUMN IF NOT EXISTS flight_school TEXT;
+
+ALTER TABLE public.user_profiles
+ADD COLUMN IF NOT EXISTS instructor_name TEXT;
+
+-- Update handle_new_user to read and insert student pilot fields
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_full_name TEXT;
+  v_first_name TEXT;
+  v_last_name TEXT;
+  v_phone TEXT;
+  v_pilot_license_type TEXT;
+  v_aircraft_type TEXT;
+  v_call_sign TEXT;
+  v_how_often_fly_from_ytz TEXT;
+  v_how_did_you_hear TEXT;
+  v_role TEXT;
+  v_membership_level TEXT;
+  v_is_student_pilot BOOLEAN;
+  v_flight_school TEXT;
+  v_instructor_name TEXT;
+BEGIN
+  v_full_name := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'full_name', '')), '');
+  v_first_name := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'first_name', '')), '');
+  v_last_name := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'last_name', '')), '');
+  v_phone := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'phone', '')), '');
+  v_pilot_license_type := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'pilot_license_type', '')), '');
+  v_aircraft_type := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'aircraft_type', '')), '');
+  v_call_sign := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'call_sign', '')), '');
+  v_how_often_fly_from_ytz := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'how_often_fly_from_ytz', '')), '');
+  v_how_did_you_hear := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'how_did_you_hear', '')), '');
+  v_is_student_pilot := COALESCE((NEW.raw_user_meta_data->>'is_student_pilot')::boolean, false);
+  v_flight_school := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'flight_school', '')), '');
+  v_instructor_name := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'instructor_name', '')), '');
+
+  v_role := COALESCE(
+    NULLIF(LOWER(TRIM(COALESCE(NEW.raw_user_meta_data->>'role', ''))), ''),
+    'member'
+  );
+  IF v_role NOT IN ('member', 'admin') THEN
+    v_role := 'member';
+  END IF;
+
+  v_membership_level := COALESCE(
+    NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'membership_level', '')), ''),
+    'Full'
+  );
+  IF v_membership_level NOT IN ('Full', 'Student', 'Associate', 'Corporate', 'Honorary') THEN
+    v_membership_level := 'Full';
+  END IF;
+
+  IF NEW.email IS NULL OR TRIM(NEW.email) = '' THEN
+    RAISE EXCEPTION 'Email cannot be null or empty';
+  END IF;
+
+  INSERT INTO public.user_profiles (
+    id,
+    email,
+    full_name,
+    first_name,
+    last_name,
+    phone,
+    pilot_license_type,
+    aircraft_type,
+    call_sign,
+    how_often_fly_from_ytz,
+    how_did_you_hear,
+    role,
+    membership_level,
+    member_number,
+    status,
+    is_student_pilot,
+    flight_school,
+    instructor_name
+  )
+  VALUES (
+    NEW.id,
+    LOWER(TRIM(NEW.email)),
+    v_full_name,
+    v_first_name,
+    v_last_name,
+    v_phone,
+    v_pilot_license_type,
+    v_aircraft_type,
+    v_call_sign,
+    v_how_often_fly_from_ytz,
+    v_how_did_you_hear,
+    v_role,
+    v_membership_level,
+    NULL,
+    'pending',
+    v_is_student_pilot,
+    v_flight_school,
+    v_instructor_name
+  )
+  ON CONFLICT (id) DO NOTHING;
+
+  RETURN NEW;
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE WARNING 'Error creating user profile for user %: %', NEW.id, SQLERRM;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

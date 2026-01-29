@@ -15,12 +15,15 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   how_often_fly_from_ytz TEXT,
   how_did_you_hear TEXT,
   role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('member', 'admin')),
-  membership_level TEXT NOT NULL DEFAULT 'Regular' CHECK (membership_level IN ('Active', 'Regular', 'Resident', 'Retired', 'Student', 'Lifetime')),
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  membership_level TEXT NOT NULL DEFAULT 'Full' CHECK (membership_level IN ('Full', 'Student', 'Associate', 'Corporate', 'Honorary')),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'expired')),
   membership_expires_at TIMESTAMPTZ,
   paypal_subscription_id TEXT,
   profile_picture_url TEXT,
   member_number TEXT UNIQUE,
+  is_student_pilot BOOLEAN NOT NULL DEFAULT false,
+  flight_school TEXT,
+  instructor_name TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -161,11 +164,11 @@ BEGIN
   
   v_membership_level := COALESCE(
     NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'membership_level', '')), ''),
-    'Regular'
+    'Full'
   );
   -- Ensure it's one of the valid values
-  IF v_membership_level NOT IN ('Active', 'Regular', 'Resident', 'Retired', 'Student', 'Lifetime') THEN
-    v_membership_level := 'Regular';
+  IF v_membership_level NOT IN ('Full', 'Student', 'Associate', 'Corporate', 'Honorary') THEN
+    v_membership_level := 'Full';
   END IF;
 
   -- Generate unique member number
@@ -178,8 +181,8 @@ BEGIN
 
   -- Insert user profile with error handling
   INSERT INTO public.user_profiles (
-    id, 
-    email, 
+    id,
+    email,
     full_name,
     first_name,
     last_name,
@@ -189,10 +192,13 @@ BEGIN
     call_sign,
     how_often_fly_from_ytz,
     how_did_you_hear,
-    role, 
+    role,
     membership_level,
     member_number,
-    status
+    status,
+    is_student_pilot,
+    flight_school,
+    instructor_name
   )
   VALUES (
     NEW.id,
@@ -208,10 +214,13 @@ BEGIN
     v_how_did_you_hear,
     v_role,
     v_membership_level,
-    NULL,  -- Member number will be assigned on approval
-    'pending'
+    NULL,
+    'pending',
+    v_is_student_pilot,
+    v_flight_school,
+    v_instructor_name
   )
-  ON CONFLICT (id) DO NOTHING; -- Prevent duplicate inserts if trigger runs twice
+  ON CONFLICT (id) DO NOTHING;
 
   RETURN NEW;
 EXCEPTION

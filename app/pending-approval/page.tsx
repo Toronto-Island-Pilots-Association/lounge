@@ -16,12 +16,17 @@ export default async function PendingApprovalPage() {
   }
 
   const isRejected = user.profile.status === 'rejected'
+  const isExpired = user.profile.status === 'expired'
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-8 text-center">
         <div className="mb-6">
-          {isRejected ? (
+          {isExpired ? (
+            <svg className="mx-auto h-16 w-16 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          ) : isRejected ? (
             <svg className="mx-auto h-16 w-16 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -32,9 +37,18 @@ export default async function PendingApprovalPage() {
           )}
         </div>
         <h1 className="text-2xl font-bold text-gray-900 mb-4">
-          {isRejected ? 'Account Rejected' : 'Account Pending Approval'}
+          {isExpired ? 'Membership Expired' : isRejected ? 'Account Rejected' : 'Account Pending Approval'}
         </h1>
-        {isRejected ? (
+        {isExpired ? (
+          <>
+            <p className="text-gray-600 mb-6">
+              Your membership has lapsed due to non-payment. You do not have access to TIPA platform features.
+            </p>
+            <p className="text-sm text-gray-500">
+              To restore access, please renew your membership or contact an administrator.
+            </p>
+          </>
+        ) : isRejected ? (
           <>
             <p className="text-gray-600 mb-6">
               Your account application has been rejected. You do not have access to TIPA platform features.

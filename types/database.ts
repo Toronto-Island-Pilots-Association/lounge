@@ -1,11 +1,11 @@
-export type MembershipLevel = 'Active' | 'Regular' | 'Resident' | 'Retired' | 'Student' | 'Lifetime'
+export type MembershipLevel = 'Full' | 'Student' | 'Associate' | 'Corporate' | 'Honorary'
 
 // Helper function to get display name for membership level (now just returns the value)
 export function getMembershipLevelLabel(level: MembershipLevel): string {
   return level
 }
 export type UserRole = 'member' | 'admin'
-export type UserStatus = 'pending' | 'approved' | 'rejected'
+export type UserStatus = 'pending' | 'approved' | 'rejected' | 'expired'
 
 export interface UserProfile {
   id: string
@@ -26,6 +26,9 @@ export interface UserProfile {
   paypal_subscription_id: string | null
   profile_picture_url: string | null
   member_number: string | null
+  is_student_pilot: boolean
+  flight_school: string | null
+  instructor_name: string | null
   created_at: string
   updated_at: string
 }

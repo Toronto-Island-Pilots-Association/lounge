@@ -143,7 +143,7 @@ export async function POST(request: Request) {
     const { error } = await supabase
       .from('user_profiles')
       .update({
-        membership_level: 'Active',
+        membership_level: 'Full',
         paypal_subscription_id: subscriptionId,
         membership_expires_at: expiresAt.toISOString(),
       })

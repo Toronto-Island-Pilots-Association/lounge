@@ -17,6 +17,7 @@ export default async function DashboardPage() {
 
   const isPending = user.profile.status === 'pending' && user.profile.role !== 'admin'
   const isRejected = user.profile.status === 'rejected' && user.profile.role !== 'admin'
+  const isExpiredStatus = user.profile.status === 'expired' && user.profile.role !== 'admin'
 
   // Check if user was invited and needs to change password
   const wasInvited = user.user_metadata?.invited_by_admin === true
@@ -28,7 +29,7 @@ export default async function DashboardPage() {
   // The appendMemberToSheet function now checks for duplicates before appending
 
   const membershipFee = await getMembershipFee()
-  const isPaid = user.profile.membership_level === 'Active' || user.profile.membership_level === 'Lifetime'
+  const isPaid = user.profile.membership_level === 'Full' || user.profile.membership_level === 'Corporate' || user.profile.membership_level === 'Honorary'
   const isExpired = user.profile.membership_expires_at
     ? new Date(user.profile.membership_expires_at) < new Date()
     : false
@@ -39,7 +40,7 @@ export default async function DashboardPage() {
   let upcomingEvents: Event[] = []
   let topThreads: any[] = []
 
-  if (!isPending && !isRejected) {
+  if (!isPending && !isRejected && !isExpiredStatus) {
     // Fetch only minimal fields needed for display
     const { data: resources } = await supabase
       .from('resources')
@@ -111,7 +112,7 @@ export default async function DashboardPage() {
 
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-2">
                   {/* Wallet-Sized Membership Card - Only for approved members */}
-                  {!isPending && !isRejected && (
+                  {!isPending && !isRejected && !isExpiredStatus && (
                     <MembershipCard
                       user={user}
                       isPending={isPending}
@@ -182,6 +183,25 @@ export default async function DashboardPage() {
                       </div>
                     </div>
                   </div>
+                ) : isExpiredStatus ? (
+                  <div className="mt-8 bg-amber-50 border-l-4 border-amber-400 rounded-lg p-6">
+                    <div className="flex items-start gap-4">
+                      <svg className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-amber-900 mb-2">
+                          Membership Expired
+                        </h3>
+                        <p className="text-amber-800 mb-4">
+                          Your membership has lapsed due to non-payment. You do not have access to TIPA platform features including discussions, announcements, and events.
+                        </p>
+                        <p className="text-sm text-amber-700">
+                          To restore access, please renew your membership or contact an administrator.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 ) : isRejected ? (
                   <div className="mt-8 bg-red-50 border-l-4 border-red-400 rounded-lg p-6">
                     <div className="flex items-start gap-4">
@@ -193,7 +213,7 @@ export default async function DashboardPage() {
                           Account Rejected
                         </h3>
                         <p className="text-red-800 mb-4">
-                          Your account application has been rejected. You do not have access to TIPA platform features including discussions, resources, and events.
+                          Your account application has been rejected. You do not have access to TIPA platform features including discussions, announcements, and events.
                         </p>
                         <p className="text-sm text-red-700">
                           If you believe this is an error, please contact an administrator.
@@ -235,7 +255,7 @@ export default async function DashboardPage() {
           </div>
 
           {/* Sidebar - Hidden on Mobile */}
-          {!isPending && !isRejected && (
+          {!isPending && !isRejected && !isExpiredStatus && (
             <div className="hidden lg:block lg:col-span-1 space-y-6 order-1 lg:order-2">
               {/* Events Section */}
               <div className="bg-white shadow rounded-lg">

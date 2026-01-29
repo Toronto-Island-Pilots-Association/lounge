@@ -15,7 +15,10 @@ export async function POST(request: Request) {
       aircraftType,
       callSign,
       howOftenFlyFromYTZ,
-      howDidYouHear
+      howDidYouHear,
+      isStudentPilot,
+      flightSchool,
+      instructorName,
     } = await request.json()
 
     if (!email || !password) {
@@ -53,8 +56,11 @@ export async function POST(request: Request) {
           call_sign: toNullIfEmpty(callSign),
           how_often_fly_from_ytz: toNullIfEmpty(howOftenFlyFromYTZ),
           how_did_you_hear: toNullIfEmpty(howDidYouHear),
+          is_student_pilot: Boolean(isStudentPilot),
+          flight_school: isStudentPilot ? toNullIfEmpty(flightSchool) : null,
+          instructor_name: isStudentPilot ? toNullIfEmpty(instructorName) : null,
           role: 'member',
-          membership_level: 'Regular',
+          membership_level: 'Full',
         },
       },
     })
@@ -137,7 +143,7 @@ export async function POST(request: Request) {
           console.warn('Profile not created by trigger, attempting manual creation')
           try {
             // Ensure membership_level and role match the database constraints exactly
-            const membershipLevel: 'Active' | 'Regular' | 'Resident' | 'Retired' | 'Student' | 'Lifetime' = 'Regular'
+            const membershipLevel: 'Full' | 'Student' | 'Associate' | 'Corporate' | 'Honorary' = 'Full'
             const userRole: 'member' | 'admin' = 'member'
             
             const { data: createdProfile, error: createError } = await adminClient
@@ -154,6 +160,9 @@ export async function POST(request: Request) {
                 call_sign: toNullIfEmpty(callSign),
                 how_often_fly_from_ytz: toNullIfEmpty(howOftenFlyFromYTZ),
                 how_did_you_hear: toNullIfEmpty(howDidYouHear),
+                is_student_pilot: Boolean(isStudentPilot),
+                flight_school: isStudentPilot ? toNullIfEmpty(flightSchool) : null,
+                instructor_name: isStudentPilot ? toNullIfEmpty(instructorName) : null,
                 role: userRole,
                 membership_level: membershipLevel,
                 status: 'pending',

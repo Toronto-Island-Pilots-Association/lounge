@@ -439,11 +439,11 @@ export default function Navbar() {
                           {profile?.full_name || user.email}
                         </span>
                         <span className={`px-2 py-1 text-xs rounded-full ml-2 flex-shrink-0 ${
-                          profile?.membership_level === 'Active' || profile?.membership_level === 'Lifetime'
+                          profile?.membership_level === 'Full' || profile?.membership_level === 'Corporate' || profile?.membership_level === 'Honorary'
                             ? 'bg-green-100 text-green-800'
                             : 'bg-gray-100 text-gray-800'
                         }`}>
-                          {profile?.membership_level ? getMembershipLevelLabel(profile.membership_level) : 'Regular'}
+                          {profile?.membership_level ? getMembershipLevelLabel(profile.membership_level) : 'Full'}
                         </span>
                       </div>
                     </div>

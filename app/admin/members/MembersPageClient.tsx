@@ -254,6 +254,9 @@ export default function MembersPageClient() {
                       {member.member_number && (
                         <div className="text-xs text-gray-400 mt-1">Member #: {member.member_number}</div>
                       )}
+                      {member.is_student_pilot && (
+                        <div className="text-xs text-gray-500 mt-1">Student pilot</div>
+                      )}
                     </div>
                     <button
                       onClick={() => setEditingMember(member)}
@@ -266,6 +269,7 @@ export default function MembersPageClient() {
                     <span className={`px-2 py-1 rounded ${
                       member.status === 'approved' ? 'bg-green-100 text-green-800' :
                       member.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      member.status === 'expired' ? 'bg-amber-100 text-amber-800' :
                       'bg-red-100 text-red-800'
                     }`}>
                       {member.status ? member.status.charAt(0).toUpperCase() + member.status.slice(1) : 'Pending'}
@@ -274,11 +278,11 @@ export default function MembersPageClient() {
                       {member.role}
                     </span>
                     <span className={`px-2 py-1 rounded-full ${
-                      member.membership_level === 'Active' || member.membership_level === 'Lifetime'
+                      member.membership_level === 'Full' || member.membership_level === 'Corporate' || member.membership_level === 'Honorary'
                         ? 'bg-green-100 text-green-800'
                         : 'bg-gray-100 text-gray-800'
                     }`}>
-                      {member.membership_level ? getMembershipLevelLabel(member.membership_level) : 'Regular'}
+                      {member.membership_level ? getMembershipLevelLabel(member.membership_level) : 'Full'}
                     </span>
                   </div>
                 </div>
@@ -312,6 +316,7 @@ export default function MembersPageClient() {
                       <span className={`px-2 py-1 text-xs rounded ${
                         member.status === 'approved' ? 'bg-green-100 text-green-800' :
                         member.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        member.status === 'expired' ? 'bg-amber-100 text-amber-800' :
                         'bg-red-100 text-red-800'
                       }`}>
                         {member.status ? member.status.charAt(0).toUpperCase() + member.status.slice(1) : 'Pending'}
@@ -320,12 +325,21 @@ export default function MembersPageClient() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{member.role}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <span className={`px-2 py-1 text-xs rounded-full ${
-                        member.membership_level === 'Active' || member.membership_level === 'Lifetime'
+                        member.membership_level === 'Full' || member.membership_level === 'Corporate' || member.membership_level === 'Honorary'
                           ? 'bg-green-100 text-green-800'
                           : 'bg-gray-100 text-gray-800'
                       }`}>
-                        {member.membership_level ? getMembershipLevelLabel(member.membership_level) : 'Regular'}
+                        {member.membership_level ? getMembershipLevelLabel(member.membership_level) : 'Full'}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {member.is_student_pilot ? (
+                        <span className="text-xs" title={[member.flight_school, member.instructor_name].filter(Boolean).join(' · ') || 'Student pilot'}>
+                          Yes{member.flight_school ? ` · ${member.flight_school}` : ''}
+                        </span>
+                      ) : (
+                        '-'
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       {member.status === 'pending' && (
@@ -402,6 +416,8 @@ function MemberEditModal({
     full_name: member.full_name || '',
     role: member.role,
     membership_level: member.membership_level,
+    flight_school: member.flight_school || '',
+    instructor_name: member.instructor_name || '',
   })
 
   return (
@@ -419,6 +435,11 @@ function MemberEditModal({
               onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
               className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
             />
+          </div>
+          <div className="text-sm text-gray-500">
+            <span className="font-medium text-gray-700">Status: </span>
+            {member.status ? member.status.charAt(0).toUpperCase() + member.status.slice(1) : 'Pending'}
+            <span className="block text-xs text-gray-400 mt-0.5">Status is set by the system (e.g. Approve/Reject).</span>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-1">Role</label>
@@ -438,14 +459,37 @@ function MemberEditModal({
               onChange={(e) => setFormData({ ...formData, membership_level: e.target.value as MembershipLevel })}
               className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
             >
-              <option value="Active">Active</option>
-              <option value="Regular">Regular</option>
-              <option value="Resident">Resident</option>
-              <option value="Retired">Retired</option>
+              <option value="Full">Full</option>
               <option value="Student">Student</option>
-              <option value="Lifetime">Lifetime</option>
+              <option value="Associate">Associate</option>
+              <option value="Corporate">Corporate</option>
+              <option value="Honorary">Honorary</option>
             </select>
           </div>
+          {formData.membership_level === 'Student' && (
+            <div className="pt-2 border-t border-gray-200 space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Flight school / club</label>
+                <input
+                  type="text"
+                  value={formData.flight_school}
+                  onChange={(e) => setFormData({ ...formData, flight_school: e.target.value })}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  placeholder="e.g., Island Air, Freelance…"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Instructor name</label>
+                <input
+                  type="text"
+                  value={formData.instructor_name}
+                  onChange={(e) => setFormData({ ...formData, instructor_name: e.target.value })}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  placeholder="e.g., Jane Smith"
+                />
+              </div>
+            </div>
+          )}
         </div>
         <DrawerFooter>
           <div className="flex justify-end space-x-2">
@@ -456,7 +500,10 @@ function MemberEditModal({
             </DrawerClose>
             <button
               onClick={() => {
-                onSave(member, formData)
+                onSave(member, {
+                  ...formData,
+                  is_student_pilot: formData.membership_level === 'Student',
+                } as Partial<UserProfile>)
                 onClose()
               }}
               className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c]"
