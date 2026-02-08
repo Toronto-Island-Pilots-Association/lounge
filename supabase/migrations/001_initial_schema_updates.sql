@@ -83,7 +83,17 @@ BEGIN
   END IF;
 END $$;
 
--- Step 2: Update the check constraint to include all categories
+-- Step 2: Update existing data - migrate general_aviation_discussions to general_aviation
+UPDATE public.threads 
+SET category = 'general_aviation'
+WHERE category = 'general_aviation_discussions';
+
+-- Step 2b: Update existing data - migrate lounge_feedback to other
+UPDATE public.threads 
+SET category = 'other'
+WHERE category = 'lounge_feedback';
+
+-- Step 3: Update the check constraint to include all categories
 ALTER TABLE public.threads 
 DROP CONSTRAINT IF EXISTS threads_category_check;
 
@@ -93,12 +103,15 @@ CHECK (category IN (
   'aircraft_shares', 
   'instructor_availability', 
   'gear_for_sale', 
-  'lounge_feedback', 
+  'flying_at_ytz',
+  'general_aviation',
+  'training_safety_proficiency',
+  'wanted',
   'other'
 ));
 
--- Step 3: Add/update column comment
-COMMENT ON COLUMN public.threads.category IS 'Category for discussions: aircraft_shares (Aircraft Shares / Block Time), instructor_availability (Instructor Availability), gear_for_sale (Gear for Sale), lounge_feedback (Lounge Feedback), or other (Other)';
+-- Step 4: Add/update column comment
+COMMENT ON COLUMN public.threads.category IS 'Category for discussions: aircraft_shares (Aircraft Shares / Block Time), instructor_availability (Instructor Availability), gear_for_sale (Gear for Sale), flying_at_ytz (Flying at YTZ), general_aviation (General Aviation), training_safety_proficiency (Training, Safety & Proficiency), wanted (Wanted), or other (Other)';
 
 -- ============================================================================
 -- PART 4: Update handle_new_user Function (No Member Number on Creation)
@@ -585,6 +598,193 @@ BEGIN
     v_is_student_pilot,
     v_flight_school,
     v_instructor_name
+  )
+  ON CONFLICT (id) DO NOTHING;
+
+  RETURN NEW;
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE WARNING 'Error creating user profile for user %: %', NEW.id, SQLERRM;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================================================
+-- PART 14: Add member join form fields to user_profiles
+-- ============================================================================
+-- Add mailing address, membership class, COPA membership, and statement of interest fields.
+-- Idempotent (safe to run multiple times).
+
+-- Mailing Address fields
+ALTER TABLE public.user_profiles
+ADD COLUMN IF NOT EXISTS street TEXT;
+
+ALTER TABLE public.user_profiles
+ADD COLUMN IF NOT EXISTS city TEXT;
+
+ALTER TABLE public.user_profiles
+ADD COLUMN IF NOT EXISTS province_state TEXT;
+
+ALTER TABLE public.user_profiles
+ADD COLUMN IF NOT EXISTS postal_zip_code TEXT;
+
+ALTER TABLE public.user_profiles
+ADD COLUMN IF NOT EXISTS country TEXT;
+
+-- Membership Application field
+ALTER TABLE public.user_profiles
+ADD COLUMN IF NOT EXISTS membership_class TEXT;
+
+-- COPA Membership fields
+ALTER TABLE public.user_profiles
+ADD COLUMN IF NOT EXISTS is_copa_member TEXT;
+
+ALTER TABLE public.user_profiles
+ADD COLUMN IF NOT EXISTS join_copa_flight_32 TEXT;
+
+ALTER TABLE public.user_profiles
+ADD COLUMN IF NOT EXISTS copa_membership_number TEXT;
+
+-- Statement of Interest field
+ALTER TABLE public.user_profiles
+ADD COLUMN IF NOT EXISTS statement_of_interest TEXT;
+
+-- Update handle_new_user to read and insert new member join form fields
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_full_name TEXT;
+  v_first_name TEXT;
+  v_last_name TEXT;
+  v_phone TEXT;
+  v_pilot_license_type TEXT;
+  v_aircraft_type TEXT;
+  v_call_sign TEXT;
+  v_how_often_fly_from_ytz TEXT;
+  v_how_did_you_hear TEXT;
+  v_role TEXT;
+  v_membership_level TEXT;
+  v_is_student_pilot BOOLEAN;
+  v_flight_school TEXT;
+  v_instructor_name TEXT;
+  -- New fields
+  v_street TEXT;
+  v_city TEXT;
+  v_province_state TEXT;
+  v_postal_zip_code TEXT;
+  v_country TEXT;
+  v_membership_class TEXT;
+  v_is_copa_member TEXT;
+  v_join_copa_flight_32 TEXT;
+  v_copa_membership_number TEXT;
+  v_statement_of_interest TEXT;
+BEGIN
+  v_full_name := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'full_name', '')), '');
+  v_first_name := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'first_name', '')), '');
+  v_last_name := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'last_name', '')), '');
+  v_phone := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'phone', '')), '');
+  v_pilot_license_type := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'pilot_license_type', '')), '');
+  v_aircraft_type := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'aircraft_type', '')), '');
+  v_call_sign := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'call_sign', '')), '');
+  v_how_often_fly_from_ytz := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'how_often_fly_from_ytz', '')), '');
+  v_how_did_you_hear := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'how_did_you_hear', '')), '');
+  v_is_student_pilot := COALESCE((NEW.raw_user_meta_data->>'is_student_pilot')::boolean, false);
+  v_flight_school := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'flight_school', '')), '');
+  v_instructor_name := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'instructor_name', '')), '');
+  
+  -- New fields from member join form
+  v_street := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'street', '')), '');
+  v_city := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'city', '')), '');
+  v_province_state := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'provinceState', '')), '');
+  v_postal_zip_code := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'postalZipCode', '')), '');
+  v_country := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'country', '')), '');
+  v_membership_class := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'membershipClass', '')), '');
+  v_is_copa_member := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'isCopaMember', '')), '');
+  v_join_copa_flight_32 := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'joinCopaFlight32', '')), '');
+  v_copa_membership_number := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'copaMembershipNumber', '')), '');
+  v_statement_of_interest := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'statementOfInterest', '')), '');
+
+  v_role := COALESCE(
+    NULLIF(LOWER(TRIM(COALESCE(NEW.raw_user_meta_data->>'role', ''))), ''),
+    'member'
+  );
+  IF v_role NOT IN ('member', 'admin') THEN
+    v_role := 'member';
+  END IF;
+
+  v_membership_level := COALESCE(
+    NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'membership_level', '')), ''),
+    'Full'
+  );
+  IF v_membership_level NOT IN ('Full', 'Student', 'Associate', 'Corporate', 'Honorary') THEN
+    v_membership_level := 'Full';
+  END IF;
+
+  IF NEW.email IS NULL OR TRIM(NEW.email) = '' THEN
+    RAISE EXCEPTION 'Email cannot be null or empty';
+  END IF;
+
+  INSERT INTO public.user_profiles (
+    id,
+    email,
+    full_name,
+    first_name,
+    last_name,
+    phone,
+    pilot_license_type,
+    aircraft_type,
+    call_sign,
+    how_often_fly_from_ytz,
+    how_did_you_hear,
+    role,
+    membership_level,
+    member_number,
+    status,
+    is_student_pilot,
+    flight_school,
+    instructor_name,
+    -- New fields
+    street,
+    city,
+    province_state,
+    postal_zip_code,
+    country,
+    membership_class,
+    is_copa_member,
+    join_copa_flight_32,
+    copa_membership_number,
+    statement_of_interest
+  )
+  VALUES (
+    NEW.id,
+    LOWER(TRIM(NEW.email)),
+    v_full_name,
+    v_first_name,
+    v_last_name,
+    v_phone,
+    v_pilot_license_type,
+    v_aircraft_type,
+    v_call_sign,
+    v_how_often_fly_from_ytz,
+    v_how_did_you_hear,
+    v_role,
+    v_membership_level,
+    NULL,
+    'pending',
+    v_is_student_pilot,
+    v_flight_school,
+    v_instructor_name,
+    -- New fields
+    v_street,
+    v_city,
+    v_province_state,
+    v_postal_zip_code,
+    v_country,
+    v_membership_class,
+    v_is_copa_member,
+    v_join_copa_flight_32,
+    v_copa_membership_number,
+    v_statement_of_interest
   )
   ON CONFLICT (id) DO NOTHING;
 

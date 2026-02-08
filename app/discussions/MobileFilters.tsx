@@ -3,19 +3,18 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import { DiscussionCategory } from '@/types/database'
+import { CATEGORY_ICONS, CATEGORIES_WITH_ALL } from './constants'
 
-const CATEGORY_LABELS: Record<DiscussionCategory, string> = {
+// Mobile-specific shortened labels for better fit on small screens
+const MOBILE_CATEGORY_LABELS: Record<DiscussionCategory, string> = {
   aircraft_shares: 'Aircraft Shares',
   instructor_availability: 'Instructors',
   gear_for_sale: 'Gear',
+  flying_at_ytz: 'Flying at YTZ',
+  general_aviation: 'General Aviation',
+  training_safety_proficiency: 'Training',
+  wanted: 'Wanted',
   other: 'Other',
-}
-
-const CATEGORY_ICONS: Record<DiscussionCategory, string> = {
-  aircraft_shares: '✈️',
-  instructor_availability: '👨‍✈️',
-  gear_for_sale: '🛒',
-  other: '📋',
 }
 
 export default function MobileFilters() {
@@ -61,7 +60,7 @@ export default function MobileFilters() {
     } else {
       params.set('sort', newSort)
     }
-    router.push(`/discussions?${params.toString()}`)
+    router.push(`/discussions?${params.toString()}`, { scroll: false })
   }
 
   const handleCategoryChange = (newCategory: DiscussionCategory | 'all') => {
@@ -76,11 +75,10 @@ export default function MobileFilters() {
     if (searchParams.get('sort')) {
       params.set('sort', searchParams.get('sort')!)
     }
-    router.push(`/discussions?${params.toString()}`)
+    router.push(`/discussions?${params.toString()}`, { scroll: false })
     setIsOpen(false)
   }
 
-  const categories: (DiscussionCategory | 'all')[] = ['all', 'aircraft_shares', 'instructor_availability', 'gear_for_sale', 'other']
 
   return (
     <div className="lg:hidden relative" ref={dropdownRef}>
@@ -90,13 +88,17 @@ export default function MobileFilters() {
         className="flex items-center justify-between gap-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors w-full sm:w-auto min-w-[140px]"
       >
         <div className="flex items-center gap-2">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-          </svg>
+          {category === 'all' ? (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+          ) : (
+            <span className="text-base">{CATEGORY_ICONS[category]}</span>
+          )}
           <span className="truncate">
             {category === 'all' 
               ? 'All Categories' 
-              : `${CATEGORY_ICONS[category]} ${CATEGORY_LABELS[category]}`}
+              : MOBILE_CATEGORY_LABELS[category]}
           </span>
         </div>
         <svg className={`w-4 h-4 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -114,18 +116,18 @@ export default function MobileFilters() {
                 Category
               </label>
               <div className="grid grid-cols-2 gap-2">
-                {categories.map((cat) => (
+                {CATEGORIES_WITH_ALL.map((cat) => (
                   <button
                     key={cat}
                     onClick={() => handleCategoryChange(cat)}
-                    className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                       category === cat
-                        ? 'bg-[#0d1e26] text-white'
+                        ? 'bg-[#0d1e26] text-white shadow-sm'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    {cat !== 'all' && <span className="text-base">{CATEGORY_ICONS[cat]}</span>}
-                    <span className="truncate">{cat === 'all' ? 'All' : CATEGORY_LABELS[cat]}</span>
+                    {cat !== 'all' && <span className="text-base flex-shrink-0">{CATEGORY_ICONS[cat]}</span>}
+                    <span className="truncate text-center">{cat === 'all' ? 'All' : MOBILE_CATEGORY_LABELS[cat]}</span>
                   </button>
                 ))}
               </div>

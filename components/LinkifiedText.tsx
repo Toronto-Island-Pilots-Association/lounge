@@ -8,8 +8,9 @@ interface LinkifiedTextProps {
 }
 
 /**
- * Component that converts URLs in plain text to clickable links
+ * Component that converts URLs in plain text to clickable links and renders markdown
  * Supports http://, https://, and www. URLs
+ * Supports markdown bold (**text**) and line breaks
  */
 export default function LinkifiedText({ text, className = '' }: LinkifiedTextProps) {
   // Handle empty text
@@ -17,64 +18,129 @@ export default function LinkifiedText({ text, className = '' }: LinkifiedTextPro
     return <span className={className}></span>
   }
 
-  // URL regex pattern - matches http://, https://, and www. URLs
-  const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi
+  // Split by lines to preserve line breaks
+  const lines = text.split('\n')
+  const processedLines: React.ReactNode[] = []
 
-  const parts: (string | React.ReactElement)[] = []
-  let lastIndex = 0
-  let match
-  let hasUrls = false
+  lines.forEach((line, lineIndex) => {
+    if (line.trim() === '') {
+      processedLines.push(<br key={`br-${lineIndex}`} />)
+      return
+    }
 
-  // Reset regex lastIndex for multiple uses
-  const regex = new RegExp(urlRegex.source, urlRegex.flags)
+    const parts: (string | React.ReactElement)[] = []
+    let processedText = line
+    let keyCounter = 0
 
-  while ((match = regex.exec(text)) !== null) {
-    hasUrls = true
+    // Process markdown bold (**text**) first
+    const boldRegex = /\*\*(.+?)\*\*/g
+    const boldMatches: Array<{ start: number; end: number; text: string }> = []
+    let boldMatch
+    const boldRegexCopy = new RegExp(boldRegex.source, boldRegex.flags)
     
-    // Add text before the URL
-    if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index))
+    while ((boldMatch = boldRegexCopy.exec(line)) !== null) {
+      boldMatches.push({
+        start: boldMatch.index,
+        end: boldRegexCopy.lastIndex,
+        text: boldMatch[1]
+      })
     }
 
-    // Extract the matched URL
-    let url = match[0]
-    let displayUrl = url
-
-    // Add protocol if it's a www. URL
-    if (url.startsWith('www.')) {
-      url = `https://${url}`
+    // Process URLs
+    const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi
+    const urlMatches: Array<{ start: number; end: number; url: string; displayUrl: string }> = []
+    let urlMatch
+    const urlRegexCopy = new RegExp(urlRegex.source, urlRegex.flags)
+    
+    while ((urlMatch = urlRegexCopy.exec(line)) !== null) {
+      let url = urlMatch[0]
+      let displayUrl = url
+      
+      if (url.startsWith('www.')) {
+        url = `https://${url}`
+      }
+      
+      if (displayUrl.length > 50) {
+        displayUrl = displayUrl.slice(0, 47) + '...'
+      }
+      
+      urlMatches.push({
+        start: urlMatch.index,
+        end: urlRegexCopy.lastIndex,
+        url,
+        displayUrl
+      })
     }
 
-    // Truncate display URL if too long
-    if (displayUrl.length > 50) {
-      displayUrl = displayUrl.slice(0, 47) + '...'
+    // Merge and sort all matches by position, avoiding overlaps
+    const allMatches = [
+      ...boldMatches.map(m => ({ ...m, type: 'bold' as const })),
+      ...urlMatches.map(m => ({ ...m, type: 'url' as const }))
+    ].sort((a, b) => a.start - b.start)
+      .filter((match, index, arr) => {
+        // Remove overlapping matches (keep the first one)
+        if (index === 0) return true
+        const prev = arr[index - 1]
+        return match.start >= prev.end
+      })
+
+    // Process the line with all matches
+    let currentIndex = 0
+    
+    allMatches.forEach((match) => {
+      // Add text before the match
+      if (match.start > currentIndex) {
+        const beforeText = line.slice(currentIndex, match.start)
+        if (beforeText) {
+          parts.push(beforeText)
+        }
+      }
+
+      // Add the match
+      if (match.type === 'bold') {
+        parts.push(
+          <strong key={`bold-${lineIndex}-${keyCounter++}`} className="font-semibold text-gray-900">
+            {match.text}
+          </strong>
+        )
+      } else {
+        parts.push(
+          <a
+            key={`url-${lineIndex}-${keyCounter++}`}
+            href={match.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#0d1e26] underline hover:text-[#0a171c] break-all"
+          >
+            {match.displayUrl}
+          </a>
+        )
+      }
+
+      currentIndex = match.end
+    })
+
+    // Add remaining text after the last match
+    if (currentIndex < line.length) {
+      parts.push(line.slice(currentIndex))
     }
 
-    // Add the link
-    parts.push(
-      <a
-        key={match.index}
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-[#0d1e26] underline hover:text-[#0a171c] break-all"
-      >
-        {displayUrl}
-      </a>
+    // If no matches, add the line as-is
+    if (parts.length === 0) {
+      parts.push(line)
+    }
+
+    processedLines.push(
+      <span key={`line-${lineIndex}`}>
+        {parts}
+      </span>
     )
 
-    lastIndex = regex.lastIndex
-  }
+    // Add line break except for the last line
+    if (lineIndex < lines.length - 1) {
+      processedLines.push(<br key={`linebreak-${lineIndex}`} />)
+    }
+  })
 
-  // Add remaining text after the last URL
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex))
-  }
-
-  // If no URLs found, return original text as-is
-  if (!hasUrls) {
-    return <span className={className}>{text}</span>
-  }
-
-  return <span className={className}>{parts}</span>
+  return <span className={className}>{processedLines}</span>
 }

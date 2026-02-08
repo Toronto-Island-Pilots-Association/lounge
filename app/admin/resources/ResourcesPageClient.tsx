@@ -105,12 +105,12 @@ export default function ResourcesPageClient() {
       }
     } catch (error) {
       console.error('Error deleting resource:', error)
-      alert('Failed to delete announcement')
+      alert('Failed to delete update')
     }
   }
 
   if (loading) {
-    return <Loading message="Loading announcements..." />
+    return <Loading message="Loading YTZ Flying Updates..." />
   }
 
   return (
@@ -123,7 +123,7 @@ export default function ResourcesPageClient() {
           }}
           className="bg-[#0d1e26] text-white px-4 py-2 rounded-md hover:bg-[#0a171c] text-sm w-full sm:w-auto"
         >
-          Add Announcement
+          Add Update
         </button>
       </div>
       <div className="space-y-4">
@@ -399,7 +399,7 @@ function ResourceFormModal({
                 placeholder={
                   isExternalLink
                     ? "Optional: Add a description or additional information about this external link..."
-                    : "Enter the announcement content. The beginning will be automatically used as a preview on the announcements list page..."
+                    : "Enter the YTZ Flying Update content. The beginning will be automatically used as a preview on the YTZ Flying Updates list page..."
                 }
               />
             </Suspense>

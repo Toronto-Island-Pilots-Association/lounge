@@ -29,12 +29,12 @@ export async function GET(request: Request) {
 
     const supabase = await createClient()
 
-    // Get the last 7 days of discussions
+    // Get the last 7 days of Hangar Talk posts
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
     const sevenDaysAgoISO = sevenDaysAgo.toISOString()
 
-    // Fetch the last 7 discussion threads created in the past 7 days
+    // Fetch the last 7 Hangar Talk threads created in the past 7 days
     const { data: threads, error: threadsError } = await supabase
       .from('threads')
       .select('*')
@@ -54,7 +54,7 @@ export async function GET(request: Request) {
     if (!threads || threads.length === 0) {
       return NextResponse.json({
         success: true,
-        message: 'No discussions in the past 7 days',
+        message: 'No Hangar Talk posts in the past 7 days',
         threadsSent: 0,
         membersNotified: 0,
       })

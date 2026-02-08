@@ -14,6 +14,21 @@ export interface UserProfile {
   first_name: string | null
   last_name: string | null
   phone: string | null
+  // Mailing Address
+  street: string | null
+  city: string | null
+  province_state: string | null
+  postal_zip_code: string | null
+  country: string | null
+  // Membership
+  membership_class: string | null
+  // COPA Membership
+  is_copa_member: string | null
+  join_copa_flight_32: string | null
+  copa_membership_number: string | null
+  // Statement of Interest
+  statement_of_interest: string | null
+  // Aviation Information
   pilot_license_type: string | null
   aircraft_type: string | null
   call_sign: string | null
@@ -64,7 +79,7 @@ export interface Event {
   updated_at: string
 }
 
-export type DiscussionCategory = 'aircraft_shares' | 'instructor_availability' | 'gear_for_sale' | 'other'
+export type DiscussionCategory = 'aircraft_shares' | 'instructor_availability' | 'gear_for_sale' | 'flying_at_ytz' | 'general_aviation' | 'training_safety_proficiency' | 'wanted' | 'other'
 
 export interface Thread {
   id: string

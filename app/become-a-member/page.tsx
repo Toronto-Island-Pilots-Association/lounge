@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Loading from '@/components/Loading'
+import { COUNTRIES, getStatesProvinces } from './constants'
 
 function BecomeMemberForm() {
   const [formData, setFormData] = useState({
@@ -12,6 +13,25 @@ function BecomeMemberForm() {
     email: '',
     password: '',
     phone: '',
+    // Mailing Address
+    street: '',
+    city: '',
+    provinceState: '',
+    postalZipCode: '',
+    country: '',
+    // Membership Application
+    membershipClass: '',
+    // COPA Membership
+    isCopaMember: '',
+    joinCopaFlight32: '',
+    copaMembershipNumber: '',
+    // Statement of Interest
+    statementOfInterest: '',
+    // Acknowledgements
+    agreedToBylaws: false,
+    agreedToGovernancePolicy: false,
+    understandsApprovalProcess: false,
+    // Existing fields
     pilotLicenseType: '',
     aircraftType: '',
     callSign: '',
@@ -38,10 +58,30 @@ function BecomeMemberForm() {
   }, [searchParams, router])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    })
+    const target = e.target
+    const value = target.type === 'checkbox' ? (target as HTMLInputElement).checked : target.value
+    const name = target.name
+
+    // Reset conditional fields when parent field changes
+    if (name === 'isCopaMember' && value !== 'yes') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: String(value),
+        joinCopaFlight32: '',
+        copaMembershipNumber: '',
+      }))
+    } else if (name === 'joinCopaFlight32' && value !== 'yes') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: String(value),
+        copaMembershipNumber: '',
+      }))
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+      }))
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -62,6 +102,25 @@ function BecomeMemberForm() {
           firstName: formData.firstName,
           lastName: formData.lastName,
           phone: formData.phone,
+          // Mailing Address
+          street: formData.street,
+          city: formData.city,
+          provinceState: formData.provinceState,
+          postalZipCode: formData.postalZipCode,
+          country: formData.country,
+          // Membership Application
+          membershipClass: formData.membershipClass,
+          // COPA Membership
+          isCopaMember: formData.isCopaMember,
+          joinCopaFlight32: formData.joinCopaFlight32,
+          copaMembershipNumber: formData.copaMembershipNumber,
+          // Statement of Interest
+          statementOfInterest: formData.statementOfInterest,
+          // Acknowledgements
+          agreedToBylaws: formData.agreedToBylaws,
+          agreedToGovernancePolicy: formData.agreedToGovernancePolicy,
+          understandsApprovalProcess: formData.understandsApprovalProcess,
+          // Existing fields
           pilotLicenseType: formData.pilotLicenseType,
           aircraftType: formData.aircraftType,
           callSign: formData.callSign,
@@ -89,6 +148,19 @@ function BecomeMemberForm() {
         email: '',
         password: '',
         phone: '',
+        street: '',
+        city: '',
+        provinceState: '',
+        postalZipCode: '',
+        country: '',
+        membershipClass: '',
+        isCopaMember: '',
+        joinCopaFlight32: '',
+        copaMembershipNumber: '',
+        statementOfInterest: '',
+        agreedToBylaws: false,
+        agreedToGovernancePolicy: false,
+        understandsApprovalProcess: false,
         pilotLicenseType: '',
         aircraftType: '',
         callSign: '',
@@ -115,6 +187,15 @@ function BecomeMemberForm() {
             Join the Toronto Island Pilots Association
           </p>
         </div>
+
+        {!success && (
+          <p className="text-center text-sm text-gray-600 mb-6">
+            Already have an account?{' '}
+            <Link href="/login" className="font-medium text-[#0d1e26] hover:text-[#416e82]">
+              Sign in
+            </Link>
+          </p>
+        )}
 
         {success ? (
           <div className="bg-green-50 border border-green-200 rounded-lg p-8 text-center">
@@ -183,7 +264,7 @@ function BecomeMemberForm() {
               </div>
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Email <span className="text-red-500">*</span>
+                  Email Address <span className="text-red-500">*</span>
                 </label>
                 <input
                   id="email"
@@ -207,6 +288,105 @@ function BecomeMemberForm() {
                   value={formData.phone}
                   onChange={handleChange}
                 />
+              </div>
+            </div>
+
+            {/* Mailing Address */}
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <h3 className="text-md font-medium text-gray-900 mb-3">Mailing Address</h3>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label htmlFor="street" className="block text-sm font-medium text-gray-700 mb-1">
+                    Street <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="street"
+                    name="street"
+                    type="text"
+                    required
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    value={formData.street}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
+                      City <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="city"
+                      name="city"
+                      type="text"
+                      required
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                      value={formData.city}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="provinceState" className="block text-sm font-medium text-gray-700 mb-1">
+                      Province / State <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      id="provinceState"
+                      name="provinceState"
+                      required
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                      value={formData.provinceState}
+                      onChange={handleChange}
+                    >
+                      {getStatesProvinces(formData.country).map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="postalZipCode" className="block text-sm font-medium text-gray-700 mb-1">
+                      Postal / ZIP Code <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="postalZipCode"
+                      name="postalZipCode"
+                      type="text"
+                      required
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                      value={formData.postalZipCode}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">
+                      Country <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      id="country"
+                      name="country"
+                      required
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                      value={formData.country}
+                      onChange={(e) => {
+                        handleChange(e)
+                        // Reset province/state when country changes
+                        setFormData(prev => ({
+                          ...prev,
+                          country: e.target.value,
+                          provinceState: '',
+                        }))
+                      }}
+                    >
+                      {COUNTRIES.map((country) => (
+                        <option key={country.value} value={country.value}>
+                          {country.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -233,114 +413,180 @@ function BecomeMemberForm() {
             </div>
           </div>
 
-          {/* Aviation Information */}
+          {/* Membership Application */}
           <div className="bg-gray-50 p-6 rounded-lg">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Aviation Information (Optional)</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="pilotLicenseType" className="block text-sm font-medium text-gray-700 mb-1">
-                  License Type
-                </label>
-                <select
-                  id="pilotLicenseType"
-                  name="pilotLicenseType"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                  value={formData.pilotLicenseType}
-                  onChange={handleChange}
-                >
-                  <option value="">Select...</option>
-                  <option value="student">Student Pilot</option>
-                  <option value="private">Private Pilot</option>
-                  <option value="commercial">Commercial Pilot</option>
-                  <option value="atp">Airline Transport Pilot</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div>
-                <label htmlFor="aircraftType" className="block text-sm font-medium text-gray-700 mb-1">
-                  Aircraft Type
-                </label>
-                <input
-                  id="aircraftType"
-                  name="aircraftType"
-                  type="text"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                  placeholder="e.g., Cessna 172, Piper Cherokee"
-                  value={formData.aircraftType}
-                  onChange={handleChange}
-                />
-              </div>
-              <div>
-                <label htmlFor="callSign" className="block text-sm font-medium text-gray-700 mb-1">
-                  Call Sign
-                </label>
-                <input
-                  id="callSign"
-                  name="callSign"
-                  type="text"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                  placeholder="e.g., C-GABC"
-                  value={formData.callSign}
-                  onChange={handleChange}
-                />
-              </div>
-              <div>
-                <label htmlFor="howOftenFlyFromYTZ" className="block text-sm font-medium text-gray-700 mb-1">
-                  How often do you fly from YTZ?
-                </label>
-                <select
-                  id="howOftenFlyFromYTZ"
-                  name="howOftenFlyFromYTZ"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                  value={formData.howOftenFlyFromYTZ}
-                  onChange={handleChange}
-                >
-                  <option value="">Select...</option>
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                  <option value="seasonal">Seasonal</option>
-                  <option value="occasionally">Occasionally</option>
-                  <option value="rarely">Rarely</option>
-                </select>
-              </div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Membership Application</h2>
+            <div>
+              <label htmlFor="membershipClass" className="block text-sm font-medium text-gray-700 mb-1">
+                Applying for TIPA Membership Class: <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="membershipClass"
+                name="membershipClass"
+                required
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                value={formData.membershipClass}
+                onChange={handleChange}
+              >
+                <option value="">Select...</option>
+                <option value="full">Full Member</option>
+                <option value="student-associate">Student / Associate Member</option>
+                <option value="corporate">Corporate Member</option>
+              </select>
             </div>
+          </div>
 
-            {/* Student pilot: show flight school / instructor when License Type is Student Pilot */}
-            {formData.pilotLicenseType === 'student' && (
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="flightSchool" className="block text-sm font-medium text-gray-700 mb-1">
-                      Flight school
-                    </label>
+          {/* COPA Membership */}
+          <div className="bg-gray-50 p-6 rounded-lg">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">COPA Membership</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Are you a COPA Member? <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-6">
+                  <label className="flex items-center">
                     <input
-                      id="flightSchool"
-                      name="flightSchool"
-                      type="text"
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                      placeholder="e.g., Island Air, Freelance…"
-                      value={formData.flightSchool}
+                      type="radio"
+                      name="isCopaMember"
+                      value="yes"
+                      required
+                      className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
+                      checked={formData.isCopaMember === 'yes'}
                       onChange={handleChange}
                     />
-                  </div>
-                  <div>
-                    <label htmlFor="instructorName" className="block text-sm font-medium text-gray-700 mb-1">
-                      Instructor name
-                    </label>
+                    <span className="text-sm text-gray-700">Yes</span>
+                  </label>
+                  <label className="flex items-center">
                     <input
-                      id="instructorName"
-                      name="instructorName"
-                      type="text"
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                      placeholder="e.g., Jane Smith"
-                      value={formData.instructorName}
+                      type="radio"
+                      name="isCopaMember"
+                      value="no"
+                      required
+                      className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
+                      checked={formData.isCopaMember === 'no'}
                       onChange={handleChange}
                     />
-                  </div>
+                    <span className="text-sm text-gray-700">No</span>
+                  </label>
                 </div>
               </div>
-            )}
+
+              {formData.isCopaMember === 'yes' && (
+                <div className="pt-4 border-t border-gray-200 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Would you like to join COPA Flight 32? COPA Flight 32 is free to join and a working partner with TIPA.
+                    </label>
+                    <div className="flex gap-6">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="joinCopaFlight32"
+                          value="yes"
+                          className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
+                          checked={formData.joinCopaFlight32 === 'yes'}
+                          onChange={handleChange}
+                        />
+                        <span className="text-sm text-gray-700">Yes</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="joinCopaFlight32"
+                          value="no"
+                          className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
+                          checked={formData.joinCopaFlight32 === 'no'}
+                          onChange={handleChange}
+                        />
+                        <span className="text-sm text-gray-700">No</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {formData.joinCopaFlight32 === 'yes' && (
+                    <div>
+                      <label htmlFor="copaMembershipNumber" className="block text-sm font-medium text-gray-700 mb-1">
+                        Please enter your COPA Membership Number <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        id="copaMembershipNumber"
+                        name="copaMembershipNumber"
+                        type="text"
+                        required={formData.joinCopaFlight32 === 'yes'}
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                        value={formData.copaMembershipNumber}
+                        onChange={handleChange}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Statement of Interest */}
+          <div className="bg-gray-50 p-6 rounded-lg">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Statement of Interest</h2>
+            <div>
+              <label htmlFor="statementOfInterest" className="block text-sm font-medium text-gray-700 mb-1">
+                Briefly describe your connection to YTZ or interest in supporting TIPA.
+              </label>
+              <textarea
+                id="statementOfInterest"
+                name="statementOfInterest"
+                rows={4}
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                value={formData.statementOfInterest}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+
+          {/* Acknowledgements */}
+          <div className="bg-gray-50 p-6 rounded-lg">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Acknowledgements</h2>
+            <div className="space-y-3">
+              <label className="flex items-start">
+                <input
+                  type="checkbox"
+                  name="agreedToBylaws"
+                  required
+                  className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]"
+                  checked={formData.agreedToBylaws}
+                  onChange={handleChange}
+                />
+                <span className="text-sm text-gray-700">
+                  I have reviewed and agree to TIPA's By-Laws <span className="text-red-500">*</span>
+                </span>
+              </label>
+              <label className="flex items-start">
+                <input
+                  type="checkbox"
+                  name="agreedToGovernancePolicy"
+                  required
+                  className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]"
+                  checked={formData.agreedToGovernancePolicy}
+                  onChange={handleChange}
+                />
+                <span className="text-sm text-gray-700">
+                  I have reviewed and agree to the Governance & Membership Policy <span className="text-red-500">*</span>
+                </span>
+              </label>
+              <label className="flex items-start">
+                <input
+                  type="checkbox"
+                  name="understandsApprovalProcess"
+                  required
+                  className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]"
+                  checked={formData.understandsApprovalProcess}
+                  onChange={handleChange}
+                />
+                <span className="text-sm text-gray-700">
+                  I understand my application is subject to approval and does not create membership until approved <span className="text-red-500">*</span>
+                </span>
+              </label>
+            </div>
           </div>
 
           {/* Additional Information */}
@@ -382,13 +628,6 @@ function BecomeMemberForm() {
               {loading ? 'Creating account...' : 'Become a Member'}
             </button>
           </div>
-
-          <p className="text-center text-sm text-gray-600">
-            Already have an account?{' '}
-            <Link href="/login" className="font-medium text-[#0d1e26] hover:text-[#416e82]">
-              Sign in
-            </Link>
-          </p>
         </form>
         )}
       </div>

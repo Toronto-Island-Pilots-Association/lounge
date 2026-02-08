@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS threads (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   title TEXT NOT NULL,
   content TEXT NOT NULL,
-  category TEXT NOT NULL DEFAULT 'other' CHECK (category IN ('aircraft_shares', 'instructor_availability', 'gear_for_sale', 'lounge_feedback', 'other')),
+  category TEXT NOT NULL DEFAULT 'other' CHECK (category IN ('aircraft_shares', 'instructor_availability', 'gear_for_sale', 'flying_at_ytz', 'general_aviation', 'training_safety_proficiency', 'wanted', 'other')),
   created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   author_email TEXT, -- Store email for deleted users
   created_at TIMESTAMPTZ DEFAULT NOW(),

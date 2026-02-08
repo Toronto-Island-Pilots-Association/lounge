@@ -359,7 +359,7 @@ export async function sendMemberApprovalEmail(email: string, name: string | null
         </p>
         <ul style="color: #374151; line-height: 1.8; margin-left: 20px;">
           <li>Access member resources and exclusive content</li>
-          <li>Browse and post discussions</li>
+          <li>Browse and post in Hangar Talk</li>
           <li>View and RSVP to events</li>
           <li>Connect with other GA pilots in Toronto</li>
           <li>Stay informed on advocacy efforts for GA at CYTZ</li>
@@ -552,10 +552,10 @@ export async function sendDiscussionDigestEmail(
     subject: `TIPA Discussion Digest - ${threads.length} New Discussion${threads.length === 1 ? '' : 's'}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h1 style="color: #1f2937; margin-bottom: 20px;">TIPA Discussion Digest</h1>
+        <h1 style="color: #1f2937; margin-bottom: 20px;">TIPA Hangar Talk Digest</h1>
         <p style="color: #374151; line-height: 1.6;">Hi ${name},</p>
         <p style="color: #374151; line-height: 1.6;">
-          Here are the latest discussions from the TIPA community over the past week:
+          Here are the latest Hangar Talk posts from the TIPA community over the past week:
         </p>
         <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
           ${threadsHtml}
@@ -563,7 +563,7 @@ export async function sendDiscussionDigestEmail(
         <p style="margin-top: 20px;">
           <a href="${discussionsUrl}" 
              style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
-            View All Discussions
+            View All Hangar Talk
           </a>
         </p>
         <p style="margin-top: 20px; color: #374151; line-height: 1.6; font-size: 14px;">
@@ -578,4 +578,3 @@ export async function sendDiscussionDigestEmail(
     `,
   })
 }
-

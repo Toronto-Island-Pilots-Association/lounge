@@ -1,6 +1,7 @@
 import { requireAuth } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { DiscussionCategory } from '@/types/database'
 
 export async function GET() {
   try {
@@ -68,7 +69,9 @@ export async function POST(request: Request) {
     }
 
     // Validate category
-    const validCategories = ['aircraft_shares', 'instructor_availability', 'gear_for_sale', 'other']
+    // Import ALL_CATEGORIES from constants (but we can't import from app directory in API routes)
+    // So we keep it here but it should match ALL_CATEGORIES in app/discussions/constants.ts
+    const validCategories: DiscussionCategory[] = ['aircraft_shares', 'instructor_availability', 'gear_for_sale', 'flying_at_ytz', 'general_aviation', 'training_safety_proficiency', 'wanted', 'other']
     const threadCategory = category && validCategories.includes(category) ? category : 'other'
 
     // Validate image_urls (should be an array of strings, max 5)

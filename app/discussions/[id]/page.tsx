@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { Suspense } from 'react'
 import { getCurrentUser } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { Thread, Comment, DiscussionCategory } from '@/types/database'
@@ -10,13 +11,9 @@ import DeleteThreadButton from './DeleteThreadButton'
 import DeleteCommentButton from './DeleteCommentButton'
 import ThreadImages from '@/components/ThreadImages'
 import LinkifiedText from '@/components/LinkifiedText'
-
-const CATEGORY_LABELS: Record<DiscussionCategory, string> = {
-  aircraft_shares: 'Aircraft Shares / Block Time',
-  instructor_availability: 'Instructor Availability',
-  gear_for_sale: 'Gear for Sale',
-  other: 'Other',
-}
+import Sidebar from '../Sidebar'
+import { CATEGORY_LABELS } from '../constants'
+import { formatDetailDate } from '../utils'
 
 export default async function DiscussionPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser()
@@ -51,7 +48,7 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
               href="/discussions"
               className="inline-block px-6 py-2 bg-[#0d1e26] text-white font-semibold rounded-lg hover:bg-[#0a171c] transition-colors"
             >
-              Back to Discussions
+              Back to Hangar Talk
             </Link>
           </div>
         </div>
@@ -142,24 +139,12 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
 
   const threadWithAuthor: Thread & { author?: any } = { ...thread, author }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-    
-    if (diffInSeconds < 60) return 'just now'
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`
-    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`
-    
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
-  }
 
   const threadAuthor = threadWithAuthor.author || {}
 
   return (
     <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-4 sm:mb-6">
           <Link
             href="/discussions"
@@ -168,12 +153,21 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to Discussions
+            Back to Hangar Talk
           </Link>
         </div>
 
-        {/* Thread */}
-        <div className="bg-white shadow rounded-lg p-4 sm:p-6 mb-4 sm:mb-6 relative">
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+          {/* Sidebar - Hidden on Mobile */}
+          <div className="hidden lg:block lg:col-span-1">
+            <Sidebar currentCategory={thread.category as DiscussionCategory} />
+          </div>
+
+          {/* Main Content */}
+          <div className="lg:col-span-3">
+            {/* Thread */}
+            <div className="bg-white shadow rounded-lg p-4 sm:p-6 mb-4 sm:mb-6 relative">
           {(thread.created_by === user.id && thread.created_by !== null) || user.profile.role === 'admin' ? (
             <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
               <DeleteThreadButton
@@ -224,7 +218,7 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
               <div className={`text-sm font-medium ${isThreadAuthorDeleted ? 'text-gray-600 italic' : 'text-gray-900'}`}>
                 {threadDisplayName}
               </div>
-              <div className="text-xs text-gray-500">{formatDate(threadWithAuthor.created_at)}</div>
+              <div className="text-xs text-gray-500">{formatDetailDate(threadWithAuthor.created_at)}</div>
             </div>
           </div>
 
@@ -317,7 +311,7 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
                             <div className={`text-sm font-medium ${isDeleted ? 'text-gray-600 italic' : 'text-gray-900'}`}>
                               {displayName}
                             </div>
-                            <div className="text-xs text-gray-500">{formatDate(comment.created_at)}</div>
+                            <div className="text-xs text-gray-500">{formatDetailDate(comment.created_at)}</div>
                           </div>
                         </div>
                         <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap mb-3">
@@ -339,6 +333,8 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
               })}
             </div>
           )}
+          </div>
+          </div>
         </div>
       </div>
     </div>

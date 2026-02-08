@@ -1,154 +1,113 @@
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { DiscussionCategory } from '@/types/database'
+import SidebarRecentPosts from './SidebarRecentPosts'
+import { CATEGORY_LABELS, CATEGORY_DESCRIPTIONS, CATEGORY_ICONS, CATEGORIES_WITH_ALL, ALL_CATEGORIES } from './constants'
 
-const CATEGORY_LABELS: Record<DiscussionCategory, string> = {
-  aircraft_shares: 'Aircraft Shares / Block Time',
-  instructor_availability: 'Instructor Availability',
-  gear_for_sale: 'Gear for Sale',
-  other: 'Other',
+// Static category list component - always visible, links work immediately
+function CategoryList({ currentCategory }: { currentCategory?: DiscussionCategory | 'all' }) {
+  const selectedCategory = currentCategory || 'all'
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+      <h3 className="text-sm font-semibold text-gray-900 mb-3 uppercase tracking-wide">Categories</h3>
+      <nav className="space-y-1">
+        {CATEGORIES_WITH_ALL.map((category) => {
+          const isActive = selectedCategory === category
+          
+          return (
+            <Link
+              key={category}
+              href={category === 'all' ? '/discussions' : `/discussions?category=${category}`}
+              prefetch={true}
+              className={`group flex flex-col px-3 py-2 rounded-md text-sm transition-all duration-200 ${
+                isActive
+                  ? 'bg-[#0d1e26] text-white font-medium'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  {category !== 'all' && (
+                    <span className="text-base flex-shrink-0">
+                      {CATEGORY_ICONS[category]}
+                    </span>
+                  )}
+                  <span className="truncate">
+                    {category === 'all' ? 'All Categories' : CATEGORY_LABELS[category]}
+                  </span>
+                </div>
+                <Suspense fallback={
+                  <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 animate-pulse ${
+                    isActive
+                      ? 'bg-white/20 text-white'
+                      : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    ...
+                  </span>
+                }>
+                  <CategoryCount category={category} isActive={isActive} />
+                </Suspense>
+              </div>
+            </Link>
+          )
+        })}
+      </nav>
+    </div>
+  )
 }
 
-const CATEGORY_ICONS: Record<DiscussionCategory, string> = {
-  aircraft_shares: '✈️',
-  instructor_availability: '👨‍✈️',
-  gear_for_sale: '🛒',
-  other: '📋',
-}
-
-export default async function Sidebar({ currentCategory }: { currentCategory?: DiscussionCategory | 'all' }) {
+// Component that fetches all category counts in one query and returns the count for a specific category
+async function CategoryCount({ category, isActive }: { category: DiscussionCategory | 'all', isActive: boolean }) {
   const supabase = await createClient()
-
-  // Get category counts
+  
+  // Fetch all threads once to get all counts
   const { data: threads } = await supabase
     .from('threads')
     .select('category')
 
-  const categoryCounts = new Map<DiscussionCategory | 'all', number>()
-  categoryCounts.set('all', threads?.length || 0)
-  
-  const validCategories: DiscussionCategory[] = ['aircraft_shares', 'instructor_availability', 'gear_for_sale', 'other']
-  
-  threads?.forEach(thread => {
-    const category = thread.category as string
-    if (validCategories.includes(category as DiscussionCategory)) {
-      const typedCategory = category as DiscussionCategory
-      const count = categoryCounts.get(typedCategory) || 0
-      categoryCounts.set(typedCategory, count + 1)
-    }
-  })
-
-  // Get recent threads for sidebar
-  const { data: recentThreads } = await supabase
-    .from('threads')
-    .select('id, title, category, created_at')
-    .order('created_at', { ascending: false })
-    .limit(5)
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-    
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`
-    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`
-    
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  }
-
-  const categories: (DiscussionCategory | 'all')[] = ['all', 'aircraft_shares', 'instructor_availability', 'gear_for_sale', 'other']
-  const selectedCategory = currentCategory || 'all'
-  
-  // Helper to safely get category icon
-  const getCategoryIcon = (category: string): string => {
-    if (validCategories.includes(category as DiscussionCategory)) {
-      return CATEGORY_ICONS[category as DiscussionCategory]
-    }
-    return '📋'
+  let count = 0
+  if (category === 'all') {
+    count = threads?.length || 0
+  } else {
+    count = threads?.filter((t: { category: string }) => t.category === category).length || 0
   }
 
   return (
-    <div className="space-y-6">
-      {/* Categories */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <h3 className="text-sm font-semibold text-gray-900 mb-3 uppercase tracking-wide">Categories</h3>
-        <nav className="space-y-1">
-          {categories.map((category) => {
-            const isActive = selectedCategory === category
-            const count = categoryCounts.get(category) || 0
-            
-            return (
-              <Link
-                key={category}
-                href={category === 'all' ? '/discussions' : `/discussions?category=${category}`}
-                className={`flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${
-                  isActive
-                    ? 'bg-[#0d1e26] text-white font-medium'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  {category !== 'all' && (
-                    <span className="text-base">{CATEGORY_ICONS[category]}</span>
-                  )}
-                  <span>
-                    {category === 'all' ? 'All Categories' : CATEGORY_LABELS[category]}
-                  </span>
-                </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  isActive
-                    ? 'bg-white/20 text-white'
-                    : 'bg-gray-100 text-gray-600'
-                }`}>
-                  {count}
-                </span>
-              </Link>
-            )
-          })}
-        </nav>
-      </div>
+    <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
+      isActive
+        ? 'bg-white/20 text-white'
+        : 'bg-gray-100 text-gray-600'
+    }`}>
+      {count}
+    </span>
+  )
+}
 
-      {/* Recent Activity */}
-      {recentThreads && recentThreads.length > 0 && (
+
+export default function Sidebar({ currentCategory }: { currentCategory?: DiscussionCategory | 'all' }) {
+  return (
+    <div className="space-y-6">
+      {/* Categories - Links always visible, counts load separately */}
+      <CategoryList currentCategory={currentCategory} />
+
+      {/* Recent Posts - Loads separately */}
+      <Suspense fallback={
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
           <h3 className="text-sm font-semibold text-gray-900 mb-3 uppercase tracking-wide">Recent Posts</h3>
           <div className="space-y-3">
-            {recentThreads.map((thread) => (
-              <Link
-                key={thread.id}
-                href={`/discussions/${thread.id}`}
-                className="block group"
-              >
-                <div className="flex items-start gap-2">
-                  <span className="text-sm flex-shrink-0 mt-0.5">
-                    {getCategoryIcon(thread.category)}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900 group-hover:text-[#0d1e26] line-clamp-2 font-medium transition-colors">
-                      {thread.title}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {formatDate(thread.created_at)}
-                    </p>
-                  </div>
-                </div>
-              </Link>
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              </div>
             ))}
           </div>
         </div>
-      )}
-
-      {/* Stats */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <h3 className="text-sm font-semibold text-gray-900 mb-3 uppercase tracking-wide">Statistics</h3>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">Total Discussions</span>
-            <span className="font-semibold text-gray-900">{categoryCounts.get('all') || 0}</span>
-          </div>
-        </div>
-      </div>
+      }>
+        <SidebarRecentPosts />
+      </Suspense>
     </div>
   )
 }

@@ -8,13 +8,9 @@ import { Thread, DiscussionCategory, ThreadWithData, ThreadAuthor } from '@/type
 import ThreadSort from './ThreadSort'
 import Sidebar from './Sidebar'
 import MobileFilters from './MobileFilters'
-
-const CATEGORY_LABELS: Record<DiscussionCategory, string> = {
-  aircraft_shares: 'Aircraft Shares / Block Time',
-  instructor_availability: 'Instructor Availability',
-  gear_for_sale: 'Gear for Sale',
-  other: 'Other',
-}
+import ContentPreview from './ContentPreview'
+import { CATEGORY_LABELS, CATEGORY_DESCRIPTIONS, CATEGORY_ICONS } from './constants'
+import { formatRelativeDate } from './utils'
 
 export default async function DiscussionsPage({
   searchParams,
@@ -157,18 +153,6 @@ export default async function DiscussionsPage({
     )
   }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-    
-    if (diffInSeconds < 60) return 'just now'
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`
-    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`
-    
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-6 sm:py-8">
@@ -176,7 +160,7 @@ export default async function DiscussionsPage({
         {/* Header */}
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Discussions</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Hangar Talk</h1>
             <div className="flex items-center gap-3 w-full sm:w-auto sm:ml-auto">
               {/* Mobile Filters - Combined Category & Sort */}
               <div className="lg:hidden relative flex-1 sm:flex-initial">
@@ -208,45 +192,65 @@ export default async function DiscussionsPage({
               </Link>
             </div>
           </div>
-          {/* Category Filter Badge - Desktop Only */}
-          {categoryFilter && (
-            <div className="hidden lg:flex items-center gap-2">
-              <span className="px-3 py-1 text-sm font-medium bg-[#0d1e26]/10 text-[#0d1e26] rounded-md">
-                {CATEGORY_LABELS[categoryFilter]}
-              </span>
-              <Link
-                href="/discussions"
-                className="text-sm text-[#0d1e26] hover:text-[#0a171c] hover:underline"
-              >
-                Clear filter
-              </Link>
-            </div>
-          )}
         </div>
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
           {/* Sidebar - Hidden on Mobile */}
           <div className="hidden lg:block lg:col-span-1">
-            <Suspense fallback={<div className="space-y-6"><div className="h-64 bg-gray-100 rounded-lg animate-pulse" /></div>}>
-              <Sidebar currentCategory={categoryFilter} />
-            </Suspense>
+            <Sidebar currentCategory={categoryFilter} />
           </div>
 
-          {/* Main Content - Full Width on Mobile */}
+          {/* Main Content */}
           <div className="lg:col-span-3">
+            {/* Category Header with Info Popover */}
+            {categoryFilter && (
+              <div className="mb-4 flex items-start gap-2">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {CATEGORY_LABELS[categoryFilter]}
+                </h2>
+                {CATEGORY_DESCRIPTIONS[categoryFilter] && (
+                  <div className="group relative flex-shrink-0">
+                    <button
+                      type="button"
+                      className="text-gray-400 hover:text-gray-600 transition-colors mt-0.5"
+                      aria-label="Category information"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </button>
+                    <div className="absolute left-0 top-6 z-10 w-72 p-3 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none">
+                      <p className="text-sm text-gray-700 leading-relaxed">
+                        {CATEGORY_DESCRIPTIONS[categoryFilter]}
+                      </p>
+                      <div className="absolute -top-1 left-4 w-2 h-2 bg-white border-l border-t border-gray-200 transform rotate-45"></div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {!threadsWithData || threadsWithData.length === 0 ? (
               <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-8 sm:p-12 text-center">
                 <div className="max-w-md mx-auto">
-                  <svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <p className="text-gray-600 mb-6">
-                    {categoryFilter
-                      ? `No discussions in this category yet. Be the first to post!`
-                      : 'No discussions yet. Be the first to start a discussion!'}
-                  </p>
+                  {categoryFilter ? (
+                    <div className="text-6xl mb-4">{CATEGORY_ICONS[categoryFilter]}</div>
+                  ) : (
+                    <svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  )}
+                  {categoryFilter && CATEGORY_DESCRIPTIONS[categoryFilter] && (
+                    <p className="text-sm text-gray-500 mb-6 max-w-lg mx-auto">
+                      {CATEGORY_DESCRIPTIONS[categoryFilter]}
+                    </p>
+                  )}
+                  {!categoryFilter && (
+                    <p className="text-gray-600 mb-6">
+                      No discussions yet. Be the first to start a discussion!
+                    </p>
+                  )}
                   <Link
                     href={categoryFilter 
                       ? `/discussions/new?category=${categoryFilter}`
@@ -303,7 +307,7 @@ export default async function DiscussionsPage({
                               <span className="font-medium text-gray-700">{thread.comment_count || 0}</span>
                             </div>
                             <span className="text-xs text-gray-500">
-                              {formatDate(thread.latest_comment_at ? new Date(thread.latest_comment_at).toISOString() : thread.created_at)}
+                              {formatRelativeDate(thread.latest_comment_at ? new Date(thread.latest_comment_at).toISOString() : thread.created_at)}
                             </span>
                           </div>
                           
@@ -366,9 +370,7 @@ export default async function DiscussionsPage({
                                   <span className="px-2 py-0.5 text-xs font-medium bg-[#0d1e26]/10 text-[#0d1e26] rounded">
                                     {CATEGORY_LABELS[thread.category]}
                                   </span>
-                                  <span className="text-xs text-gray-500 line-clamp-1">
-                                    {thread.content.substring(0, 60)}...
-                                  </span>
+                                  <ContentPreview content={thread.content} maxLength={60} />
                                 </div>
                               </div>
                             </div>
@@ -398,7 +400,7 @@ export default async function DiscussionsPage({
                           {/* Last Activity */}
                           <div className="col-span-2 text-center">
                             <div className="text-xs text-gray-500">
-                              {formatDate(thread.latest_comment_at ? new Date(thread.latest_comment_at).toISOString() : thread.created_at)}
+                              {formatRelativeDate(thread.latest_comment_at ? new Date(thread.latest_comment_at).toISOString() : thread.created_at)}
                             </div>
                           </div>
                         </div>

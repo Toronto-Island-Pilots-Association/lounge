@@ -1,154 +1,11 @@
-'use client'
-
-import { useState, useEffect, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { DiscussionCategory } from '@/types/database'
-import ThreadImageUpload from '@/components/ThreadImageUpload'
-
-const CATEGORY_LABELS: Record<DiscussionCategory, string> = {
-  aircraft_shares: 'Aircraft Shares / Block Time',
-  instructor_availability: 'Instructor Availability',
-  gear_for_sale: 'Gear for Sale',
-  other: 'Other',
-}
-
-function NewDiscussionForm() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const [title, setTitle] = useState('')
-  const [content, setContent] = useState('')
-  const [category, setCategory] = useState<DiscussionCategory>('other')
-  const [imageUrls, setImageUrls] = useState<string[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  // Pre-fill category from URL parameter
-  useEffect(() => {
-    const categoryParam = searchParams.get('category')
-    if (categoryParam) {
-      const validCategories: DiscussionCategory[] = ['aircraft_shares', 'instructor_availability', 'gear_for_sale', 'other']
-      if (validCategories.includes(categoryParam as DiscussionCategory)) {
-        setCategory(categoryParam as DiscussionCategory)
-      }
-    }
-  }, [searchParams])
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-
-    try {
-      const res = await fetch('/api/threads', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ title, content, category, image_urls: imageUrls }),
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to create discussion')
-      }
-
-      router.push(`/discussions/${data.thread.id}`)
-      router.refresh()
-    } catch (err: any) {
-      setError(err.message || 'An error occurred')
-      setLoading(false)
-    }
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="bg-white shadow rounded-lg p-6">
-          {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-800">{error}</p>
-            </div>
-          )}
-
-          <div className="mb-6">
-            <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
-              Category
-            </label>
-            <select
-              id="category"
-              value={category}
-              onChange={(e) => setCategory(e.target.value as DiscussionCategory)}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-transparent"
-            >
-              {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="mb-6">
-            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-              Title
-            </label>
-            <input
-              type="text"
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-transparent"
-              placeholder="Enter discussion title..."
-            />
-          </div>
-
-          <div className="mb-6">
-            <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
-              Description
-            </label>
-            <textarea
-              id="content"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              required
-              rows={10}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-transparent"
-              placeholder="Describe your discussion..."
-            />
-          </div>
-
-          <div className="mb-6">
-            <ThreadImageUpload
-              onImagesChange={setImageUrls}
-              maxImages={5}
-            />
-          </div>
-
-          <div className="flex items-center gap-4">
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-6 py-2 bg-[#0d1e26] text-white font-semibold rounded-lg hover:bg-[#0a171c] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Creating...' : 'Start Discussion'}
-            </button>
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="px-6 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-  )
-}
+import { Suspense } from 'react'
+import Sidebar from '../Sidebar'
+import NewDiscussionForm from './NewDiscussionForm'
 
 export default function NewDiscussionPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Start New Discussion</h1>
           <p className="mt-2 text-gray-600">
@@ -156,34 +13,43 @@ export default function NewDiscussionPage() {
           </p>
         </div>
 
-        {/* Community Guidelines Disclaimer */}
-        <div className="mb-6 bg-blue-50 border-l-4 border-blue-400 rounded-r-md p-4">
-          <div className="flex items-start gap-3">
-            <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div className="flex-1">
-              <p className="text-sm text-gray-700 leading-relaxed">
-                <strong className="text-gray-900">Community Guidelines:</strong> Please maintain a respectful and professional environment. 
-                Harassment, discrimination, or sharing sensitive personal information is not permitted. 
-                All discussions should be conducted with mutual respect and consideration for fellow members.
-              </p>
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+          {/* Sidebar - Hidden on Mobile */}
+          <div className="hidden lg:block lg:col-span-1">
+            <Sidebar />
+          </div>
+
+          {/* Main Content */}
+          <div className="lg:col-span-3">
+            {/* Community Guidelines Disclaimer */}
+            <div className="mb-6 bg-blue-50 border-l-4 border-blue-400 rounded-r-md p-4">
+              <div className="flex items-start gap-3">
+                <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="flex-1">
+                  <p className="text-sm text-gray-700 leading-relaxed">
+                    <strong className="text-gray-900">Community Guidelines:</strong> Keep it respectful, practical, and aviation-focused. Posts may be moved or closed if needed.
+                  </p>
+                </div>
+              </div>
             </div>
+
+            <Suspense fallback={
+              <div className="bg-white shadow rounded-lg p-6">
+                <div className="animate-pulse space-y-4">
+                  <div className="h-10 bg-gray-200 rounded"></div>
+                  <div className="h-10 bg-gray-200 rounded"></div>
+                  <div className="h-40 bg-gray-200 rounded"></div>
+                  <div className="h-10 bg-gray-200 rounded w-32"></div>
+                </div>
+              </div>
+            }>
+              <NewDiscussionForm />
+            </Suspense>
           </div>
         </div>
-
-        <Suspense fallback={
-          <div className="bg-white shadow rounded-lg p-6">
-            <div className="animate-pulse space-y-4">
-              <div className="h-10 bg-gray-200 rounded"></div>
-              <div className="h-10 bg-gray-200 rounded"></div>
-              <div className="h-40 bg-gray-200 rounded"></div>
-              <div className="h-10 bg-gray-200 rounded w-32"></div>
-            </div>
-          </div>
-        }>
-          <NewDiscussionForm />
-        </Suspense>
       </div>
     </div>
   )

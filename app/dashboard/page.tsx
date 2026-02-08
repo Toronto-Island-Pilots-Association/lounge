@@ -194,7 +194,7 @@ export default async function DashboardPage() {
                           Membership Expired
                         </h3>
                         <p className="text-amber-800 mb-4">
-                          Your membership has lapsed due to non-payment. You do not have access to TIPA platform features including discussions, announcements, and events.
+                          Your membership has lapsed due to non-payment. You do not have access to TIPA platform features including discussions, YTZ Flying Updates, and events.
                         </p>
                         <p className="text-sm text-amber-700">
                           To restore access, please renew your membership or contact an administrator.
@@ -213,7 +213,7 @@ export default async function DashboardPage() {
                           Account Rejected
                         </h3>
                         <p className="text-red-800 mb-4">
-                          Your account application has been rejected. You do not have access to TIPA platform features including discussions, announcements, and events.
+                          Your account application has been rejected. You do not have access to TIPA platform features including discussions, YTZ Flying Updates, and events.
                         </p>
                         <p className="text-sm text-red-700">
                           If you believe this is an error, please contact an administrator.
@@ -231,9 +231,9 @@ export default async function DashboardPage() {
                         href="/resources"
                         className="block p-4 bg-white border border-gray-200 rounded-lg hover:border-[#0d1e26] hover:shadow-md transition"
                       >
-                        <h3 className="font-medium text-gray-900">Announcements</h3>
+                        <h3 className="font-medium text-gray-900">YTZ Flying Updates</h3>
                         <p className="mt-1 text-sm text-gray-500">
-                          View all announcements
+                          View all YTZ Flying Updates
                         </p>
                       </a>
                       {user.profile.role === 'admin' && (
@@ -314,7 +314,7 @@ export default async function DashboardPage() {
                 </div>
               </div>
 
-              {/* Announcements Section */}
+              {/* YTZ Flying Updates Section */}
               {topResources.length > 0 && (
                 <div className="bg-white shadow rounded-lg">
                   <div className="px-4 py-5 sm:p-6">
@@ -322,7 +322,7 @@ export default async function DashboardPage() {
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
-                      Announcements
+                      YTZ Flying Updates
                     </h2>
                     <div className="space-y-3">
                       {topResources.map((resource) => (
@@ -356,7 +356,7 @@ export default async function DashboardPage() {
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
-                      Recent Discussions
+                      Recent Hangar Talk
                     </h2>
                     <div className="space-y-3">
                       {topThreads.map((thread) => {
