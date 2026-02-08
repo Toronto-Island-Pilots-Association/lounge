@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { DiscussionCategory } from '@/types/database'
 import SortButtons from './SortButtons'
-import { CATEGORY_LABELS, CATEGORY_DESCRIPTIONS, CATEGORY_ICONS, CATEGORIES_WITH_ALL, ALL_CATEGORIES, CLASSIFIED_CATEGORIES, DISCUSSION_CATEGORIES } from './constants'
+import CategoryIcon from './CategoryIcons'
+import { CATEGORY_LABELS, CATEGORY_DESCRIPTIONS, CATEGORIES_WITH_ALL, ALL_CATEGORIES, CLASSIFIED_CATEGORIES, DISCUSSION_CATEGORIES } from './constants'
 
 // Component to render a list of categories
 function CategorySection({ 
@@ -39,7 +40,7 @@ function CategorySection({
             <div className="flex items-center justify-between w-full">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <span className="text-base flex-shrink-0">
-                  {CATEGORY_ICONS[category]}
+                  <CategoryIcon category={category} className="w-4 h-4" />
                 </span>
                 <span className="truncate">
                   {CATEGORY_LABELS[category]}

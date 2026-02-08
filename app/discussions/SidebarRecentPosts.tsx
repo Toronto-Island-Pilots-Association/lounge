@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { DiscussionCategory } from '@/types/database'
-import { CATEGORY_ICONS, ALL_CATEGORIES } from './constants'
+import { ALL_CATEGORIES } from './constants'
+import CategoryIcon from './CategoryIcons'
 import { formatRelativeDate } from './utils'
 
 export default async function SidebarRecentPosts() {
@@ -15,11 +16,11 @@ export default async function SidebarRecentPosts() {
     .limit(5)
 
   // Helper to safely get category icon
-  const getCategoryIcon = (category: string): string => {
+  const getCategoryIcon = (category: string) => {
     if (ALL_CATEGORIES.includes(category as DiscussionCategory)) {
-      return CATEGORY_ICONS[category as DiscussionCategory]
+      return <CategoryIcon category={category as DiscussionCategory} className="w-4 h-4" />
     }
-    return '📋'
+    return <CategoryIcon category="other" className="w-4 h-4" />
   }
 
   if (!recentThreads || recentThreads.length === 0) {

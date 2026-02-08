@@ -3,7 +3,8 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import { DiscussionCategory } from '@/types/database'
-import { CATEGORY_ICONS, CATEGORIES_WITH_ALL } from './constants'
+import { CATEGORIES_WITH_ALL } from './constants'
+import CategoryIcon from './CategoryIcons'
 
 // Mobile-specific shortened labels for better fit on small screens
 const MOBILE_CATEGORY_LABELS: Record<DiscussionCategory, string> = {
@@ -93,7 +94,9 @@ export default function MobileFilters() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
             </svg>
           ) : (
-            <span className="text-base">{CATEGORY_ICONS[category]}</span>
+            <span className="text-base">
+              <CategoryIcon category={category} className="w-4 h-4" />
+            </span>
           )}
           <span className="truncate">
             {category === 'all' 
@@ -126,7 +129,11 @@ export default function MobileFilters() {
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    {cat !== 'all' && <span className="text-base flex-shrink-0">{CATEGORY_ICONS[cat]}</span>}
+                    {cat !== 'all' && (
+                      <span className="text-base flex-shrink-0">
+                        <CategoryIcon category={cat} className="w-4 h-4" />
+                      </span>
+                    )}
                     <span className="truncate text-center">{cat === 'all' ? 'All' : MOBILE_CATEGORY_LABELS[cat]}</span>
                   </button>
                 ))}

@@ -277,7 +277,7 @@ export default function MemberDetailModal({
                 <select
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value as UserProfile['status'] })}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
                 >
                   <option value="pending">Pending</option>
                   <option value="approved">Approved</option>
@@ -290,7 +290,7 @@ export default function MemberDetailModal({
                 <select
                   value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value as 'member' | 'admin' })}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
                 >
                   <option value="member">Member</option>
                   <option value="admin">Admin</option>
@@ -301,7 +301,7 @@ export default function MemberDetailModal({
                 <select
                   value={formData.membership_level}
                   onChange={(e) => setFormData({ ...formData, membership_level: e.target.value as MembershipLevel })}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
                 >
                   <option value="Full">Full</option>
                   <option value="Student">Student</option>
@@ -525,7 +525,7 @@ export default function MemberDetailModal({
                             paymentMethod: e.target.value as 'cash' | 'paypal' | 'wire',
                           })
                         }
-                        className="w-full px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                        className="w-full px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
                       >
                         <option value="cash">Cash</option>
                         <option value="paypal">PayPal</option>

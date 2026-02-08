@@ -2,6 +2,8 @@ import { Suspense } from 'react'
 import Sidebar from '../Sidebar'
 import NewDiscussionForm from './NewDiscussionForm'
 
+export const dynamic = 'force-dynamic'
+
 export default function NewDiscussionPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -36,18 +38,7 @@ export default function NewDiscussionPage() {
               </div>
             </div>
 
-            <Suspense fallback={
-              <div className="bg-white shadow rounded-lg p-6">
-                <div className="animate-pulse space-y-4">
-                  <div className="h-10 bg-gray-200 rounded"></div>
-                  <div className="h-10 bg-gray-200 rounded"></div>
-                  <div className="h-40 bg-gray-200 rounded"></div>
-                  <div className="h-10 bg-gray-200 rounded w-32"></div>
-                </div>
-              </div>
-            }>
-              <NewDiscussionForm />
-            </Suspense>
+            <NewDiscussionForm />
           </div>
         </div>
       </div>

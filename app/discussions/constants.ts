@@ -26,7 +26,7 @@ export const CATEGORY_ICONS: Record<DiscussionCategory, string> = {
   aircraft_shares: '✈️',
   instructor_availability: '👨‍✈️',
   gear_for_sale: '🛒',
-  flying_at_ytz: '🏝️',
+  flying_at_ytz: '🛫',
   general_aviation: '🌐',
   training_safety_proficiency: '📚',
   wanted: '🔍',
