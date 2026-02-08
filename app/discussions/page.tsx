@@ -5,7 +5,6 @@ import { Suspense } from 'react'
 import { getCurrentUser } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { Thread, DiscussionCategory, ThreadWithData, ThreadAuthor } from '@/types/database'
-import ThreadSort from './ThreadSort'
 import Sidebar from './Sidebar'
 import MobileFilters from './MobileFilters'
 import ContentPreview from './ContentPreview'
@@ -169,14 +168,6 @@ export default async function DiscussionsPage({
                 </Suspense>
               </div>
               
-              {/* Desktop Sort - Hidden on Mobile */}
-              {threadsWithData.length > 0 && (
-                <div className="hidden lg:block">
-                  <Suspense fallback={<div className="h-8 w-32 bg-gray-100 rounded-lg animate-pulse" />}>
-                    <ThreadSort />
-                  </Suspense>
-                </div>
-              )}
               
               <Link
                 href={categoryFilter 
@@ -196,10 +187,10 @@ export default async function DiscussionsPage({
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
-          {/* Sidebar - Hidden on Mobile */}
-          <div className="hidden lg:block lg:col-span-1">
-            <Sidebar currentCategory={categoryFilter} />
-          </div>
+                  {/* Sidebar - Hidden on Mobile */}
+                  <div className="hidden lg:block lg:col-span-1">
+                    <Sidebar currentCategory={categoryFilter} currentSort={sortBy} />
+                  </div>
 
           {/* Main Content */}
           <div className="lg:col-span-3">

@@ -301,11 +301,63 @@ export async function sendNewMemberNotificationToAdmins(
     aircraft_type?: string | null
     pilot_license_type?: string | null
     phone?: string | null
+    membership_level?: string | null
+    membership_class?: string | null
+    street?: string | null
+    city?: string | null
+    province_state?: string | null
+    postal_zip_code?: string | null
+    country?: string | null
+    how_often_fly_from_ytz?: string | null
+    is_copa_member?: string | null
+    join_copa_flight_32?: string | null
+    copa_membership_number?: string | null
+    statement_of_interest?: string | null
+    how_did_you_hear?: string | null
+    is_student_pilot?: boolean | null
+    flight_school?: string | null
+    instructor_name?: string | null
   },
   adminEmail: string
 ) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
   const adminUrl = `${appUrl}/admin`
+
+  // Helper to format membership level/class
+  const formatMembershipClass = (level: string | null | undefined, klass: string | null | undefined) => {
+    if (level) {
+      const levelMap: Record<string, string> = {
+        'Full': 'Full Member',
+        'Student': 'Student Member',
+        'Associate': 'Associate Member',
+        'Corporate': 'Corporate Member',
+        'Honorary': 'Honorary Member'
+      }
+      return levelMap[level] || level
+    }
+    if (klass) {
+      const classMap: Record<string, string> = {
+        'full': 'Full Member',
+        'student-associate': 'Student / Associate Member',
+        'corporate': 'Corporate Member'
+      }
+      return classMap[klass] || klass
+    }
+    return 'Not specified'
+  }
+
+  // Helper to format address
+  const formatAddress = () => {
+    const parts = []
+    if (memberDetails.street) parts.push(memberDetails.street)
+    if (memberDetails.city) parts.push(memberDetails.city)
+    if (memberDetails.province_state) parts.push(memberDetails.province_state)
+    if (memberDetails.postal_zip_code) parts.push(memberDetails.postal_zip_code)
+    if (memberDetails.country) parts.push(memberDetails.country)
+    return parts.length > 0 ? parts.join(', ') : null
+  }
+
+  const address = formatAddress()
 
   return sendEmail({
     to: adminEmail,
@@ -316,16 +368,67 @@ export async function sendNewMemberNotificationToAdmins(
         <p style="color: #374151; line-height: 1.6;">
           A new member has signed up and is waiting for approval:
         </p>
+        
+        <!-- Contact Information -->
         <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0; border-radius: 4px;">
-          <p style="margin: 8px 0; color: #374151;">
+          <h2 style="color: #1f2937; margin-top: 0; margin-bottom: 12px; font-size: 16px; font-weight: 600;">Contact Information</h2>
+          <p style="margin: 6px 0; color: #374151;">
             <strong>Name:</strong> ${memberName || 'N/A'}<br>
-            <strong>Email:</strong> ${memberEmail}
+            <strong>Email:</strong> <a href="mailto:${memberEmail}" style="color: #2563eb; text-decoration: underline;">${memberEmail}</a>
           </p>
-          ${memberDetails.call_sign ? `<p style="margin: 8px 0; color: #374151;"><strong>Call Sign:</strong> ${memberDetails.call_sign}</p>` : ''}
-          ${memberDetails.aircraft_type ? `<p style="margin: 8px 0; color: #374151;"><strong>Aircraft Type:</strong> ${memberDetails.aircraft_type}</p>` : ''}
-          ${memberDetails.pilot_license_type ? `<p style="margin: 8px 0; color: #374151;"><strong>Pilot License:</strong> ${memberDetails.pilot_license_type}</p>` : ''}
-          ${memberDetails.phone ? `<p style="margin: 8px 0; color: #374151;"><strong>Phone:</strong> ${memberDetails.phone}</p>` : ''}
+          ${memberDetails.phone ? `<p style="margin: 6px 0; color: #374151;"><strong>Phone:</strong> ${memberDetails.phone}</p>` : ''}
+          ${address ? `<p style="margin: 6px 0; color: #374151;"><strong>Address:</strong> ${address}</p>` : ''}
         </div>
+
+        <!-- Membership Details -->
+        <div style="background-color: #f0f9ff; border-left: 4px solid #0d1e26; padding: 16px; margin: 20px 0; border-radius: 4px;">
+          <h2 style="color: #1f2937; margin-top: 0; margin-bottom: 12px; font-size: 16px; font-weight: 600;">Membership Details</h2>
+          <p style="margin: 6px 0; color: #374151;">
+            <strong>Membership Class:</strong> ${formatMembershipClass(memberDetails.membership_level, memberDetails.membership_class)}
+          </p>
+          ${memberDetails.how_did_you_hear ? `<p style="margin: 6px 0; color: #374151;"><strong>How they heard about TIPA:</strong> ${memberDetails.how_did_you_hear}</p>` : ''}
+        </div>
+
+        <!-- Aviation Information -->
+        <div style="background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 16px; margin: 20px 0; border-radius: 4px;">
+          <h2 style="color: #1f2937; margin-top: 0; margin-bottom: 12px; font-size: 16px; font-weight: 600;">Aviation Information</h2>
+          ${memberDetails.pilot_license_type ? `<p style="margin: 6px 0; color: #374151;"><strong>Pilot License:</strong> ${memberDetails.pilot_license_type}</p>` : ''}
+          ${memberDetails.aircraft_type ? `<p style="margin: 6px 0; color: #374151;"><strong>Aircraft Type:</strong> ${memberDetails.aircraft_type}</p>` : ''}
+          ${memberDetails.call_sign ? `<p style="margin: 6px 0; color: #374151;"><strong>Call Sign:</strong> ${memberDetails.call_sign}</p>` : ''}
+          ${memberDetails.how_often_fly_from_ytz ? `<p style="margin: 6px 0; color: #374151;"><strong>Flying Frequency from YTZ:</strong> ${memberDetails.how_often_fly_from_ytz}</p>` : ''}
+          ${memberDetails.is_student_pilot ? `
+            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #d1d5db;">
+              <p style="margin: 6px 0; color: #374151;"><strong>Student Pilot:</strong> Yes</p>
+              ${memberDetails.flight_school ? `<p style="margin: 6px 0; color: #374151;"><strong>Flight School:</strong> ${memberDetails.flight_school}</p>` : ''}
+              ${memberDetails.instructor_name ? `<p style="margin: 6px 0; color: #374151;"><strong>Instructor Name:</strong> ${memberDetails.instructor_name}</p>` : ''}
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- COPA Membership -->
+        ${memberDetails.is_copa_member ? `
+          <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0; border-radius: 4px;">
+            <h2 style="color: #1f2937; margin-top: 0; margin-bottom: 12px; font-size: 16px; font-weight: 600;">COPA Membership</h2>
+            <p style="margin: 6px 0; color: #374151;">
+              <strong>COPA Member:</strong> ${memberDetails.is_copa_member === 'yes' ? 'Yes' : 'No'}
+            </p>
+            ${memberDetails.is_copa_member === 'yes' && memberDetails.join_copa_flight_32 ? `
+              <p style="margin: 6px 0; color: #374151;">
+                <strong>Join COPA Flight 32:</strong> ${memberDetails.join_copa_flight_32 === 'yes' ? 'Yes' : 'No'}
+              </p>
+            ` : ''}
+            ${memberDetails.copa_membership_number ? `<p style="margin: 6px 0; color: #374151;"><strong>COPA Membership Number:</strong> ${memberDetails.copa_membership_number}</p>` : ''}
+          </div>
+        ` : ''}
+
+        <!-- Statement of Interest -->
+        ${memberDetails.statement_of_interest ? `
+          <div style="background-color: #f9fafb; border-left: 4px solid #6b7280; padding: 16px; margin: 20px 0; border-radius: 4px;">
+            <h2 style="color: #1f2937; margin-top: 0; margin-bottom: 12px; font-size: 16px; font-weight: 600;">Statement of Interest</h2>
+            <p style="margin: 0; color: #374151; line-height: 1.6; white-space: pre-wrap;">${memberDetails.statement_of_interest}</p>
+          </div>
+        ` : ''}
+
         <p style="margin: 20px 0;">
           <a href="${adminUrl}" 
              style="display: inline-block; padding: 12px 24px; background-color: #0d1e26; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">

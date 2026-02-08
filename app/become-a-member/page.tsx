@@ -39,6 +39,7 @@ function BecomeMemberForm() {
     howDidYouHear: '',
     flightSchool: '',
     instructorName: '',
+    studentNotes: '',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -68,12 +69,6 @@ function BecomeMemberForm() {
         ...prev,
         [name]: String(value),
         joinCopaFlight32: '',
-        copaMembershipNumber: '',
-      }))
-    } else if (name === 'joinCopaFlight32' && value !== 'yes') {
-      setFormData(prev => ({
-        ...prev,
-        [name]: String(value),
         copaMembershipNumber: '',
       }))
     } else {
@@ -126,9 +121,10 @@ function BecomeMemberForm() {
           callSign: formData.callSign,
           howOftenFlyFromYTZ: formData.howOftenFlyFromYTZ,
           howDidYouHear: formData.howDidYouHear,
-          isStudentPilot: formData.pilotLicenseType === 'student',
-          flightSchool: formData.pilotLicenseType === 'student' ? formData.flightSchool : '',
-          instructorName: formData.pilotLicenseType === 'student' ? formData.instructorName : '',
+          isStudentPilot: formData.pilotLicenseType === 'student' || formData.membershipClass === 'student-associate',
+          flightSchool: (formData.pilotLicenseType === 'student' || formData.membershipClass === 'student-associate') ? formData.flightSchool : '',
+          instructorName: (formData.pilotLicenseType === 'student' || formData.membershipClass === 'student-associate') ? formData.instructorName : '',
+          studentNotes: formData.studentNotes || '',
         }),
       })
 
@@ -168,6 +164,7 @@ function BecomeMemberForm() {
         howDidYouHear: '',
         flightSchool: '',
         instructorName: '',
+        studentNotes: '',
       })
     } catch (err: any) {
       setError(err.message)
@@ -325,41 +322,6 @@ function BecomeMemberForm() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="provinceState" className="block text-sm font-medium text-gray-700 mb-1">
-                      Province / State <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      id="provinceState"
-                      name="provinceState"
-                      required
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                      value={formData.provinceState}
-                      onChange={handleChange}
-                    >
-                      {getStatesProvinces(formData.country).map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="postalZipCode" className="block text-sm font-medium text-gray-700 mb-1">
-                      Postal / ZIP Code <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="postalZipCode"
-                      name="postalZipCode"
-                      type="text"
-                      required
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                      value={formData.postalZipCode}
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div>
                     <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">
                       Country <span className="text-red-500">*</span>
                     </label>
@@ -385,6 +347,41 @@ function BecomeMemberForm() {
                         </option>
                       ))}
                     </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="provinceState" className="block text-sm font-medium text-gray-700 mb-1">
+                      Province / State <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      id="provinceState"
+                      name="provinceState"
+                      required
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                      value={formData.provinceState}
+                      onChange={handleChange}
+                    >
+                      {getStatesProvinces(formData.country).map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="postalZipCode" className="block text-sm font-medium text-gray-700 mb-1">
+                      Postal / ZIP Code <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="postalZipCode"
+                      name="postalZipCode"
+                      type="text"
+                      required
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                      value={formData.postalZipCode}
+                      onChange={handleChange}
+                    />
                   </div>
                 </div>
               </div>
@@ -429,11 +426,145 @@ function BecomeMemberForm() {
                 onChange={handleChange}
               >
                 <option value="">Select...</option>
-                <option value="full">Full Member</option>
-                <option value="student-associate">Student / Associate Member</option>
-                <option value="corporate">Corporate Member</option>
+                <option value="full">Full</option>
+                <option value="student-associate">Student / Associate</option>
+                <option value="corporate">Corporate</option>
               </select>
             </div>
+
+          </div>
+
+          {/* Aviation Information */}
+          <div className="bg-gray-50 p-6 rounded-lg">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Aviation Information</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Please provide your aviation background information:
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="pilotLicenseType" className="block text-sm font-medium text-gray-700 mb-1">
+                  Pilot License Type {formData.membershipClass === 'student-associate' && <span className="text-red-500">*</span>}
+                </label>
+                <select
+                  id="pilotLicenseType"
+                  name="pilotLicenseType"
+                  required={formData.membershipClass === 'student-associate'}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  value={formData.pilotLicenseType}
+                  onChange={handleChange}
+                >
+                  <option value="">Select...</option>
+                  <option value="student">Student Pilot</option>
+                  <option value="private">Private Pilot</option>
+                  <option value="commercial">Commercial Pilot</option>
+                  <option value="atp">Airline Transport Pilot</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="aircraftType" className="block text-sm font-medium text-gray-700 mb-1">
+                  Aircraft Type
+                </label>
+                <input
+                  type="text"
+                  id="aircraftType"
+                  name="aircraftType"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  value={formData.aircraftType}
+                  onChange={handleChange}
+                  placeholder="e.g., Cessna 172, Piper Cherokee"
+                />
+              </div>
+              <div>
+                <label htmlFor="callSign" className="block text-sm font-medium text-gray-700 mb-1">
+                  Call Sign
+                </label>
+                <input
+                  type="text"
+                  id="callSign"
+                  name="callSign"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  value={formData.callSign}
+                  onChange={handleChange}
+                  placeholder="e.g., C-GABC"
+                />
+              </div>
+              <div>
+                <label htmlFor="howOftenFlyFromYTZ" className="block text-sm font-medium text-gray-700 mb-1">
+                  How Often Do You Fly From YTZ? {formData.membershipClass === 'student-associate' && <span className="text-red-500">*</span>}
+                </label>
+                <select
+                  id="howOftenFlyFromYTZ"
+                  name="howOftenFlyFromYTZ"
+                  required={formData.membershipClass === 'student-associate'}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  value={formData.howOftenFlyFromYTZ}
+                  onChange={handleChange}
+                >
+                  <option value="">Select...</option>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="occasionally">Occasionally</option>
+                  <option value="rarely">Rarely</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Student Pilot Fields - Show if student membership class OR student pilot license type */}
+            {(formData.membershipClass === 'student-associate' || formData.pilotLicenseType === 'student') && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h3 className="text-md font-semibold text-gray-900 mb-4">Student Pilot Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="flightSchool" className="block text-sm font-medium text-gray-700 mb-1">
+                      Flight School / Training Organization {formData.membershipClass === 'student-associate' && <span className="text-red-500">*</span>}
+                    </label>
+                    <input
+                      type="text"
+                      id="flightSchool"
+                      name="flightSchool"
+                      required={formData.membershipClass === 'student-associate'}
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                      value={formData.flightSchool}
+                      onChange={handleChange}
+                      placeholder="e.g., Island Air, Freelance, etc."
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="instructorName" className="block text-sm font-medium text-gray-700 mb-1">
+                      Instructor Name {formData.membershipClass === 'student-associate' && <span className="text-red-500">*</span>}
+                    </label>
+                    <input
+                      type="text"
+                      id="instructorName"
+                      name="instructorName"
+                      required={formData.membershipClass === 'student-associate'}
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                      value={formData.instructorName}
+                      onChange={handleChange}
+                      placeholder="e.g., Jane Smith"
+                    />
+                  </div>
+                </div>
+                {formData.membershipClass === 'student-associate' && (
+                  <div className="mt-4">
+                    <label htmlFor="studentNotes" className="block text-sm font-medium text-gray-700 mb-1">
+                      Additional Student Information (Optional)
+                    </label>
+                    <textarea
+                      id="studentNotes"
+                      name="studentNotes"
+                      rows={3}
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                      value={formData.studentNotes || ''}
+                      onChange={handleChange}
+                      placeholder="e.g., Expected graduation date, current training stage, etc."
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* COPA Membership */}
@@ -475,6 +606,20 @@ function BecomeMemberForm() {
               {formData.isCopaMember === 'yes' && (
                 <div className="pt-4 border-t border-gray-200 space-y-4">
                   <div>
+                    <label htmlFor="copaMembershipNumber" className="block text-sm font-medium text-gray-700 mb-1">
+                      Please enter your COPA Membership Number <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="copaMembershipNumber"
+                      name="copaMembershipNumber"
+                      type="text"
+                      required={formData.isCopaMember === 'yes'}
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                      value={formData.copaMembershipNumber}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Would you like to join COPA Flight 32? COPA Flight 32 is free to join and a working partner with TIPA.
                     </label>
@@ -503,23 +648,6 @@ function BecomeMemberForm() {
                       </label>
                     </div>
                   </div>
-
-                  {formData.joinCopaFlight32 === 'yes' && (
-                    <div>
-                      <label htmlFor="copaMembershipNumber" className="block text-sm font-medium text-gray-700 mb-1">
-                        Please enter your COPA Membership Number <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        id="copaMembershipNumber"
-                        name="copaMembershipNumber"
-                        type="text"
-                        required={formData.joinCopaFlight32 === 'yes'}
-                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                        value={formData.copaMembershipNumber}
-                        onChange={handleChange}
-                      />
-                    </div>
-                  )}
                 </div>
               )}
             </div>

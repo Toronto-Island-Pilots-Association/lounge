@@ -1,6 +1,7 @@
 import { requireAuth } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { sendMembershipUpgradeEmail } from '@/lib/resend'
+import { getMembershipFee } from '@/lib/settings'
 import { NextResponse } from 'next/server'
 
 // PayPal API base URLs
@@ -159,6 +160,21 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
+
+    // Get membership fee and record payment
+    const membershipFee = await getMembershipFee()
+    await supabase
+      .from('payments')
+      .insert({
+        user_id: user.id,
+        payment_method: 'paypal',
+        amount: membershipFee,
+        currency: 'CAD',
+        payment_date: new Date().toISOString(),
+        membership_expires_at: expiresAt.toISOString(),
+        paypal_subscription_id: subscriptionId,
+        status: 'completed',
+      })
 
     // Send upgrade email
     try {

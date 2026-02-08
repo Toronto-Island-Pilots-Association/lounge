@@ -27,8 +27,6 @@ export default function SettingsPage() {
     province_state: '',
     postal_zip_code: '',
     country: '',
-    // Membership
-    membership_class: '',
     // COPA Membership
     is_copa_member: '',
     join_copa_flight_32: '',
@@ -65,7 +63,6 @@ export default function SettingsPage() {
           province_state: data.profile.province_state || '',
           postal_zip_code: data.profile.postal_zip_code || '',
           country: data.profile.country || '',
-          membership_class: data.profile.membership_class || '',
           is_copa_member: data.profile.is_copa_member || '',
           join_copa_flight_32: data.profile.join_copa_flight_32 || '',
           copa_membership_number: data.profile.copa_membership_number || '',
@@ -89,6 +86,7 @@ export default function SettingsPage() {
     }
   }
 
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
@@ -105,7 +103,6 @@ export default function SettingsPage() {
           ...formData,
           // Exclude read-only fields from updates - only admins can update these
           full_name: undefined,
-          membership_class: undefined,
           statement_of_interest: undefined,
           how_did_you_hear: undefined,
           is_student_pilot: formData.pilot_license_type === 'student',
@@ -173,12 +170,15 @@ export default function SettingsPage() {
     )
   }
 
-  const getMembershipClassLabel = (value: string) => {
+  const getMembershipLevelLabel = (value: string | null | undefined) => {
+    if (!value) return 'Not set'
     switch (value) {
-      case 'full': return 'Full Member'
-      case 'student-associate': return 'Student / Associate Member'
-      case 'corporate': return 'Corporate Member'
-      default: return 'Not set'
+      case 'Full': return 'Full'
+      case 'Student': return 'Student'
+      case 'Associate': return 'Associate'
+      case 'Corporate': return 'Corporate'
+      case 'Honorary': return 'Honorary'
+      default: return value
     }
   }
 
@@ -346,39 +346,6 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="province_state" className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Province / State
-                  </label>
-                  <select
-                    name="province_state"
-                    id="province_state"
-                    value={formData.province_state}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                  >
-                    {getStatesProvinces(formData.country).map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <div>
-                  <label htmlFor="postal_zip_code" className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Postal / ZIP Code
-                  </label>
-                  <input
-                    type="text"
-                    name="postal_zip_code"
-                    id="postal_zip_code"
-                    value={formData.postal_zip_code}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                  />
-                </div>
-                <div>
                   <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1.5">
                     Country
                   </label>
@@ -405,48 +372,94 @@ export default function SettingsPage() {
                   </select>
                 </div>
               </div>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="province_state" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Province / State
+                  </label>
+                  <select
+                    name="province_state"
+                    id="province_state"
+                    value={formData.province_state}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  >
+                    {getStatesProvinces(formData.country).map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="postal_zip_code" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Postal / ZIP Code
+                  </label>
+                  <input
+                    type="text"
+                    name="postal_zip_code"
+                    id="postal_zip_code"
+                    value={formData.postal_zip_code}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Membership Information (Read-Only) */}
+
+          {/* COPA Membership */}
           <div className="bg-white shadow rounded-lg overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-200 bg-gray-50">
-              <h2 className="text-lg font-semibold text-gray-900">Membership Information</h2>
-              <p className="mt-1 text-sm text-gray-500">Your membership details (read-only)</p>
+            <div className="px-6 py-5 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">COPA Membership</h2>
+              <p className="mt-1 text-sm text-gray-500">Your COPA membership information</p>
             </div>
             <div className="px-6 py-5 space-y-6">
               <div>
-                <label htmlFor="membership_class" className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Membership Class
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Are you a COPA Member?
                 </label>
-                <input
-                  type="text"
-                  id="membership_class"
-                  value={getMembershipClassLabel(formData.membership_class)}
-                  disabled
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-500 bg-gray-50 cursor-not-allowed"
-                />
-                <p className="mt-1.5 text-xs text-gray-500">
-                  Membership class cannot be changed. Please contact an administrator if you need to update your membership class.
-                </p>
+                <div className="flex gap-6">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="is_copa_member"
+                      value="yes"
+                      className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
+                      checked={formData.is_copa_member === 'yes'}
+                      onChange={handleChange}
+                    />
+                    <span className="text-sm text-gray-700">Yes</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="is_copa_member"
+                      value="no"
+                      className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
+                      checked={formData.is_copa_member === 'no'}
+                      onChange={handleChange}
+                    />
+                    <span className="text-sm text-gray-700">No</span>
+                  </label>
+                </div>
               </div>
 
-              {/* COPA Membership */}
-              <div className="pt-4 border-t border-gray-200">
-                <h3 className="text-sm font-semibold text-gray-900 mb-4">COPA Membership</h3>
+              {formData.is_copa_member === 'yes' && (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Are you a COPA Member?
+                      Would you like to join COPA Flight 32? COPA Flight 32 is free to join and a working partner with TIPA.
                     </label>
                     <div className="flex gap-6">
                       <label className="flex items-center">
                         <input
                           type="radio"
-                          name="is_copa_member"
+                          name="join_copa_flight_32"
                           value="yes"
                           className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
-                          checked={formData.is_copa_member === 'yes'}
+                          checked={formData.join_copa_flight_32 === 'yes'}
                           onChange={handleChange}
                         />
                         <span className="text-sm text-gray-700">Yes</span>
@@ -454,10 +467,10 @@ export default function SettingsPage() {
                       <label className="flex items-center">
                         <input
                           type="radio"
-                          name="is_copa_member"
+                          name="join_copa_flight_32"
                           value="no"
                           className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
-                          checked={formData.is_copa_member === 'no'}
+                          checked={formData.join_copa_flight_32 === 'no'}
                           onChange={handleChange}
                         />
                         <span className="text-sm text-gray-700">No</span>
@@ -465,58 +478,24 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  {formData.is_copa_member === 'yes' && (
-                    <div className="space-y-4 pl-4 border-l-2 border-gray-200">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Would you like to join COPA Flight 32? COPA Flight 32 is free to join and a working partner with TIPA.
-                        </label>
-                        <div className="flex gap-6">
-                          <label className="flex items-center">
-                            <input
-                              type="radio"
-                              name="join_copa_flight_32"
-                              value="yes"
-                              className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
-                              checked={formData.join_copa_flight_32 === 'yes'}
-                              onChange={handleChange}
-                            />
-                            <span className="text-sm text-gray-700">Yes</span>
-                          </label>
-                          <label className="flex items-center">
-                            <input
-                              type="radio"
-                              name="join_copa_flight_32"
-                              value="no"
-                              className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
-                              checked={formData.join_copa_flight_32 === 'no'}
-                              onChange={handleChange}
-                            />
-                            <span className="text-sm text-gray-700">No</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      {formData.join_copa_flight_32 === 'yes' && (
-                        <div>
-                          <label htmlFor="copa_membership_number" className="block text-sm font-medium text-gray-700 mb-1.5">
-                            COPA Membership Number
-                          </label>
-                          <input
-                            type="text"
-                            name="copa_membership_number"
-                            id="copa_membership_number"
-                            value={formData.copa_membership_number}
-                            onChange={handleChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                            placeholder="Enter your COPA membership number"
-                          />
-                        </div>
-                      )}
+                  {formData.join_copa_flight_32 === 'yes' && (
+                    <div>
+                      <label htmlFor="copa_membership_number" className="block text-sm font-medium text-gray-700 mb-1.5">
+                        COPA Membership Number
+                      </label>
+                      <input
+                        type="text"
+                        name="copa_membership_number"
+                        id="copa_membership_number"
+                        value={formData.copa_membership_number}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                        placeholder="Enter your COPA membership number"
+                      />
                     </div>
                   )}
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
