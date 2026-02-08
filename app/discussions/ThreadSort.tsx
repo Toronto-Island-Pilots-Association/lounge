@@ -27,7 +27,7 @@ export default function ThreadSort() {
     } else {
       params.set('sort', newSort)
     }
-    router.push(`/discussion?${params.toString()}`)
+    router.push(`/discussions?${params.toString()}`)
   }
 
   return (
@@ -58,4 +58,3 @@ export default function ThreadSort() {
     </div>
   )
 }
-

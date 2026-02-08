@@ -11,11 +11,29 @@ export async function POST(request: Request) {
       firstName,
       lastName,
       phone,
+      // Mailing Address
+      street,
+      city,
+      provinceState,
+      postalZipCode,
+      country,
+      // Membership Application
+      membershipClass,
+      // COPA Membership
+      isCopaMember,
+      joinCopaFlight32,
+      copaMembershipNumber,
+      // Statement of Interest
+      statementOfInterest,
+      // Aviation Information
       pilotLicenseType,
       aircraftType,
       callSign,
       howOftenFlyFromYTZ,
-      howDidYouHear
+      howDidYouHear,
+      isStudentPilot,
+      flightSchool,
+      instructorName,
     } = await request.json()
 
     if (!email || !password) {
@@ -48,13 +66,31 @@ export async function POST(request: Request) {
           first_name: toNullIfEmpty(firstName),
           last_name: toNullIfEmpty(lastName),
           phone: toNullIfEmpty(phone),
+          // Mailing Address
+          street: toNullIfEmpty(street),
+          city: toNullIfEmpty(city),
+          provinceState: toNullIfEmpty(provinceState),
+          postalZipCode: toNullIfEmpty(postalZipCode),
+          country: toNullIfEmpty(country),
+          // Membership Application
+          membershipClass: toNullIfEmpty(membershipClass),
+          // COPA Membership
+          isCopaMember: toNullIfEmpty(isCopaMember),
+          joinCopaFlight32: toNullIfEmpty(joinCopaFlight32),
+          copaMembershipNumber: toNullIfEmpty(copaMembershipNumber),
+          // Statement of Interest
+          statementOfInterest: toNullIfEmpty(statementOfInterest),
+          // Aviation Information
           pilot_license_type: toNullIfEmpty(pilotLicenseType),
           aircraft_type: toNullIfEmpty(aircraftType),
           call_sign: toNullIfEmpty(callSign),
           how_often_fly_from_ytz: toNullIfEmpty(howOftenFlyFromYTZ),
           how_did_you_hear: toNullIfEmpty(howDidYouHear),
+          is_student_pilot: Boolean(isStudentPilot),
+          flight_school: isStudentPilot ? toNullIfEmpty(flightSchool) : null,
+          instructor_name: isStudentPilot ? toNullIfEmpty(instructorName) : null,
           role: 'member',
-          membership_level: 'basic',
+          membership_level: 'Full',
         },
       },
     })
@@ -137,7 +173,7 @@ export async function POST(request: Request) {
           console.warn('Profile not created by trigger, attempting manual creation')
           try {
             // Ensure membership_level and role match the database constraints exactly
-            const membershipLevel: 'basic' | 'cadet' | 'captain' = 'basic'
+            const membershipLevel: 'Full' | 'Student' | 'Associate' | 'Corporate' | 'Honorary' = 'Full'
             const userRole: 'member' | 'admin' = 'member'
             
             const { data: createdProfile, error: createError } = await adminClient
@@ -149,11 +185,29 @@ export async function POST(request: Request) {
                 first_name: toNullIfEmpty(firstName),
                 last_name: toNullIfEmpty(lastName),
                 phone: toNullIfEmpty(phone),
+                // Mailing Address
+                street: toNullIfEmpty(street),
+                city: toNullIfEmpty(city),
+                province_state: toNullIfEmpty(provinceState),
+                postal_zip_code: toNullIfEmpty(postalZipCode),
+                country: toNullIfEmpty(country),
+                // Membership Application
+                membership_class: toNullIfEmpty(membershipClass),
+                // COPA Membership
+                is_copa_member: toNullIfEmpty(isCopaMember),
+                join_copa_flight_32: toNullIfEmpty(joinCopaFlight32),
+                copa_membership_number: toNullIfEmpty(copaMembershipNumber),
+                // Statement of Interest
+                statement_of_interest: toNullIfEmpty(statementOfInterest),
+                // Aviation Information
                 pilot_license_type: toNullIfEmpty(pilotLicenseType),
                 aircraft_type: toNullIfEmpty(aircraftType),
                 call_sign: toNullIfEmpty(callSign),
                 how_often_fly_from_ytz: toNullIfEmpty(howOftenFlyFromYTZ),
                 how_did_you_hear: toNullIfEmpty(howDidYouHear),
+                is_student_pilot: Boolean(isStudentPilot),
+                flight_school: isStudentPilot ? toNullIfEmpty(flightSchool) : null,
+                instructor_name: isStudentPilot ? toNullIfEmpty(instructorName) : null,
                 role: userRole,
                 membership_level: membershipLevel,
                 status: 'pending',

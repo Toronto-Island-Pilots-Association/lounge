@@ -30,16 +30,14 @@ export async function GET(
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    // Count reactions by type
+    // Count reactions by type (only like)
     const counts = {
       like: 0,
-      upvote: 0,
-      downvote: 0,
     }
 
     reactions?.forEach(r => {
-      if (r.reaction_type in counts) {
-        counts[r.reaction_type as keyof typeof counts]++
+      if (r.reaction_type === 'like') {
+        counts.like++
       }
     })
 

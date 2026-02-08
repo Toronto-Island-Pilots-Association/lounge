@@ -45,24 +45,62 @@ export async function PATCH(request: Request) {
       first_name,
       last_name,
       phone,
+      // Mailing Address
+      street,
+      city,
+      province_state,
+      postal_zip_code,
+      country,
+      // Membership
+      membership_class,
+      // COPA Membership
+      is_copa_member,
+      join_copa_flight_32,
+      copa_membership_number,
+      // Statement of Interest
+      statement_of_interest,
+      // Aviation Information
       pilot_license_type,
       aircraft_type,
       call_sign,
       how_often_fly_from_ytz,
       how_did_you_hear,
+      is_student_pilot,
+      flight_school,
+      instructor_name,
     } = body
 
     // Build update object with only provided fields
     const updates: Record<string, any> = {}
-    if (full_name !== undefined) updates.full_name = full_name || null
+    // full_name is read-only, only admins can update it
+    // Explicitly exclude full_name from member updates
     if (first_name !== undefined) updates.first_name = first_name || null
     if (last_name !== undefined) updates.last_name = last_name || null
     if (phone !== undefined) updates.phone = phone || null
+    // Mailing Address
+    if (street !== undefined) updates.street = street || null
+    if (city !== undefined) updates.city = city || null
+    if (province_state !== undefined) updates.province_state = province_state || null
+    if (postal_zip_code !== undefined) updates.postal_zip_code = postal_zip_code || null
+    if (country !== undefined) updates.country = country || null
+    // Membership - membership_class is read-only, only admins can update it
+    // Explicitly exclude membership_class from member updates
+    // COPA Membership
+    if (is_copa_member !== undefined) updates.is_copa_member = is_copa_member || null
+    if (join_copa_flight_32 !== undefined) updates.join_copa_flight_32 = join_copa_flight_32 || null
+    if (copa_membership_number !== undefined) updates.copa_membership_number = copa_membership_number || null
+    // Statement of Interest - read-only, only admins can update it
+    // Explicitly exclude statement_of_interest from member updates
+    // Aviation Information
     if (pilot_license_type !== undefined) updates.pilot_license_type = pilot_license_type || null
     if (aircraft_type !== undefined) updates.aircraft_type = aircraft_type || null
     if (call_sign !== undefined) updates.call_sign = call_sign || null
     if (how_often_fly_from_ytz !== undefined) updates.how_often_fly_from_ytz = how_often_fly_from_ytz || null
-    if (how_did_you_hear !== undefined) updates.how_did_you_hear = how_did_you_hear || null
+    // how_did_you_hear is read-only, only admins can update it
+    // Explicitly exclude how_did_you_hear from member updates
+    if (is_student_pilot !== undefined) updates.is_student_pilot = Boolean(is_student_pilot)
+    if (flight_school !== undefined) updates.flight_school = flight_school ? String(flight_school).trim() || null : null
+    if (instructor_name !== undefined) updates.instructor_name = instructor_name ? String(instructor_name).trim() || null : null
 
     const { data, error } = await supabase
       .from('user_profiles')

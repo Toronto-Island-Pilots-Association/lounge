@@ -1,19 +1,30 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { Suspense } from 'react'
 import { getCurrentUser } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
-import { Thread, Comment } from '@/types/database'
+import { Thread, Comment, DiscussionCategory } from '@/types/database'
 import CommentForm from './CommentForm'
 import ReactionButton from './ReactionButton'
 import DeleteThreadButton from './DeleteThreadButton'
 import DeleteCommentButton from './DeleteCommentButton'
+import ThreadImages from '@/components/ThreadImages'
+import LinkifiedText from '@/components/LinkifiedText'
+import Sidebar from '../Sidebar'
+import { CATEGORY_LABELS } from '../constants'
+import { formatDetailDate } from '../utils'
 
-export default async function ThreadPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function DiscussionPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser()
 
   if (!user) {
     redirect('/login')
+  }
+
+  // Redirect rejected/pending users to approval page
+  if (user.profile.status !== 'approved' && user.profile.role !== 'admin') {
+    redirect('/pending-approval')
   }
 
   const { id } = await params
@@ -31,13 +42,13 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-white shadow rounded-lg p-8 text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Thread Not Found</h2>
-            <p className="text-gray-600 mb-6">The thread you're looking for doesn't exist.</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Discussion Not Found</h2>
+            <p className="text-gray-600 mb-6">The discussion you're looking for doesn't exist.</p>
             <Link
-              href="/discussion"
+              href="/discussions"
               className="inline-block px-6 py-2 bg-[#0d1e26] text-white font-semibold rounded-lg hover:bg-[#0a171c] transition-colors"
             >
-              Back to Discussion Board
+              Back to Hangar Talk
             </Link>
           </div>
         </div>
@@ -92,11 +103,9 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
 
   const threadReactionCounts = {
     like: threadReactions?.filter(r => r.reaction_type === 'like').length || 0,
-    upvote: threadReactions?.filter(r => r.reaction_type === 'upvote').length || 0,
-    downvote: threadReactions?.filter(r => r.reaction_type === 'downvote').length || 0,
   }
 
-  const userThreadReaction = threadReactions?.find(r => r.user_id === user.id)?.reaction_type || null
+  const userThreadReaction = threadReactions?.find(r => r.user_id === user.id && r.reaction_type === 'like')?.reaction_type || null
 
   // Get reactions for comments
   const commentIds = comments?.map(c => c.id) || []
@@ -118,10 +127,8 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
     const reactions = commentReactionsMap.get(comment.id) || []
     const reactionCounts = {
       like: reactions.filter(r => r.reaction_type === 'like').length,
-      upvote: reactions.filter(r => r.reaction_type === 'upvote').length,
-      downvote: reactions.filter(r => r.reaction_type === 'downvote').length,
     }
-    const userReaction = reactions.find(r => r.user_id === user.id)?.reaction_type || null
+    const userReaction = reactions.find(r => r.user_id === user.id && r.reaction_type === 'like')?.reaction_type || null
 
     return {
       ...comment,
@@ -130,44 +137,53 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
     }
   })
 
-  const threadWithAuthor = { ...thread, author }
+  const threadWithAuthor: Thread & { author?: any } = { ...thread, author }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-    
-    if (diffInSeconds < 60) return 'just now'
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`
-    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`
-    
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
-  }
 
   const threadAuthor = threadWithAuthor.author || {}
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-6">
+    <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-4 sm:mb-6">
           <Link
-            href="/discussion"
-            className="text-[#0d1e26] hover:text-[#0a171c] text-sm font-medium"
+            href="/discussions"
+            className="text-[#0d1e26] hover:text-[#0a171c] text-sm font-medium inline-flex items-center gap-1"
           >
-            ← Back to Discussion Board
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Hangar Talk
           </Link>
         </div>
 
-        {/* Thread */}
-        <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <div className="flex items-start justify-between mb-4">
-            <h1 className="text-2xl font-bold text-gray-900 flex-1">{threadWithAuthor.title}</h1>
-            <DeleteThreadButton
-              threadId={id}
-              isOwner={thread.created_by === user.id && thread.created_by !== null}
-              isAdmin={user.profile.role === 'admin'}
-            />
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+          {/* Sidebar - Hidden on Mobile */}
+          <div className="hidden lg:block lg:col-span-1">
+            <Sidebar currentCategory={thread.category as DiscussionCategory} />
+          </div>
+
+          {/* Main Content */}
+          <div className="lg:col-span-3">
+            {/* Thread */}
+            <div className="bg-white shadow rounded-lg p-4 sm:p-6 mb-4 sm:mb-6 relative">
+          {(thread.created_by === user.id && thread.created_by !== null) || user.profile.role === 'admin' ? (
+            <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
+              <DeleteThreadButton
+                threadId={id}
+                isOwner={thread.created_by === user.id && thread.created_by !== null}
+                isAdmin={user.profile.role === 'admin'}
+              />
+            </div>
+          ) : null}
+          <div className="flex flex-col gap-3 sm:gap-4 mb-4">
+            <div className="flex-1 min-w-0 pr-10 sm:pr-12">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 break-words">{threadWithAuthor.title}</h1>
+              <span className="inline-block px-3 py-1 text-xs sm:text-sm font-medium bg-[#0d1e26]/10 text-[#0d1e26] rounded-md">
+                {CATEGORY_LABELS[thread.category as DiscussionCategory]}
+              </span>
+            </div>
           </div>
           
           <div className="flex items-center gap-3 mb-6">
@@ -202,13 +218,18 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
               <div className={`text-sm font-medium ${isThreadAuthorDeleted ? 'text-gray-600 italic' : 'text-gray-900'}`}>
                 {threadDisplayName}
               </div>
-              <div className="text-xs text-gray-500">{formatDate(threadWithAuthor.created_at)}</div>
+              <div className="text-xs text-gray-500">{formatDetailDate(threadWithAuthor.created_at)}</div>
             </div>
           </div>
 
           <div className="prose max-w-none text-gray-700 whitespace-pre-wrap mb-4">
-            {threadWithAuthor.content}
+            <LinkifiedText text={threadWithAuthor.content} />
           </div>
+
+          {/* Thread Images */}
+          {thread.image_urls && thread.image_urls.length > 0 && (
+            <ThreadImages imageUrls={thread.image_urls} />
+          )}
 
           {/* Thread Reactions */}
           <div className="mt-4 pt-4 border-t border-gray-200">
@@ -222,13 +243,13 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
         </div>
 
         {/* Comments Section */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">
+        <div className="bg-white shadow rounded-lg p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">
             {commentsWithAuthors.length} {commentsWithAuthors.length === 1 ? 'Comment' : 'Comments'}
           </h2>
 
           {/* Comment Form */}
-          <div className="mb-8">
+          <div className="mb-6 sm:mb-8">
             <CommentForm threadId={id} />
           </div>
 
@@ -246,8 +267,17 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
                   : (commentAuthor.full_name || commentAuthor.email || 'Anonymous')
                 
                 return (
-                  <div key={comment.id} className="border-t border-gray-200 pt-6 first:border-t-0 first:pt-0">
-                    <div className="flex items-start gap-3">
+                  <div key={comment.id} className="border-t border-gray-200 pt-6 first:border-t-0 first:pt-0 relative">
+                    {(comment.created_by === user.id && comment.created_by !== null) || user.profile.role === 'admin' ? (
+                      <div className="absolute top-6 right-0">
+                        <DeleteCommentButton
+                          commentId={comment.id}
+                          isOwner={comment.created_by === user.id && comment.created_by !== null}
+                          isAdmin={user.profile.role === 'admin'}
+                        />
+                      </div>
+                    ) : null}
+                    <div className="flex items-start gap-3 pr-8 sm:pr-10">
                       {commentAuthor.profile_picture_url ? (
                         <div className="relative w-10 h-10 rounded-full overflow-hidden border border-gray-300 flex-shrink-0">
                           <Image
@@ -276,28 +306,23 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
                         </div>
                       )}
                       <div className="flex-1">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <div className={`text-sm font-medium ${isDeleted ? 'text-gray-600 italic' : 'text-gray-900'}`}>
                               {displayName}
                             </div>
-                            <div className="text-xs text-gray-500">{formatDate(comment.created_at)}</div>
+                            <div className="text-xs text-gray-500">{formatDetailDate(comment.created_at)}</div>
                           </div>
-                          <DeleteCommentButton
-                            commentId={comment.id}
-                            isOwner={comment.created_by === user.id && comment.created_by !== null}
-                            isAdmin={user.profile.role === 'admin'}
-                          />
                         </div>
                         <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap mb-3">
-                          {comment.content}
+                          <LinkifiedText text={comment.content} />
                         </div>
                         {/* Comment Reactions */}
                         <div className="mt-2">
                           <ReactionButton
                             targetId={comment.id}
                             targetType="comment"
-                            initialReactions={comment.reactionCounts || { like: 0, upvote: 0, downvote: 0 }}
+                            initialReactions={comment.reactionCounts || { like: 0 }}
                             userReaction={comment.userReaction || null}
                           />
                         </div>
@@ -308,9 +333,10 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
               })}
             </div>
           )}
+          </div>
+          </div>
         </div>
       </div>
     </div>
   )
 }
-

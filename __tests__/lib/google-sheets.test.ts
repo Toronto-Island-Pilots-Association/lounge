@@ -53,7 +53,7 @@ describe('lib/google-sheets', () => {
       },
     }
 
-    ;(google.auth.JWT as jest.Mock).mockImplementation(() => mockAuth)
+    ;(google.auth.JWT as unknown as jest.Mock).mockImplementation(() => mockAuth)
     ;(google.sheets as jest.Mock).mockReturnValue(mockSheets)
 
     const member = {
@@ -98,7 +98,7 @@ describe('lib/google-sheets', () => {
       },
     }
 
-    ;(google.auth.JWT as jest.Mock).mockImplementation(() => mockAuth)
+    ;(google.auth.JWT as unknown as jest.Mock).mockImplementation(() => mockAuth)
     ;(google.sheets as jest.Mock).mockReturnValue(mockSheets)
 
     const member = {

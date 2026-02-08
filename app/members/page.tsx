@@ -3,7 +3,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { getCurrentUser } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
-import { UserProfile } from '@/types/database'
+import { UserProfile, getMembershipLevelLabel } from '@/types/database'
 
 const MEMBERS_PER_PAGE = 25
 
@@ -97,11 +97,11 @@ export default async function MembersPage({
                           )}
                         </div>
                         <span className={`ml-2 px-2 py-1 text-xs rounded-full flex-shrink-0 ${
-                          member.membership_level === 'cadet' || member.membership_level === 'captain'
+                          member.membership_level === 'Full' || member.membership_level === 'Corporate' || member.membership_level === 'Honorary'
                             ? 'bg-green-100 text-green-800'
                             : 'bg-gray-100 text-gray-800'
                         }`}>
-                          {member.membership_level ? member.membership_level.charAt(0).toUpperCase() + member.membership_level.slice(1) : 'Basic'}
+                          {member.membership_level ? getMembershipLevelLabel(member.membership_level) : 'Full'}
                         </span>
                       </div>
                       <div className="mt-2 space-y-1">
@@ -202,11 +202,11 @@ export default async function MembersPage({
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 text-xs rounded-full ${
-                          member.membership_level === 'cadet' || member.membership_level === 'captain'
+                          member.membership_level === 'Full' || member.membership_level === 'Corporate' || member.membership_level === 'Honorary'
                             ? 'bg-green-100 text-green-800'
                             : 'bg-gray-100 text-gray-800'
                         }`}>
-                          {member.membership_level ? member.membership_level.charAt(0).toUpperCase() + member.membership_level.slice(1) : 'Basic'}
+                          {member.membership_level ? getMembershipLevelLabel(member.membership_level) : 'Full'}
                         </span>
                       </td>
                     </tr>

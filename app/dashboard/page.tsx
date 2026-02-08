@@ -1,12 +1,12 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
 import { getCurrentUserIncludingPending } from '@/lib/auth'
 import { getMembershipFee } from '@/lib/settings'
 import { createClient } from '@/lib/supabase/server'
 // import { appendMemberToSheet } from '@/lib/google-sheets' // Not used - Google Sheets append happens on status change
 import { Resource, Event } from '@/types/database'
 import PayPalButton from '@/components/PayPalButton'
+import MembershipCard from '@/components/MembershipCard'
 
 export default async function DashboardPage() {
   const user = await getCurrentUserIncludingPending()
@@ -17,6 +17,7 @@ export default async function DashboardPage() {
 
   const isPending = user.profile.status === 'pending' && user.profile.role !== 'admin'
   const isRejected = user.profile.status === 'rejected' && user.profile.role !== 'admin'
+  const isExpiredStatus = user.profile.status === 'expired' && user.profile.role !== 'admin'
 
   // Check if user was invited and needs to change password
   const wasInvited = user.user_metadata?.invited_by_admin === true
@@ -28,161 +29,98 @@ export default async function DashboardPage() {
   // The appendMemberToSheet function now checks for duplicates before appending
 
   const membershipFee = await getMembershipFee()
-  const isPaid = user.profile.membership_level === 'cadet' || user.profile.membership_level === 'captain'
+  const isPaid = user.profile.membership_level === 'Full' || user.profile.membership_level === 'Corporate' || user.profile.membership_level === 'Honorary'
   const isExpired = user.profile.membership_expires_at
     ? new Date(user.profile.membership_expires_at) < new Date()
     : false
 
-  // Fetch top resources and upcoming events
+  // Fetch top resources, events, and threads (only for approved users)
   const supabase = await createClient()
-  const { data: resources } = await supabase
-    .from('resources')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(5)
+  let topResources: Resource[] = []
+  let upcomingEvents: Event[] = []
+  let topThreads: any[] = []
 
-  const now = new Date().toISOString()
-  const { data: events } = await supabase
-    .from('events')
-    .select('*')
-    .gte('start_time', now)
-    .order('start_time', { ascending: true })
-    .limit(5)
+  if (!isPending && !isRejected && !isExpiredStatus) {
+    // Fetch only minimal fields needed for display
+    const { data: resources } = await supabase
+      .from('resources')
+      .select('id, title, created_at')
+      .order('created_at', { ascending: false })
+      .limit(5)
 
-  const topResources = (resources as Resource[]) || []
-  const upcomingEvents = (events as Event[]) || []
+    const now = new Date().toISOString()
+    const { data: events } = await supabase
+      .from('events')
+      .select('id, title, start_time')
+      .gte('start_time', now)
+      .order('start_time', { ascending: true })
+      .limit(5)
 
-  // Fetch top threads
-  const { data: threads } = await supabase
-    .from('threads')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(5)
+    topResources = (resources as Resource[]) || []
+    upcomingEvents = (events as Event[]) || []
 
-  // Get author info for threads
-  const threadUserIds = [...new Set(threads?.map(t => t.created_by) || [])]
-  const { data: threadAuthors } = await supabase
-    .from('user_profiles')
-    .select('id, full_name, email')
-    .in('id', threadUserIds)
+    // Fetch top threads with minimal fields
+    const { data: threads } = await supabase
+      .from('threads')
+      .select('id, title, created_at, created_by')
+      .order('created_at', { ascending: false })
+      .limit(5)
 
-  const threadAuthorsMap = new Map(threadAuthors?.map(a => [a.id, a]) || [])
+    if (threads && threads.length > 0) {
+      // Get author info for threads
+      const threadUserIds = [...new Set(threads.map(t => t.created_by).filter((id): id is string => id !== null))]
+      const { data: threadAuthors } = threadUserIds.length > 0 ? await supabase
+        .from('user_profiles')
+        .select('id, full_name, email')
+        .in('id', threadUserIds) : { data: [] }
 
-  // Get comment counts for threads
-  const threadIds = threads?.map(t => t.id) || []
-  const { data: threadCommentCounts } = await supabase
-    .from('comments')
-    .select('thread_id')
-    .in('thread_id', threadIds)
+      const threadAuthorsMap = new Map(threadAuthors?.map(a => [a.id, a]) || [])
 
-  const threadCountsMap = new Map<string, number>()
-  threadCommentCounts?.forEach(c => {
-    threadCountsMap.set(c.thread_id, (threadCountsMap.get(c.thread_id) || 0) + 1)
-  })
+      // Get comment counts for threads
+      const threadIds = threads.map(t => t.id)
+      const { data: threadCommentCounts } = threadIds.length > 0 ? await supabase
+        .from('comments')
+        .select('thread_id')
+        .in('thread_id', threadIds) : { data: [] }
 
-  const topThreads = threads?.map(thread => ({
-    ...thread,
-    comment_count: threadCountsMap.get(thread.id) || 0,
-    author: threadAuthorsMap.get(thread.created_by)
-  })) || []
+      const threadCountsMap = new Map<string, number>()
+      threadCommentCounts?.forEach(c => {
+        threadCountsMap.set(c.thread_id, (threadCountsMap.get(c.thread_id) || 0) + 1)
+      })
+
+      topThreads = threads.map(thread => ({
+        id: thread.id,
+        title: thread.title,
+        created_at: thread.created_at,
+        comment_count: threadCountsMap.get(thread.id) || 0,
+        author: threadAuthorsMap.get(thread.created_by) || null
+      }))
+    }
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Main Content */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 order-2 lg:order-1">
             <div className="bg-white shadow rounded-lg">
               <div className="px-4 py-5 sm:p-6">
-                <h1 className="text-2xl font-bold text-gray-900 mb-6">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">
                   Welcome, {user.profile.full_name || user.profile.email}!
                 </h1>
 
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                  {/* Wallet-Sized Membership Card */}
-                  <div className="relative">
-                    <div className="relative bg-gradient-to-br from-[#0d1e26] via-[#0a171c] to-[#0d1e26] rounded-2xl shadow-2xl overflow-hidden" style={{ aspectRatio: '1.586 / 1' }}>
-                      {/* Card Content */}
-                      <div className="relative h-full p-6 flex flex-col justify-between text-white">
-                        {/* Top Section */}
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <div className="text-xs uppercase tracking-widest text-white/70 mb-1">TIPA</div>
-                            <div className="text-[10px] uppercase tracking-wide text-white/60">Toronto Island Pilots Association</div>
-                          </div>
-                          {/* Logo in Chip Area */}
-                          <div className="relative">
-                            <div className="w-12 h-10 bg-gradient-to-br rounded-md border border-yellow-400/30 flex items-center justify-center p-1">
-                              <div className="relative w-full h-full">
-                                <Image
-                                  src="/logo.png"
-                                  alt="TIPA Logo"
-                                  fill
-                                  className="object-contain"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Middle Section - Member Name */}
-                        <div className="my-4">
-                          <div className="text-[10px] uppercase tracking-widest text-white/60 mb-2">Member</div>
-                          <div className="text-2xl font-bold tracking-wide" style={{ fontFamily: 'monospace', letterSpacing: '2px' }}>
-                            {user.profile.full_name?.toUpperCase() || user.profile.email.toUpperCase()}
-                          </div>
-                        </div>
-
-                        {/* Bottom Section */}
-                        <div className="flex items-end justify-between mb-3">
-                          <div className="flex-1">
-                            {/* Status */}
-                            <div>
-                              <div className="text-[8px] uppercase tracking-widest text-white/60 mb-0.5">Status</div>
-                              <div className={`text-xs font-semibold uppercase tracking-wide ${
-                                isRejected ? 'text-red-300' :
-                                isPending ? 'text-yellow-300' :
-                                isPaid && !isExpired ? 'text-green-300' : 
-                                isExpired ? 'text-red-300' : 'text-white'
-                              }`}>
-                                {isRejected ? 'REJECTED' :
-                                 isPending ? 'PENDING' :
-                                 isPaid && !isExpired ? 'ACTIVE' : 
-                                 isExpired ? 'EXPIRED' : 'ACTIVE'}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Expiration Date */}
-                          {user.profile.membership_expires_at && (
-                            <div className="text-right">
-                              <div className="text-[8px] uppercase tracking-widest text-white/60 mb-0.5">Valid Thru</div>
-                              <div className={`text-xs font-mono ${isExpired ? 'text-red-300' : 'text-white'}`}>
-                                {new Date(user.profile.membership_expires_at).toLocaleDateString('en-US', { 
-                                  month: '2-digit', 
-                                  year: '2-digit' 
-                                })}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Member Since - Small text at very bottom */}
-                        {user.profile.created_at && (
-                          <div className="absolute bottom-4 left-6 text-[7px] text-white/50 uppercase tracking-widest">
-                            Member Since {new Date(user.profile.created_at).toLocaleDateString('en-US', { 
-                              month: 'short', 
-                              day: 'numeric',
-                              year: 'numeric' 
-                            })}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Magnetic Stripe Area (Visual Element) */}
-                      <div className="absolute bottom-0 left-0 right-0 h-2 bg-black/40"></div>
-                    </div>
-                  </div>
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-2">
+                  {/* Wallet-Sized Membership Card - Only for approved members */}
+                  {!isPending && !isRejected && !isExpiredStatus && (
+                    <MembershipCard
+                      user={user}
+                      isPending={isPending}
+                      isRejected={isRejected}
+                      isPaid={isPaid}
+                      isExpired={isExpired}
+                    />
+                  )}
 
                   {/* Subscription box hidden for now */}
                   {false && !isPaid && (
@@ -245,19 +183,57 @@ export default async function DashboardPage() {
                       </div>
                     </div>
                   </div>
+                ) : isExpiredStatus ? (
+                  <div className="mt-8 bg-amber-50 border-l-4 border-amber-400 rounded-lg p-6">
+                    <div className="flex items-start gap-4">
+                      <svg className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-amber-900 mb-2">
+                          Membership Expired
+                        </h3>
+                        <p className="text-amber-800 mb-4">
+                          Your membership has lapsed due to non-payment. You do not have access to TIPA platform features including discussions, YTZ Flying Updates, and events.
+                        </p>
+                        <p className="text-sm text-amber-700">
+                          To restore access, please renew your membership or contact an administrator.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : isRejected ? (
+                  <div className="mt-8 bg-red-50 border-l-4 border-red-400 rounded-lg p-6">
+                    <div className="flex items-start gap-4">
+                      <svg className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-red-900 mb-2">
+                          Account Rejected
+                        </h3>
+                        <p className="text-red-800 mb-4">
+                          Your account application has been rejected. You do not have access to TIPA platform features including discussions, YTZ Flying Updates, and events.
+                        </p>
+                        <p className="text-sm text-red-700">
+                          If you believe this is an error, please contact an administrator.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 ) : (
                   <div className="mt-8">
                     <h2 className="text-lg font-semibold text-gray-900 mb-4">
                       Quick Links
                     </h2>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <a
                         href="/resources"
                         className="block p-4 bg-white border border-gray-200 rounded-lg hover:border-[#0d1e26] hover:shadow-md transition"
                       >
-                        <h3 className="font-medium text-gray-900">Resources</h3>
+                        <h3 className="font-medium text-gray-900">YTZ Flying Updates</h3>
                         <p className="mt-1 text-sm text-gray-500">
-                          Access member resources
+                          View all YTZ Flying Updates
                         </p>
                       </a>
                       {user.profile.role === 'admin' && (
@@ -278,18 +254,109 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          {/* Sidebar */}
-          {!isPending && (topResources.length > 0 || upcomingEvents.length > 0 || topThreads.length > 0) && (
-            <div className="lg:col-span-1 space-y-6">
+          {/* Sidebar - Hidden on Mobile */}
+          {!isPending && !isRejected && !isExpiredStatus && (
+            <div className="hidden lg:block lg:col-span-1 space-y-6 order-1 lg:order-2">
+              {/* Events Section */}
+              <div className="bg-white shadow rounded-lg">
+                <div className="px-4 py-5 sm:p-6">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Events
+                  </h2>
+                  {upcomingEvents.length > 0 ? (
+                    <>
+                      <div className="space-y-3">
+                        {upcomingEvents.map((event) => {
+                          const eventDate = new Date(event.start_time)
+                          const dateStr = eventDate.toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                          })
+                          return (
+                            <Link
+                              key={event.id}
+                              href="/events"
+                              className="block text-sm text-[#0d1e26] hover:text-[#0a171c] hover:underline py-2 border-b border-gray-200 last:border-b-0"
+                            >
+                              <div className="font-medium">{event.title}</div>
+                              <div className="text-xs text-gray-500 mt-1">{dateStr}</div>
+                            </Link>
+                          )
+                        })}
+                      </div>
+                      <Link
+                        href="/events"
+                        className="mt-4 block text-sm font-medium text-[#0d1e26] hover:text-[#0a171c] flex items-center gap-1"
+                      >
+                        See More
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm text-gray-500 mb-4">No upcoming events scheduled.</p>
+                      <Link
+                        href="/events"
+                        className="block text-sm font-medium text-[#0d1e26] hover:text-[#0a171c] flex items-center gap-1"
+                      >
+                        View All Events
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </Link>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* YTZ Flying Updates Section */}
+              {topResources.length > 0 && (
+                <div className="bg-white shadow rounded-lg">
+                  <div className="px-4 py-5 sm:p-6">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      YTZ Flying Updates
+                    </h2>
+                    <div className="space-y-3">
+                      {topResources.map((resource) => (
+                        <Link
+                          key={resource.id}
+                          href={`/resources/${resource.id}`}
+                          className="block text-sm text-[#0d1e26] hover:text-[#0a171c] hover:underline py-2 border-b border-gray-200 last:border-b-0"
+                        >
+                          {resource.title}
+                        </Link>
+                      ))}
+                    </div>
+                    <Link
+                      href="/resources"
+                      className="mt-4 block text-sm font-medium text-[#0d1e26] hover:text-[#0a171c] flex items-center gap-1"
+                    >
+                      See More
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Link>
+                  </div>
+                </div>
+              )}
+
               {/* Top Threads Section */}
               {topThreads.length > 0 && (
                 <div className="bg-white shadow rounded-lg">
                   <div className="px-4 py-5 sm:p-6">
                     <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
-                      Recent Threads
+                      Recent Hangar Talk
                     </h2>
                     <div className="space-y-3">
                       {topThreads.map((thread) => {
@@ -308,7 +375,7 @@ export default async function DashboardPage() {
                         return (
                           <Link
                             key={thread.id}
-                            href={`/discussion/${thread.id}`}
+                            href={`/discussions/${thread.id}`}
                             className="block text-sm text-[#0d1e26] hover:text-[#0a171c] hover:underline py-2 border-b border-gray-200 last:border-b-0"
                           >
                             <div className="font-medium line-clamp-1">{thread.title}</div>
@@ -329,82 +396,7 @@ export default async function DashboardPage() {
                       })}
                     </div>
                     <Link
-                      href="/discussion"
-                      className="mt-4 block text-sm font-medium text-[#0d1e26] hover:text-[#0a171c] flex items-center gap-1"
-                    >
-                      See More
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </Link>
-                  </div>
-                </div>
-              )}
-              {/* Events Section */}
-              {upcomingEvents.length > 0 && (
-                <div className="bg-white shadow rounded-lg">
-                  <div className="px-4 py-5 sm:p-6">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      Events
-                    </h2>
-                    <div className="space-y-3">
-                      {upcomingEvents.map((event) => {
-                        const eventDate = new Date(event.start_time)
-                        const dateStr = eventDate.toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                        })
-                        return (
-                          <Link
-                            key={event.id}
-                            href="/events"
-                            className="block text-sm text-[#0d1e26] hover:text-[#0a171c] hover:underline py-2 border-b border-gray-200 last:border-b-0"
-                          >
-                            <div className="font-medium">{event.title}</div>
-                            <div className="text-xs text-gray-500 mt-1">{dateStr}</div>
-                          </Link>
-                        )
-                      })}
-                    </div>
-                    <Link
-                      href="/events"
-                      className="mt-4 block text-sm font-medium text-[#0d1e26] hover:text-[#0a171c] flex items-center gap-1"
-                    >
-                      See More
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </Link>
-                  </div>
-                </div>
-              )}
-
-              {/* Resources Section */}
-              {topResources.length > 0 && (
-                <div className="bg-white shadow rounded-lg">
-                  <div className="px-4 py-5 sm:p-6">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      Resources
-                    </h2>
-                    <div className="space-y-3">
-                      {topResources.map((resource) => (
-                        <Link
-                          key={resource.id}
-                          href="/resources"
-                          className="block text-sm text-[#0d1e26] hover:text-[#0a171c] hover:underline py-2 border-b border-gray-200 last:border-b-0"
-                        >
-                          {resource.title}
-                        </Link>
-                      ))}
-                    </div>
-                    <Link
-                      href="/resources"
+                      href="/discussions"
                       className="mt-4 block text-sm font-medium text-[#0d1e26] hover:text-[#0a171c] flex items-center gap-1"
                     >
                       See More

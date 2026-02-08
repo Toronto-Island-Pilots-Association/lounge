@@ -8,9 +8,9 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { thread_id, comment_id, reaction_type } = body
 
-    if (!reaction_type || !['like', 'upvote', 'downvote'].includes(reaction_type)) {
+    if (!reaction_type || reaction_type !== 'like') {
       return NextResponse.json(
-        { error: 'Invalid reaction type' },
+        { error: 'Invalid reaction type. Only "like" is supported' },
         { status: 400 }
       )
     }

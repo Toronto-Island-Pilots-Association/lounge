@@ -84,7 +84,10 @@ export default function RichTextEditor({ content, onChange, placeholder }: RichT
         </button>
         <button
           type="button"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          onClick={(e) => {
+            e.stopPropagation()
+            editor.chain().focus().toggleHeading({ level: 2 }).run()
+          }}
           className={`px-2 py-1 text-sm rounded hover:bg-gray-100 ${
             editor.isActive('heading', { level: 2 }) ? 'bg-gray-200' : ''
           }`}
@@ -105,7 +108,10 @@ export default function RichTextEditor({ content, onChange, placeholder }: RichT
         <div className="w-px bg-gray-300 mx-1" />
         <button
           type="button"
-          onClick={() => editor.chain().focus().toggleBold().run()}
+          onClick={(e) => {
+            e.stopPropagation()
+            editor.chain().focus().toggleBold().run()
+          }}
           className={`px-2 py-1 text-sm rounded hover:bg-gray-100 ${
             editor.isActive('bold') ? 'bg-gray-200' : ''
           }`}
@@ -125,7 +131,10 @@ export default function RichTextEditor({ content, onChange, placeholder }: RichT
         </button>
         <button
           type="button"
-          onClick={() => editor.chain().focus().toggleStrike().run()}
+          onClick={(e) => {
+            e.stopPropagation()
+            editor.chain().focus().toggleStrike().run()
+          }}
           className={`px-2 py-1 text-sm rounded hover:bg-gray-100 ${
             editor.isActive('strike') ? 'bg-gray-200' : ''
           }`}
@@ -146,7 +155,10 @@ export default function RichTextEditor({ content, onChange, placeholder }: RichT
         </button>
         <button
           type="button"
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          onClick={(e) => {
+            e.stopPropagation()
+            editor.chain().focus().toggleOrderedList().run()
+          }}
           className={`px-2 py-1 text-sm rounded hover:bg-gray-100 ${
             editor.isActive('orderedList') ? 'bg-gray-200' : ''
           }`}
@@ -172,7 +184,8 @@ export default function RichTextEditor({ content, onChange, placeholder }: RichT
         </button>
         <button
           type="button"
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation()
             const url = window.prompt('Enter image URL:')
             if (url) {
               editor.chain().focus().setImage({ src: url }).run()
@@ -185,10 +198,15 @@ export default function RichTextEditor({ content, onChange, placeholder }: RichT
         </button>
       </div>
       {/* Editor */}
-      <div className="p-3">
+      <div 
+        className="p-3 relative"
+        onPointerDown={(e) => e.stopPropagation()}
+        onPointerUp={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+      >
         <EditorContent editor={editor} />
         {placeholder && !editor.getText() && (
-          <div className="absolute text-gray-400 pointer-events-none mt-2">
+          <div className="absolute top-5 left-6 text-gray-400 pointer-events-none">
             {placeholder}
           </div>
         )}

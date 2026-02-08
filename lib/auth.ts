@@ -52,7 +52,7 @@ export async function getCurrentUser() {
         
         // Ensure membership_level and role match the database constraints exactly
         // Force to exact string literals to avoid any type issues
-        const membershipLevel: 'basic' | 'cadet' | 'captain' = 'basic'
+        const membershipLevel: 'Full' | 'Student' | 'Associate' | 'Corporate' | 'Honorary' = 'Full'
         const userRole: 'member' | 'admin' = 'member'
         
         // Build the insert object with explicit string values
