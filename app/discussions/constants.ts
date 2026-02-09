@@ -26,7 +26,7 @@ export const CATEGORY_ICONS: Record<DiscussionCategory, string> = {
   aircraft_shares: '✈️',
   instructor_availability: '👨‍✈️',
   gear_for_sale: '🛒',
-  flying_at_ytz: '🏝️',
+  flying_at_ytz: '🛫',
   general_aviation: '🌐',
   training_safety_proficiency: '📚',
   wanted: '🔍',
@@ -47,6 +47,22 @@ export const ALL_CATEGORIES: DiscussionCategory[] = [
 export const CATEGORIES_WITH_ALL: (DiscussionCategory | 'all')[] = [
   'all',
   ...ALL_CATEGORIES,
+]
+
+// Classified categories (for sale/rental listings)
+export const CLASSIFIED_CATEGORIES: DiscussionCategory[] = [
+  'aircraft_shares',
+  'instructor_availability',
+  'gear_for_sale',
+]
+
+// Discussion categories (general discussions)
+export const DISCUSSION_CATEGORIES: DiscussionCategory[] = [
+  'flying_at_ytz',
+  'general_aviation',
+  'training_safety_proficiency',
+  'wanted',
+  'other',
 ]
 
 // Category-specific placeholders for the description field

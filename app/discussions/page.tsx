@@ -5,11 +5,11 @@ import { Suspense } from 'react'
 import { getCurrentUser } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { Thread, DiscussionCategory, ThreadWithData, ThreadAuthor } from '@/types/database'
-import ThreadSort from './ThreadSort'
 import Sidebar from './Sidebar'
 import MobileFilters from './MobileFilters'
 import ContentPreview from './ContentPreview'
-import { CATEGORY_LABELS, CATEGORY_DESCRIPTIONS, CATEGORY_ICONS } from './constants'
+import { CATEGORY_LABELS, CATEGORY_DESCRIPTIONS } from './constants'
+import { CategoryIconLarge } from './CategoryIcons'
 import { formatRelativeDate } from './utils'
 
 export default async function DiscussionsPage({
@@ -169,14 +169,6 @@ export default async function DiscussionsPage({
                 </Suspense>
               </div>
               
-              {/* Desktop Sort - Hidden on Mobile */}
-              {threadsWithData.length > 0 && (
-                <div className="hidden lg:block">
-                  <Suspense fallback={<div className="h-8 w-32 bg-gray-100 rounded-lg animate-pulse" />}>
-                    <ThreadSort />
-                  </Suspense>
-                </div>
-              )}
               
               <Link
                 href={categoryFilter 
@@ -196,10 +188,10 @@ export default async function DiscussionsPage({
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
-          {/* Sidebar - Hidden on Mobile */}
-          <div className="hidden lg:block lg:col-span-1">
-            <Sidebar currentCategory={categoryFilter} />
-          </div>
+                  {/* Sidebar - Hidden on Mobile */}
+                  <div className="hidden lg:block lg:col-span-1">
+                    <Sidebar currentCategory={categoryFilter} currentSort={sortBy} />
+                  </div>
 
           {/* Main Content */}
           <div className="lg:col-span-3">
@@ -235,7 +227,9 @@ export default async function DiscussionsPage({
               <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-8 sm:p-12 text-center">
                 <div className="max-w-md mx-auto">
                   {categoryFilter ? (
-                    <div className="text-6xl mb-4">{CATEGORY_ICONS[categoryFilter]}</div>
+                    <div className="mb-4 text-[#0d1e26] flex justify-center">
+                      <CategoryIconLarge category={categoryFilter} />
+                    </div>
                   ) : (
                     <svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />

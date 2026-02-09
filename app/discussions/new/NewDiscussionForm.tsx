@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { DiscussionCategory } from '@/types/database'
 import ThreadImageUpload from '@/components/ThreadImageUpload'
@@ -39,7 +39,7 @@ interface ClassifiedFields {
   hangarLocation?: string
 }
 
-export default function NewDiscussionForm() {
+function NewDiscussionFormContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [title, setTitle] = useState('')
@@ -659,5 +659,22 @@ export default function NewDiscussionForm() {
         </button>
       </div>
     </form>
+  )
+}
+
+export default function NewDiscussionForm() {
+  return (
+    <Suspense fallback={
+      <div className="bg-white shadow rounded-lg p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-10 bg-gray-200 rounded"></div>
+          <div className="h-10 bg-gray-200 rounded"></div>
+          <div className="h-40 bg-gray-200 rounded"></div>
+          <div className="h-10 bg-gray-200 rounded w-32"></div>
+        </div>
+      </div>
+    }>
+      <NewDiscussionFormContent />
+    </Suspense>
   )
 }

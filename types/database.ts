@@ -39,6 +39,8 @@ export interface UserProfile {
   status: UserStatus
   membership_expires_at: string | null
   paypal_subscription_id: string | null
+  stripe_subscription_id: string | null
+  stripe_customer_id: string | null
   profile_picture_url: string | null
   member_number: string | null
   is_student_pilot: boolean
@@ -132,3 +134,28 @@ export interface Reaction {
   created_at: string
 }
 
+
+export type PaymentMethod = 'stripe' | 'paypal' | 'cash' | 'wire'
+export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded'
+
+export interface Payment {
+  id: string
+  user_id: string
+  payment_method: PaymentMethod
+  amount: number
+  currency: string
+  payment_date: string
+  membership_expires_at: string
+  stripe_subscription_id: string | null
+  stripe_payment_intent_id: string | null
+  paypal_subscription_id: string | null
+  paypal_transaction_id: string | null
+  recorded_by: string | null
+  notes: string | null
+  status: PaymentStatus
+  created_at: string
+  updated_at: string
+  // Joined fields
+  user?: UserProfile
+  recorded_by_user?: UserProfile
+}

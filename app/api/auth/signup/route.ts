@@ -34,6 +34,7 @@ export async function POST(request: Request) {
       isStudentPilot,
       flightSchool,
       instructorName,
+      studentNotes,
     } = await request.json()
 
     if (!email || !password) {
@@ -78,8 +79,10 @@ export async function POST(request: Request) {
           isCopaMember: toNullIfEmpty(isCopaMember),
           joinCopaFlight32: toNullIfEmpty(joinCopaFlight32),
           copaMembershipNumber: toNullIfEmpty(copaMembershipNumber),
-          // Statement of Interest
-          statementOfInterest: toNullIfEmpty(statementOfInterest),
+          // Statement of Interest (append student notes if provided)
+          statementOfInterest: studentNotes 
+            ? `${toNullIfEmpty(statementOfInterest) || ''}\n\nStudent Information:\n${studentNotes}`.trim()
+            : toNullIfEmpty(statementOfInterest),
           // Aviation Information
           pilot_license_type: toNullIfEmpty(pilotLicenseType),
           aircraft_type: toNullIfEmpty(aircraftType),
@@ -197,8 +200,10 @@ export async function POST(request: Request) {
                 is_copa_member: toNullIfEmpty(isCopaMember),
                 join_copa_flight_32: toNullIfEmpty(joinCopaFlight32),
                 copa_membership_number: toNullIfEmpty(copaMembershipNumber),
-                // Statement of Interest
-                statement_of_interest: toNullIfEmpty(statementOfInterest),
+                // Statement of Interest (append student notes if provided)
+                statement_of_interest: studentNotes 
+                  ? `${toNullIfEmpty(statementOfInterest) || ''}\n\nStudent Information:\n${studentNotes}`.trim()
+                  : toNullIfEmpty(statementOfInterest),
                 // Aviation Information
                 pilot_license_type: toNullIfEmpty(pilotLicenseType),
                 aircraft_type: toNullIfEmpty(aircraftType),
@@ -251,7 +256,7 @@ export async function POST(request: Request) {
             if (admins && admins.length > 0) {
               const adminEmails = admins.map(a => a.email).filter(Boolean)
               
-              // Send notification to each admin
+              // Send notification to each admin (non-blocking but properly handled)
               Promise.all(
                 adminEmails.map(adminEmail =>
                   sendNewMemberNotificationToAdmins(
@@ -262,13 +267,93 @@ export async function POST(request: Request) {
                       aircraft_type: profile.aircraft_type,
                       pilot_license_type: profile.pilot_license_type,
                       phone: profile.phone,
+                      membership_level: profile.membership_level,
+                      membership_class: profile.membership_class,
+                      street: profile.street,
+                      city: profile.city,
+                      province_state: profile.province_state,
+                      postal_zip_code: profile.postal_zip_code,
+                      country: profile.country,
+                      how_often_fly_from_ytz: profile.how_often_fly_from_ytz,
+                      is_copa_member: profile.is_copa_member,
+                      join_copa_flight_32: profile.join_copa_flight_32,
+                      copa_membership_number: profile.copa_membership_number,
+                      statement_of_interest: profile.statement_of_interest,
+                      how_did_you_hear: profile.how_did_you_hear,
+                      is_student_pilot: profile.is_student_pilot,
+                      flight_school: profile.flight_school,
+                      instructor_name: profile.instructor_name,
                     },
                     adminEmail
                   ).catch(err => {
                     console.error(`Failed to notify admin ${adminEmail}:`, err)
+                    return { success: false, error: err }
                   })
                 )
-              ).catch(err => {
+              ).then(results => {
+                const successCount = results.filter(r => r?.success !== false).length
+                console.log(`Admin notifications sent: ${successCount}/${adminEmails.length} successful`)
+              }).catch(err => {
+                console.error('Error sending admin notifications:', err)
+              })
+            } else {
+              console.warn('No admin emails found to notify about new member')
+            }
+          } catch (err) {
+            console.error('Error fetching admin emails for notification:', err)
+          }
+        }
+      } else {
+        // Even if adminClient is not available, try to notify admins using regular client
+        if (profile) {
+          try {
+            const { data: admins } = await supabase
+              .from('user_profiles')
+              .select('email')
+              .eq('role', 'admin')
+              .eq('status', 'approved')
+
+            if (admins && admins.length > 0) {
+              const adminEmails = admins.map(a => a.email).filter(Boolean)
+              
+              // Send notification to each admin (non-blocking but properly handled)
+              Promise.all(
+                adminEmails.map(adminEmail =>
+                  sendNewMemberNotificationToAdmins(
+                    profile.email,
+                    profile.full_name || profile.first_name || null,
+                    {
+                      call_sign: profile.call_sign,
+                      aircraft_type: profile.aircraft_type,
+                      pilot_license_type: profile.pilot_license_type,
+                      phone: profile.phone,
+                      membership_level: profile.membership_level,
+                      membership_class: profile.membership_class,
+                      street: profile.street,
+                      city: profile.city,
+                      province_state: profile.province_state,
+                      postal_zip_code: profile.postal_zip_code,
+                      country: profile.country,
+                      how_often_fly_from_ytz: profile.how_often_fly_from_ytz,
+                      is_copa_member: profile.is_copa_member,
+                      join_copa_flight_32: profile.join_copa_flight_32,
+                      copa_membership_number: profile.copa_membership_number,
+                      statement_of_interest: profile.statement_of_interest,
+                      how_did_you_hear: profile.how_did_you_hear,
+                      is_student_pilot: profile.is_student_pilot,
+                      flight_school: profile.flight_school,
+                      instructor_name: profile.instructor_name,
+                    },
+                    adminEmail
+                  ).catch(err => {
+                    console.error(`Failed to notify admin ${adminEmail}:`, err)
+                    return { success: false, error: err }
+                  })
+                )
+              ).then(results => {
+                const successCount = results.filter(r => r?.success !== false).length
+                console.log(`Admin notifications sent: ${successCount}/${adminEmails.length} successful`)
+              }).catch(err => {
                 console.error('Error sending admin notifications:', err)
               })
             } else {

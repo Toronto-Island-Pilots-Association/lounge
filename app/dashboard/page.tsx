@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Resource, Event } from '@/types/database'
 import PayPalButton from '@/components/PayPalButton'
 import MembershipCard from '@/components/MembershipCard'
+import SubscriptionSection from '@/components/SubscriptionSection'
 
 export default async function DashboardPage() {
   const user = await getCurrentUserIncludingPending()
@@ -142,6 +143,13 @@ export default async function DashboardPage() {
 
                 </div>
 
+                {/* Subscription Section - Show for all users except rejected */}
+                {!isRejected && (
+                  <div className="mt-6">
+                    <SubscriptionSection user={user} />
+                  </div>
+                )}
+
                 {needsPasswordChange ? (
                   <div className="mt-8 bg-yellow-50 border-l-4 border-yellow-400 rounded-lg p-6">
                     <div className="flex items-start gap-4">
@@ -221,35 +229,7 @@ export default async function DashboardPage() {
                       </div>
                     </div>
                   </div>
-                ) : (
-                  <div className="mt-8">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                      Quick Links
-                    </h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <a
-                        href="/resources"
-                        className="block p-4 bg-white border border-gray-200 rounded-lg hover:border-[#0d1e26] hover:shadow-md transition"
-                      >
-                        <h3 className="font-medium text-gray-900">YTZ Flying Updates</h3>
-                        <p className="mt-1 text-sm text-gray-500">
-                          View all YTZ Flying Updates
-                        </p>
-                      </a>
-                      {user.profile.role === 'admin' && (
-                        <a
-                          href="/admin"
-                          className="block p-4 bg-white border border-gray-200 rounded-lg hover:border-[#0d1e26] hover:shadow-md transition"
-                        >
-                          <h3 className="font-medium text-gray-900">Admin Panel</h3>
-                          <p className="mt-1 text-sm text-gray-500">
-                            Manage members and resources
-                          </p>
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                )}
+                ) : null}
               </div>
             </div>
           </div>

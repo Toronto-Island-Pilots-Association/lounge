@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'expired')),
   membership_expires_at TIMESTAMPTZ,
   paypal_subscription_id TEXT,
+  stripe_subscription_id TEXT,
+  stripe_customer_id TEXT,
   profile_picture_url TEXT,
   member_number TEXT UNIQUE,
   is_student_pilot BOOLEAN NOT NULL DEFAULT false,
@@ -96,6 +98,35 @@ CREATE TABLE IF NOT EXISTS reactions (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(thread_id, comment_id, user_id, reaction_type)
 );
+
+-- Create payments table for payment tracking and audit trail
+CREATE TABLE IF NOT EXISTS payments (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  payment_method TEXT NOT NULL CHECK (payment_method IN ('stripe', 'paypal', 'cash', 'wire')),
+  amount DECIMAL(10, 2) NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'CAD',
+  payment_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  membership_expires_at TIMESTAMPTZ NOT NULL,
+  -- Payment method specific IDs
+  stripe_subscription_id TEXT,
+  stripe_payment_intent_id TEXT,
+  paypal_subscription_id TEXT,
+  paypal_transaction_id TEXT,
+  -- Manual payment details
+  recorded_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  notes TEXT,
+  -- Status tracking
+  status TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('pending', 'completed', 'failed', 'refunded')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create index for faster lookups
+CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id);
+CREATE INDEX IF NOT EXISTS idx_payments_payment_date ON payments(payment_date);
+CREATE INDEX IF NOT EXISTS idx_payments_stripe_subscription_id ON payments(stripe_subscription_id);
+CREATE INDEX IF NOT EXISTS idx_payments_paypal_subscription_id ON payments(paypal_subscription_id);
 
 -- Insert default membership fee setting
 INSERT INTO settings (key, value, description)
@@ -328,6 +359,7 @@ ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE threads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies if they exist (for clean re-runs)
 DROP POLICY IF EXISTS "Users can view own profile" ON user_profiles;
@@ -359,6 +391,10 @@ DROP POLICY IF EXISTS "Authenticated users can view reactions" ON reactions;
 DROP POLICY IF EXISTS "Authenticated users can create reactions" ON reactions;
 DROP POLICY IF EXISTS "Users can delete own reactions" ON reactions;
 DROP POLICY IF EXISTS "Admins can delete reactions" ON reactions;
+DROP POLICY IF EXISTS "Users can view own payments" ON payments;
+DROP POLICY IF EXISTS "Admins can view all payments" ON payments;
+DROP POLICY IF EXISTS "Admins can insert payments" ON payments;
+DROP POLICY IF EXISTS "Service role can insert payments" ON payments;
 
 -- User profiles policies
 -- All authenticated users can view all profiles
@@ -504,6 +540,27 @@ CREATE POLICY "Users can delete own reactions"
 CREATE POLICY "Admins can delete reactions"
   ON reactions FOR DELETE
   USING (public.is_admin(auth.uid()));
+
+-- Payments policies
+-- Users can view their own payments
+CREATE POLICY "Users can view own payments"
+  ON payments FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Admins can view all payments
+CREATE POLICY "Admins can view all payments"
+  ON payments FOR SELECT
+  USING (public.is_admin(auth.uid()));
+
+-- Admins can insert payments (for manual payment recording)
+CREATE POLICY "Admins can insert payments"
+  ON payments FOR INSERT
+  WITH CHECK (public.is_admin(auth.uid()));
+
+-- Service role can insert payments (for webhooks and system operations)
+CREATE POLICY "Service role can insert payments"
+  ON payments FOR INSERT
+  WITH CHECK (auth.role() = 'service_role');
 
 -- Storage Bucket Setup for Profile Pictures
 

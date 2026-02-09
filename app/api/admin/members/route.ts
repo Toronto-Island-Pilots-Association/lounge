@@ -36,12 +36,8 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Member ID is required' }, { status: 400 })
     }
 
-    // Status is system-managed: only allow change when request is solely Approve/Reject (id + status).
-    // Strip status when editing other profile fields so admins cannot change it from the edit form.
-    const isStatusOnlyUpdate = Object.keys(updates).length === 1 && 'status' in updates
-    if (!isStatusOnlyUpdate && 'status' in updates) {
-      delete updates.status
-    }
+    // Allow status changes from admin edit form
+    // Status can be changed along with other fields when updating from the admin interface
 
     const supabase = await createClient()
 
@@ -64,10 +60,10 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    // Check if status changed from 'pending' to 'approved'
+    // Check if status changed to 'approved' (from any status)
     const statusChangedToApproved = updates.status === 'approved' && 
                                      currentMember && 
-                                     currentMember.status === 'pending'
+                                     currentMember.status !== 'approved'
 
     if (statusChangedToApproved) {
       // Send approval email

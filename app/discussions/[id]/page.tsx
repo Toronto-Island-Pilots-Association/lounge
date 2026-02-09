@@ -161,7 +161,7 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
           {/* Sidebar - Hidden on Mobile */}
           <div className="hidden lg:block lg:col-span-1">
-            <Sidebar currentCategory={thread.category as DiscussionCategory} />
+            <Sidebar currentCategory={thread.category as DiscussionCategory} currentSort="latest" />
           </div>
 
           {/* Main Content */}

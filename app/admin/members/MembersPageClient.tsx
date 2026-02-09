@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState, useMemo, useCallback, Suspense } from 'react'
-import { UserProfile, MembershipLevel, getMembershipLevelLabel } from '@/types/database'
+import { UserProfile, MembershipLevel, getMembershipLevelLabel, Payment } from '@/types/database'
 import Loading from '@/components/Loading'
+import MemberDetailModal from './MemberDetailModal'
 import {
   Drawer,
   DrawerContent,
@@ -297,7 +298,7 @@ export default function MembersPageClient() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">System Role</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Membership</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -369,7 +370,7 @@ export default function MembersPageClient() {
 
       {/* Modals */}
       {editingMember && (
-        <MemberEditModal
+        <MemberDetailModal
           member={editingMember}
           onClose={() => setEditingMember(null)}
           onSave={handleUpdateMember}
@@ -403,13 +404,64 @@ function MemberEditModal({
   onClose: () => void
   onSave: (member: UserProfile, updates: Partial<UserProfile>) => void
 }) {
+  const [activeTab, setActiveTab] = useState<'overview' | 'activity' | 'payments' | 'timeline'>('overview')
   const [formData, setFormData] = useState({
     full_name: member.full_name || '',
     role: member.role,
     membership_level: member.membership_level,
+    status: member.status,
     flight_school: member.flight_school || '',
     instructor_name: member.instructor_name || '',
   })
+  const [showPaymentForm, setShowPaymentForm] = useState(false)
+  const [paymentFormData, setPaymentFormData] = useState({
+    paymentMethod: 'cash' as 'cash' | 'paypal' | 'wire',
+    membershipExpiresAt: '',
+    notes: '',
+    clearStripeSubscription: true,
+  })
+  const [recordingPayment, setRecordingPayment] = useState(false)
+  
+  // Activity data state
+  const [activityData, setActivityData] = useState<{
+    stats: {
+      threads_created: number
+      comments_made: number
+      reactions_given: number
+      events_created: number
+      payments_count: number
+      total_paid: number
+    } | null
+    threads: any[]
+    comments: any[]
+    reactions: any[]
+    events: any[]
+    payments: Payment[]
+  } | null>(null)
+  const [loadingActivity, setLoadingActivity] = useState(false)
+
+  // Load activity data when modal opens or tab changes
+  useEffect(() => {
+    if (activeTab === 'activity' || activeTab === 'payments' || activeTab === 'timeline') {
+      loadActivityData()
+    }
+  }, [activeTab, member.id])
+
+  const loadActivityData = async () => {
+    if (activityData) return // Already loaded
+    setLoadingActivity(true)
+    try {
+      const response = await fetch(`/api/admin/members/${member.id}/activity`)
+      if (response.ok) {
+        const data = await response.json()
+        setActivityData(data)
+      }
+    } catch (error) {
+      console.error('Error loading activity data:', error)
+    } finally {
+      setLoadingActivity(false)
+    }
+  }
 
   return (
     <Drawer open={true} onOpenChange={(open) => !open && onClose()}>
@@ -427,10 +479,18 @@ function MemberEditModal({
               className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
             />
           </div>
-          <div className="text-sm text-gray-500">
-            <span className="font-medium text-gray-700">Status: </span>
-            {member.status ? member.status.charAt(0).toUpperCase() + member.status.slice(1) : 'Pending'}
-            <span className="block text-xs text-gray-400 mt-0.5">Status is set by the system (e.g. Approve/Reject).</span>
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-1">Status</label>
+            <select
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value as UserProfile['status'] })}
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+            >
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="expired">Expired</option>
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-1">Role</label>
@@ -481,6 +541,212 @@ function MemberEditModal({
               </div>
             </div>
           )}
+
+          {/* Payment Recording Section */}
+          <div className="pt-4 mt-4 border-t border-gray-200">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900">Payment & Subscription</h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Record manual payments (cash, PayPal, or wire transfer)
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  // Set default expiration to 1 year from now
+                  const defaultExpiresAt = new Date()
+                  defaultExpiresAt.setFullYear(defaultExpiresAt.getFullYear() + 1)
+                  setPaymentFormData({
+                    ...paymentFormData,
+                    membershipExpiresAt: defaultExpiresAt.toISOString().split('T')[0],
+                  })
+                  setShowPaymentForm(!showPaymentForm)
+                }}
+                className="px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
+              >
+                {showPaymentForm ? 'Cancel' : 'Record Payment'}
+              </button>
+            </div>
+
+            {/* Current Status */}
+            <div className="mb-3 p-3 bg-gray-50 rounded-md text-xs">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <span className="text-gray-500">Status:</span>{' '}
+                  <span className="font-medium text-gray-900">{member.status}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Expires:</span>{' '}
+                  <span className="font-medium text-gray-900">
+                    {member.membership_expires_at
+                      ? new Date(member.membership_expires_at).toLocaleDateString()
+                      : 'Not set'}
+                  </span>
+                </div>
+                {member.stripe_subscription_id && (
+                  <div className="col-span-2">
+                    <span className="text-gray-500">Stripe Subscription:</span>{' '}
+                    <span className="font-medium text-gray-900">Active</span>
+                  </div>
+                )}
+                {member.paypal_subscription_id && (
+                  <div className="col-span-2">
+                    <span className="text-gray-500">PayPal Subscription:</span>{' '}
+                    <span className="font-medium text-gray-900">Active</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Payment Form */}
+            {showPaymentForm && (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-md space-y-3" style={{ overflow: 'visible' }}>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Payment Method
+                  </label>
+                  <select
+                    value={paymentFormData.paymentMethod}
+                    onChange={(e) =>
+                      setPaymentFormData({
+                        ...paymentFormData,
+                        paymentMethod: e.target.value as 'cash' | 'paypal' | 'wire',
+                      })
+                    }
+                    className="w-full px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  >
+                    <option value="cash">Cash</option>
+                    <option value="paypal">PayPal</option>
+                    <option value="wire">Wire Transfer</option>
+                  </select>
+                </div>
+
+                <div className="relative" style={{ zIndex: 9999, isolation: 'isolate' }}>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Membership Expires At
+                  </label>
+                  <input
+                    type="date"
+                    value={paymentFormData.membershipExpiresAt}
+                    onChange={(e) =>
+                      setPaymentFormData({
+                        ...paymentFormData,
+                        membershipExpiresAt: e.target.value,
+                      })
+                    }
+                    onFocus={(e) => {
+                      // Prevent drawer from closing when date picker opens
+                      e.stopPropagation()
+                    }}
+                    onClick={(e) => {
+                      // Ensure the input is clickable and the calendar can open
+                      e.stopPropagation()
+                    }}
+                    onMouseDown={(e) => {
+                      // Prevent any event handlers from blocking the date picker
+                      e.stopPropagation()
+                    }}
+                    className="w-full px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                    style={{ position: 'relative', pointerEvents: 'auto', WebkitAppearance: 'none' }}
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Defaults to 1 year from today if not set
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Notes (optional)
+                  </label>
+                  <textarea
+                    value={paymentFormData.notes}
+                    onChange={(e) =>
+                      setPaymentFormData({
+                        ...paymentFormData,
+                        notes: e.target.value,
+                      })
+                    }
+                    rows={2}
+                    className="w-full px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    placeholder="Payment reference, receipt number, etc."
+                  />
+                </div>
+
+                {member.stripe_subscription_id && (
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="clearStripe"
+                      checked={paymentFormData.clearStripeSubscription}
+                      onChange={(e) =>
+                        setPaymentFormData({
+                          ...paymentFormData,
+                          clearStripeSubscription: e.target.checked,
+                        })
+                      }
+                      className="h-4 w-4 text-[#0d1e26] focus:ring-[#0d1e26] border-gray-300 rounded"
+                    />
+                    <label htmlFor="clearStripe" className="ml-2 text-xs text-gray-700">
+                      Clear Stripe subscription (recommended for cash/PayPal payments)
+                    </label>
+                  </div>
+                )}
+
+                <button
+                  onClick={async () => {
+                    setRecordingPayment(true)
+                    try {
+                      const response = await fetch('/api/admin/record-payment', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          userId: member.id,
+                          paymentMethod: paymentFormData.paymentMethod,
+                          membershipExpiresAt: paymentFormData.membershipExpiresAt
+                            ? new Date(paymentFormData.membershipExpiresAt).toISOString()
+                            : undefined,
+                          notes: paymentFormData.notes || undefined,
+                          clearStripeSubscription: paymentFormData.clearStripeSubscription,
+                        }),
+                      })
+
+                      if (response.ok) {
+                        const data = await response.json()
+                        alert('Payment recorded successfully!')
+                        setShowPaymentForm(false)
+                        setPaymentFormData({
+                          paymentMethod: 'cash',
+                          membershipExpiresAt: '',
+                          notes: '',
+                          clearStripeSubscription: true,
+                        })
+                        // Update the member with the new data - this will trigger reload
+                        onSave(member, {
+                          status: data.member.status,
+                          membership_expires_at: data.member.membership_expires_at,
+                          stripe_subscription_id: data.member.stripe_subscription_id,
+                          stripe_customer_id: data.member.stripe_customer_id,
+                          paypal_subscription_id: data.member.paypal_subscription_id,
+                        })
+                      } else {
+                        const error = await response.json()
+                        alert(error.error || 'Failed to record payment')
+                      }
+                    } catch (error) {
+                      console.error('Error recording payment:', error)
+                      alert('Failed to record payment')
+                    } finally {
+                      setRecordingPayment(false)
+                    }
+                  }}
+                  disabled={recordingPayment}
+                  className="w-full px-3 py-2 text-xs font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {recordingPayment ? 'Recording...' : 'Record Payment'}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
         <DrawerFooter>
           <div className="flex justify-end space-x-2">
