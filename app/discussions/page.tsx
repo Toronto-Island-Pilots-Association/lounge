@@ -227,7 +227,7 @@ export default async function DiscussionsPage({
               <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-8 sm:p-12 text-center">
                 <div className="max-w-md mx-auto">
                   {categoryFilter ? (
-                    <div className="mb-4 text-[#0d1e26]">
+                    <div className="mb-4 text-[#0d1e26] flex justify-center">
                       <CategoryIconLarge category={categoryFilter} />
                     </div>
                   ) : (

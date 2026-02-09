@@ -12,6 +12,11 @@ export default function SortButtons({ currentCategory, currentSort }: SortButton
   const router = useRouter()
   const searchParams = useSearchParams()
   const sortBy = currentSort || 'latest'
+  
+  // Only highlight sort buttons when no category is selected
+  const isCategorySelected = currentCategory && currentCategory !== 'all'
+  const isLatestActive = !isCategorySelected && (sortBy === 'latest' || !sortBy)
+  const isPopularActive = !isCategorySelected && sortBy === 'hot'
 
   const handleSortChange = (newSort: string) => {
     const params = new URLSearchParams()
@@ -34,8 +39,8 @@ export default function SortButtons({ currentCategory, currentSort }: SortButton
       <nav className="space-y-1">
         <button
           onClick={() => handleSortChange('latest')}
-          className={`group flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-all duration-200 w-full ${
-            sortBy === 'latest' || !sortBy
+          className={`group flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-all duration-200 w-full cursor-pointer ${
+            isLatestActive
               ? 'bg-[#0d1e26] text-white font-medium'
               : 'text-gray-700 hover:bg-gray-100'
           }`}
@@ -49,8 +54,8 @@ export default function SortButtons({ currentCategory, currentSort }: SortButton
         </button>
         <button
           onClick={() => handleSortChange('hot')}
-          className={`group flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-all duration-200 w-full ${
-            sortBy === 'hot'
+          className={`group flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-all duration-200 w-full cursor-pointer ${
+            isPopularActive
               ? 'bg-[#0d1e26] text-white font-medium'
               : 'text-gray-700 hover:bg-gray-100'
           }`}
