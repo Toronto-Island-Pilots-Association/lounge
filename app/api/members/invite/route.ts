@@ -1,4 +1,4 @@
-import { requireAdmin } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import { sendInvitationWithPasswordEmail } from '@/lib/resend'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
@@ -29,16 +29,25 @@ function generateTempPassword(): string {
 
 export async function POST(request: Request) {
   try {
-    await requireAdmin()
+    // Allow any authenticated member to invite
+    const user = await requireAuth()
+    
+    // Only allow approved members to invite (not pending/rejected/expired)
+    if (user.profile.status !== 'approved' && user.profile.role !== 'admin') {
+      return NextResponse.json(
+        { error: 'Only approved members can invite others' },
+        { status: 403 }
+      )
+    }
+
     const {
       email,
       firstName,
       lastName,
-      membership_level,
     } = await request.json()
     
-    // Default to Associate if not specified
-    const membershipLevel = membership_level || 'Associate'
+    // Members can only invite as Associate level
+    const membershipLevel = 'Associate'
 
     if (!email) {
       return NextResponse.json(
@@ -71,7 +80,7 @@ export async function POST(request: Request) {
 
     const normalizedEmail = email.toLowerCase().trim()
 
-    // Check if profile exists first (simpler check)
+    // Check if profile exists first
     const supabase = await createClient()
     const { data: existingMember } = await supabase
       .from('user_profiles')
@@ -94,18 +103,18 @@ export async function POST(request: Request) {
     const fullName = `${firstName || ''} ${lastName || ''}`.trim() || null
 
     // Create auth user with temporary password
-    // This will fail if the email already exists in auth.users
     const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
       email: normalizedEmail,
       password: tempPassword,
-      email_confirm: true, // Auto-confirm email
+      email_confirm: true,
       user_metadata: {
         full_name: fullName,
         first_name: firstName || null,
         last_name: lastName || null,
         role: 'member',
         membership_level: membershipLevel,
-        invited_by_admin: true, // Flag to indicate this user was invited
+        invited_by_member: true, // Flag to indicate this user was invited by a member
+        invited_by: user.id, // Track who invited them
       }
     })
 
@@ -154,7 +163,6 @@ export async function POST(request: Request) {
     }
 
     // Create profile manually if trigger didn't create it
-    // Keep status as 'pending' - will be updated to 'approved' when they log in and change password
     if (!profile) {
       const { error: profileError } = await adminClient
         .from('user_profiles')
@@ -166,12 +174,11 @@ export async function POST(request: Request) {
           last_name: lastName || null,
           role: 'member',
           membership_level: membershipLevel,
-          status: 'pending', // Will be updated to 'approved' when they log in
+          status: 'pending',
         })
 
       if (profileError) {
         console.error('Error creating profile:', profileError)
-        // User was created but profile failed - still send email
       }
     }
 
@@ -192,8 +199,7 @@ export async function POST(request: Request) {
     console.error('Invite member error:', error)
     return NextResponse.json(
       { error: error.message || 'An error occurred while sending invitation' },
-      { status: error.message === 'Forbidden: Admin access required' ? 403 : 500 }
+      { status: error.message === 'Unauthorized' ? 401 : 500 }
     )
   }
 }
-

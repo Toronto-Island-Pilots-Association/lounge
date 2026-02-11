@@ -25,6 +25,7 @@ export async function POST(request: Request) {
     const {
       userId,
       paymentMethod,
+      amount,
       membershipExpiresAt,
       notes,
       clearStripeSubscription = true,
@@ -121,8 +122,15 @@ export async function POST(request: Request) {
       })
     }
 
-    // Get membership fee for payment record
-    const membershipFee = await getMembershipFee()
+    // Get membership fee for payment record (use provided amount or fall back to default fee)
+    const membershipFee = amount ? parseFloat(amount) : await getMembershipFee()
+    
+    if (isNaN(membershipFee) || membershipFee <= 0) {
+      return NextResponse.json(
+        { error: 'Invalid payment amount' },
+        { status: 400 }
+      )
+    }
     
     // Get current admin user who is recording the payment
     const adminUser = await getCurrentUser()

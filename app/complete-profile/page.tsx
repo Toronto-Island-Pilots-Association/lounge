@@ -93,9 +93,9 @@ export default function CompleteProfilePage() {
       }
 
       setSuccess(true)
-      // Redirect to dashboard after a short delay
+      // Redirect to membership after a short delay
       setTimeout(() => {
-        router.push('/dashboard')
+        router.push('/membership')
       }, 2000)
     } catch (err: any) {
       setError(err.message)
@@ -126,7 +126,7 @@ export default function CompleteProfilePage() {
 
         {success && (
           <div className="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md">
-            Profile updated successfully! Redirecting to dashboard...
+            Profile updated successfully! Redirecting to membership...
           </div>
         )}
 
@@ -265,7 +265,7 @@ export default function CompleteProfilePage() {
 
           <div className="flex items-center justify-between">
             <Link
-              href="/dashboard"
+              href="/membership"
               className="text-sm text-gray-600 hover:text-gray-900"
             >
               Skip for now

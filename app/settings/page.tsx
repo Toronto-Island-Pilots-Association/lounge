@@ -41,6 +41,8 @@ export default function SettingsPage() {
     how_did_you_hear: '',
     flight_school: '',
     instructor_name: '',
+    // Interests
+    interests: [] as string[],
   })
 
   useEffect(() => {
@@ -74,6 +76,18 @@ export default function SettingsPage() {
           how_did_you_hear: data.profile.how_did_you_hear || '',
           flight_school: data.profile.flight_school || '',
           instructor_name: data.profile.instructor_name || '',
+          interests: (() => {
+            try {
+              if (data.profile.interests) {
+                return typeof data.profile.interests === 'string' 
+                  ? JSON.parse(data.profile.interests) 
+                  : data.profile.interests
+              }
+              return []
+            } catch {
+              return []
+            }
+          })(),
         })
       } else if (response.status === 401) {
         router.push('/login')
@@ -108,6 +122,9 @@ export default function SettingsPage() {
           is_student_pilot: formData.pilot_license_type === 'student',
           flight_school: formData.pilot_license_type === 'student' ? formData.flight_school : '',
           instructor_name: formData.pilot_license_type === 'student' ? formData.instructor_name : '',
+          interests: formData.interests && formData.interests.length > 0 
+            ? JSON.stringify(formData.interests) 
+            : null,
         }),
       })
 
@@ -158,6 +175,20 @@ export default function SettingsPage() {
         [name]: isCheckbox ? value : stringValue as string,
       }))
     }
+  }
+
+  const handleInterestChange = (interestValue: string, checked: boolean) => {
+    setFormData(prev => {
+      const currentInterests = prev.interests || []
+      if (checked) {
+        if (!currentInterests.includes(interestValue)) {
+          return { ...prev, interests: [...currentInterests, interestValue] }
+        }
+      } else {
+        return { ...prev, interests: currentInterests.filter(i => i !== interestValue) }
+      }
+      return prev
+    })
   }
 
   if (loading) {
@@ -496,6 +527,43 @@ export default function SettingsPage() {
                   )}
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Interests */}
+          <div className="bg-white shadow rounded-lg overflow-hidden">
+            <div className="px-6 py-5 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">Interests</h2>
+              <p className="mt-1 text-sm text-gray-500">Select your main interests within TIPA</p>
+            </div>
+            <div className="px-6 py-5">
+              <div className="space-y-2">
+                {[
+                  { value: 'flying', label: 'Flying' },
+                  { value: 'aircraft-ownership', label: 'Aircraft Ownership' },
+                  { value: 'training', label: 'Training & Education' },
+                  { value: 'safety', label: 'Safety & Proficiency' },
+                  { value: 'community', label: 'Community & Networking' },
+                  { value: 'events', label: 'Events & Social Activities' },
+                  { value: 'advocacy', label: 'Aviation Advocacy' },
+                  { value: 'island-operations', label: 'Island Operations / YTZ' },
+                  { value: 'aircraft-maintenance', label: 'Aircraft Maintenance' },
+                  { value: 'mentoring', label: 'Mentoring' },
+                  { value: 'hangar-storage', label: 'Hangar/Storage' },
+                ].map((interest) => (
+                  <label key={interest.value} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="interests"
+                      value={interest.value}
+                      checked={Array.isArray(formData.interests) && formData.interests.includes(interest.value)}
+                      onChange={(e) => handleInterestChange(interest.value, e.target.checked)}
+                      className="h-4 w-4 text-[#0d1e26] focus:ring-[#0d1e26] border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">{interest.label}</span>
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
 

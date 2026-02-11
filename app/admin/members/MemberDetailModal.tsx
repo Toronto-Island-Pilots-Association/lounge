@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { UserProfile, MembershipLevel, Payment } from '@/types/database'
+import { COUNTRIES, getStatesProvinces } from '@/app/become-a-member/constants'
 import {
   Drawer,
   DrawerContent,
@@ -63,18 +65,73 @@ export default function MemberDetailModal({
   onClose: () => void
   onSave: (member: UserProfile, updates: Partial<UserProfile>) => void
 }) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'activity' | 'membership'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'edit' | 'membership' | 'activity'>('overview')
   const [formData, setFormData] = useState({
     full_name: member.full_name || '',
+    first_name: member.first_name || '',
+    last_name: member.last_name || '',
+    phone: member.phone || '',
+    // Mailing Address
+    street: member.street || '',
+    city: member.city || '',
+    province_state: member.province_state || '',
+    postal_zip_code: member.postal_zip_code || '',
+    country: member.country || '',
+    // Role and Status
     role: member.role,
     membership_level: member.membership_level,
     status: member.status,
+    // COPA Membership
+    is_copa_member: member.is_copa_member || '',
+    join_copa_flight_32: member.join_copa_flight_32 || '',
+    copa_membership_number: member.copa_membership_number || '',
+    // Aviation Information
+    pilot_license_type: member.pilot_license_type || '',
+    aircraft_type: member.aircraft_type || '',
+    call_sign: member.call_sign || '',
+    how_often_fly_from_ytz: member.how_often_fly_from_ytz || '',
+    // Student Pilot Fields
     flight_school: member.flight_school || '',
     instructor_name: member.instructor_name || '',
+    // Membership Expiration
+    membership_expires_at: member.membership_expires_at
+      ? new Date(member.membership_expires_at).toISOString().split('T')[0]
+      : '',
   })
+
+  // Update formData when member changes
+  useEffect(() => {
+    setFormData({
+      full_name: member.full_name || '',
+      first_name: member.first_name || '',
+      last_name: member.last_name || '',
+      phone: member.phone || '',
+      street: member.street || '',
+      city: member.city || '',
+      province_state: member.province_state || '',
+      postal_zip_code: member.postal_zip_code || '',
+      country: member.country || '',
+      role: member.role,
+      membership_level: member.membership_level,
+      status: member.status,
+      is_copa_member: member.is_copa_member || '',
+      join_copa_flight_32: member.join_copa_flight_32 || '',
+      copa_membership_number: member.copa_membership_number || '',
+      pilot_license_type: member.pilot_license_type || '',
+      aircraft_type: member.aircraft_type || '',
+      call_sign: member.call_sign || '',
+      how_often_fly_from_ytz: member.how_often_fly_from_ytz || '',
+      flight_school: member.flight_school || '',
+      instructor_name: member.instructor_name || '',
+      membership_expires_at: member.membership_expires_at
+        ? new Date(member.membership_expires_at).toISOString().split('T')[0]
+        : '',
+    })
+  }, [member])
   const [showPaymentForm, setShowPaymentForm] = useState(false)
   const [paymentFormData, setPaymentFormData] = useState({
     paymentMethod: 'cash' as 'cash' | 'paypal' | 'wire',
+    amount: '',
     membershipExpiresAt: '',
     notes: '',
     clearStripeSubscription: true,
@@ -107,7 +164,7 @@ export default function MemberDetailModal({
 
   return (
     <Drawer open={true} onOpenChange={(open) => !open && onClose()}>
-      <DrawerContent className="max-h-[90vh] flex flex-col">
+      <DrawerContent className="max-h-[90vh] flex flex-col md:max-w-4xl">
         <DrawerHeader>
           <DrawerTitle>{member.full_name || member.email} - Member Details</DrawerTitle>
         </DrawerHeader>
@@ -115,7 +172,7 @@ export default function MemberDetailModal({
         {/* Tab Navigation */}
         <div className="border-b border-gray-200 px-4">
           <nav className="-mb-px flex space-x-4" aria-label="Tabs">
-            {(['overview', 'activity', 'membership'] as const).map((tab) => (
+            {(['overview', 'edit', 'membership', 'activity'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -141,199 +198,562 @@ export default function MemberDetailModal({
               {/* Profile Information (Read-Only) */}
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                 <h3 className="text-sm font-semibold text-gray-900 mb-3">Profile Information</h3>
+                
+                {/* Profile Picture */}
+                <div className="mb-4 flex items-center gap-4">
+                  {member.profile_picture_url ? (
+                    <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-gray-300">
+                      <Image
+                        src={member.profile_picture_url}
+                        alt={member.full_name || member.email || 'Member'}
+                        fill
+                        className="object-cover"
+                        sizes="96px"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center border-2 border-gray-300">
+                      <svg
+                        className="w-12 h-12 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                        />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+                
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-gray-500">Email:</span>
                     <div className="font-medium text-gray-900">{member.email}</div>
                   </div>
-                  {member.phone && (
-                    <div>
-                      <span className="text-gray-500">Phone:</span>
-                      <div className="font-medium text-gray-900">{member.phone}</div>
+                  <div>
+                    <span className="text-gray-500">Phone:</span>
+                    <div className="font-medium text-gray-900">{member.phone || 'N/A'}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Member Number:</span>
+                    <div className="font-medium text-gray-900">{member.member_number || 'N/A'}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Member Since:</span>
+                    <div className="font-medium text-gray-900">
+                      {member.created_at ? new Date(member.created_at).toLocaleDateString() : 'N/A'}
                     </div>
-                  )}
-                  {member.member_number && (
-                    <div>
-                      <span className="text-gray-500">Member Number:</span>
-                      <div className="font-medium text-gray-900">{member.member_number}</div>
-                    </div>
-                  )}
-                  {member.created_at && (
-                    <div>
-                      <span className="text-gray-500">Member Since:</span>
-                      <div className="font-medium text-gray-900">
-                        {new Date(member.created_at).toLocaleDateString()}
-                      </div>
-                    </div>
-                  )}
+                  </div>
                 </div>
 
                 {/* Address Information */}
-                {(member.street || member.city || member.province_state || member.postal_zip_code || member.country) && (
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <h4 className="text-xs font-semibold text-gray-700 mb-2">Mailing Address</h4>
-                    <div className="text-sm text-gray-900">
-                      {member.street && <div>{member.street}</div>}
-                      {(member.city || member.province_state || member.postal_zip_code) && (
-                        <div>
-                          {member.city && member.city}
-                          {member.city && member.province_state && ', '}
-                          {member.province_state}
-                          {member.postal_zip_code && ` ${member.postal_zip_code}`}
-                        </div>
-                      )}
-                      {member.country && <div>{member.country}</div>}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <h4 className="text-xs font-semibold text-gray-700 mb-2">Mailing Address</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-gray-500">Street:</span>
+                      <div className="font-medium text-gray-900">{member.street || 'N/A'}</div>
                     </div>
-                  </div>
-                )}
-
-                {/* Aviation Information */}
-                {(member.pilot_license_type || member.aircraft_type || member.call_sign || member.how_often_fly_from_ytz) && (
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <h4 className="text-xs font-semibold text-gray-700 mb-2">Aviation Information</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                      {member.pilot_license_type && (
-                        <div>
-                          <span className="text-gray-500">Pilot License Type:</span>
-                          <div className="font-medium text-gray-900">{member.pilot_license_type}</div>
-                        </div>
-                      )}
-                      {member.aircraft_type && (
-                        <div>
-                          <span className="text-gray-500">Aircraft Type:</span>
-                          <div className="font-medium text-gray-900">{member.aircraft_type}</div>
-                        </div>
-                      )}
-                      {member.call_sign && (
-                        <div>
-                          <span className="text-gray-500">Call Sign:</span>
-                          <div className="font-medium text-gray-900">{member.call_sign}</div>
-                        </div>
-                      )}
-                      {member.how_often_fly_from_ytz && (
-                        <div>
-                          <span className="text-gray-500">How Often Fly from YTZ:</span>
-                          <div className="font-medium text-gray-900">{member.how_often_fly_from_ytz}</div>
-                        </div>
-                      )}
+                    <div>
+                      <span className="text-gray-500">City:</span>
+                      <div className="font-medium text-gray-900">{member.city || 'N/A'}</div>
                     </div>
-                  </div>
-                )}
-
-                {/* COPA Membership */}
-                {member.is_copa_member && (
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <h4 className="text-xs font-semibold text-gray-700 mb-2">COPA Membership</h4>
-                    <div className="text-sm">
-                      <div className="text-gray-900">
-                        <span className="text-gray-500">COPA Member:</span> {member.is_copa_member === 'yes' ? 'Yes' : 'No'}
-                      </div>
-                      {member.copa_membership_number && (
-                        <div className="text-gray-900 mt-1">
-                          <span className="text-gray-500">COPA Membership Number:</span> {member.copa_membership_number}
-                        </div>
-                      )}
-                      {member.join_copa_flight_32 && (
-                        <div className="text-gray-900 mt-1">
-                          <span className="text-gray-500">Join COPA Flight 32:</span> {member.join_copa_flight_32 === 'yes' ? 'Yes' : 'No'}
-                        </div>
-                      )}
+                    <div>
+                      <span className="text-gray-500">Province/State:</span>
+                      <div className="font-medium text-gray-900">{member.province_state || 'N/A'}</div>
                     </div>
-                  </div>
-                )}
-
-                {/* Statement of Interest */}
-                {member.statement_of_interest && (
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <h4 className="text-xs font-semibold text-gray-700 mb-2">Statement of Interest</h4>
-                    <div className="text-sm text-gray-900 whitespace-pre-wrap">{member.statement_of_interest}</div>
-                  </div>
-                )}
-
-                {/* How Did You Hear */}
-                {member.how_did_you_hear && (
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <h4 className="text-xs font-semibold text-gray-700 mb-2">How Did You Hear About Us</h4>
-                    <div className="text-sm text-gray-900">{member.how_did_you_hear}</div>
-                  </div>
-                )}
-              </div>
-
-              {/* Editable Fields Section */}
-              <div className="pt-4 border-t border-gray-200">
-                <h3 className="text-sm font-semibold text-gray-900 mb-4">Edit Member Details</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-1">Full Name</label>
-                    <input
-                      type="text"
-                      value={formData.full_name}
-                      onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                    />
-                  </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">Status</label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value as UserProfile['status'] })}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
-                >
-                  <option value="pending">Pending</option>
-                  <option value="approved">Approved</option>
-                  <option value="rejected">Rejected</option>
-                  <option value="expired">Expired</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">Role</label>
-                <select
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value as 'member' | 'admin' })}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
-                >
-                  <option value="member">Member</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">Membership Level</label>
-                <select
-                  value={formData.membership_level}
-                  onChange={(e) => setFormData({ ...formData, membership_level: e.target.value as MembershipLevel })}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
-                >
-                  <option value="Full">Full</option>
-                  <option value="Student">Student</option>
-                  <option value="Associate">Associate</option>
-                  <option value="Corporate">Corporate</option>
-                  <option value="Honorary">Honorary</option>
-                </select>
-              </div>
-              {formData.membership_level === 'Student' && (
-                <div className="pt-2 border-t border-gray-200 space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Flight school / club</label>
-                    <input
-                      type="text"
-                      value={formData.flight_school}
-                      onChange={(e) => setFormData({ ...formData, flight_school: e.target.value })}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                      placeholder="e.g., Island Air, Freelance…"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Instructor name</label>
-                    <input
-                      type="text"
-                      value={formData.instructor_name}
-                      onChange={(e) => setFormData({ ...formData, instructor_name: e.target.value })}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                      placeholder="e.g., Jane Smith"
-                    />
+                    <div>
+                      <span className="text-gray-500">Postal/ZIP Code:</span>
+                      <div className="font-medium text-gray-900">{member.postal_zip_code || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Country:</span>
+                      <div className="font-medium text-gray-900">{member.country || 'N/A'}</div>
+                    </div>
                   </div>
                 </div>
-              )}
+
+                {/* Aviation Information */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <h4 className="text-xs font-semibold text-gray-700 mb-2">Aviation Information</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-gray-500">Pilot License Type:</span>
+                      <div className="font-medium text-gray-900">{member.pilot_license_type || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Aircraft Type:</span>
+                      <div className="font-medium text-gray-900">{member.aircraft_type || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Call Sign:</span>
+                      <div className="font-medium text-gray-900">{member.call_sign || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">How Often Fly from YTZ:</span>
+                      <div className="font-medium text-gray-900">{member.how_often_fly_from_ytz || 'N/A'}</div>
+                    </div>
+                    {member.is_student_pilot && (
+                      <>
+                        <div>
+                          <span className="text-gray-500">Flight School:</span>
+                          <div className="font-medium text-gray-900">{member.flight_school || 'N/A'}</div>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Instructor Name:</span>
+                          <div className="font-medium text-gray-900">{member.instructor_name || 'N/A'}</div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* COPA Membership */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <h4 className="text-xs font-semibold text-gray-700 mb-2">COPA Membership</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-gray-500">COPA Member:</span>
+                      <div className="font-medium text-gray-900">
+                        {member.is_copa_member === 'yes' ? 'Yes' : member.is_copa_member === 'no' ? 'No' : 'N/A'}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Join COPA Flight 32:</span>
+                      <div className="font-medium text-gray-900">
+                        {member.join_copa_flight_32 === 'yes' ? 'Yes' : member.join_copa_flight_32 === 'no' ? 'No' : 'N/A'}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">COPA Membership Number:</span>
+                      <div className="font-medium text-gray-900">{member.copa_membership_number || 'N/A'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Interests */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <h4 className="text-xs font-semibold text-gray-700 mb-2">Interests</h4>
+                  <div className="text-sm">
+                    {(() => {
+                      if (!member.interests) {
+                        return <span className="text-gray-500">No interests specified</span>
+                      }
+                      
+                      try {
+                        const interestsArray = typeof member.interests === 'string' 
+                          ? JSON.parse(member.interests) 
+                          : member.interests
+                        
+                        if (!Array.isArray(interestsArray) || interestsArray.length === 0) {
+                          return <span className="text-gray-500">No interests specified</span>
+                        }
+
+                        const interestLabels: Record<string, string> = {
+                          'flying': 'Flying',
+                          'aircraft-ownership': 'Aircraft Ownership',
+                          'training': 'Training & Education',
+                          'safety': 'Safety & Proficiency',
+                          'community': 'Community & Networking',
+                          'events': 'Events & Social Activities',
+                          'advocacy': 'Aviation Advocacy',
+                          'island-operations': 'Island Operations / YTZ',
+                          'aircraft-maintenance': 'Aircraft Maintenance',
+                          'mentoring': 'Mentoring',
+                          'hangar-storage': 'Hangar/Storage',
+                        }
+
+                        return (
+                          <div className="flex flex-wrap gap-2">
+                            {interestsArray.map((interest: string) => (
+                              <span
+                                key={interest}
+                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                              >
+                                {interestLabels[interest] || interest}
+                              </span>
+                            ))}
+                          </div>
+                        )
+                      } catch (error) {
+                        return <span className="text-gray-500">Error parsing interests</span>
+                      }
+                    })()}
+                  </div>
+                </div>
+
+                {/* Statement of Interest */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <h4 className="text-xs font-semibold text-gray-700 mb-2">Statement of Interest</h4>
+                  <div className="text-sm text-gray-900 whitespace-pre-wrap">
+                    {member.statement_of_interest || <span className="text-gray-500">No statement provided</span>}
+                  </div>
+                </div>
+
+                {/* How Did You Hear */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <h4 className="text-xs font-semibold text-gray-700 mb-2">How Did You Hear About Us</h4>
+                  <div className="text-sm text-gray-900">
+                    {member.how_did_you_hear || <span className="text-gray-500">Not specified</span>}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Edit Tab */}
+          {activeTab === 'edit' && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-4">Edit Member Details</h3>
+                <div className="space-y-6">
+                  {/* Basic Information */}
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Basic Information</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">Full Name</label>
+                        <input
+                          type="text"
+                          value={formData.full_name}
+                          onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">Email</label>
+                        <input
+                          type="email"
+                          value={member.email}
+                          disabled
+                          className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-500 cursor-not-allowed"
+                        />
+                        <p className="mt-1 text-xs text-gray-500">Email cannot be changed</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">First Name</label>
+                        <input
+                          type="text"
+                          value={formData.first_name}
+                          onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">Last Name</label>
+                        <input
+                          type="text"
+                          value={formData.last_name}
+                          onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">Phone</label>
+                        <input
+                          type="tel"
+                          value={formData.phone}
+                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                          placeholder="(555) 123-4567"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mailing Address */}
+                  <div className="pt-4 border-t border-gray-200 space-y-4">
+                    <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Mailing Address</h4>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">Street Address</label>
+                      <input
+                        type="text"
+                        value={formData.street}
+                        onChange={(e) => setFormData({ ...formData, street: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                        placeholder="123 Main Street"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">City</label>
+                        <input
+                          type="text"
+                          value={formData.city}
+                          onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">Country</label>
+                        <select
+                          value={formData.country}
+                          onChange={(e) => setFormData({ ...formData, country: e.target.value, province_state: '' })}
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                        >
+                          <option value="">Select Country</option>
+                          {COUNTRIES.map((country) => (
+                            <option key={country.value} value={country.value}>
+                              {country.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">Province / State</label>
+                        <select
+                          value={formData.province_state}
+                          onChange={(e) => setFormData({ ...formData, province_state: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                          disabled={!formData.country}
+                        >
+                          <option value="">Select Province/State</option>
+                          {getStatesProvinces(formData.country).map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">Postal / ZIP Code</label>
+                        <input
+                          type="text"
+                          value={formData.postal_zip_code}
+                          onChange={(e) => setFormData({ ...formData, postal_zip_code: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Membership & Status */}
+                  <div className="pt-4 border-t border-gray-200 space-y-4">
+                    <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Membership & Status</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">Status</label>
+                        <select
+                          value={formData.status}
+                          onChange={(e) => setFormData({ ...formData, status: e.target.value as UserProfile['status'] })}
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="approved">Approved</option>
+                          <option value="rejected">Rejected</option>
+                          <option value="expired">Expired</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">Role</label>
+                        <select
+                          value={formData.role}
+                          onChange={(e) => setFormData({ ...formData, role: e.target.value as 'member' | 'admin' })}
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                        >
+                          <option value="member">Member</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">Membership Level</label>
+                        <select
+                          value={formData.membership_level}
+                          onChange={(e) => setFormData({ ...formData, membership_level: e.target.value as MembershipLevel })}
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                        >
+                          <option value="Full">Full</option>
+                          <option value="Student">Student</option>
+                          <option value="Associate">Associate</option>
+                          <option value="Corporate">Corporate</option>
+                          <option value="Honorary">Honorary</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">Membership Expires</label>
+                        <input
+                          type="date"
+                          value={formData.membership_expires_at}
+                          onChange={(e) => setFormData({ ...formData, membership_expires_at: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                          style={{ position: 'relative', zIndex: 1 }}
+                        />
+                      </div>
+                    </div>
+                    {formData.membership_level === 'Student' && (
+                      <div className="pt-2 border-t border-gray-200 space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Flight school / club</label>
+                          <input
+                            type="text"
+                            value={formData.flight_school}
+                            onChange={(e) => setFormData({ ...formData, flight_school: e.target.value })}
+                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                            placeholder="e.g., Island Air, Freelance…"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Instructor name</label>
+                          <input
+                            type="text"
+                            value={formData.instructor_name}
+                            onChange={(e) => setFormData({ ...formData, instructor_name: e.target.value })}
+                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                            placeholder="e.g., Jane Smith"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* COPA Membership */}
+                  <div className="pt-4 border-t border-gray-200 space-y-4">
+                    <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">COPA Membership</h4>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">Are you a COPA Member?</label>
+                      <div className="flex gap-6">
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name="is_copa_member"
+                            value="yes"
+                            checked={formData.is_copa_member === 'yes'}
+                            onChange={(e) => setFormData({ ...formData, is_copa_member: e.target.value })}
+                            className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
+                          />
+                          <span className="text-sm text-gray-700">Yes</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name="is_copa_member"
+                            value="no"
+                            checked={formData.is_copa_member === 'no'}
+                            onChange={(e) => setFormData({ ...formData, is_copa_member: e.target.value, join_copa_flight_32: '', copa_membership_number: '' })}
+                            className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
+                          />
+                          <span className="text-sm text-gray-700">No</span>
+                        </label>
+                      </div>
+                    </div>
+                    {formData.is_copa_member === 'yes' && (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">Would you like to join COPA Flight 32?</label>
+                          <div className="flex gap-6">
+                            <label className="flex items-center">
+                              <input
+                                type="radio"
+                                name="join_copa_flight_32"
+                                value="yes"
+                                checked={formData.join_copa_flight_32 === 'yes'}
+                                onChange={(e) => setFormData({ ...formData, join_copa_flight_32: e.target.value })}
+                                className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
+                              />
+                              <span className="text-sm text-gray-700">Yes</span>
+                            </label>
+                            <label className="flex items-center">
+                              <input
+                                type="radio"
+                                name="join_copa_flight_32"
+                                value="no"
+                                checked={formData.join_copa_flight_32 === 'no'}
+                                onChange={(e) => setFormData({ ...formData, join_copa_flight_32: e.target.value, copa_membership_number: '' })}
+                                className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
+                              />
+                              <span className="text-sm text-gray-700">No</span>
+                            </label>
+                          </div>
+                        </div>
+                        {formData.join_copa_flight_32 === 'yes' && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-900 mb-1">COPA Membership Number</label>
+                            <input
+                              type="text"
+                              value={formData.copa_membership_number}
+                              onChange={(e) => setFormData({ ...formData, copa_membership_number: e.target.value })}
+                              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                              placeholder="Enter COPA membership number"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Aviation Information */}
+                  <div className="pt-4 border-t border-gray-200 space-y-4">
+                    <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Aviation Information</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">Pilot License Type</label>
+                        <select
+                          value={formData.pilot_license_type}
+                          onChange={(e) => setFormData({ ...formData, pilot_license_type: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                        >
+                          <option value="">Select...</option>
+                          <option value="student">Student Pilot</option>
+                          <option value="private">Private Pilot</option>
+                          <option value="commercial">Commercial Pilot</option>
+                          <option value="atp">Airline Transport Pilot</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">Aircraft Type</label>
+                        <input
+                          type="text"
+                          value={formData.aircraft_type}
+                          onChange={(e) => setFormData({ ...formData, aircraft_type: e.target.value })}
+                          placeholder="e.g., Cessna 172, Piper Cherokee"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">Call Sign</label>
+                        <input
+                          type="text"
+                          value={formData.call_sign}
+                          onChange={(e) => setFormData({ ...formData, call_sign: e.target.value })}
+                          placeholder="e.g., C-GABC"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">How Often Fly from YTZ</label>
+                        <select
+                          value={formData.how_often_fly_from_ytz}
+                          onChange={(e) => setFormData({ ...formData, how_often_fly_from_ytz: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                        >
+                          <option value="">Select...</option>
+                          <option value="daily">Daily</option>
+                          <option value="weekly">Weekly</option>
+                          <option value="monthly">Monthly</option>
+                          <option value="occasionally">Occasionally</option>
+                          <option value="rarely">Rarely</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Save Button */}
+                  <div className="pt-4 border-t border-gray-200">
+                    <button
+                      onClick={() => onSave(member, formData)}
+                      className="px-4 py-2 bg-[#0d1e26] text-white rounded-md hover:bg-[#0a171c] text-sm font-medium transition-colors"
+                    >
+                      Save Changes
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -349,100 +769,181 @@ export default function MemberDetailModal({
                 </div>
               ) : activityData ? (
                 <>
-                  {/* Statistics */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                      <div className="text-3xl font-bold text-blue-900">{activityData.stats.threads_created}</div>
-                      <div className="text-sm font-medium text-blue-700 mt-1">Threads</div>
-                    </div>
-                    <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                      <div className="text-3xl font-bold text-green-900">{activityData.stats.comments_made}</div>
-                      <div className="text-sm font-medium text-green-700 mt-1">Comments</div>
-                    </div>
-                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                      <div className="text-3xl font-bold text-purple-900">{activityData.stats.reactions_given}</div>
-                      <div className="text-sm font-medium text-purple-700 mt-1">Reactions</div>
-                    </div>
-                    <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                      <div className="text-3xl font-bold text-yellow-900">{activityData.stats.events_created}</div>
-                      <div className="text-sm font-medium text-yellow-700 mt-1">Events</div>
+                  {/* Chronological Activity Log */}
+                  <div>
+                    <div className="space-y-0 border-t border-gray-200">
+                      {(() => {
+                        const formatDate = (dateString: string) => {
+                          const date = new Date(dateString)
+                          return date.toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit'
+                          })
+                        }
+
+                        // Combine all activities into a single array
+                        const allActivities: Array<{
+                          type: 'thread' | 'comment' | 'reaction' | 'event'
+                          id: string
+                          title?: string
+                          content?: string
+                          created_at: string
+                          link?: string
+                        }> = []
+
+                        // Add threads
+                        activityData.threads.forEach(thread => {
+                          allActivities.push({
+                            type: 'thread',
+                            id: thread.id,
+                            title: thread.title,
+                            created_at: thread.created_at,
+                            link: `/discussions/${thread.id}`
+                          })
+                        })
+
+                        // Add comments
+                        activityData.comments.forEach(comment => {
+                          allActivities.push({
+                            type: 'comment',
+                            id: comment.id,
+                            content: comment.content,
+                            created_at: comment.created_at,
+                            link: `/discussions/${comment.thread?.id || '#'}`
+                          })
+                        })
+
+                        // Add reactions
+                        activityData.reactions.forEach(reaction => {
+                          allActivities.push({
+                            type: 'reaction',
+                            id: reaction.id,
+                            title: reaction.thread?.title || reaction.comment?.content?.substring(0, 50) || 'Unknown',
+                            created_at: reaction.created_at,
+                            link: reaction.thread ? `/discussions/${reaction.thread.id}` : undefined
+                          })
+                        })
+
+                        // Add events
+                        activityData.events.forEach(event => {
+                          allActivities.push({
+                            type: 'event',
+                            id: event.id,
+                            title: event.title,
+                            created_at: event.created_at,
+                            link: `/events`
+                          })
+                        })
+
+                        // Sort by created_at descending (most recent first)
+                        allActivities.sort((a, b) => 
+                          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                        )
+
+                        return allActivities.map((activity) => {
+                          const content = activity.title || activity.content || ''
+                          
+                          const getActivityLabel = () => {
+                            switch (activity.type) {
+                              case 'thread':
+                                return 'Thread'
+                              case 'comment':
+                                return 'Comment'
+                              case 'reaction':
+                                return 'Reaction'
+                              case 'event':
+                                return 'Event'
+                            }
+                          }
+
+                          const ActivityIcon = () => {
+                            switch (activity.type) {
+                              case 'thread':
+                                return (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                  </svg>
+                                )
+                              case 'comment':
+                                return (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                                  </svg>
+                                )
+                              case 'reaction':
+                                return (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                                  </svg>
+                                )
+                              case 'event':
+                                return (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                )
+                            }
+                          }
+
+                          const ActivityContent = activity.link ? (
+                            <Link
+                              href={activity.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block py-3 border-b border-gray-200 last:border-b-0 hover:bg-gray-50 transition-colors"
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="mt-0.5 text-gray-400">
+                                  <ActivityIcon />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-xs font-medium text-gray-500 uppercase">
+                                      {getActivityLabel()}
+                                    </span>
+                                    <span className="text-xs text-gray-400">•</span>
+                                    <span className="text-xs text-gray-500">
+                                      {formatDate(activity.created_at)}
+                                    </span>
+                                  </div>
+                                  <div className="text-sm text-gray-900">
+                                    {content}
+                                  </div>
+                                </div>
+                              </div>
+                            </Link>
+                          ) : (
+                            <div className="py-3 border-b border-gray-200 last:border-b-0">
+                              <div className="flex items-start gap-3">
+                                <div className="mt-0.5 text-gray-400">
+                                  <ActivityIcon />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-xs font-medium text-gray-500 uppercase">
+                                      {getActivityLabel()}
+                                    </span>
+                                    <span className="text-xs text-gray-400">•</span>
+                                    <span className="text-xs text-gray-500">
+                                      {formatDate(activity.created_at)}
+                                    </span>
+                                  </div>
+                                  <div className="text-sm text-gray-900">
+                                    {content}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )
+
+                          return <div key={`${activity.type}-${activity.id}`}>{ActivityContent}</div>
+                        })
+                      })()}
                     </div>
                   </div>
-
-                  {/* Recent Threads */}
-                  {activityData.threads.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                        </svg>
-                        Recent Threads
-                      </h3>
-                      <div className="space-y-2">
-                        {activityData.threads.slice(0, 5).map((thread) => (
-                          <Link
-                            key={thread.id}
-                            href={`/discussions/${thread.id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block bg-white border border-gray-200 rounded-lg p-3 hover:border-[#0d1e26] hover:shadow-sm transition-all group"
-                          >
-                            <div className="font-medium text-sm text-gray-900 group-hover:text-[#0d1e26] line-clamp-2">
-                              {thread.title}
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-gray-500 mt-2">
-                              <span>{new Date(thread.created_at).toLocaleDateString()}</span>
-                              <span>•</span>
-                              <span className="flex items-center gap-1">
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                                </svg>
-                                {thread.comment_count || 0} comments
-                              </span>
-                              <svg className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                              </svg>
-                            </div>
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Recent Comments */}
-                  {activityData.comments.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                        </svg>
-                        Recent Comments
-                      </h3>
-                      <div className="space-y-2">
-                        {activityData.comments.slice(0, 5).map((comment) => (
-                          <Link
-                            key={comment.id}
-                            href={`/discussions/${comment.thread?.id || '#'}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block bg-white border border-gray-200 rounded-lg p-3 hover:border-[#0d1e26] hover:shadow-sm transition-all group"
-                          >
-                            <div className="text-sm text-gray-900 line-clamp-2 group-hover:text-[#0d1e26]">
-                              {comment.content}
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-gray-500 mt-2">
-                              <span>On: {comment.thread?.title || 'Unknown thread'}</span>
-                              <span>•</span>
-                              <span>{new Date(comment.created_at).toLocaleDateString()}</span>
-                              <svg className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                              </svg>
-                            </div>
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </>
               ) : (
                 <div className="text-center py-8">
@@ -480,36 +981,6 @@ export default function MemberDetailModal({
                   </button>
                 </div>
 
-                {/* Current Status */}
-                <div className="mb-3 p-3 bg-gray-50 rounded-md text-xs">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <span className="text-gray-500">Status:</span>{' '}
-                      <span className="font-medium text-gray-900">{member.status}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Expires:</span>{' '}
-                      <span className="font-medium text-gray-900">
-                        {member.membership_expires_at
-                          ? new Date(member.membership_expires_at).toLocaleDateString()
-                          : 'Not set'}
-                      </span>
-                    </div>
-                    {member.stripe_subscription_id && (
-                      <div className="col-span-2">
-                        <span className="text-gray-500">Stripe Subscription:</span>{' '}
-                        <span className="font-medium text-gray-900">Active</span>
-                      </div>
-                    )}
-                    {member.paypal_subscription_id && (
-                      <div className="col-span-2">
-                        <span className="text-gray-500">PayPal Subscription:</span>{' '}
-                        <span className="font-medium text-gray-900">Active</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
                 {/* Payment Form */}
                 {showPaymentForm && (
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-md space-y-3" style={{ overflow: 'visible' }}>
@@ -531,6 +1002,39 @@ export default function MemberDetailModal({
                         <option value="paypal">PayPal</option>
                         <option value="wire">Wire Transfer</option>
                       </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Amount (CAD)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={paymentFormData.amount}
+                        onChange={(e) =>
+                          setPaymentFormData({
+                            ...paymentFormData,
+                            amount: e.target.value,
+                          })
+                        }
+                        placeholder={
+                          member.membership_level === 'Corporate'
+                            ? '120'
+                            : member.membership_level === 'Full'
+                            ? '45'
+                            : ''
+                        }
+                        className="w-full px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        {member.membership_level === 'Corporate'
+                          ? 'Default: $120'
+                          : member.membership_level === 'Full'
+                          ? 'Default: $45'
+                          : 'Enter payment amount'}
+                      </p>
                     </div>
 
                     <div className="relative" style={{ zIndex: 9999, isolation: 'isolate' }}>
@@ -605,6 +1109,7 @@ export default function MemberDetailModal({
                             body: JSON.stringify({
                               userId: member.id,
                               paymentMethod: paymentFormData.paymentMethod,
+                              amount: paymentFormData.amount ? parseFloat(paymentFormData.amount) : undefined,
                               membershipExpiresAt: paymentFormData.membershipExpiresAt
                                 ? new Date(paymentFormData.membershipExpiresAt).toISOString()
                                 : undefined,
@@ -619,6 +1124,7 @@ export default function MemberDetailModal({
                             setShowPaymentForm(false)
                             setPaymentFormData({
                               paymentMethod: 'cash',
+                              amount: '',
                               membershipExpiresAt: '',
                               notes: '',
                               clearStripeSubscription: true,

@@ -98,9 +98,9 @@ function ChangePasswordContent() {
       })
       setWasInvited(false) // No longer needs to change password
       
-      // Redirect to dashboard after successful password change
+      // Redirect to membership after successful password change
       setTimeout(() => {
-        router.push('/dashboard')
+        router.push('/membership')
       }, 2000)
     } catch (err: any) {
       setPasswordError(err.message || 'Failed to change password')
@@ -156,7 +156,7 @@ function ChangePasswordContent() {
             )}
             {passwordSuccess && (
               <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md">
-                Password changed successfully! Your account status has been updated. Redirecting to dashboard...
+                Password changed successfully! Your account status has been updated. Redirecting to membership...
               </div>
             )}
             <form onSubmit={handlePasswordSubmit} className="space-y-6">

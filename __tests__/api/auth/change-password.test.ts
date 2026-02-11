@@ -39,7 +39,7 @@ describe('/api/auth/change-password - Complex Flow', () => {
       },
     }
 
-    let callCount = 0
+    let queryCallCount = 0
     const mockAdminClient = {
       auth: {
         admin: {
@@ -53,30 +53,38 @@ describe('/api/auth/change-password - Complex Flow', () => {
           }),
         },
       },
-      from: jest.fn(() => {
-        callCount++
+      from: jest.fn((table) => {
         const queryBuilder = {
           select: jest.fn().mockReturnThis(),
           update: jest.fn().mockReturnThis(),
           eq: jest.fn().mockReturnThis(),
+          limit: jest.fn().mockReturnThis(),
           single: jest.fn(),
         }
         
-        // First call chain: select('*').eq().single() - get current profile (status: pending)
-        // Second call chain: update().eq().select().single() - get updated profile (status: approved)
-        queryBuilder.single.mockImplementation(() => {
-          if (callCount === 1) {
-            // First query: get current profile
-            return Promise.resolve({
-              data: { status: 'pending', id: 'user-123', email: 'invited@example.com', full_name: 'Test User' },
-            })
-          } else {
-            // Second query: get updated profile after update
-            return Promise.resolve({
-              data: { status: 'approved', id: 'user-123', email: 'invited@example.com', full_name: 'Test User' },
-            })
-          }
-        })
+        if (table === 'payments') {
+          // Payments query: select('id').eq().limit(1)
+          queryBuilder.limit.mockResolvedValue({
+            data: [], // No payments
+          })
+        } else if (table === 'user_profiles') {
+          queryCallCount++
+          // First call chain: select('*').eq().single() - get current profile (status: pending)
+          // Second call chain: update().eq().select().single() - get updated profile (status: approved)
+          queryBuilder.single.mockImplementation(() => {
+            if (queryCallCount === 1) {
+              // First query: get current profile
+              return Promise.resolve({
+                data: { status: 'pending', id: 'user-123', email: 'invited@example.com', full_name: 'Test User' },
+              })
+            } else {
+              // Second query: get updated profile after update
+              return Promise.resolve({
+                data: { status: 'approved', id: 'user-123', email: 'invited@example.com', full_name: 'Test User' },
+              })
+            }
+          })
+        }
         
         return queryBuilder
       }),

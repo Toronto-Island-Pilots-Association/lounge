@@ -7,7 +7,7 @@ export default async function PaymentsPage() {
   try {
     await requireAdmin()
   } catch {
-    redirect('/dashboard')
+    redirect('/membership')
   }
 
   return (

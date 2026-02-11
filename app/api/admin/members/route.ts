@@ -48,8 +48,45 @@ export async function PATCH(request: Request) {
       .eq('id', id)
       .single()
 
+    if (!currentMember) {
+      return NextResponse.json({ error: 'Member not found' }, { status: 404 })
+    }
+
+    // Check if status is being changed to 'approved' (from any status)
+    const isApproving = updates.status === 'approved' && currentMember.status !== 'approved'
+
+    // If approving a member who hasn't paid yet, set Associate level and Oct 1st expiration
+    if (isApproving) {
+      // Check if member has any payments
+      const { data: payments } = await supabase
+        .from('payments')
+        .select('id')
+        .eq('user_id', id)
+        .limit(1)
+
+      // Check if member has active Stripe or PayPal subscription
+      const hasActiveSubscription = currentMember.stripe_subscription_id || currentMember.paypal_subscription_id
+      const hasPayments = payments && payments.length > 0
+
+      // If no payments and no active subscription, set to Associate with Oct 1st expiration
+      if (!hasPayments && !hasActiveSubscription) {
+        // Calculate October 1st - current year if before Oct 1, next year if after Oct 1
+        const now = new Date()
+        const currentYear = now.getFullYear()
+        const oct1ThisYear = new Date(currentYear, 9, 1) // Month is 0-indexed, so 9 = October
+        const oct1NextYear = new Date(currentYear + 1, 9, 1)
+        
+        // Use this year's Oct 1 if we're before it, otherwise next year's
+        const expirationDate = now < oct1ThisYear ? oct1ThisYear : oct1NextYear
+
+        // Add to updates (will override if already set)
+        updates.membership_level = 'Associate'
+        updates.membership_expires_at = expirationDate.toISOString()
+      }
+    }
+
     // Update the member (database trigger will assign member number if status changes to approved)
-    const { data, error } = await supabase
+    const { data: updatedMember, error } = await supabase
       .from('user_profiles')
       .update(updates)
       .eq('id', id)
@@ -60,25 +97,23 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    // Check if status changed to 'approved' (from any status)
-    const statusChangedToApproved = updates.status === 'approved' && 
-                                     currentMember && 
-                                     currentMember.status !== 'approved'
+    // Check if status actually changed to 'approved' (verify after update)
+    const statusChangedToApproved = currentMember.status !== 'approved' && updatedMember.status === 'approved'
 
     if (statusChangedToApproved) {
       // Send approval email
-      const memberName = data.full_name || data.first_name || null
-      sendMemberApprovalEmail(data.email, memberName).catch(err => {
+      const memberName = updatedMember.full_name || updatedMember.first_name || null
+      sendMemberApprovalEmail(updatedMember.email, memberName).catch(err => {
         console.error('Failed to send approval email:', err)
       })
 
-      // Append to Google Sheets when status changes from pending to approved
-      appendMemberToSheet(data).catch(err => {
+      // Append to Google Sheets when status changes to approved
+      appendMemberToSheet(updatedMember).catch(err => {
         console.error('Failed to append member to Google Sheet after approval:', err)
       })
     }
 
-    return NextResponse.json({ member: data })
+    return NextResponse.json({ member: updatedMember })
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || 'An error occurred' },

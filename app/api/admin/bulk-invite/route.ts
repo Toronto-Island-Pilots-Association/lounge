@@ -81,6 +81,7 @@ export async function POST(request: Request) {
     
     const formData = await request.formData()
     const file = formData.get('file') as File
+    const membershipLevel = (formData.get('membership_level') as string) || 'Associate'
     
     if (!file) {
       return NextResponse.json(
@@ -164,7 +165,7 @@ export async function POST(request: Request) {
             first_name: user.firstName || null,
             last_name: user.lastName || null,
             role: 'member',
-            membership_level: 'Full',
+            membership_level: membershipLevel,
             invited_by_admin: true,
           }
         })
@@ -215,7 +216,7 @@ export async function POST(request: Request) {
               first_name: user.firstName || null,
               last_name: user.lastName || null,
               role: 'member',
-              membership_level: 'Full',
+              membership_level: membershipLevel,
               status: 'pending', // Will be updated to 'approved' when they log in
             })
 
