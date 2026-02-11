@@ -36,6 +36,11 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Member ID is required' }, { status: 400 })
     }
 
+    // Convert empty strings to null for timestamp fields (PostgreSQL doesn't accept empty strings for timestamps)
+    if (updates.membership_expires_at === '') {
+      updates.membership_expires_at = null
+    }
+
     // Allow status changes from admin edit form
     // Status can be changed along with other fields when updating from the admin interface
 
