@@ -25,6 +25,8 @@ export async function POST(request: Request) {
       copaMembershipNumber,
       // Statement of Interest
       statementOfInterest,
+      // Interests
+      interests,
       // Aviation Information
       pilotLicenseType,
       aircraftType,
@@ -53,6 +55,18 @@ export async function POST(request: Request) {
     const toNullIfEmpty = (value: string | undefined | null): string | null => {
       return value && value.trim() ? value.trim() : null
     }
+
+    // Map membership class to membership level
+    const getMembershipLevel = (classValue: string | undefined | null): 'Full' | 'Student' | 'Associate' | 'Corporate' | 'Honorary' => {
+      if (!classValue) return 'Full'
+      const normalized = classValue.toLowerCase().trim()
+      if (normalized === 'student') return 'Student'
+      if (normalized === 'associate') return 'Associate'
+      if (normalized === 'corporate') return 'Corporate'
+      return 'Full' // Default to Full for 'full' or any other value
+    }
+
+    const membershipLevel = getMembershipLevel(membershipClass)
 
     // Disable Supabase's default confirmation email by setting emailRedirectTo
     // We'll handle confirmation in our welcome email instead
@@ -83,6 +97,10 @@ export async function POST(request: Request) {
           statementOfInterest: studentNotes 
             ? `${toNullIfEmpty(statementOfInterest) || ''}\n\nStudent Information:\n${studentNotes}`.trim()
             : toNullIfEmpty(statementOfInterest),
+          // Interests (store as JSON array string)
+          interests: interests && Array.isArray(interests) && interests.length > 0 
+            ? JSON.stringify(interests) 
+            : null,
           // Aviation Information
           pilot_license_type: toNullIfEmpty(pilotLicenseType),
           aircraft_type: toNullIfEmpty(aircraftType),
@@ -93,7 +111,7 @@ export async function POST(request: Request) {
           flight_school: isStudentPilot ? toNullIfEmpty(flightSchool) : null,
           instructor_name: isStudentPilot ? toNullIfEmpty(instructorName) : null,
           role: 'member',
-          membership_level: 'Full',
+          membership_level: membershipLevel,
         },
       },
     })
@@ -176,7 +194,7 @@ export async function POST(request: Request) {
           console.warn('Profile not created by trigger, attempting manual creation')
           try {
             // Ensure membership_level and role match the database constraints exactly
-            const membershipLevel: 'Full' | 'Student' | 'Associate' | 'Corporate' | 'Honorary' = 'Full'
+            const membershipLevel = getMembershipLevel(membershipClass)
             const userRole: 'member' | 'admin' = 'member'
             
             const { data: createdProfile, error: createError } = await adminClient
@@ -204,6 +222,10 @@ export async function POST(request: Request) {
                 statement_of_interest: studentNotes 
                   ? `${toNullIfEmpty(statementOfInterest) || ''}\n\nStudent Information:\n${studentNotes}`.trim()
                   : toNullIfEmpty(statementOfInterest),
+                // Interests (store as JSON array string)
+                interests: interests && Array.isArray(interests) && interests.length > 0 
+                  ? JSON.stringify(interests) 
+                  : null,
                 // Aviation Information
                 pilot_license_type: toNullIfEmpty(pilotLicenseType),
                 aircraft_type: toNullIfEmpty(aircraftType),

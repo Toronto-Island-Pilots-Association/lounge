@@ -117,7 +117,6 @@ export default function MembershipCard({ user, isPending, isRejected, isPaid, is
 
           {/* Middle Section - Member Name */}
           <div className="my-[clamp(0.75rem,3vw,1rem)] min-w-0 flex-1 flex flex-col justify-center">
-            <div className="text-[clamp(0.75rem,1.5vw,0.625rem)] uppercase tracking-widest text-white/60 mb-[clamp(0.25rem,1vw,0.5rem)]">Member</div>
             <div 
               className="font-bold break-words overflow-hidden leading-[1.1]" 
               style={{ 
@@ -161,7 +160,8 @@ export default function MembershipCard({ user, isPending, isRejected, isPaid, is
                     </div>
                   )}
                 </div>
-                {user.profile.member_number ? (
+                {/* Only show Number field if not Associate and member_number exists */}
+                {user.profile.membership_level !== 'Associate' && user.profile.member_number && (
                   <div className="min-w-0 flex-1">
                     <div className="text-[clamp(0.625rem,1.2vw,0.5rem)] uppercase tracking-widest text-white/60 mb-0.5">Number</div>
                     <div 
@@ -171,20 +171,10 @@ export default function MembershipCard({ user, isPending, isRejected, isPaid, is
                       {user.profile.member_number}
                     </div>
                   </div>
-                ) : (
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[clamp(0.625rem,1.2vw,0.5rem)] uppercase tracking-widest text-white/60 mb-0.5">Number</div>
-                    <div 
-                      className="font-semibold uppercase tracking-wide text-white font-mono"
-                      style={{ fontSize: 'clamp(0.875rem, 2vw, 0.75rem)' }}
-                    >
-                      —
-                    </div>
-                  </div>
                 )}
               </div>
-              {/* Member Since - Below Level and Number */}
-              {user.profile.created_at && (
+              {/* Member Since - Below Level and Number - Hidden for Associate members */}
+              {user.profile.created_at && user.profile.membership_level !== 'Associate' && (
                 <div 
                   className="text-white/50 uppercase tracking-widest mt-[clamp(0.125rem,0.5vw,0.25rem)] break-words leading-tight"
                   style={{ fontSize: 'clamp(0.625rem, 1vw, 0.4375rem)' }}

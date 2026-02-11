@@ -39,6 +39,9 @@ export default function CommentForm({ threadId }: { threadId: string }) {
     }
   }
 
+  const [showGuidelines, setShowGuidelines] = useState(false)
+  const [isClicked, setIsClicked] = useState(false)
+
   return (
     <form onSubmit={handleSubmit}>
       {error && (
@@ -47,19 +50,7 @@ export default function CommentForm({ threadId }: { threadId: string }) {
         </div>
       )}
 
-      {/* Community Guidelines Disclaimer */}
-      <div className="mb-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-md p-3">
-        <div className="flex items-start gap-2">
-          <svg className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <p className="text-xs text-gray-700 leading-relaxed">
-            <strong className="text-gray-900">Community Guidelines:</strong> Keep it respectful, practical, and aviation-focused. Posts may be moved or closed if needed.
-          </p>
-        </div>
-      </div>
-
-      <div className="mb-4">
+      <div className="mb-2">
         <textarea
           id="comment"
           value={content}
@@ -75,6 +66,36 @@ export default function CommentForm({ threadId }: { threadId: string }) {
           }`}
           placeholder="Add a comment..."
         />
+      </div>
+
+      {/* Community Guidelines - Subtle, grayed out, shows on hover/click */}
+      <div className="relative mb-4">
+        <button
+          type="button"
+          onClick={() => {
+            setIsClicked(!isClicked)
+            setShowGuidelines(!isClicked)
+          }}
+          onMouseEnter={() => !isClicked && setShowGuidelines(true)}
+          onMouseLeave={() => !isClicked && setShowGuidelines(false)}
+          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>Community Guidelines</span>
+        </button>
+        
+        {showGuidelines && (
+          <div className="absolute bottom-full left-0 mb-2 w-64 bg-gray-900 text-white text-xs rounded-lg p-3 shadow-lg z-10">
+            <p className="leading-relaxed">
+              <strong>Community Guidelines:</strong> Keep it respectful, practical, and aviation-focused. Posts may be moved or closed if needed.
+            </p>
+            <div className="absolute bottom-0 left-4 transform translate-y-full">
+              <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+            </div>
+          </div>
+        )}
       </div>
 
       {(isFocused || content) && (

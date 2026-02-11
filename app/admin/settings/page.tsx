@@ -6,7 +6,7 @@ export default async function SettingsPage() {
   try {
     await requireAdmin()
   } catch {
-    redirect('/dashboard')
+    redirect('/membership')
   }
 
   return (

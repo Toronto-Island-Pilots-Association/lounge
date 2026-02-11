@@ -7,7 +7,7 @@ export default async function ResourcesPage() {
   try {
     await requireAdmin()
   } catch {
-    redirect('/dashboard')
+    redirect('/membership')
   }
 
   return (

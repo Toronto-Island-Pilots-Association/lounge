@@ -24,22 +24,10 @@ export async function GET(request: Request) {
 
     const supabase = await createClient()
 
+    // First, get payments
     let query = supabase
       .from('payments')
-      .select(`
-        *,
-        user:user_profiles!payments_user_id_fkey (
-          id,
-          email,
-          full_name,
-          member_number
-        ),
-        recorded_by_user:user_profiles!payments_recorded_by_fkey (
-          id,
-          email,
-          full_name
-        )
-      `)
+      .select('*')
       .order('payment_date', { ascending: false })
       .range(offset, offset + limit - 1)
 
@@ -60,6 +48,35 @@ export async function GET(request: Request) {
       )
     }
 
+    // Enrich payments with user profile data
+    const enrichedPayments = await Promise.all(
+      (payments || []).map(async (payment) => {
+        // Get user profile for payment.user_id
+        const { data: userProfile } = await supabase
+          .from('user_profiles')
+          .select('id, email, full_name, member_number')
+          .eq('id', payment.user_id)
+          .single()
+
+        // Get user profile for payment.recorded_by (if exists)
+        let recordedByUser = null
+        if (payment.recorded_by) {
+          const { data: recordedByProfile } = await supabase
+            .from('user_profiles')
+            .select('id, email, full_name')
+            .eq('id', payment.recorded_by)
+            .single()
+          recordedByUser = recordedByProfile
+        }
+
+        return {
+          ...payment,
+          user: userProfile || null,
+          recorded_by_user: recordedByUser || null,
+        }
+      })
+    )
+
     // Get total count for pagination
     let countQuery = supabase
       .from('payments')
@@ -76,7 +93,7 @@ export async function GET(request: Request) {
     const { count } = await countQuery
 
     return NextResponse.json({
-      payments: payments || [],
+      payments: enrichedPayments || [],
       pagination: {
         total: count || 0,
         limit,

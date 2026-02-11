@@ -177,16 +177,9 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
               />
             </div>
           ) : null}
-          <div className="flex flex-col gap-3 sm:gap-4 mb-4">
-            <div className="flex-1 min-w-0 pr-10 sm:pr-12">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 break-words">{threadWithAuthor.title}</h1>
-              <span className="inline-block px-3 py-1 text-xs sm:text-sm font-medium bg-[#0d1e26]/10 text-[#0d1e26] rounded-md">
-                {CATEGORY_LABELS[thread.category as DiscussionCategory]}
-              </span>
-            </div>
-          </div>
           
-          <div className="flex items-center gap-3 mb-6">
+          {/* Profile Image, Name, and Date at Top */}
+          <div className="flex items-center gap-3 mb-4 pr-10 sm:pr-12">
             {threadAuthor.profile_picture_url ? (
               <div className="relative w-10 h-10 rounded-full overflow-hidden border border-gray-300">
                 <Image
@@ -222,6 +215,12 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
             </div>
           </div>
 
+          {/* Title */}
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 break-words pr-10 sm:pr-12">
+            {threadWithAuthor.title}
+          </h1>
+
+          {/* Description/Content */}
           <div className="prose max-w-none text-gray-700 whitespace-pre-wrap mb-4">
             <LinkifiedText text={threadWithAuthor.content} />
           </div>
@@ -231,8 +230,14 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
             <ThreadImages imageUrls={thread.image_urls} />
           )}
 
-          {/* Thread Reactions */}
-          <div className="mt-4 pt-4 border-t border-gray-200">
+          {/* Thread Reactions and Comments */}
+          <div className="mt-4 pt-4 border-t border-gray-200 flex items-center gap-3">
+            <div className="flex items-center gap-1 px-2 py-1 text-sm text-gray-600">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              <span>{commentsWithReactions.length}</span>
+            </div>
             <ReactionButton
               targetId={id}
               targetType="thread"
@@ -244,10 +249,6 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
 
         {/* Comments Section */}
         <div className="bg-white shadow rounded-lg p-4 sm:p-6">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">
-            {commentsWithAuthors.length} {commentsWithAuthors.length === 1 ? 'Comment' : 'Comments'}
-          </h2>
-
           {/* Comment Form */}
           <div className="mb-6 sm:mb-8">
             <CommentForm threadId={id} />

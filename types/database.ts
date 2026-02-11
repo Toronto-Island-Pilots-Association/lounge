@@ -28,6 +28,8 @@ export interface UserProfile {
   copa_membership_number: string | null
   // Statement of Interest
   statement_of_interest: string | null
+  // Interests
+  interests: string | null
   // Aviation Information
   pilot_license_type: string | null
   aircraft_type: string | null

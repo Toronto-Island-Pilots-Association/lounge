@@ -27,6 +27,8 @@ function BecomeMemberForm() {
     copaMembershipNumber: '',
     // Statement of Interest
     statementOfInterest: '',
+    // Interests (array)
+    interests: [] as string[],
     // Acknowledgements
     agreedToBylaws: false,
     agreedToGovernancePolicy: false,
@@ -79,9 +81,32 @@ function BecomeMemberForm() {
     }
   }
 
+  const handleInterestChange = (interestValue: string, checked: boolean) => {
+    setFormData(prev => {
+      const currentInterests = prev.interests || []
+      if (checked) {
+        // Add interest if not already in array
+        if (!currentInterests.includes(interestValue)) {
+          return { ...prev, interests: [...currentInterests, interestValue] }
+        }
+      } else {
+        // Remove interest from array
+        return { ...prev, interests: currentInterests.filter(i => i !== interestValue) }
+      }
+      return prev
+    })
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    
+    // Validate interests
+    if (!Array.isArray(formData.interests) || formData.interests.length === 0) {
+      setError('Please select at least one interest')
+      return
+    }
+    
     setLoading(true)
 
     try {
@@ -111,6 +136,8 @@ function BecomeMemberForm() {
           copaMembershipNumber: formData.copaMembershipNumber,
           // Statement of Interest
           statementOfInterest: formData.statementOfInterest,
+          // Interests
+          interests: formData.interests,
           // Acknowledgements
           agreedToBylaws: formData.agreedToBylaws,
           agreedToGovernancePolicy: formData.agreedToGovernancePolicy,
@@ -121,9 +148,9 @@ function BecomeMemberForm() {
           callSign: formData.callSign,
           howOftenFlyFromYTZ: formData.howOftenFlyFromYTZ,
           howDidYouHear: formData.howDidYouHear,
-          isStudentPilot: formData.pilotLicenseType === 'student' || formData.membershipClass === 'student-associate',
-          flightSchool: (formData.pilotLicenseType === 'student' || formData.membershipClass === 'student-associate') ? formData.flightSchool : '',
-          instructorName: (formData.pilotLicenseType === 'student' || formData.membershipClass === 'student-associate') ? formData.instructorName : '',
+          isStudentPilot: formData.pilotLicenseType === 'student' || formData.membershipClass === 'student',
+          flightSchool: (formData.pilotLicenseType === 'student' || formData.membershipClass === 'student') ? formData.flightSchool : '',
+          instructorName: (formData.pilotLicenseType === 'student' || formData.membershipClass === 'student') ? formData.instructorName : '',
           studentNotes: formData.studentNotes || '',
         }),
       })
@@ -154,6 +181,7 @@ function BecomeMemberForm() {
         joinCopaFlight32: '',
         copaMembershipNumber: '',
         statementOfInterest: '',
+        interests: [],
         agreedToBylaws: false,
         agreedToGovernancePolicy: false,
         understandsApprovalProcess: false,
@@ -427,7 +455,8 @@ function BecomeMemberForm() {
               >
                 <option value="">Select...</option>
                 <option value="full">Full</option>
-                <option value="student-associate">Student / Associate</option>
+                <option value="student">Student</option>
+                <option value="associate">Associate</option>
                 <option value="corporate">Corporate</option>
               </select>
             </div>
@@ -443,12 +472,12 @@ function BecomeMemberForm() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="pilotLicenseType" className="block text-sm font-medium text-gray-700 mb-1">
-                  Pilot License Type {formData.membershipClass === 'student-associate' && <span className="text-red-500">*</span>}
+                  Pilot License Type {formData.membershipClass === 'student' && <span className="text-red-500">*</span>}
                 </label>
                 <select
                   id="pilotLicenseType"
                   name="pilotLicenseType"
-                  required={formData.membershipClass === 'student-associate'}
+                  required={formData.membershipClass === 'student'}
                   className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
                   value={formData.pilotLicenseType}
                   onChange={handleChange}
@@ -491,12 +520,12 @@ function BecomeMemberForm() {
               </div>
               <div>
                 <label htmlFor="howOftenFlyFromYTZ" className="block text-sm font-medium text-gray-700 mb-1">
-                  How Often Do You Fly From YTZ? {formData.membershipClass === 'student-associate' && <span className="text-red-500">*</span>}
+                  How Often Do You Fly From YTZ? {formData.membershipClass === 'student' && <span className="text-red-500">*</span>}
                 </label>
                 <select
                   id="howOftenFlyFromYTZ"
                   name="howOftenFlyFromYTZ"
-                  required={formData.membershipClass === 'student-associate'}
+                  required={formData.membershipClass === 'student'}
                   className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
                   value={formData.howOftenFlyFromYTZ}
                   onChange={handleChange}
@@ -512,19 +541,19 @@ function BecomeMemberForm() {
             </div>
 
             {/* Student Pilot Fields - Show if student membership class OR student pilot license type */}
-            {(formData.membershipClass === 'student-associate' || formData.pilotLicenseType === 'student') && (
+            {(formData.membershipClass === 'student' || formData.pilotLicenseType === 'student') && (
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <h3 className="text-md font-semibold text-gray-900 mb-4">Student Pilot Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="flightSchool" className="block text-sm font-medium text-gray-700 mb-1">
-                      Flight School / Training Organization {formData.membershipClass === 'student-associate' && <span className="text-red-500">*</span>}
+                      Flight School / Training Organization {formData.membershipClass === 'student' && <span className="text-red-500">*</span>}
                     </label>
                     <input
                       type="text"
                       id="flightSchool"
                       name="flightSchool"
-                      required={formData.membershipClass === 'student-associate'}
+                      required={formData.membershipClass === 'student'}
                       className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
                       value={formData.flightSchool}
                       onChange={handleChange}
@@ -533,13 +562,13 @@ function BecomeMemberForm() {
                   </div>
                   <div>
                     <label htmlFor="instructorName" className="block text-sm font-medium text-gray-700 mb-1">
-                      Instructor Name {formData.membershipClass === 'student-associate' && <span className="text-red-500">*</span>}
+                      Instructor Name {formData.membershipClass === 'student' && <span className="text-red-500">*</span>}
                     </label>
                     <input
                       type="text"
                       id="instructorName"
                       name="instructorName"
-                      required={formData.membershipClass === 'student-associate'}
+                      required={formData.membershipClass === 'student'}
                       className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
                       value={formData.instructorName}
                       onChange={handleChange}
@@ -547,7 +576,7 @@ function BecomeMemberForm() {
                     />
                   </div>
                 </div>
-                {formData.membershipClass === 'student-associate' && (
+                {formData.membershipClass === 'student' && (
                   <div className="mt-4">
                     <label htmlFor="studentNotes" className="block text-sm font-medium text-gray-700 mb-1">
                       Additional Student Information (Optional)
@@ -649,6 +678,48 @@ function BecomeMemberForm() {
                     </div>
                   </div>
                 </div>
+              )}
+            </div>
+          </div>
+
+          {/* Interests */}
+          <div className="bg-gray-50 p-6 rounded-lg">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Interests</h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                What are your main interests? <span className="text-red-500">*</span>
+                <span className="text-xs text-gray-500 font-normal ml-2">(Select all that apply)</span>
+              </label>
+              <div className="space-y-2">
+                {[
+                  { value: 'flying', label: 'Flying' },
+                  { value: 'aircraft-ownership', label: 'Aircraft Ownership' },
+                  { value: 'training', label: 'Training & Education' },
+                  { value: 'safety', label: 'Safety & Proficiency' },
+                  { value: 'community', label: 'Community & Networking' },
+                  { value: 'events', label: 'Events & Social Activities' },
+                  { value: 'advocacy', label: 'Aviation Advocacy' },
+                  { value: 'island-operations', label: 'Island Operations / YTZ' },
+                  { value: 'aircraft-maintenance', label: 'Aircraft Maintenance' },
+                  { value: 'mentoring', label: 'Mentoring' },
+                  { value: 'hangar-storage', label: 'Hangar/Storage' },
+                  { value: 'other', label: 'Other' },
+                ].map((interest) => (
+                  <label key={interest.value} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="interests"
+                      value={interest.value}
+                      checked={Array.isArray(formData.interests) && formData.interests.includes(interest.value)}
+                      onChange={(e) => handleInterestChange(interest.value, e.target.checked)}
+                      className="h-4 w-4 text-[#0d1e26] focus:ring-[#0d1e26] border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">{interest.label}</span>
+                  </label>
+                ))}
+              </div>
+              {(!Array.isArray(formData.interests) || formData.interests.length === 0) && (
+                <p className="mt-2 text-xs text-red-600">Please select at least one interest</p>
               )}
             </div>
           </div>

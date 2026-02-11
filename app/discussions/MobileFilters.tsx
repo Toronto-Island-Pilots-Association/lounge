@@ -3,20 +3,8 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import { DiscussionCategory } from '@/types/database'
-import { CATEGORIES_WITH_ALL } from './constants'
+import { CATEGORY_LABELS, DISCUSSION_CATEGORIES, CLASSIFIED_CATEGORIES } from './constants'
 import CategoryIcon from './CategoryIcons'
-
-// Mobile-specific shortened labels for better fit on small screens
-const MOBILE_CATEGORY_LABELS: Record<DiscussionCategory, string> = {
-  aircraft_shares: 'Aircraft Shares',
-  instructor_availability: 'Instructors',
-  gear_for_sale: 'Gear',
-  flying_at_ytz: 'Flying at YTZ',
-  general_aviation: 'General Aviation',
-  training_safety_proficiency: 'Training',
-  wanted: 'Wanted',
-  other: 'Other',
-}
 
 export default function MobileFilters() {
   const router = useRouter()
@@ -101,7 +89,7 @@ export default function MobileFilters() {
           <span className="truncate">
             {category === 'all' 
               ? 'All Categories' 
-              : MOBILE_CATEGORY_LABELS[category]}
+              : CATEGORY_LABELS[category]}
           </span>
         </div>
         <svg className={`w-4 h-4 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -111,30 +99,66 @@ export default function MobileFilters() {
 
       {/* Mobile Filter Dropdown */}
       {isOpen && (
-        <div className="absolute left-0 right-0 sm:right-auto sm:min-w-[280px] mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+        <div className="absolute left-0 right-0 sm:right-auto sm:min-w-[280px] mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-[80vh] overflow-y-auto">
           <div className="p-4 space-y-4">
-            {/* Categories */}
+            {/* All Categories Option */}
             <div>
-              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
-                Category
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {CATEGORIES_WITH_ALL.map((cat) => (
+              <button
+                onClick={() => handleCategoryChange('all')}
+                className={`flex items-center gap-2 w-full px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                  category === 'all'
+                    ? 'bg-[#0d1e26] text-white shadow-sm'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+                <span className="truncate">All Categories</span>
+              </button>
+            </div>
+
+            {/* Discussions Section */}
+            <div className="bg-white rounded-lg border border-gray-200 p-3">
+              <h3 className="text-xs font-semibold text-gray-900 mb-2 uppercase tracking-wide">Discussions</h3>
+              <div className="space-y-1">
+                {DISCUSSION_CATEGORIES.map((cat) => (
                   <button
                     key={cat}
                     onClick={() => handleCategoryChange(cat)}
-                    className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                    className={`flex items-center gap-2 w-full px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                       category === cat
                         ? 'bg-[#0d1e26] text-white shadow-sm'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        : 'text-gray-700 hover:bg-gray-100'
                     }`}
                   >
-                    {cat !== 'all' && (
-                      <span className="text-base flex-shrink-0">
-                        <CategoryIcon category={cat} className="w-4 h-4" />
-                      </span>
-                    )}
-                    <span className="truncate text-center">{cat === 'all' ? 'All' : MOBILE_CATEGORY_LABELS[cat]}</span>
+                    <span className="text-base flex-shrink-0">
+                      <CategoryIcon category={cat} className="w-4 h-4" />
+                    </span>
+                    <span className="truncate">{CATEGORY_LABELS[cat]}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Classifieds Section */}
+            <div className="bg-white rounded-lg border border-gray-200 p-3">
+              <h3 className="text-xs font-semibold text-gray-900 mb-2 uppercase tracking-wide">Classifieds</h3>
+              <div className="space-y-1">
+                {CLASSIFIED_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => handleCategoryChange(cat)}
+                    className={`flex items-center gap-2 w-full px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                      category === cat
+                        ? 'bg-[#0d1e26] text-white shadow-sm'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <span className="text-base flex-shrink-0">
+                      <CategoryIcon category={cat} className="w-4 h-4" />
+                    </span>
+                    <span className="truncate">{CATEGORY_LABELS[cat]}</span>
                   </button>
                 ))}
               </div>

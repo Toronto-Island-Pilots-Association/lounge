@@ -75,6 +75,7 @@ export default function MemberDetailModal({
   const [showPaymentForm, setShowPaymentForm] = useState(false)
   const [paymentFormData, setPaymentFormData] = useState({
     paymentMethod: 'cash' as 'cash' | 'paypal' | 'wire',
+    amount: '',
     membershipExpiresAt: '',
     notes: '',
     clearStripeSubscription: true,
@@ -533,6 +534,39 @@ export default function MemberDetailModal({
                       </select>
                     </div>
 
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Amount (CAD)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={paymentFormData.amount}
+                        onChange={(e) =>
+                          setPaymentFormData({
+                            ...paymentFormData,
+                            amount: e.target.value,
+                          })
+                        }
+                        placeholder={
+                          member.membership_level === 'Corporate'
+                            ? '120'
+                            : member.membership_level === 'Full'
+                            ? '45'
+                            : ''
+                        }
+                        className="w-full px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        {member.membership_level === 'Corporate'
+                          ? 'Default: $120'
+                          : member.membership_level === 'Full'
+                          ? 'Default: $45'
+                          : 'Enter payment amount'}
+                      </p>
+                    </div>
+
                     <div className="relative" style={{ zIndex: 9999, isolation: 'isolate' }}>
                       <label className="block text-xs font-medium text-gray-700 mb-1">
                         Membership Expires At
@@ -605,6 +639,7 @@ export default function MemberDetailModal({
                             body: JSON.stringify({
                               userId: member.id,
                               paymentMethod: paymentFormData.paymentMethod,
+                              amount: paymentFormData.amount ? parseFloat(paymentFormData.amount) : undefined,
                               membershipExpiresAt: paymentFormData.membershipExpiresAt
                                 ? new Date(paymentFormData.membershipExpiresAt).toISOString()
                                 : undefined,
@@ -619,6 +654,7 @@ export default function MemberDetailModal({
                             setShowPaymentForm(false)
                             setPaymentFormData({
                               paymentMethod: 'cash',
+                              amount: '',
                               membershipExpiresAt: '',
                               notes: '',
                               clearStripeSubscription: true,
@@ -653,6 +689,49 @@ export default function MemberDetailModal({
                     </button>
                   </div>
                 )}
+              </div>
+
+              {/* Payment Methods Information */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Payment Methods</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div className="flex items-start gap-2">
+                    <svg className="w-4 h-4 text-gray-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                    <div>
+                      <div className="font-medium text-gray-900">Credit/Debit Card</div>
+                      <div className="text-gray-600">Pay online via Stripe</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <svg className="w-4 h-4 text-gray-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    <div>
+                      <div className="font-medium text-gray-900">PayPal</div>
+                      <div className="text-gray-600">Pay online via PayPal</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <svg className="w-4 h-4 text-gray-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    <div>
+                      <div className="font-medium text-gray-900">Cash</div>
+                      <div className="text-gray-600">Pay in person with cash</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <svg className="w-4 h-4 text-gray-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    </svg>
+                    <div>
+                      <div className="font-medium text-gray-900">Wire Transfer</div>
+                      <div className="text-gray-600">Bank transfer payment</div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Payment History */}

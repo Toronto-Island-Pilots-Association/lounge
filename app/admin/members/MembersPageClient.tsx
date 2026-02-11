@@ -45,6 +45,7 @@ export default function MembersPageClient() {
     email: string
     firstName?: string
     lastName?: string
+    membership_level?: string
   }) => {
     try {
       const response = await fetch('/api/admin/invite-member', {
@@ -70,10 +71,13 @@ export default function MembersPageClient() {
     }
   }
 
-  const handleBulkInvite = async (file: File) => {
+  const handleBulkInvite = async (file: File, membership_level?: string) => {
     try {
       const formData = new FormData()
       formData.append('file', file)
+      if (membership_level) {
+        formData.append('membership_level', membership_level)
+      }
 
       const response = await fetch('/api/admin/bulk-invite', {
         method: 'POST',
@@ -779,12 +783,13 @@ function InviteMemberModal({
   onSave,
 }: {
   onClose: () => void
-  onSave: (memberData: { email: string; firstName?: string; lastName?: string }) => Promise<void>
+  onSave: (memberData: { email: string; firstName?: string; lastName?: string; membership_level?: string }) => Promise<void>
 }) {
   const [formData, setFormData] = useState({
     email: '',
     firstName: '',
     lastName: '',
+    membership_level: 'Associate' as 'Full' | 'Student' | 'Associate' | 'Corporate' | 'Honorary',
   })
 
   return (
@@ -831,6 +836,20 @@ function InviteMemberModal({
                 placeholder="Doe"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">Membership Level</label>
+              <select
+                value={formData.membership_level}
+                onChange={(e) => setFormData({ ...formData, membership_level: e.target.value as 'Full' | 'Student' | 'Associate' | 'Corporate' | 'Honorary' })}
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+              >
+                <option value="Full">Full</option>
+                <option value="Student">Student</option>
+                <option value="Associate">Associate</option>
+                <option value="Corporate">Corporate</option>
+                <option value="Honorary">Honorary</option>
+              </select>
+            </div>
           </div>
         </div>
         <DrawerFooter>
@@ -850,6 +869,7 @@ function InviteMemberModal({
                   email: formData.email,
                   firstName: formData.firstName || undefined,
                   lastName: formData.lastName || undefined,
+                  membership_level: formData.membership_level,
                 })
                 onClose()
               }}
@@ -869,10 +889,11 @@ function BulkInviteModal({
   onSave,
 }: {
   onClose: () => void
-  onSave: (file: File) => Promise<void>
+  onSave: (file: File, membership_level?: string) => Promise<void>
 }) {
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [membership_level, setMembershipLevel] = useState<'Full' | 'Student' | 'Associate' | 'Corporate' | 'Honorary'>('Associate')
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
@@ -893,7 +914,7 @@ function BulkInviteModal({
 
     setUploading(true)
     try {
-      await onSave(file)
+      await onSave(file, membership_level)
       onClose()
     } finally {
       setUploading(false)
@@ -944,6 +965,21 @@ jane@example.com,Jane,Smith`}
                 Selected: {file.name} ({(file.size / 1024).toFixed(2)} KB)
               </p>
             )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-1">Membership Level</label>
+            <select
+              value={membership_level}
+              onChange={(e) => setMembershipLevel(e.target.value as 'Full' | 'Student' | 'Associate' | 'Corporate' | 'Honorary')}
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+            >
+              <option value="Full">Full</option>
+              <option value="Student">Student</option>
+              <option value="Associate">Associate</option>
+              <option value="Corporate">Corporate</option>
+              <option value="Honorary">Honorary</option>
+            </select>
+            <p className="mt-1 text-xs text-gray-500">All members in the CSV will be assigned this membership level</p>
           </div>
         </div>
         <DrawerFooter>

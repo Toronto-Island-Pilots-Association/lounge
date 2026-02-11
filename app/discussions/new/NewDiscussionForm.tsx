@@ -50,6 +50,8 @@ function NewDiscussionFormContent() {
   const [error, setError] = useState('')
   const [classifiedFields, setClassifiedFields] = useState<ClassifiedFields>({})
   const [useStructuredForm, setUseStructuredForm] = useState(false)
+  const [showGuidelines, setShowGuidelines] = useState(false)
+  const [isClicked, setIsClicked] = useState(false)
 
   // Pre-fill category from URL parameter
   useEffect(() => {
@@ -188,9 +190,40 @@ function NewDiscussionFormContent() {
       </div>
 
       <div className="mb-6">
-        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-          Title
-        </label>
+        <div className="flex items-center justify-between mb-2">
+          <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+            Title
+          </label>
+          {/* Community Guidelines - Subtle, grayed out, shows on hover/click */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                setIsClicked(!isClicked)
+                setShowGuidelines(!isClicked)
+              }}
+              onMouseEnter={() => !isClicked && setShowGuidelines(true)}
+              onMouseLeave={() => !isClicked && setShowGuidelines(false)}
+              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>Community Guidelines</span>
+            </button>
+            
+            {showGuidelines && (
+              <div className="absolute bottom-full right-0 mb-2 w-64 bg-gray-900 text-white text-xs rounded-lg p-3 shadow-lg z-10">
+                <p className="leading-relaxed">
+                  <strong>Community Guidelines:</strong> Keep it respectful, practical, and aviation-focused. Posts may be moved or closed if needed.
+                </p>
+                <div className="absolute bottom-0 right-4 transform translate-y-full">
+                  <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
         <input
           type="text"
           id="title"

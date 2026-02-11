@@ -7,7 +7,7 @@ export default async function MembersPage() {
   try {
     await requireAdmin()
   } catch {
-    redirect('/dashboard')
+    redirect('/membership')
   }
 
   return (

@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   is_student_pilot BOOLEAN NOT NULL DEFAULT false,
   flight_school TEXT,
   instructor_name TEXT,
+  interests TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -195,11 +196,11 @@ BEGIN
   
   v_membership_level := COALESCE(
     NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'membership_level', '')), ''),
-    'Full'
+    'Associate'
   );
   -- Ensure it's one of the valid values
   IF v_membership_level NOT IN ('Full', 'Student', 'Associate', 'Corporate', 'Honorary') THEN
-    v_membership_level := 'Full';
+    v_membership_level := 'Associate';
   END IF;
 
   -- Generate unique member number

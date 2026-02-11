@@ -10,9 +10,9 @@ export default async function PendingApprovalPage() {
     redirect('/login')
   }
 
-  // If user is approved or is admin, redirect to dashboard
+  // If user is approved or is admin, redirect to membership
   if (user.profile.status === 'approved' || user.profile.role === 'admin') {
-    redirect('/dashboard')
+    redirect('/membership')
   }
 
   const isRejected = user.profile.status === 'rejected'
@@ -37,7 +37,7 @@ export default async function PendingApprovalPage() {
           )}
         </div>
         <h1 className="text-2xl font-bold text-gray-900 mb-4">
-          {isExpired ? 'Membership Expired' : isRejected ? 'Account Rejected' : 'Account Pending Approval'}
+          {isExpired ? 'Membership Expired' : isRejected ? 'Account Rejected' : 'Membership Pending Approval'}
         </h1>
         {isExpired ? (
           <>
@@ -59,9 +59,18 @@ export default async function PendingApprovalPage() {
           </>
         ) : (
           <>
-            <p className="text-gray-600 mb-6">
-              Thank you for joining TIPA! Your account is currently pending review by an administrator.
+            <p className="text-gray-600 mb-4">
+              Thank you for applying for membership with TIPA! Your membership application is currently pending review by an administrator.
             </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 text-left">
+              <p className="text-sm text-blue-900 mb-2">
+                <strong>What happens next:</strong>
+              </p>
+              <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+                <li>Once approved, you will be registered as an <strong>Associate member</strong> until <strong>October 1st</strong></li>
+                <li>Your access to the platform may be revoked if you do not pay your membership fees after that date</li>
+              </ul>
+            </div>
             <p className="text-sm text-gray-500">
               You will receive access to the platform once your account has been approved. This usually takes 1-2 business days.
             </p>

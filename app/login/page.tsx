@@ -21,7 +21,7 @@ export default function LoginPage() {
         
         if (data.authenticated) {
           // Only redirect if we have a valid session
-          window.location.href = '/dashboard'
+          window.location.href = '/membership'
         } else {
           setCheckingAuth(false)
         }
@@ -68,7 +68,7 @@ export default function LoginPage() {
         window.location.href = '/change-password?required=true'
       } else {
         // Use window.location for a full page reload to ensure cookies are set
-        window.location.href = '/dashboard'
+        window.location.href = '/membership'
       }
     } catch (err: any) {
       setError(err.message)

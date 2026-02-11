@@ -52,7 +52,12 @@ export async function getCurrentUser() {
         
         // Ensure membership_level and role match the database constraints exactly
         // Force to exact string literals to avoid any type issues
-        const membershipLevel: 'Full' | 'Student' | 'Associate' | 'Corporate' | 'Honorary' = 'Full'
+        // Default to Associate for invited users, otherwise use metadata or default to Associate
+        const membershipLevelFromMetadata = metadata.membership_level || metadata.membershipLevel
+        const membershipLevel: 'Full' | 'Student' | 'Associate' | 'Corporate' | 'Honorary' = 
+          (membershipLevelFromMetadata && ['Full', 'Student', 'Associate', 'Corporate', 'Honorary'].includes(membershipLevelFromMetadata))
+            ? membershipLevelFromMetadata as 'Full' | 'Student' | 'Associate' | 'Corporate' | 'Honorary'
+            : 'Associate'
         const userRole: 'member' | 'admin' = 'member'
         
         // Build the insert object with explicit string values

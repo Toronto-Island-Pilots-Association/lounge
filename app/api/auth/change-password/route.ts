@@ -88,9 +88,47 @@ export async function POST(request: Request) {
 
           // Update to approved if still pending
           if (profile && profile.status === 'pending') {
+            // Check if member has any payments
+            const { data: payments } = await adminClient
+              .from('payments')
+              .select('id')
+              .eq('user_id', user.id)
+              .limit(1)
+
+            // Check if member has active Stripe or PayPal subscription
+            const hasActiveSubscription = profile.stripe_subscription_id || profile.paypal_subscription_id
+            const hasPayments = payments && payments.length > 0
+
+            // Prepare update object
+            const updateData: any = { status: 'approved' }
+
+            // Get membership level from user_metadata if set, otherwise default to 'Associate'
+            const membershipLevelFromMetadata = authUser?.user?.user_metadata?.membership_level
+            const membershipLevel = membershipLevelFromMetadata || 'Associate'
+
+            // If no payments and no active subscription, set membership level and Oct 1st expiration
+            if (!hasPayments && !hasActiveSubscription) {
+              // Calculate October 1st - current year if before Oct 1, next year if after Oct 1
+              const now = new Date()
+              const currentYear = now.getFullYear()
+              const oct1ThisYear = new Date(currentYear, 9, 1) // Month is 0-indexed, so 9 = October
+              const oct1NextYear = new Date(currentYear + 1, 9, 1)
+              
+              // Use this year's Oct 1 if we're before it, otherwise next year's
+              const expirationDate = now < oct1ThisYear ? oct1ThisYear : oct1NextYear
+
+              updateData.membership_level = membershipLevel
+              updateData.membership_expires_at = expirationDate.toISOString()
+            } else {
+              // If they have payments/subscriptions, still set the membership level from metadata if provided
+              if (membershipLevelFromMetadata) {
+                updateData.membership_level = membershipLevelFromMetadata
+              }
+            }
+
             const { data: updatedProfile } = await adminClient
               .from('user_profiles')
-              .update({ status: 'approved' })
+              .update(updateData)
               .eq('id', user.id)
               .select()
               .single()

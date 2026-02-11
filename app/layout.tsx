@@ -26,7 +26,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${interTight.variable} antialiased`}
+        className={`${interTight.variable} antialiased pt-20 md:pt-0`}
       >
         <PayPalProvider>
           <Navbar />
