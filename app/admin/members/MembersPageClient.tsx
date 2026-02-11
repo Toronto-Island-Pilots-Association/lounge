@@ -195,7 +195,7 @@ export default function MembersPageClient() {
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row justify-end gap-2">
+      <div className="grid grid-cols-3 sm:flex sm:flex-row justify-end gap-2">
         <button
           onClick={async () => {
             try {
@@ -223,9 +223,9 @@ export default function MembersPageClient() {
               alert('Failed to export members')
             }
           }}
-          className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center justify-center gap-2 text-sm"
+          className="bg-green-600 text-white px-2 py-1.5 sm:px-4 sm:py-2 rounded-md hover:bg-green-700 flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
           <span className="hidden sm:inline">Export Members</span>
@@ -233,15 +233,17 @@ export default function MembersPageClient() {
         </button>
         <button
           onClick={() => setShowInviteForm(true)}
-          className="bg-[#0d1e26] text-white px-4 py-2 rounded-md hover:bg-[#0a171c] text-sm"
+          className="bg-[#0d1e26] text-white px-2 py-1.5 sm:px-4 sm:py-2 rounded-md hover:bg-[#0a171c] text-xs sm:text-sm"
         >
-          Invite Member
+          <span className="hidden sm:inline">Invite Member</span>
+          <span className="sm:hidden">Invite</span>
         </button>
         <button
           onClick={() => setShowBulkInviteForm(true)}
-          className="bg-[#0d1e26] text-white px-4 py-2 rounded-md hover:bg-[#0a171c] text-sm"
+          className="bg-[#0d1e26] text-white px-2 py-1.5 sm:px-4 sm:py-2 rounded-md hover:bg-[#0a171c] text-xs sm:text-sm"
         >
-          Bulk Invite (CSV)
+          <span className="hidden sm:inline">Bulk Invite (CSV)</span>
+          <span className="sm:hidden">Bulk</span>
         </button>
       </div>
 
@@ -271,6 +273,11 @@ export default function MembersPageClient() {
                     </button>
                   </div>
                   <div className="flex flex-wrap gap-2 text-xs">
+                    {member.role === 'admin' && (
+                      <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded font-medium">
+                        Admin
+                      </span>
+                    )}
                     <span className={`px-2 py-1 rounded ${
                       member.status === 'approved' ? 'bg-green-100 text-green-800' :
                       member.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
@@ -278,9 +285,6 @@ export default function MembersPageClient() {
                       'bg-red-100 text-red-800'
                     }`}>
                       {member.status ? member.status.charAt(0).toUpperCase() + member.status.slice(1) : 'Pending'}
-                    </span>
-                    <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded">
-                      {member.role}
                     </span>
                     <span className={`px-2 py-1 rounded-full ${
                       member.membership_level === 'Full' || member.membership_level === 'Corporate' || member.membership_level === 'Honorary'
@@ -302,8 +306,8 @@ export default function MembersPageClient() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">System Role</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Membership</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expires</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -314,7 +318,14 @@ export default function MembersPageClient() {
                       {member.member_number || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {member.full_name || 'N/A'}
+                      <div className="flex items-center gap-2">
+                        <span>{member.full_name || 'N/A'}</span>
+                        {member.role === 'admin' && (
+                          <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded font-medium">
+                            Admin
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{member.email}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -327,7 +338,6 @@ export default function MembersPageClient() {
                         {member.status ? member.status.charAt(0).toUpperCase() + member.status.slice(1) : 'Pending'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{member.role}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <span className={`px-2 py-1 text-xs rounded-full ${
                         member.membership_level === 'Full' || member.membership_level === 'Corporate' || member.membership_level === 'Honorary'
@@ -336,6 +346,11 @@ export default function MembersPageClient() {
                       }`}>
                         {member.membership_level ? getMembershipLevelLabel(member.membership_level) : 'Full'}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {member.membership_expires_at
+                        ? new Date(member.membership_expires_at).toLocaleDateString()
+                        : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       {member.status === 'pending' && (

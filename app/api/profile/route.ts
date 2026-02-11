@@ -68,6 +68,8 @@ export async function PATCH(request: Request) {
       is_student_pilot,
       flight_school,
       instructor_name,
+      // Interests
+      interests,
     } = body
 
     // Build update object with only provided fields
@@ -101,6 +103,15 @@ export async function PATCH(request: Request) {
     if (is_student_pilot !== undefined) updates.is_student_pilot = Boolean(is_student_pilot)
     if (flight_school !== undefined) updates.flight_school = flight_school ? String(flight_school).trim() || null : null
     if (instructor_name !== undefined) updates.instructor_name = instructor_name ? String(instructor_name).trim() || null : null
+    // Interests - store as JSON string if provided
+    if (interests !== undefined) {
+      if (interests && (typeof interests === 'string' || Array.isArray(interests))) {
+        // If it's already a JSON string, use it; otherwise stringify the array
+        updates.interests = typeof interests === 'string' ? interests : JSON.stringify(interests)
+      } else {
+        updates.interests = null
+      }
+    }
 
     const { data, error } = await supabase
       .from('user_profiles')

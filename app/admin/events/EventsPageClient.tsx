@@ -39,7 +39,11 @@ export default function EventsPageClient() {
     try {
       const response = await fetch('/api/events')
       const data = await response.json()
-      setEvents(data.events || [])
+      // Sort events by start_time descending (most recent first)
+      const sortedEvents = (data.events || []).sort((a: Event, b: Event) => {
+        return new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
+      })
+      setEvents(sortedEvents)
     } catch (error) {
       console.error('Error loading events:', error)
     } finally {
