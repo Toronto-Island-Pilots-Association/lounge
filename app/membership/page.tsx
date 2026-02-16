@@ -1,12 +1,14 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getCurrentUserIncludingPending } from '@/lib/auth'
-import { getMembershipFee } from '@/lib/settings'
+import { getMembershipFeeForLevel, getTrialEndDate, type MembershipLevelKey } from '@/lib/settings'
 import { createClient } from '@/lib/supabase/server'
-import { Resource, Event } from '@/types/database'
+import { Resource, Event, getMembershipLevelLabel } from '@/types/database'
+import { Suspense } from 'react'
 import MembershipCard from '@/components/MembershipCard'
 import SubscriptionSection from '@/components/SubscriptionSection'
 import MembershipPageClient from './MembershipPageClient'
+import StripeSuccessHandler from './StripeSuccessHandler'
 
 export default async function MembershipPage() {
   const user = await getCurrentUserIncludingPending()
@@ -23,11 +25,36 @@ export default async function MembershipPage() {
   const wasInvited = user.user_metadata?.invited_by_admin === true
   const needsPasswordChange = wasInvited && user.profile.status === 'pending'
 
-  const membershipFee = await getMembershipFee()
+  const membershipLevel = (user.profile.membership_level || 'Full') as MembershipLevelKey
+  const membershipFee = await getMembershipFeeForLevel(membershipLevel)
+  const trialEnd = getTrialEndDate(membershipLevel, user.profile.created_at ?? null)
+  const isOnTrial = trialEnd != null && trialEnd > new Date()
+  const hasStripeSubscription = !!user.profile.stripe_subscription_id
+  // If already subscribed in Stripe, do not show trial label or trial-based validity
+  const showTrial = isOnTrial && !hasStripeSubscription
   const isPaid = user.profile.membership_level === 'Full' || user.profile.membership_level === 'Corporate' || user.profile.membership_level === 'Honorary'
-  const isExpired = user.profile.membership_expires_at
-    ? new Date(user.profile.membership_expires_at) < new Date()
-    : false
+  // Prefer DB membership_expires_at when set; otherwise use trial end only when showing trial (not subscribed)
+  const hasMembershipExpiry = !!user.profile.membership_expires_at
+  const isExpired = hasMembershipExpiry
+    ? new Date(user.profile.membership_expires_at!) < new Date()
+    : showTrial && trialEnd
+      ? trialEnd < new Date()
+      : false
+  const validThruDate = hasMembershipExpiry ? null : (showTrial && trialEnd ? trialEnd.toISOString() : null)
+
+  const membershipLevelDisplay = showTrial
+    ? `${getMembershipLevelLabel(membershipLevel)} (trial)`
+    : getMembershipLevelLabel(membershipLevel)
+
+  // Pending approval copy: level-specific message (Full/Associate trial until Sept 1, etc.)
+  const levelLabel = getMembershipLevelLabel(membershipLevel)
+  const article = (membershipLevel === 'Associate' || membershipLevel === 'Honorary') ? 'an' : 'a'
+  const pendingTrialCopy =
+    membershipLevel === 'Full' || membershipLevel === 'Associate'
+      ? <>Once approved, you will be registered as {article} <strong>{levelLabel} member</strong> (trial) until <strong>September 1st</strong></>
+      : membershipLevel === 'Student'
+        ? <>Once approved, you will be registered as {article} <strong>{levelLabel} member</strong> with a 12-month trial from approval</>
+        : <>Once approved, you will be registered as {article} <strong>{levelLabel} member</strong></>
 
     // Fetch top resources, events, and threads (only for approved users)
     const supabase = await createClient()
@@ -95,6 +122,9 @@ export default async function MembershipPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
+      <Suspense fallback={null}>
+        <StripeSuccessHandler />
+      </Suspense>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Main Content */}
@@ -114,6 +144,8 @@ export default async function MembershipPage() {
                       isRejected={isRejected}
                       isPaid={isPaid}
                       isExpired={isExpired}
+                      membershipLevelDisplay={membershipLevelDisplay}
+                      validThruDate={validThruDate}
                     />
                   )}
 
@@ -160,7 +192,7 @@ export default async function MembershipPage() {
                 {/* Payment History Section - Show for approved and expired members */}
                 {!isPending && !isRejected && (
                   <div className="mt-6">
-                    <MembershipPageClient />
+                    <MembershipPageClient membershipLevel={user.profile.membership_level} />
                   </div>
                 )}
 
@@ -211,7 +243,7 @@ export default async function MembershipPage() {
                             <strong>What happens next:</strong>
                           </p>
                           <ul className="text-sm text-yellow-800 space-y-1 list-disc list-inside">
-                            <li>Once approved, you will be registered as an <strong>Associate member</strong> until <strong>October 1st</strong></li>
+                            <li>{pendingTrialCopy}</li>
                             <li>Your access to the platform may be revoked if you do not pay your membership fees after that date</li>
                           </ul>
                         </div>

@@ -86,191 +86,137 @@ export default function PaymentsPageClient() {
     )
   })
 
-  const totalAmount = filteredPayments.reduce((sum, payment) => sum + payment.amount, 0)
-
   if (loading) {
     return <Loading message="Loading payment history..." />
   }
 
+  const formatDate = (d: string) =>
+    new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' })
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Payment History</h2>
-          <p className="mt-1 text-sm text-gray-500">
-            View and manage all membership payments
-          </p>
+    <div className="space-y-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-lg font-semibold text-gray-900">Payment History</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            id="paymentMethod"
+            value={filters.paymentMethod}
+            onChange={(e) =>
+              setFilters({ ...filters, paymentMethod: e.target.value as PaymentMethod | '' })
+            }
+            className="h-8 text-sm px-2.5 border border-gray-300 rounded text-gray-900 focus:ring-1 focus:ring-[#0d1e26] focus:border-[#0d1e26] w-full sm:w-auto sm:min-w-[110px]"
+          >
+            <option value="">All methods</option>
+            <option value="stripe">Stripe</option>
+            <option value="paypal">PayPal</option>
+            <option value="cash">Cash</option>
+            <option value="wire">Wire</option>
+          </select>
+          <input
+            type="text"
+            id="search"
+            value={filters.search}
+            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+            placeholder="Search..."
+            className="h-8 text-sm px-2.5 border border-gray-300 rounded text-gray-900 placeholder-gray-400 focus:ring-1 focus:ring-[#0d1e26] focus:border-[#0d1e26] w-full sm:w-36 min-w-0"
+          />
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="paymentMethod" className="block text-sm font-medium text-gray-700 mb-1">
-              Payment Method
-            </label>
-            <select
-              id="paymentMethod"
-              value={filters.paymentMethod}
-              onChange={(e) =>
-                setFilters({ ...filters, paymentMethod: e.target.value as PaymentMethod | '' })
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-            >
-              <option value="">All Methods</option>
-              <option value="stripe">Stripe</option>
-              <option value="paypal">PayPal</option>
-              <option value="cash">Cash</option>
-              <option value="wire">Wire Transfer</option>
-            </select>
-          </div>
-          <div>
-            <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
-              Search
-            </label>
-            <input
-              type="text"
-              id="search"
-              value={filters.search}
-              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-              placeholder="Search by email, name, or member number..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Summary */}
-      {filteredPayments.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex flex-wrap items-center gap-4 text-sm">
-            <div>
-              <span className="font-medium text-gray-700">Total Payments:</span>{' '}
-              <span className="text-gray-900">{filteredPayments.length}</span>
-            </div>
-            <div>
-              <span className="font-medium text-gray-700">Total Amount:</span>{' '}
-              <span className="text-gray-900 font-semibold">
-                ${totalAmount.toFixed(2)} CAD
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Payments Table */}
       <div className="bg-white shadow rounded-lg overflow-hidden">
         {filteredPayments.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No payments found.</p>
-          </div>
+          <div className="text-center py-8 text-sm text-gray-500">No payments found.</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Member
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Method
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Amount
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Expires
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Recorded By
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Notes
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredPayments.map((payment) => (
-                  <tr key={payment.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(payment.payment_date).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      <div>
-                        <div className="font-medium">
-                          {payment.user?.full_name || 'N/A'}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {payment.user?.email}
-                        </div>
-                        {payment.user?.member_number && (
-                          <div className="text-xs text-gray-400">
-                            #{payment.user.member_number}
-                          </div>
-                        )}
+          <>
+            <div className="md:hidden divide-y divide-gray-200">
+              {filteredPayments.map((payment) => (
+                <div key={payment.id} className="p-3">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="min-w-0">
+                      <div className="font-medium text-gray-900 truncate">
+                        {payment.user?.full_name || '-'}
                       </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize bg-blue-100 text-blue-800">
-                        {payment.payment_method}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <div className="text-xs text-gray-500 truncate">{payment.user?.email}</div>
+                    </div>
+                    <span className="text-sm font-medium text-gray-900 shrink-0">
                       ${payment.amount.toFixed(2)} {payment.currency}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(payment.membership_expires_at).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${
-                          payment.status === 'completed'
-                            ? 'bg-green-100 text-green-800'
-                            : payment.status === 'pending'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : payment.status === 'failed'
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}
-                      >
-                        {payment.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
-                      {payment.recorded_by_user ? (
-                        <div>
-                          <div>{payment.recorded_by_user.full_name || 'N/A'}</div>
-                          <div className="text-xs text-gray-400">
-                            {payment.recorded_by_user.email}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-gray-500">
+                    <span>{formatDate(payment.payment_date)}</span>
+                    <span className="inline-flex px-1.5 py-0.5 rounded capitalize bg-blue-50 text-blue-800">
+                      {payment.payment_method}
+                    </span>
+                    <span>Expires {formatDate(payment.membership_expires_at)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden md:block overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Member</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Method</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Expires</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Recorded By</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredPayments.map((payment) => (
+                    <tr key={payment.id} className="hover:bg-gray-50">
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
+                        {formatDate(payment.payment_date)}
+                      </td>
+                      <td className="px-3 py-2 text-sm text-gray-900">
+                        <div className="min-w-0">
+                          <div className="font-medium truncate max-w-[140px]">
+                            {payment.user?.full_name || 'N/A'}
+                          </div>
+                          <div className="text-xs text-gray-500 truncate max-w-[140px]">
+                            {payment.user?.email}
                           </div>
                         </div>
-                      ) : (
-                        <span className="text-gray-400">System</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500 max-w-xs truncate">
-                      {payment.notes || '-'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium capitalize bg-blue-100 text-blue-800">
+                          {payment.payment_method}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
+                        ${payment.amount.toFixed(2)} {payment.currency}
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
+                        {formatDate(payment.membership_expires_at)}
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <span
+                          className={`inline-flex px-2 py-0.5 rounded text-xs font-medium capitalize ${
+                            payment.status === 'completed'
+                              ? 'bg-green-100 text-green-800'
+                              : payment.status === 'pending'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : payment.status === 'failed'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}
+                        >
+                          {payment.status}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-sm text-gray-500">
+                        {payment.recorded_by_user?.full_name || 'System'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

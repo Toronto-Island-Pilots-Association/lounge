@@ -35,12 +35,11 @@ export async function POST(request: Request) {
     }
 
     const supabase = await createClient()
-    
-    // Update database
     await supabase
       .from('user_profiles')
       .update({
         membership_expires_at: cancelImmediately ? new Date().toISOString() : null,
+        subscription_cancel_at_period_end: !cancelImmediately,
       })
       .eq('id', user.id)
 

@@ -8,6 +8,7 @@ export const CATEGORY_LABELS: Record<DiscussionCategory, string> = {
   general_aviation: 'General Aviation',
   training_safety_proficiency: 'Training, Safety & Proficiency',
   wanted: 'Wanted',
+  building_a_better_tipa: 'Building a Better TIPA',
   other: 'Other',
 }
 
@@ -19,6 +20,7 @@ export const CATEGORY_DESCRIPTIONS: Record<DiscussionCategory, string> = {
   general_aviation: 'A place to talk all things general aviation: flying experiences, aircraft, training, safety, airspace, gear, and everyday questions.',
   training_safety_proficiency: 'Questions and discussions related to training, currency, safety, proficiency, IPCs, and recurrent flying skills.',
   wanted: 'Requests for aircraft access, instruction, gear, or other aviation-related needs.',
+  building_a_better_tipa: 'Ideas, feedback, and discussions on how to improve TIPA—operations, community, events, and member experience.',
   other: 'General discussions that don\'t fit into the other categories.',
 }
 
@@ -30,6 +32,7 @@ export const CATEGORY_ICONS: Record<DiscussionCategory, string> = {
   general_aviation: '🌐',
   training_safety_proficiency: '📚',
   wanted: '🔍',
+  building_a_better_tipa: '🏗️',
   other: '📋',
 }
 
@@ -41,6 +44,7 @@ export const ALL_CATEGORIES: DiscussionCategory[] = [
   'general_aviation',
   'training_safety_proficiency',
   'wanted',
+  'building_a_better_tipa',
   'other',
 ]
 
@@ -62,6 +66,7 @@ export const DISCUSSION_CATEGORIES: DiscussionCategory[] = [
   'general_aviation',
   'training_safety_proficiency',
   'wanted',
+  'building_a_better_tipa',
   'other',
 ]
 
@@ -74,5 +79,6 @@ export const CATEGORY_PLACEHOLDERS: Record<DiscussionCategory, string> = {
   general_aviation: 'Share your question or discussion topic...',
   training_safety_proficiency: 'Share your question or discussion about training, safety, or proficiency...',
   wanted: 'Describe what you\'re looking for: aircraft access, instruction, gear, or other aviation-related needs...',
+  building_a_better_tipa: 'Share ideas, feedback, or suggestions for improving TIPA...',
   other: 'Describe your discussion...',
 }

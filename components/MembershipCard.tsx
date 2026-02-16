@@ -13,9 +13,13 @@ interface MembershipCardProps {
   isRejected: boolean
   isPaid: boolean
   isExpired: boolean
+  /** When provided (e.g. "Full (trial)"), used for Level instead of raw membership_level */
+  membershipLevelDisplay?: string
+  /** When provided (e.g. trial end date), used for Valid Thru instead of membership_expires_at */
+  validThruDate?: string | null
 }
 
-export default function MembershipCard({ user, isPending, isRejected, isPaid, isExpired }: MembershipCardProps) {
+export default function MembershipCard({ user, isPending, isRejected, isPaid, isExpired, membershipLevelDisplay, validThruDate }: MembershipCardProps) {
   const [tilt, setTilt] = useState({ x: 0, y: 0 })
   const [glarePosition, setGlarePosition] = useState({ x: 50, y: 50 })
   const cardRef = useRef<HTMLDivElement>(null)
@@ -156,7 +160,7 @@ export default function MembershipCard({ user, isPending, isRejected, isPaid, is
                       className="font-semibold uppercase tracking-wide text-white break-words"
                       style={{ fontSize: 'clamp(0.875rem, 2vw, 0.75rem)' }}
                     >
-                      {getMembershipLevelLabel(user.profile.membership_level)}
+                      {membershipLevelDisplay ?? getMembershipLevelLabel(user.profile.membership_level)}
                     </div>
                   )}
                 </div>
@@ -188,17 +192,19 @@ export default function MembershipCard({ user, isPending, isRejected, isPaid, is
               )}
             </div>
 
-            {/* Expiration Date */}
-            {user.profile.membership_expires_at && (
+            {/* Expiration Date: show trial end when on trial, otherwise membership_expires_at */}
+            {(validThruDate || user.profile.membership_expires_at) && (
               <div className="text-right flex-shrink-0">
                 <div className="text-[clamp(0.625rem,1.2vw,0.5rem)] uppercase tracking-widest text-white/60 mb-0.5">Valid Thru</div>
                 <div 
                   className={`font-mono ${isExpired ? 'text-red-300' : 'text-white'}`}
                   style={{ fontSize: 'clamp(0.875rem, 2vw, 0.75rem)' }}
                 >
-                  {new Date(user.profile.membership_expires_at).toLocaleDateString('en-US', { 
-                    month: '2-digit', 
-                    year: '2-digit' 
+                  {new Date(validThruDate || user.profile.membership_expires_at!).toLocaleDateString('en-US', { 
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                    timeZone: 'UTC'
                   })}
                 </div>
               </div>

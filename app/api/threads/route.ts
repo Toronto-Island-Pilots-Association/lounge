@@ -71,7 +71,7 @@ export async function POST(request: Request) {
     // Validate category
     // Import ALL_CATEGORIES from constants (but we can't import from app directory in API routes)
     // So we keep it here but it should match ALL_CATEGORIES in app/discussions/constants.ts
-    const validCategories: DiscussionCategory[] = ['aircraft_shares', 'instructor_availability', 'gear_for_sale', 'flying_at_ytz', 'general_aviation', 'training_safety_proficiency', 'wanted', 'other']
+    const validCategories: DiscussionCategory[] = ['aircraft_shares', 'instructor_availability', 'gear_for_sale', 'flying_at_ytz', 'general_aviation', 'training_safety_proficiency', 'wanted', 'building_a_better_tipa', 'other']
     const threadCategory = category && validCategories.includes(category) ? category : 'other'
 
     // Validate image_urls (should be an array of strings, max 5)

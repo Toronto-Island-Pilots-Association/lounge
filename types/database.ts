@@ -43,6 +43,7 @@ export interface UserProfile {
   paypal_subscription_id: string | null
   stripe_subscription_id: string | null
   stripe_customer_id: string | null
+  subscription_cancel_at_period_end: boolean | null
   profile_picture_url: string | null
   member_number: string | null
   is_student_pilot: boolean
@@ -83,7 +84,7 @@ export interface Event {
   updated_at: string
 }
 
-export type DiscussionCategory = 'aircraft_shares' | 'instructor_availability' | 'gear_for_sale' | 'flying_at_ytz' | 'general_aviation' | 'training_safety_proficiency' | 'wanted' | 'other'
+export type DiscussionCategory = 'aircraft_shares' | 'instructor_availability' | 'gear_for_sale' | 'flying_at_ytz' | 'general_aviation' | 'training_safety_proficiency' | 'wanted' | 'building_a_better_tipa' | 'other'
 
 export interface Thread {
   id: string

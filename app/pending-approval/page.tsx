@@ -1,5 +1,6 @@
 import { getCurrentUserIncludingPending } from '@/lib/auth'
 import { redirect } from 'next/navigation'
+import { getMembershipLevelLabel } from '@/types/database'
 import SignOutButton from './SignOutButton'
 
 export default async function PendingApprovalPage() {
@@ -17,6 +18,16 @@ export default async function PendingApprovalPage() {
 
   const isRejected = user.profile.status === 'rejected'
   const isExpired = user.profile.status === 'expired'
+
+  const level = user.profile.membership_level || 'Full'
+  const levelLabel = getMembershipLevelLabel(level)
+  const article = (level === 'Associate' || level === 'Honorary') ? 'an' : 'a'
+  const pendingTrialCopy =
+    level === 'Full' || level === 'Associate'
+      ? <>Once approved, you will be registered as {article} <strong>{levelLabel} member</strong> (trial) until <strong>September 1st</strong></>
+      : level === 'Student'
+        ? <>Once approved, you will be registered as {article} <strong>{levelLabel} member</strong> with a 12-month trial from approval</>
+        : <>Once approved, you will be registered as {article} <strong>{levelLabel} member</strong></>
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -67,7 +78,7 @@ export default async function PendingApprovalPage() {
                 <strong>What happens next:</strong>
               </p>
               <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-                <li>Once approved, you will be registered as an <strong>Associate member</strong> until <strong>October 1st</strong></li>
+                <li>{pendingTrialCopy}</li>
                 <li>Your access to the platform may be revoked if you do not pay your membership fees after that date</li>
               </ul>
             </div>

@@ -1,8 +1,8 @@
-import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getStripeInstance, isStripeEnabled } from '@/lib/stripe'
 import { sendMembershipUpgradeEmail } from '@/lib/resend'
 import { syncSubscriptionBySubscriptionId, syncSubscriptionStatus } from '@/lib/subscription-sync'
-import { getMembershipFee } from '@/lib/settings'
+import { getMembershipFeeForLevel, getMembershipExpiresAtFromSubscription, type MembershipLevelKey } from '@/lib/settings'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     )
   }
 
-  const supabase = await createClient()
+  const supabase = createServiceRoleClient()
 
   try {
     switch (event.type) {
@@ -68,30 +68,38 @@ export async function POST(request: Request) {
         // Get subscription details
         const subscription = await stripe.subscriptions.retrieve(subscriptionId)
         const currentPeriodEnd = new Date((subscription as any).current_period_end * 1000)
-        
-        // Get payment intent ID if available
+        const currentPeriodStart = new Date((subscription as any).current_period_start * 1000)
+        const membershipExpiresAt = getMembershipExpiresAtFromSubscription(currentPeriodEnd, currentPeriodStart)
+
+        // Get payment intent ID and amount from invoice if available
         const invoiceId = subscription.latest_invoice as string
         let paymentIntentId: string | null = null
+        let amountFromInvoice: number | null = null
         if (invoiceId) {
           try {
             const invoice = await stripe.invoices.retrieve(invoiceId)
             paymentIntentId = (invoice as any).payment_intent as string | null
+            if (invoice.amount_paid != null) amountFromInvoice = invoice.amount_paid / 100
           } catch (err) {
             console.error('Error retrieving invoice:', err)
           }
         }
 
-        // Get membership fee
-        const membershipFee = await getMembershipFee()
+        const { data: existingProfile } = await supabase
+          .from('user_profiles')
+          .select('membership_level')
+          .eq('id', userId)
+          .single()
+        const level = (existingProfile?.membership_level || 'Full') as MembershipLevelKey
+        const membershipFee = amountFromInvoice ?? (await getMembershipFeeForLevel(level))
 
-        // Update user profile with subscription info
+        // Update user profile with subscription info (keep their membership level)
         await supabase
           .from('user_profiles')
           .update({
             stripe_subscription_id: subscriptionId,
             stripe_customer_id: customerId,
-            membership_level: 'Full',
-            membership_expires_at: currentPeriodEnd.toISOString(),
+            membership_expires_at: membershipExpiresAt,
           })
           .eq('id', userId)
 
@@ -104,7 +112,7 @@ export async function POST(request: Request) {
             amount: membershipFee,
             currency: 'CAD',
             payment_date: new Date().toISOString(),
-            membership_expires_at: currentPeriodEnd.toISOString(),
+            membership_expires_at: membershipExpiresAt,
             stripe_subscription_id: subscriptionId,
             stripe_payment_intent_id: paymentIntentId,
             status: 'completed',

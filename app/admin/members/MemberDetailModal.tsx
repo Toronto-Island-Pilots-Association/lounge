@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { UserProfile, MembershipLevel, Payment } from '@/types/database'
+import { UserProfile, MembershipLevel, getMembershipLevelLabel, Payment } from '@/types/database'
+import { isOnTrial, getTrialEndDate } from '@/lib/trial'
 import { COUNTRIES, getStatesProvinces } from '@/app/become-a-member/constants'
 import {
   Drawer,
@@ -237,16 +238,73 @@ export default function MemberDetailModal({
                   </div>
                   <div>
                     <span className="text-gray-500">Phone:</span>
-                    <div className="font-medium text-gray-900">{member.phone || 'N/A'}</div>
+                    <div className="font-medium text-gray-900">{member.phone || '-'}</div>
                   </div>
                   <div>
                     <span className="text-gray-500">Member Number:</span>
-                    <div className="font-medium text-gray-900">{member.member_number || 'N/A'}</div>
+                    <div className="font-medium text-gray-900">{member.member_number || '-'}</div>
                   </div>
                   <div>
                     <span className="text-gray-500">Member Since:</span>
                     <div className="font-medium text-gray-900">
-                      {member.created_at ? new Date(member.created_at).toLocaleDateString() : 'N/A'}
+                      {member.created_at ? new Date(member.created_at).toLocaleDateString() : '-'}
+                    </div>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <span className="text-gray-500">Membership level:</span>
+                    <div className="font-medium text-gray-900 mt-1 flex flex-wrap items-center gap-2">
+                      <span className={`inline-flex px-2 py-0.5 text-xs rounded ${
+                        member.membership_level === 'Full' || member.membership_level === 'Corporate' || member.membership_level === 'Honorary'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {member.membership_level ? getMembershipLevelLabel(member.membership_level) : 'Full'}
+                      </span>
+                      {isOnTrial(member.membership_level, member.created_at, member.status) && (
+                        <span className="inline-flex px-2 py-0.5 text-xs rounded font-medium bg-blue-100 text-blue-800">
+                          Trial
+                          {(() => {
+                            const trialEnd = getTrialEndDate(member.membership_level, member.created_at)
+                            return trialEnd ? ` until ${trialEnd.toLocaleDateString('en-US', { timeZone: 'UTC' })}` : ''
+                          })()}
+                        </span>
+                      )}
+                      {member.stripe_subscription_id && (
+                        <span className="inline-flex px-2 py-0.5 text-xs rounded font-medium bg-indigo-100 text-indigo-800">
+                          Subscribed (Stripe)
+                        </span>
+                      )}
+                      {member.paypal_subscription_id && (
+                        <span className="inline-flex px-2 py-0.5 text-xs rounded font-medium bg-sky-100 text-sky-800">
+                          Subscribed (PayPal)
+                        </span>
+                      )}
+                      {!member.stripe_subscription_id && !member.paypal_subscription_id && member.status === 'approved' && (
+                        <span className="text-xs text-gray-500">No subscription</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <span className="text-gray-500">Membership status:</span>
+                    <div className="font-medium text-gray-900 mt-1 flex flex-wrap items-center gap-2">
+                      <span className={`inline-flex px-2 py-0.5 text-xs rounded ${
+                        member.status === 'approved' ? 'bg-green-100 text-green-800' :
+                        member.status === 'expired' ? 'bg-amber-100 text-amber-800' :
+                        member.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {member.status ? member.status.charAt(0).toUpperCase() + member.status.slice(1) : 'Pending'}
+                      </span>
+                      {member.status === 'expired' && member.membership_expires_at && (
+                        <span className="text-xs text-amber-700">
+                          Expired {new Date(member.membership_expires_at).toLocaleDateString('en-US', { timeZone: 'UTC' })}
+                        </span>
+                      )}
+                      {member.subscription_cancel_at_period_end && (
+                        <span className="text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded">
+                          Cancellation scheduled
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -257,23 +315,23 @@ export default function MemberDetailModal({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                     <div>
                       <span className="text-gray-500">Street:</span>
-                      <div className="font-medium text-gray-900">{member.street || 'N/A'}</div>
+                      <div className="font-medium text-gray-900">{member.street || '-'}</div>
                     </div>
                     <div>
                       <span className="text-gray-500">City:</span>
-                      <div className="font-medium text-gray-900">{member.city || 'N/A'}</div>
+                      <div className="font-medium text-gray-900">{member.city || '-'}</div>
                     </div>
                     <div>
                       <span className="text-gray-500">Province/State:</span>
-                      <div className="font-medium text-gray-900">{member.province_state || 'N/A'}</div>
+                      <div className="font-medium text-gray-900">{member.province_state || '-'}</div>
                     </div>
                     <div>
                       <span className="text-gray-500">Postal/ZIP Code:</span>
-                      <div className="font-medium text-gray-900">{member.postal_zip_code || 'N/A'}</div>
+                      <div className="font-medium text-gray-900">{member.postal_zip_code || '-'}</div>
                     </div>
                     <div>
                       <span className="text-gray-500">Country:</span>
-                      <div className="font-medium text-gray-900">{member.country || 'N/A'}</div>
+                      <div className="font-medium text-gray-900">{member.country || '-'}</div>
                     </div>
                   </div>
                 </div>
@@ -284,29 +342,29 @@ export default function MemberDetailModal({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                     <div>
                       <span className="text-gray-500">Pilot License Type:</span>
-                      <div className="font-medium text-gray-900">{member.pilot_license_type || 'N/A'}</div>
+                      <div className="font-medium text-gray-900">{member.pilot_license_type || '-'}</div>
                     </div>
                     <div>
                       <span className="text-gray-500">Aircraft Type:</span>
-                      <div className="font-medium text-gray-900">{member.aircraft_type || 'N/A'}</div>
+                      <div className="font-medium text-gray-900">{member.aircraft_type || '-'}</div>
                     </div>
                     <div>
                       <span className="text-gray-500">Call Sign:</span>
-                      <div className="font-medium text-gray-900">{member.call_sign || 'N/A'}</div>
+                      <div className="font-medium text-gray-900">{member.call_sign || '-'}</div>
                     </div>
                     <div>
                       <span className="text-gray-500">How Often Fly from YTZ:</span>
-                      <div className="font-medium text-gray-900">{member.how_often_fly_from_ytz || 'N/A'}</div>
+                      <div className="font-medium text-gray-900">{member.how_often_fly_from_ytz || '-'}</div>
                     </div>
                     {member.is_student_pilot && (
                       <>
                         <div>
                           <span className="text-gray-500">Flight School:</span>
-                          <div className="font-medium text-gray-900">{member.flight_school || 'N/A'}</div>
+                          <div className="font-medium text-gray-900">{member.flight_school || '-'}</div>
                         </div>
                         <div>
                           <span className="text-gray-500">Instructor Name:</span>
-                          <div className="font-medium text-gray-900">{member.instructor_name || 'N/A'}</div>
+                          <div className="font-medium text-gray-900">{member.instructor_name || '-'}</div>
                         </div>
                       </>
                     )}
@@ -320,18 +378,18 @@ export default function MemberDetailModal({
                     <div>
                       <span className="text-gray-500">COPA Member:</span>
                       <div className="font-medium text-gray-900">
-                        {member.is_copa_member === 'yes' ? 'Yes' : member.is_copa_member === 'no' ? 'No' : 'N/A'}
+                        {member.is_copa_member === 'yes' ? 'Yes' : member.is_copa_member === 'no' ? 'No' : '-'}
                       </div>
                     </div>
                     <div>
                       <span className="text-gray-500">Join COPA Flight 32:</span>
                       <div className="font-medium text-gray-900">
-                        {member.join_copa_flight_32 === 'yes' ? 'Yes' : member.join_copa_flight_32 === 'no' ? 'No' : 'N/A'}
+                        {member.join_copa_flight_32 === 'yes' ? 'Yes' : member.join_copa_flight_32 === 'no' ? 'No' : '-'}
                       </div>
                     </div>
                     <div>
                       <span className="text-gray-500">COPA Membership Number:</span>
-                      <div className="font-medium text-gray-900">{member.copa_membership_number || 'N/A'}</div>
+                      <div className="font-medium text-gray-900">{member.copa_membership_number || '-'}</div>
                     </div>
                   </div>
                 </div>
@@ -1183,21 +1241,41 @@ export default function MemberDetailModal({
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
-                            {activityData.payments.map((payment) => (
+                            {activityData.payments.map((payment) => {
+                              const stripeSubscriptionUrl = payment.payment_method === 'stripe' && payment.stripe_subscription_id
+                                ? `https://dashboard.stripe.com/subscriptions/${payment.stripe_subscription_id}`
+                                : null
+                              const stripePaymentUrl = payment.payment_method === 'stripe' && payment.stripe_payment_intent_id
+                                ? `https://dashboard.stripe.com/payments/${payment.stripe_payment_intent_id}`
+                                : null
+                              const stripeUrl = stripeSubscriptionUrl || stripePaymentUrl
+                              return (
                               <tr key={payment.id}>
                                 <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
                                   {new Date(payment.payment_date).toLocaleDateString()}
                                 </td>
                                 <td className="px-3 py-2 whitespace-nowrap text-sm">
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium capitalize bg-blue-100 text-blue-800">
-                                    {payment.payment_method}
-                                  </span>
+                                  {stripeUrl ? (
+                                    <a
+                                      href={stripeUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium capitalize bg-blue-100 text-blue-800 hover:bg-blue-200 hover:underline"
+                                    >
+                                      {payment.payment_method}
+                                      <span className="text-blue-600">↗</span>
+                                    </a>
+                                  ) : (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium capitalize bg-blue-100 text-blue-800">
+                                      {payment.payment_method}
+                                    </span>
+                                  )}
                                 </td>
                                 <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
                                   ${payment.amount.toFixed(2)} {payment.currency}
                                 </td>
                                 <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
-                                  {new Date(payment.membership_expires_at).toLocaleDateString()}
+                                  {new Date(payment.membership_expires_at).toLocaleDateString('en-US', { timeZone: 'UTC' })}
                                 </td>
                                 <td className="px-3 py-2 whitespace-nowrap text-sm">
                                   <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium capitalize ${
@@ -1210,7 +1288,7 @@ export default function MemberDetailModal({
                                   </span>
                                 </td>
                               </tr>
-                            ))}
+                            )})}
                           </tbody>
                         </table>
                       </div>
