@@ -192,8 +192,10 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
     }
   }
 
+  // Use UTC so period end matches Stripe (e.g. "September 1, 2026" not "August 31, 2026" in local time)
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
+      timeZone: 'UTC',
       year: 'numeric',
       month: 'long',
       day: 'numeric',
