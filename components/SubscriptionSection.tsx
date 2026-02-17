@@ -43,7 +43,6 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null)
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
-  const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [membershipFee, setMembershipFee] = useState<number | null>(null)
   const [stripeEnabled, setStripeEnabled] = useState<boolean | null>(null)
@@ -127,21 +126,6 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
     }
   }
 
-  const handleSyncSubscription = async () => {
-    try {
-      setSyncing(true)
-      setError(null)
-      const res = await fetch('/api/stripe/sync-my-subscription', { method: 'POST' })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Sync failed')
-      await loadSubscription()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to sync subscription')
-    } finally {
-      setSyncing(false)
-    }
-  }
-
   const handleSubscribe = async () => {
     try {
       setProcessing(true)
@@ -173,42 +157,6 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
       }
     } catch (err: any) {
       setError(err.message || 'Failed to start subscription process')
-      setProcessing(false)
-    }
-  }
-
-  const handleCancel = async (cancelImmediately: boolean = false) => {
-    if (!confirm(
-      cancelImmediately
-        ? 'Are you sure you want to cancel your subscription immediately? You will lose access right away.'
-        : 'Are you sure you want to cancel your subscription? It will remain active until the end of the current billing period.'
-    )) {
-      return
-    }
-
-    try {
-      setProcessing(true)
-      setError(null)
-
-      if (!stripeEnabled) {
-        setError('Stripe payment processing is not currently available.')
-        setProcessing(false)
-        return
-      }
-
-      const response = await fetch('/api/stripe/cancel-subscription', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cancelImmediately }),
-      })
-
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Failed to cancel subscription')
-      await loadSubscription()
-      alert(data.message || 'Subscription cancelled successfully')
-    } catch (err: any) {
-      setError(err.message || 'Failed to cancel subscription')
-    } finally {
       setProcessing(false)
     }
   }
