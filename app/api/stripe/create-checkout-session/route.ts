@@ -1,9 +1,9 @@
 import { requireAuth } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
-import { getStripeInstance, getStripePriceId, isStripeEnabled } from '@/lib/stripe'
+import { getStripeInstance, isStripeEnabled } from '@/lib/stripe'
 import {
   getMembershipFeeForLevel,
-  getTrialEndDate,
+  getTrialEndDateAsync,
   type MembershipLevelKey,
 } from '@/lib/settings'
 import { NextResponse } from 'next/server'
@@ -20,10 +20,9 @@ export async function POST(request: Request) {
 
     const user = await requireAuth()
     const stripe = getStripeInstance()
-    const priceId = getStripePriceId()
     const level = (user.profile.membership_level || 'Full') as MembershipLevelKey
     const membershipFee = await getMembershipFeeForLevel(level)
-    const trialEnd = getTrialEndDate(level, user.profile.created_at ?? null)
+    const trialEnd = await getTrialEndDateAsync(level, user.profile.created_at ?? null)
     const now = new Date()
     const hasTrial = trialEnd && trialEnd > now
     const supabase = await createClient()
@@ -64,31 +63,23 @@ export async function POST(request: Request) {
       }
     }
 
-    if (priceId) {
-      sessionParams.line_items = [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ]
-    } else {
-      const price = await stripe.prices.create({
-        currency: 'cad',
-        unit_amount: Math.round(membershipFee * 100),
-        recurring: {
-          interval: 'year',
-        },
-        product_data: {
-          name: `TIPA Annual Membership (${level})`,
-        },
-      })
-      sessionParams.line_items = [
-        {
-          price: price.id,
-          quantity: 1,
-        },
-      ]
-    }
+    // Always use current level's fee so level changes (e.g. Corporate → Full) charge the correct amount
+    const price = await stripe.prices.create({
+      currency: 'cad',
+      unit_amount: Math.round(membershipFee * 100),
+      recurring: {
+        interval: 'year',
+      },
+      product_data: {
+        name: `TIPA Annual Membership (${level})`,
+      },
+    })
+    sessionParams.line_items = [
+      {
+        price: price.id,
+        quantity: 1,
+      },
+    ]
 
     const session = await stripe.checkout.sessions.create(sessionParams)
 

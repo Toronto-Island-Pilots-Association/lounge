@@ -95,8 +95,8 @@ export async function POST(request: Request) {
               .eq('user_id', user.id)
               .limit(1)
 
-            // Check if member has active Stripe or PayPal subscription
-            const hasActiveSubscription = profile.stripe_subscription_id || profile.paypal_subscription_id
+            // Check if member has active Stripe subscription
+            const hasActiveSubscription = !!profile.stripe_subscription_id
             const hasPayments = payments && payments.length > 0
 
             // Prepare update object

@@ -36,8 +36,8 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
     return null
   }
 
-  // Don't show subscription section for rejected or pending members
-  if (profile.status === 'rejected' || profile.status === 'pending') {
+  // Don't show subscription section for rejected, pending, or Honorary members
+  if (profile.status === 'rejected' || profile.status === 'pending' || profile.membership_level === 'Honorary') {
     return null
   }
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null)
@@ -256,26 +256,6 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
   const subscriptionStatus = subscription?.subscription?.status
   const isActiveOrTrialing = subscriptionStatus === 'active' || subscriptionStatus === 'trialing'
 
-  const getStatusBadge = (status: string) => {
-    const statusColors: Record<string, string> = {
-      active: 'bg-green-100 text-green-800',
-      trialing: 'bg-green-100 text-green-800',
-      past_due: 'bg-yellow-100 text-yellow-800',
-      canceled: 'bg-red-100 text-red-800',
-      unpaid: 'bg-red-100 text-red-800',
-    }
-    const displayStatus = status === 'trialing' ? 'Active' : status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')
-    const color = statusColors[status] || 'bg-gray-100 text-gray-800'
-
-    return (
-      <span
-        className={`px-2 py-1 text-xs font-semibold rounded-full ${color}`}
-      >
-        {displayStatus}
-      </span>
-    )
-  }
-
   // Don't show subscription section if Stripe is not enabled
   if (stripeEnabled === false) {
     return null
@@ -293,7 +273,6 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
     // Embedded version - no outer card, just content
     return (
       <div>
-        <h3 className="text-sm font-semibold text-gray-900 mb-4">Membership Subscription</h3>
         <div>
         {error && (
           <div className="mb-4 rounded-md p-4 bg-red-50">
@@ -306,15 +285,18 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
         {!subscription?.hasSubscription ? (
           <div className="space-y-4">
             <div>
-              <p className="text-sm text-gray-600 mb-4">
-                You don't have an active subscription. Subscribe to maintain your membership and access all TIPA features.
-              </p>
+              <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 p-4">
+                <p className="text-sm font-medium text-amber-900 mb-1">Add your payment details to keep your membership</p>
+                <p className="text-sm text-amber-800">
+                  You will not be charged until September 1st. Set up your payment method now so your access continues without interruption.
+                </p>
+              </div>
               {membershipFee && (
                 <div className="bg-gray-50 rounded-lg p-4 mb-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-900">Annual Membership</p>
-                      <p className="text-xs text-gray-500 mt-1">Billed annually</p>
+                      <p className="text-xs text-gray-500 mt-1">Billed annually · First charge September 1st</p>
                     </div>
                     <p className="text-2xl font-bold text-gray-900">
                       ${membershipFee.toFixed(2)}
@@ -328,45 +310,16 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
                 disabled={processing}
                 className="w-full px-4 py-2 bg-[#0d1e26] text-white font-semibold rounded-md hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0d1e26] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {processing ? 'Processing...' : 'Subscribe Now'}
+                {processing ? 'Processing...' : 'Set up payment'}
               </button>
-              <p className="text-center text-xs text-gray-500 mt-2">
-                Already paid?{' '}
-                <button
-                  type="button"
-                  onClick={handleSyncSubscription}
-                  disabled={syncing}
-                  className="text-[#0d1e26] hover:underline font-medium disabled:opacity-50"
-                >
-                  {syncing ? 'Syncing...' : 'Sync subscription'}
-                </button>
-              </p>
             </div>
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-900">Subscription Status</p>
-                <div className="mt-1">{getStatusBadge(subscription.subscription!.status)}</div>
-              </div>
-              {isActiveOrTrialing && (
-                <button
-                  onClick={() => handleCancel(false)}
-                  disabled={processing || subscription.subscription!.cancelAtPeriodEnd}
-                  className="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {subscription.subscription!.cancelAtPeriodEnd
-                    ? 'Cancellation Scheduled'
-                    : 'Cancel Subscription'}
-                </button>
-              )}
-            </div>
-
-            <div className="border-t border-gray-200 pt-4 space-y-3">
+            <div className="space-y-3">
               {subscription.subscription!.amount && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Membership Fee Paid:</span>
+                  <span className="text-gray-500">Membership Fee:</span>
                   <span className="text-gray-900 font-medium">
                     ${subscription.subscription!.amount.toFixed(2)} {subscription.subscription!.currency?.toUpperCase() || 'CAD'}
                   </span>
@@ -381,23 +334,15 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Current Period End:</span>
                 <span className="text-gray-900 font-medium">
-                  {formatDate(subscription.subscription!.currentPeriodEnd)}
+                  {formatDate(profile?.membership_expires_at || subscription.subscription!.currentPeriodEnd)}
                 </span>
               </div>
-              {profile?.membership_expires_at && new Date(profile.membership_expires_at) > new Date(subscription.subscription!.currentPeriodEnd) && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Membership valid through:</span>
-                  <span className="text-gray-900 font-medium">
-                    {formatDate(profile.membership_expires_at)}
-                  </span>
-                </div>
-              )}
               {subscription.subscription!.cancelAtPeriodEnd && (
                 <div className="mt-3 space-y-3">
                   <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
                     <p className="text-sm text-yellow-800">
-                      <strong>Note:</strong> Your subscription will be cancelled at the end of the current billing period (
-                      {formatDate(subscription.subscription!.currentPeriodEnd)}). You will continue to have access until then.
+                      <strong>Note:</strong> Your subscription will be cancelled at the end of the current billing period. You will continue to have access until{' '}
+                      {formatDate(profile?.membership_expires_at || subscription.subscription!.currentPeriodEnd)}.
                     </p>
                   </div>
                   <button
@@ -433,10 +378,6 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
   // Standalone version - with card styling
   return (
     <div className="bg-white shadow rounded-lg overflow-hidden">
-      <div className="px-6 py-5 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900">Membership Subscription</h2>
-        <p className="mt-1 text-sm text-gray-500">Manage your membership payment and subscription</p>
-      </div>
       <div className="px-6 py-5">
         {error && (
           <div className="mb-4 rounded-md bg-red-50 p-4">
@@ -449,15 +390,18 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
         {!subscription?.hasSubscription ? (
           <div className="space-y-4">
             <div>
-              <p className="text-sm text-gray-600 mb-4">
-                You don't have an active subscription. Subscribe to maintain your membership and access all TIPA features.
-              </p>
+              <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 p-4">
+                <p className="text-sm font-medium text-amber-900 mb-1">Add your payment details to keep your membership</p>
+                <p className="text-sm text-amber-800">
+                  You will not be charged until September 1st. Set up your payment method now so your access continues without interruption.
+                </p>
+              </div>
               {membershipFee && (
                 <div className="bg-gray-50 rounded-lg p-4 mb-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-900">Annual Membership</p>
-                      <p className="text-xs text-gray-500 mt-1">Billed annually</p>
+                      <p className="text-xs text-gray-500 mt-1">Billed annually · First charge September 1st</p>
                     </div>
                     <p className="text-2xl font-bold text-gray-900">
                       ${membershipFee.toFixed(2)}
@@ -471,45 +415,16 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
                 disabled={processing}
                 className="w-full px-4 py-2 bg-[#0d1e26] text-white font-semibold rounded-md hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0d1e26] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {processing ? 'Processing...' : 'Subscribe Now'}
+                {processing ? 'Processing...' : 'Set up payment'}
               </button>
-              <p className="text-center text-xs text-gray-500 mt-2">
-                Already paid?{' '}
-                <button
-                  type="button"
-                  onClick={handleSyncSubscription}
-                  disabled={syncing}
-                  className="text-[#0d1e26] hover:underline font-medium disabled:opacity-50"
-                >
-                  {syncing ? 'Syncing...' : 'Sync subscription'}
-                </button>
-              </p>
             </div>
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-900">Subscription Status</p>
-                <div className="mt-1">{getStatusBadge(subscription.subscription!.status)}</div>
-              </div>
-              {isActiveOrTrialing && (
-                <button
-                  onClick={() => handleCancel(false)}
-                  disabled={processing || subscription.subscription!.cancelAtPeriodEnd}
-                  className="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {subscription.subscription!.cancelAtPeriodEnd
-                    ? 'Cancellation Scheduled'
-                    : 'Cancel Subscription'}
-                </button>
-              )}
-            </div>
-
-            <div className="border-t border-gray-200 pt-4 space-y-3">
+            <div className="space-y-3">
               {subscription.subscription!.amount && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Membership Fee Paid:</span>
+                  <span className="text-gray-500">Membership Fee:</span>
                   <span className="text-gray-900 font-medium">
                     ${subscription.subscription!.amount.toFixed(2)} {subscription.subscription!.currency?.toUpperCase() || 'CAD'}
                   </span>
@@ -524,23 +439,15 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Current Period End:</span>
                 <span className="text-gray-900 font-medium">
-                  {formatDate(subscription.subscription!.currentPeriodEnd)}
+                  {formatDate(profile?.membership_expires_at || subscription.subscription!.currentPeriodEnd)}
                 </span>
               </div>
-              {profile?.membership_expires_at && new Date(profile.membership_expires_at) > new Date(subscription.subscription!.currentPeriodEnd) && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Membership valid through:</span>
-                  <span className="text-gray-900 font-medium">
-                    {formatDate(profile.membership_expires_at)}
-                  </span>
-                </div>
-              )}
               {subscription.subscription!.cancelAtPeriodEnd && (
                 <div className="mt-3 space-y-3">
                   <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
                     <p className="text-sm text-yellow-800">
-                      <strong>Note:</strong> Your subscription will be cancelled at the end of the current billing period (
-                      {formatDate(subscription.subscription!.currentPeriodEnd)}). You will continue to have access until then.
+                      <strong>Note:</strong> Your subscription will be cancelled at the end of the current billing period. You will continue to have access until{' '}
+                      {formatDate(profile?.membership_expires_at || subscription.subscription!.currentPeriodEnd)}.
                     </p>
                   </div>
                   <button

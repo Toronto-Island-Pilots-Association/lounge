@@ -166,6 +166,86 @@ export async function sendWelcomeEmail(email: string, name: string) {
   })
 }
 
+/** Details for subscription confirmation email (charge date, amount, validity). */
+export type SubscriptionConfirmationDetails = {
+  /** Amount charged or to be charged (e.g. 45 for $45 CAD). */
+  amount: number
+  currency: string
+  /** When the next payment will be taken (e.g. end of trial or next year). */
+  nextChargeDate: Date | null
+  /** Membership valid until this date. */
+  validUntil: Date
+  paymentMethod: 'stripe'
+}
+
+function formatDate(d: Date): string {
+  return d.toLocaleDateString('en-CA', { timeZone: 'UTC', year: 'numeric', month: 'long', day: 'numeric' })
+}
+
+/**
+ * Sends a subscription confirmation email with charge date, amount, and validity.
+ * Use this instead of the generic "Membership Upgrade" email.
+ */
+export async function sendSubscriptionConfirmationEmail(
+  email: string,
+  name: string,
+  details: SubscriptionConfirmationDetails
+) {
+  const { amount, currency, nextChargeDate, validUntil, paymentMethod } = details
+  const amountStr = new Intl.NumberFormat('en-CA', {
+    style: 'currency',
+    currency: currency,
+  }).format(amount)
+  const validUntilStr = formatDate(validUntil)
+  const paymentLabel = 'Stripe'
+
+  const nextChargeSection =
+    nextChargeDate && nextChargeDate > new Date()
+      ? `
+        <p style="color: #374151; line-height: 1.6;">
+          <strong>Next payment:</strong> ${amountStr} on <strong>${formatDate(nextChargeDate)}</strong> (via ${paymentLabel}). Your membership will renew for another year from that date.
+        </p>
+      `
+      : `
+        <p style="color: #374151; line-height: 1.6;">
+          Your next payment will be in one year when your membership is due for renewal (via ${paymentLabel}).
+        </p>
+      `
+
+  return sendEmail({
+    to: email,
+    subject: 'Your TIPA subscription confirmation',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #1f2937; margin-bottom: 20px;">Subscription confirmed</h1>
+        <p style="color: #374151; line-height: 1.6;">Hi ${name},</p>
+        <p style="color: #374151; line-height: 1.6;">
+          Thank you for subscribing. Your payment has been received and your membership is active.
+        </p>
+        <div style="background-color: #f0f9ff; border-left: 4px solid #0d1e26; padding: 16px; margin: 20px 0; border-radius: 4px;">
+          <p style="color: #374151; line-height: 1.6; margin: 0 0 8px 0;">
+            <strong>Amount paid:</strong> ${amountStr}
+          </p>
+          <p style="color: #374151; line-height: 1.6; margin: 0 0 8px 0;">
+            <strong>Membership valid until:</strong> ${validUntilStr}
+          </p>
+          ${nextChargeSection}
+        </div>
+        <p style="color: #374151; line-height: 1.6;">
+          You can manage your subscription and view your membership details anytime from your <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://tipa.ca'}/membership" style="color: #0d1e26;">membership page</a>.
+        </p>
+        <p style="margin-top: 20px; color: #374151; line-height: 1.6;">
+          Best regards,<br>
+          <strong>The TIPA Team</strong>
+        </p>
+      </div>
+    `,
+  })
+}
+
+/**
+ * @deprecated Use sendSubscriptionConfirmationEmail with charge/validity details instead.
+ */
 export async function sendMembershipUpgradeEmail(email: string, name: string) {
   return sendEmail({
     to: email,

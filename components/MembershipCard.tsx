@@ -17,9 +17,11 @@ interface MembershipCardProps {
   membershipLevelDisplay?: string
   /** When provided (e.g. trial end date), used for Valid Thru instead of membership_expires_at */
   validThruDate?: string | null
+  /** When true, show "-" instead of member number (trial members don't get a number yet). */
+  isOnTrial?: boolean
 }
 
-export default function MembershipCard({ user, isPending, isRejected, isPaid, isExpired, membershipLevelDisplay, validThruDate }: MembershipCardProps) {
+export default function MembershipCard({ user, isPending, isRejected, isPaid, isExpired, membershipLevelDisplay, validThruDate, isOnTrial = false }: MembershipCardProps) {
   const [tilt, setTilt] = useState({ x: 0, y: 0 })
   const [glarePosition, setGlarePosition] = useState({ x: 50, y: 50 })
   const cardRef = useRef<HTMLDivElement>(null)
@@ -72,7 +74,7 @@ export default function MembershipCard({ user, isPending, isRejected, isPaid, is
     <div className="relative w-full">
       <div
         ref={cardRef}
-        className="relative bg-gradient-to-br from-[#0d1e26] via-[#0a171c] to-[#0d1e26] rounded-2xl overflow-hidden transition-all duration-300 ease-out shadow-2xl sm:min-w-[380px] border-0"
+        className="relative bg-gradient-to-br from-[#0d1e26] via-[#0a171c] to-[#0d1e26] rounded-2xl overflow-hidden transition-all duration-300 ease-out sm:min-w-[380px] border-0"
         style={{
           aspectRatio: '1.586 / 1',
           transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale3d(1.02, 1.02, 1.02)`,
@@ -164,15 +166,15 @@ export default function MembershipCard({ user, isPending, isRejected, isPaid, is
                     </div>
                   )}
                 </div>
-                {/* Only show Number field if not Associate and member_number exists */}
-                {user.profile.membership_level !== 'Associate' && user.profile.member_number && (
+                {/* Show Number field if not Associate; on trial show "-" instead of number */}
+                {user.profile.membership_level !== 'Associate' && (
                   <div className="min-w-0 flex-1">
                     <div className="text-[clamp(0.625rem,1.2vw,0.5rem)] uppercase tracking-widest text-white/60 mb-0.5">Number</div>
                     <div 
                       className="font-semibold uppercase tracking-wide text-white font-mono break-all"
                       style={{ fontSize: 'clamp(0.875rem, 2vw, 0.75rem)' }}
                     >
-                      {user.profile.member_number}
+                      {isOnTrial ? '-' : (user.profile.member_number || '-')}
                     </div>
                   </div>
                 )}
@@ -192,20 +194,22 @@ export default function MembershipCard({ user, isPending, isRejected, isPaid, is
               )}
             </div>
 
-            {/* Expiration Date: show trial end when on trial, otherwise membership_expires_at */}
-            {(validThruDate || user.profile.membership_expires_at) && (
+            {/* Expiration Date: Honorary = lifetime; otherwise trial end or membership_expires_at */}
+            {(user.profile.membership_level === 'Honorary' || validThruDate || user.profile.membership_expires_at) && (
               <div className="text-right flex-shrink-0">
                 <div className="text-[clamp(0.625rem,1.2vw,0.5rem)] uppercase tracking-widest text-white/60 mb-0.5">Valid Thru</div>
                 <div 
                   className={`font-mono ${isExpired ? 'text-red-300' : 'text-white'}`}
                   style={{ fontSize: 'clamp(0.875rem, 2vw, 0.75rem)' }}
                 >
-                  {new Date(validThruDate || user.profile.membership_expires_at!).toLocaleDateString('en-US', { 
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                    timeZone: 'UTC'
-                  })}
+                  {user.profile.membership_level === 'Honorary'
+                    ? 'Lifetime'
+                    : new Date(validThruDate || user.profile.membership_expires_at!).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        timeZone: 'UTC',
+                      })}
                 </div>
               </div>
             )}

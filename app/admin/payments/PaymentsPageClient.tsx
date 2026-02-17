@@ -108,7 +108,6 @@ export default function PaymentsPageClient() {
           >
             <option value="">All methods</option>
             <option value="stripe">Stripe</option>
-            <option value="paypal">PayPal</option>
             <option value="cash">Cash</option>
             <option value="wire">Wire</option>
           </select>

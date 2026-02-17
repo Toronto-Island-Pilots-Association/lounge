@@ -34,7 +34,21 @@ export default async function MembershipPage() {
   const showTrial = isOnTrial && !hasStripeSubscription
   const isPaid = user.profile.membership_level === 'Full' || user.profile.membership_level === 'Corporate' || user.profile.membership_level === 'Honorary'
   // Prefer DB membership_expires_at when set; otherwise use trial end only when showing trial (not subscribed)
-  const hasMembershipExpiry = !!user.profile.membership_expires_at
+  let hasMembershipExpiry = !!user.profile.membership_expires_at
+  if (!hasMembershipExpiry && user.profile.stripe_subscription_id) {
+    const { syncSubscriptionByUserId } = await import('@/lib/subscription-sync')
+    await syncSubscriptionByUserId(user.id)
+    const supabase = await createClient()
+    const { data: updated } = await supabase
+      .from('user_profiles')
+      .select('membership_expires_at')
+      .eq('id', user.id)
+      .single()
+    if (updated?.membership_expires_at) {
+      user.profile.membership_expires_at = updated.membership_expires_at
+      hasMembershipExpiry = true
+    }
+  }
   const isExpired = hasMembershipExpiry
     ? new Date(user.profile.membership_expires_at!) < new Date()
     : showTrial && trialEnd
@@ -42,9 +56,10 @@ export default async function MembershipPage() {
       : false
   const validThruDate = hasMembershipExpiry ? null : (showTrial && trialEnd ? trialEnd.toISOString() : null)
 
-  const membershipLevelDisplay = showTrial
-    ? `${getMembershipLevelLabel(membershipLevel)} (trial)`
-    : getMembershipLevelLabel(membershipLevel)
+  const membershipLevelDisplay =
+    showTrial && membershipLevel !== 'Student'
+      ? `${getMembershipLevelLabel(membershipLevel)} (trial)`
+      : getMembershipLevelLabel(membershipLevel)
 
   // Pending approval copy: level-specific message (Full/Associate trial until Sept 1, etc.)
   const levelLabel = getMembershipLevelLabel(membershipLevel)
@@ -129,16 +144,14 @@ export default async function MembershipPage() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Main Content */}
           <div className="lg:col-span-2 order-2 lg:order-1">
-            <div className="bg-white shadow rounded-lg">
-              <div className="px-4 py-5 sm:p-6">
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">
-                  Membership
-                </h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">
+              Membership
+            </h1>
 
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-2">
-                  {/* Wallet-Sized Membership Card - Only for approved members */}
-                  {!isPending && !isRejected && !isExpiredStatus && (
-                    <MembershipCard
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-2">
+              {/* Wallet-Sized Membership Card - Only for approved members */}
+              {!isPending && !isRejected && !isExpiredStatus && (
+                <MembershipCard
                       user={user}
                       isPending={isPending}
                       isRejected={isRejected}
@@ -146,6 +159,7 @@ export default async function MembershipPage() {
                       isExpired={isExpired}
                       membershipLevelDisplay={membershipLevelDisplay}
                       validThruDate={validThruDate}
+                      isOnTrial={showTrial}
                     />
                   )}
 
@@ -189,17 +203,17 @@ export default async function MembershipPage() {
                   </div>
                 ) : null}
 
-                {/* Payment History Section - Show for approved and expired members */}
-                {!isPending && !isRejected && (
-                  <div className="mt-6">
-                    <MembershipPageClient membershipLevel={user.profile.membership_level} />
-                  </div>
-                )}
-
-                {/* Subscription Section - Show for all users except rejected */}
+                {/* Subscription Section first - Show for all users except rejected */}
                 {!isRejected && (
                   <div className="mt-6">
                     <SubscriptionSection user={user} />
+                  </div>
+                )}
+
+                {/* Payment History - Show for approved and expired members */}
+                {!isPending && !isRejected && (
+                  <div className="mt-6">
+                    <MembershipPageClient membershipLevel={user.profile.membership_level} />
                   </div>
                 )}
 
@@ -273,8 +287,6 @@ export default async function MembershipPage() {
                     </div>
                   </div>
                 ) : null}
-              </div>
-            </div>
           </div>
 
           {/* Sidebar - Hidden on Mobile */}

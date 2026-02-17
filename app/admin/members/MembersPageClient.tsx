@@ -14,6 +14,29 @@ import {
   DrawerClose,
 } from '@/components/ui/drawer'
 
+type PaymentSummary = { amount: number; currency: string; payment_method: string } | null
+function getPaymentDisplay(member: UserProfile & { payment_summary?: PaymentSummary }) {
+  const hasStripe = !!member.stripe_subscription_id
+  const summary = member.payment_summary
+  const method = summary
+    ? summary.payment_method.charAt(0).toUpperCase() + summary.payment_method.slice(1)
+    : hasStripe ? 'Stripe' : null
+  const last =
+    summary && summary.amount > 0
+      ? new Intl.NumberFormat('en-CA', { style: 'currency', currency: summary.currency }).format(summary.amount)
+      : null
+  return { method, last }
+}
+
+function formatDueDate(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  const month = String(d.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(d.getUTCDate()).padStart(2, '0')
+  const year = d.getUTCFullYear()
+  return `${month}/${day}/${year}`
+}
+
 export default function MembersPageClient() {
   const [members, setMembers] = useState<UserProfile[]>([])
   const [loading, setLoading] = useState(true)
@@ -165,9 +188,7 @@ export default function MembersPageClient() {
                   <div className="flex-1">
                     <div className="font-medium text-gray-900">{member.full_name || '-'}</div>
                     <div className="text-sm text-gray-600">{member.email}</div>
-                    {member.member_number && (
-                      <div className="text-xs text-gray-500 mt-1">Member #: {member.member_number}</div>
-                    )}
+                    <div className="text-xs text-gray-500 mt-1">Member #: {getPaymentDisplay(member).method ? (member.member_number || '-') : '-'}</div>
                     {member.call_sign && (
                       <div className="text-xs text-gray-500 mt-1">Call Sign: {member.call_sign}</div>
                     )}
@@ -259,9 +280,7 @@ export default function MembersPageClient() {
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-gray-900 truncate">{member.full_name || '-'}</div>
                       <div className="text-xs text-gray-500 mt-1 truncate">{member.email}</div>
-                      {member.member_number && (
-                        <div className="text-xs text-gray-400 mt-1">Member #: {member.member_number}</div>
-                      )}
+                      <div className="text-xs text-gray-400 mt-1">Member #: {getPaymentDisplay(member).method ? (member.member_number || '-') : '-'}</div>
                       {member.is_student_pilot && (
                         <div className="text-xs text-gray-500 mt-1">Student pilot</div>
                       )}
@@ -279,7 +298,7 @@ export default function MembersPageClient() {
                         Admin
                       </span>
                     )}
-                    <span className={`px-2 py-1 rounded ${
+                    <span className={`px-2 py-1 rounded font-medium ${
                       member.status === 'approved' ? 'bg-green-100 text-green-800' :
                       member.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                       member.status === 'expired' ? 'bg-amber-100 text-amber-800' :
@@ -287,53 +306,75 @@ export default function MembersPageClient() {
                     }`}>
                       {member.status ? member.status.charAt(0).toUpperCase() + member.status.slice(1) : 'Pending'}
                     </span>
-                    <span className={`px-2 py-1 rounded-full ${
-                      member.membership_level === 'Full' || member.membership_level === 'Corporate' || member.membership_level === 'Honorary'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
+                    <span className="px-2 py-1 rounded font-medium bg-gray-100 text-gray-800">
                       {member.membership_level ? getMembershipLevelLabel(member.membership_level) : 'Full'}
                     </span>
-                    {isOnTrial(member.membership_level, member.created_at, member.status) && (
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded font-medium">
-                        Trial
-                      </span>
-                    )}
-                    {member.stripe_subscription_id && (
-                      <span className="px-2 py-1 bg-indigo-100 text-indigo-800 text-xs rounded font-medium">
-                        Stripe
-                      </span>
-                    )}
-                    {member.paypal_subscription_id && (
-                      <span className="px-2 py-1 bg-sky-100 text-sky-800 text-xs rounded font-medium">
-                        PayPal
-                      </span>
-                    )}
                   </div>
+                  <div className="mt-1.5 text-xs whitespace-nowrap">
+                    {(() => {
+                      const { method, last } = getPaymentDisplay(member)
+                      const expectedFee = (member as { expected_fee?: number }).expected_fee
+                      const whenDate = member.trial_end || member.membership_expires_at
+                      const first = method ? (last || '') : 'No payment set up'
+                      const cancellationScheduled = !!(method && member.subscription_cancel_at_period_end)
+                      const expected =
+                        !cancellationScheduled &&
+                        method &&
+                        member.membership_level !== 'Honorary' &&
+                        expectedFee != null
+                          ? `${new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(expectedFee)}${whenDate ? ` (${formatDueDate(whenDate)})` : ''}`
+                          : null
+                      const hasExpected = !!expected
+                      const paymentBadgeClass =
+                        cancellationScheduled || !method
+                          ? 'bg-red-100 text-red-800'
+                          : hasExpected
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-green-100 text-green-800'
+                      return (
+                        <span className={`inline-flex px-2 py-1 rounded font-medium ${paymentBadgeClass}`}>
+                          {first}
+                          {cancellationScheduled
+                            ? (first ? ' Cancellation scheduled' : 'Cancellation scheduled')
+                            : expected ? ` ${expected}` : ''}
+                        </span>
+                      )
+                    })()}
+                  </div>
+                  {(member.membership_level === 'Honorary' || member.membership_expires_at) && (
+                    <div className="mt-2 text-xs text-gray-500">
+                      Expires: {member.membership_level === 'Honorary'
+                        ? 'Lifetime'
+                        : member.membership_expires_at
+                          ? new Date(member.membership_expires_at).toLocaleDateString('en-US', { timeZone: 'UTC' })
+                          : '-'}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
             
             {/* Desktop Table View */}
             <table className="min-w-full divide-y divide-gray-200 hidden sm:table">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-100 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member #</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Membership</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expires</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Member #</th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Membership</th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Payment</th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Expires</th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {members.map((member) => (
-                  <tr key={member.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {member.member_number || '-'}
+                  <tr key={member.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-600 tabular-nums">
+                      {getPaymentDisplay(member).method ? (member.member_number || '-') : '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-5 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       <div className="flex items-center gap-2">
                         <span>{member.full_name || '-'}</span>
                         {member.role === 'admin' && (
@@ -343,8 +384,8 @@ export default function MembersPageClient() {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{member.email}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
+                    <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-500">{member.email}</td>
+                    <td className="px-5 py-4 text-sm text-gray-500">
                       <div className="flex flex-col gap-1">
                         <span className={`inline-flex w-fit px-2 py-1 text-xs rounded ${
                           member.status === 'approved' ? 'bg-green-100 text-green-800' :
@@ -359,47 +400,52 @@ export default function MembersPageClient() {
                             Expired {new Date(member.membership_expires_at).toLocaleDateString('en-US', { timeZone: 'UTC' })}
                           </span>
                         )}
-                        {member.status === 'approved' && member.subscription_cancel_at_period_end && (
-                          <span className="text-xs text-amber-700 font-medium">
-                            Cancellation scheduled
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 text-sm text-gray-500">
+                      <span className="inline-flex px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-800">
+                        {member.membership_level ? getMembershipLevelLabel(member.membership_level) : 'Full'}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 text-sm text-gray-500 whitespace-nowrap">
+                      {(() => {
+                        const { method, last } = getPaymentDisplay(member)
+                        const expectedFee = (member as { expected_fee?: number }).expected_fee
+                        const whenDate = member.trial_end || member.membership_expires_at
+                        const first = method ? (last || '') : 'No payment set up'
+                        const cancellationScheduled = !!(method && member.subscription_cancel_at_period_end)
+                        const expected =
+                          !cancellationScheduled &&
+                          method &&
+                          member.membership_level !== 'Honorary' &&
+                          expectedFee != null
+                            ? `${new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(expectedFee)}${whenDate ? ` (${formatDueDate(whenDate)})` : ''}`
+                            : null
+                        const hasExpected = !!expected
+                        const paymentBadgeClass =
+                          cancellationScheduled || !method
+                            ? 'bg-red-100 text-red-800'
+                            : hasExpected
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-green-100 text-green-800'
+                        return (
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded ${paymentBadgeClass}`}>
+                            {first}
+                            {cancellationScheduled
+                              ? (first ? ' Cancellation scheduled' : 'Cancellation scheduled')
+                              : expected ? ` ${expected}` : ''}
                           </span>
-                        )}
-                      </div>
+                        )
+                      })()}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      <div className="flex flex-col gap-1">
-                        <span className={`inline-flex w-fit px-2 py-1 text-xs rounded-full ${
-                          member.membership_level === 'Full' || member.membership_level === 'Corporate' || member.membership_level === 'Honorary'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {member.membership_level ? getMembershipLevelLabel(member.membership_level) : 'Full'}
-                        </span>
-                        <div className="flex flex-wrap gap-1">
-                          {isOnTrial(member.membership_level, member.created_at, member.status) && (
-                            <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded font-medium">
-                              Trial
-                            </span>
-                          )}
-                          {member.stripe_subscription_id && (
-                            <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-xs rounded font-medium">
-                              Stripe
-                            </span>
-                          )}
-                          {member.paypal_subscription_id && (
-                            <span className="px-2 py-0.5 bg-sky-100 text-sky-800 text-xs rounded font-medium">
-                              PayPal
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                    <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {member.membership_level === 'Honorary'
+                        ? <span className="text-gray-700 font-medium">Lifetime</span>
+                        : member.membership_expires_at
+                          ? new Date(member.membership_expires_at).toLocaleDateString('en-US', { timeZone: 'UTC' })
+                          : '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {member.membership_expires_at
-                        ? new Date(member.membership_expires_at).toLocaleDateString('en-US', { timeZone: 'UTC' })
-                        : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td className="px-5 py-4 whitespace-nowrap text-sm font-medium">
                       {member.status === 'pending' && (
                         <>
                           <button
@@ -669,11 +715,6 @@ function MemberEditModal({
                     <span className="text-amber-700 font-medium">
                       Expired {new Date(member.membership_expires_at).toLocaleDateString('en-US', { timeZone: 'UTC' })}
                     </span>
-                  </div>
-                )}
-                {member.subscription_cancel_at_period_end && (
-                  <div className="col-span-2">
-                    <span className="text-amber-700 font-medium">Cancellation scheduled</span>
                   </div>
                 )}
                 {member.stripe_subscription_id && (

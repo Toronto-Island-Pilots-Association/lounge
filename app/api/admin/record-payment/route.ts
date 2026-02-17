@@ -6,12 +6,12 @@ import { getMembershipFeeForLevel, type MembershipLevelKey } from '@/lib/setting
 import { NextResponse } from 'next/server'
 
 /**
- * Admin endpoint to record manual payments (cash or PayPal)
- * 
+ * Admin endpoint to record manual payments (cash or wire)
+ *
  * POST /api/admin/record-payment
  * Body: {
  *   userId: string,
- *   paymentMethod: 'cash' | 'paypal' | 'wire',
+ *   paymentMethod: 'cash' | 'wire',
  *   membershipExpiresAt?: string (ISO date, defaults to 1 year from now),
  *   notes?: string,
  *   clearStripeSubscription?: boolean (defaults to true)
@@ -38,9 +38,9 @@ export async function POST(request: Request) {
       )
     }
 
-    if (!paymentMethod || !['cash', 'paypal', 'wire'].includes(paymentMethod)) {
+    if (!paymentMethod || !['cash', 'wire'].includes(paymentMethod)) {
       return NextResponse.json(
-        { error: 'Payment method must be "cash", "paypal", or "wire"' },
+        { error: 'Payment method must be "cash" or "wire"' },
         { status: 400 }
       )
     }
@@ -76,15 +76,8 @@ export async function POST(request: Request) {
       membership_expires_at: expiresAt.toISOString(),
     }
 
-    // If payment is via PayPal, store PayPal subscription ID if provided
-    if (paymentMethod === 'paypal' && body.paypalSubscriptionId) {
-      updates.paypal_subscription_id = body.paypalSubscriptionId
-    }
-    
-    // Note: Wire transfers don't have subscription IDs, they're one-time payments
-
     // Clear Stripe subscription if requested (default behavior)
-    // This makes sense when payment is received via cash/PayPal/wire
+    // This makes sense when payment is received via cash/wire
     if (clearStripeSubscription && currentMember.stripe_subscription_id) {
       updates.stripe_subscription_id = null
       updates.stripe_customer_id = null
@@ -146,7 +139,7 @@ export async function POST(request: Request) {
         currency: 'CAD',
         payment_date: new Date().toISOString(),
         membership_expires_at: expiresAt.toISOString(),
-        paypal_subscription_id: paymentMethod === 'paypal' && body.paypalSubscriptionId ? body.paypalSubscriptionId : null,
+        paypal_subscription_id: null,
         recorded_by: adminUser?.id || null,
         notes: notes || null,
         status: 'completed',

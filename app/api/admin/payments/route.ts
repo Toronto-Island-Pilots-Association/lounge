@@ -8,7 +8,7 @@ import { NextResponse } from 'next/server'
  * GET /api/admin/payments
  * Query params:
  *   - userId?: string - Filter by user ID
- *   - paymentMethod?: 'stripe' | 'paypal' | 'cash' | 'wire' - Filter by payment method
+ *   - paymentMethod?: 'stripe' | 'cash' | 'wire' - Filter by payment method (paypal retained for historical data)
  *   - limit?: number - Limit results (default: 100)
  *   - offset?: number - Offset for pagination
  */

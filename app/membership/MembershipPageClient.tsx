@@ -74,8 +74,8 @@ export default function MembershipPageClient({
   return (
     <div className="mt-6 space-y-6">
       {/* Payment History */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
+      <div className="bg-white shadow rounded-lg overflow-hidden">
+        <div className="px-6 py-5">
           <div className="mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Payment History</h2>
           </div>
@@ -106,7 +106,7 @@ export default function MembershipPageClient({
                       </div>
                     </div>
                     <div className="text-sm font-medium text-gray-900">
-                      ${payment.amount.toFixed(2)} {payment.currency}
+                      {payment.amount === 0 ? '—' : `$${payment.amount.toFixed(2)} ${payment.currency}`}
                     </div>
                   </div>
                 </div>

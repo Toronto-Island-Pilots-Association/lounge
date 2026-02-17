@@ -254,9 +254,7 @@ export default function MemberDetailModal({
                     <span className="text-gray-500">Membership level:</span>
                     <div className="font-medium text-gray-900 mt-1 flex flex-wrap items-center gap-2">
                       <span className={`inline-flex px-2 py-0.5 text-xs rounded ${
-                        member.membership_level === 'Full' || member.membership_level === 'Corporate' || member.membership_level === 'Honorary'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
+                        'bg-gray-100 text-gray-800'
                       }`}>
                         {member.membership_level ? getMembershipLevelLabel(member.membership_level) : 'Full'}
                       </span>
@@ -298,11 +296,6 @@ export default function MemberDetailModal({
                       {member.status === 'expired' && member.membership_expires_at && (
                         <span className="text-xs text-amber-700">
                           Expired {new Date(member.membership_expires_at).toLocaleDateString('en-US', { timeZone: 'UTC' })}
-                        </span>
-                      )}
-                      {member.subscription_cancel_at_period_end && (
-                        <span className="text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded">
-                          Cancellation scheduled
                         </span>
                       )}
                     </div>
