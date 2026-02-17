@@ -2,12 +2,12 @@
 
 [![Tests](https://github.com/YOUR_USERNAME/tipa/actions/workflows/test.yml/badge.svg)](https://github.com/YOUR_USERNAME/tipa/actions/workflows/test.yml)
 
-A feature-rich membership management application for non-profit organizations built with Next.js, Supabase, PayPal, and Resend.
+A feature-rich membership management application for non-profit organizations built with Next.js, Supabase, Stripe, and Resend.
 
 ## Features
 
 - **Two Membership Levels**: Free and Paid memberships
-- **PayPal Integration**: Secure payment processing for paid memberships
+- **Stripe Integration**: Secure payment processing for paid memberships
 - **Role-Based Access Control**: Member and Admin roles with appropriate permissions
 - **Admin Dashboard**: Manage members and resources
 - **Resources System**: Share resources with all members
@@ -17,7 +17,7 @@ A feature-rich membership management application for non-profit organizations bu
 
 - **Framework**: Next.js 16 (App Router)
 - **Database & Auth**: Supabase
-- **Payments**: PayPal
+- **Payments**: Stripe
 - **Email**: Resend
 - **Styling**: Tailwind CSS
 - **TypeScript**: Full type safety
@@ -26,7 +26,7 @@ A feature-rich membership management application for non-profit organizations bu
 
 - Node.js 18+ and npm
 - A Supabase account and project
-- A PayPal developer account (for payments)
+- A Stripe account (for payments)
 - A Resend account (for emails)
 
 ## Setup Instructions
@@ -47,11 +47,10 @@ NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
-# PayPal
-NEXT_PUBLIC_PAYPAL_CLIENT_ID=your_paypal_client_id
-PAYPAL_CLIENT_SECRET=your_paypal_client_secret
-NEXT_PUBLIC_PAYPAL_ENVIRONMENT=sandbox
-PAYPAL_PLAN_ID=your_paypal_plan_id  # Optional: Set to use a specific subscription plan ID (takes priority over auto-generation)
+# Stripe (optional; for paid memberships)
+STRIPE_SECRET_KEY=your_stripe_secret_key
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
+STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
 
 # Resend
 RESEND_API_KEY=your_resend_api_key
@@ -68,12 +67,12 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 3. Copy your project URL and anon key from Settings > API
 4. Copy your service role key from Settings > API (keep this secret!)
 
-### 4. PayPal Setup
+### 4. Stripe Setup (optional)
 
-1. Create a PayPal developer account at [developer.paypal.com](https://developer.paypal.com)
-2. Create a new app and get your Client ID
-3. Set up a subscription plan in PayPal (you'll need the Plan ID)
-4. Update the `planId` in `app/dashboard/page.tsx` with your actual PayPal Plan ID
+1. Create a Stripe account at [stripe.com](https://stripe.com)
+2. Create products and prices for your membership tiers
+3. Configure the webhook to point to your `/api/stripe/webhook` endpoint
+4. Add your Stripe keys to environment variables
 
 ### 5. Resend Setup
 
@@ -82,7 +81,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 3. Verify your domain (or use the default sender for testing)
 4. Update `RESEND_FROM_EMAIL` with your verified email
 
-### 6. Run the Development Server
+### 6. Run the development server
 
 ```bash
 npm run dev
@@ -97,7 +96,6 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 │   ├── api/              # API routes
 │   │   ├── auth/         # Authentication endpoints
 │   │   ├── admin/        # Admin endpoints
-│   │   ├── paypal/       # PayPal integration
 │   │   └── resources/    # Resources endpoints
 │   ├── admin/            # Admin dashboard page
 │   ├── dashboard/        # Member dashboard
@@ -107,10 +105,8 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ├── components/            # React components
 │   ├── AdminDashboard.tsx
 │   ├── Navbar.tsx
-│   └── PayPalButton.tsx
 ├── lib/                  # Utility functions
 │   ├── auth.ts           # Authentication helpers
-│   ├── paypal.ts         # PayPal configuration
 │   ├── resend.ts         # Email functions
 │   └── supabase/         # Supabase clients
 ├── supabase/
@@ -131,7 +127,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ### Membership Levels
 
 - **Free**: Default membership level for all new users
-- **Paid**: Upgraded membership with PayPal subscription
+- **Paid**: Upgraded membership with Stripe subscription
 - Membership expiration tracking
 - Automatic downgrade on subscription cancellation
 
@@ -154,16 +150,6 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 - Membership upgrade confirmation
 - Extensible for additional notifications
 
-## PayPal Integration Notes
-
-1. **Plan ID**: 
-   - **Option 1 (Recommended)**: Set `PAYPAL_PLAN_ID` or `NEXT_PUBLIC_PAYPAL_PLAN_ID` in your environment variables
-   - **Option 2**: The system can auto-generate a plan via PayPal API (requires proper API permissions)
-   - **Option 3**: Manually create a plan in PayPal dashboard and set the Plan ID in environment variables
-2. **Webhooks**: Configure PayPal webhooks to point to `/api/paypal/webhook` for subscription events
-3. **Environment**: Use `sandbox` for testing, `production` for live
-4. **Priority**: Environment variable → Database setting → Auto-generation
-
 ## Database Schema
 
 The app uses two main tables:
@@ -185,7 +171,7 @@ See `supabase/schema.sql` for the complete schema with RLS policies.
 1. Deploy to Vercel, Netlify, or your preferred platform
 2. Set environment variables in your hosting platform
 3. Update `NEXT_PUBLIC_APP_URL` with your production URL
-4. Configure PayPal webhooks to point to your production URL
+4. Configure Stripe webhooks to point to your production URL
 5. Run database migrations in Supabase
 
 ## Future Enhancements

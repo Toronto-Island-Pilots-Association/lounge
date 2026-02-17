@@ -51,6 +51,10 @@ export interface UserProfile {
   instructor_name: string | null
   created_at: string
   updated_at: string
+  /** Server-computed trial end (ISO string). Set by admin members API from editable trial config. */
+  trial_end?: string | null
+  /** Latest payment summary from admin members API (amount, currency, payment_method). */
+  payment_summary?: { amount: number; currency: string; payment_method: string } | null
 }
 
 export type ResourceType = 'link' | 'document' | 'video' | 'other'

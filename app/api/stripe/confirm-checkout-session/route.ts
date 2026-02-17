@@ -1,7 +1,7 @@
 import { requireAuth } from '@/lib/auth'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getStripeInstance, isStripeEnabled } from '@/lib/stripe'
-import { sendMembershipUpgradeEmail } from '@/lib/resend'
+import { sendSubscriptionConfirmationEmail } from '@/lib/resend'
 import { syncSubscriptionStatus } from '@/lib/subscription-sync'
 import { getMembershipFeeForLevel, getMembershipExpiresAtFromSubscription, type MembershipLevelKey } from '@/lib/settings'
 import { NextResponse } from 'next/server'
@@ -134,9 +134,16 @@ export async function POST(request: Request) {
     await syncSubscriptionStatus(user.id, subscriptionId)
 
     try {
-      await sendMembershipUpgradeEmail(
+      await sendSubscriptionConfirmationEmail(
         user.profile.email,
-        user.profile.full_name || 'Member'
+        user.profile.full_name || 'Member',
+        {
+          amount: membershipFee,
+          currency: 'CAD',
+          nextChargeDate: currentPeriodEnd,
+          validUntil: new Date(membershipExpiresAt),
+          paymentMethod: 'stripe',
+        }
       )
     } catch {
       // non-fatal

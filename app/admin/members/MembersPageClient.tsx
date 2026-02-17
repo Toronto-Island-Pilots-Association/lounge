@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo, useCallback, Suspense } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import { UserProfile, MembershipLevel, getMembershipLevelLabel, Payment } from '@/types/database'
 import { isOnTrial } from '@/lib/trial'
 import Loading from '@/components/Loading'
@@ -13,6 +13,24 @@ import {
   DrawerFooter,
   DrawerClose,
 } from '@/components/ui/drawer'
+
+type PaymentSummary = { amount: number; currency: string; payment_method: string } | null
+type MemberWithPayment = UserProfile & { payment_summary?: PaymentSummary }
+
+function hasPaymentSetUp(member: MemberWithPayment): boolean {
+  return !!(member.stripe_subscription_id || member.payment_summary)
+}
+
+/** Payment column: subscription status only (no amounts). */
+function getPaymentStatus(member: MemberWithPayment): { label: string; badgeClass: string } {
+  const hasStripe = !!member.stripe_subscription_id
+  const hasPayment = !!member.payment_summary || hasStripe
+  const cancellationScheduled = !!member.subscription_cancel_at_period_end
+  if (hasStripe && cancellationScheduled) return { label: 'Cancellation scheduled', badgeClass: 'bg-yellow-100 text-yellow-800' }
+  if (hasStripe) return { label: 'Subscribed', badgeClass: 'bg-green-100 text-green-800' }
+  if (hasPayment) return { label: 'Paid', badgeClass: 'bg-green-100 text-green-800' }
+  return { label: 'No payment set up', badgeClass: 'bg-red-100 text-red-800' }
+}
 
 export default function MembersPageClient() {
   const [members, setMembers] = useState<UserProfile[]>([])
@@ -165,9 +183,7 @@ export default function MembersPageClient() {
                   <div className="flex-1">
                     <div className="font-medium text-gray-900">{member.full_name || '-'}</div>
                     <div className="text-sm text-gray-600">{member.email}</div>
-                    {member.member_number && (
-                      <div className="text-xs text-gray-500 mt-1">Member #: {member.member_number}</div>
-                    )}
+                    <div className="text-xs text-gray-500 mt-1">Member #: {hasPaymentSetUp(member) ? (member.member_number || '-') : '-'}</div>
                     {member.call_sign && (
                       <div className="text-xs text-gray-500 mt-1">Call Sign: {member.call_sign}</div>
                     )}
@@ -259,9 +275,7 @@ export default function MembersPageClient() {
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-gray-900 truncate">{member.full_name || '-'}</div>
                       <div className="text-xs text-gray-500 mt-1 truncate">{member.email}</div>
-                      {member.member_number && (
-                        <div className="text-xs text-gray-400 mt-1">Member #: {member.member_number}</div>
-                      )}
+                      <div className="text-xs text-gray-400 mt-1">Member #: {hasPaymentSetUp(member) ? (member.member_number || '-') : '-'}</div>
                       {member.is_student_pilot && (
                         <div className="text-xs text-gray-500 mt-1">Student pilot</div>
                       )}
@@ -279,7 +293,7 @@ export default function MembersPageClient() {
                         Admin
                       </span>
                     )}
-                    <span className={`px-2 py-1 rounded ${
+                    <span className={`px-2 py-1 rounded font-medium ${
                       member.status === 'approved' ? 'bg-green-100 text-green-800' :
                       member.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                       member.status === 'expired' ? 'bg-amber-100 text-amber-800' :
@@ -287,53 +301,54 @@ export default function MembersPageClient() {
                     }`}>
                       {member.status ? member.status.charAt(0).toUpperCase() + member.status.slice(1) : 'Pending'}
                     </span>
-                    <span className={`px-2 py-1 rounded-full ${
-                      member.membership_level === 'Full' || member.membership_level === 'Corporate' || member.membership_level === 'Honorary'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
+                    <span className="px-2 py-1 rounded font-medium bg-gray-100 text-gray-800">
                       {member.membership_level ? getMembershipLevelLabel(member.membership_level) : 'Full'}
                     </span>
-                    {isOnTrial(member.membership_level, member.created_at, member.status) && (
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded font-medium">
-                        Trial
-                      </span>
-                    )}
-                    {member.stripe_subscription_id && (
-                      <span className="px-2 py-1 bg-indigo-100 text-indigo-800 text-xs rounded font-medium">
-                        Stripe
-                      </span>
-                    )}
-                    {member.paypal_subscription_id && (
-                      <span className="px-2 py-1 bg-sky-100 text-sky-800 text-xs rounded font-medium">
-                        PayPal
-                      </span>
-                    )}
                   </div>
+                  <div className="mt-1.5 text-xs whitespace-nowrap">
+                    {(() => {
+                      const { label, badgeClass } = getPaymentStatus(member)
+                      return (
+                        <span className={`inline-flex px-2 py-1 rounded font-medium ${badgeClass}`}>
+                          {label}
+                        </span>
+                      )
+                    })()}
+                  </div>
+                  {(member.membership_level === 'Honorary' || member.membership_expires_at) && (
+                    <div className="mt-2 text-xs text-gray-500">
+                      Expires: {member.membership_level === 'Honorary'
+                        ? 'Lifetime'
+                        : member.membership_expires_at
+                          ? new Date(member.membership_expires_at).toLocaleDateString('en-US', { timeZone: 'UTC' })
+                          : '-'}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
             
             {/* Desktop Table View */}
             <table className="min-w-full divide-y divide-gray-200 hidden sm:table">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-100 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member #</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Membership</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expires</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Member #</th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Membership</th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Payment</th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Expires</th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {members.map((member) => (
-                  <tr key={member.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {member.member_number || '-'}
+                  <tr key={member.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-600 tabular-nums">
+                      {hasPaymentSetUp(member) ? (member.member_number || '-') : '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-5 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       <div className="flex items-center gap-2">
                         <span>{member.full_name || '-'}</span>
                         {member.role === 'admin' && (
@@ -343,8 +358,8 @@ export default function MembersPageClient() {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{member.email}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
+                    <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-500">{member.email}</td>
+                    <td className="px-5 py-4 text-sm text-gray-500">
                       <div className="flex flex-col gap-1">
                         <span className={`inline-flex w-fit px-2 py-1 text-xs rounded ${
                           member.status === 'approved' ? 'bg-green-100 text-green-800' :
@@ -359,47 +374,31 @@ export default function MembersPageClient() {
                             Expired {new Date(member.membership_expires_at).toLocaleDateString('en-US', { timeZone: 'UTC' })}
                           </span>
                         )}
-                        {member.status === 'approved' && member.subscription_cancel_at_period_end && (
-                          <span className="text-xs text-amber-700 font-medium">
-                            Cancellation scheduled
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 text-sm text-gray-500">
+                      <span className="inline-flex px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-800">
+                        {member.membership_level ? getMembershipLevelLabel(member.membership_level) : 'Full'}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 text-sm text-gray-500 whitespace-nowrap">
+                      {(() => {
+                        const { label, badgeClass } = getPaymentStatus(member)
+                        return (
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded ${badgeClass}`}>
+                            {label}
                           </span>
-                        )}
-                      </div>
+                        )
+                      })()}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      <div className="flex flex-col gap-1">
-                        <span className={`inline-flex w-fit px-2 py-1 text-xs rounded-full ${
-                          member.membership_level === 'Full' || member.membership_level === 'Corporate' || member.membership_level === 'Honorary'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {member.membership_level ? getMembershipLevelLabel(member.membership_level) : 'Full'}
-                        </span>
-                        <div className="flex flex-wrap gap-1">
-                          {isOnTrial(member.membership_level, member.created_at, member.status) && (
-                            <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded font-medium">
-                              Trial
-                            </span>
-                          )}
-                          {member.stripe_subscription_id && (
-                            <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-xs rounded font-medium">
-                              Stripe
-                            </span>
-                          )}
-                          {member.paypal_subscription_id && (
-                            <span className="px-2 py-0.5 bg-sky-100 text-sky-800 text-xs rounded font-medium">
-                              PayPal
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                    <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {member.membership_level === 'Honorary'
+                        ? <span className="text-gray-700 font-medium">Lifetime</span>
+                        : member.membership_expires_at
+                          ? new Date(member.membership_expires_at).toLocaleDateString('en-US', { timeZone: 'UTC' })
+                          : '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {member.membership_expires_at
-                        ? new Date(member.membership_expires_at).toLocaleDateString('en-US', { timeZone: 'UTC' })
-                        : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td className="px-5 py-4 whitespace-nowrap text-sm font-medium">
                       {member.status === 'pending' && (
                         <>
                           <button
@@ -457,413 +456,6 @@ export default function MembersPageClient() {
         />
       )}
     </div>
-  )
-}
-
-// Modal components (extracted from AdminDashboard)
-function MemberEditModal({
-  member,
-  onClose,
-  onSave,
-}: {
-  member: UserProfile
-  onClose: () => void
-  onSave: (member: UserProfile, updates: Partial<UserProfile>) => void
-}) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'activity' | 'payments' | 'timeline'>('overview')
-  const [formData, setFormData] = useState({
-    full_name: member.full_name || '',
-    role: member.role,
-    membership_level: member.membership_level,
-    status: member.status,
-    flight_school: member.flight_school || '',
-    instructor_name: member.instructor_name || '',
-  })
-  const [showPaymentForm, setShowPaymentForm] = useState(false)
-  const [paymentFormData, setPaymentFormData] = useState({
-    paymentMethod: 'cash' as 'cash' | 'paypal' | 'wire',
-    membershipExpiresAt: '',
-    notes: '',
-    clearStripeSubscription: true,
-  })
-  const [recordingPayment, setRecordingPayment] = useState(false)
-  
-  // Activity data state
-  const [activityData, setActivityData] = useState<{
-    stats: {
-      threads_created: number
-      comments_made: number
-      reactions_given: number
-      events_created: number
-      payments_count: number
-      total_paid: number
-    } | null
-    threads: any[]
-    comments: any[]
-    reactions: any[]
-    events: any[]
-    payments: Payment[]
-  } | null>(null)
-  const [loadingActivity, setLoadingActivity] = useState(false)
-
-  // Load activity data when modal opens or tab changes
-  useEffect(() => {
-    if (activeTab === 'activity' || activeTab === 'payments' || activeTab === 'timeline') {
-      loadActivityData()
-    }
-  }, [activeTab, member.id])
-
-  const loadActivityData = async () => {
-    if (activityData) return // Already loaded
-    setLoadingActivity(true)
-    try {
-      const response = await fetch(`/api/admin/members/${member.id}/activity`)
-      if (response.ok) {
-        const data = await response.json()
-        setActivityData(data)
-      }
-    } catch (error) {
-      console.error('Error loading activity data:', error)
-    } finally {
-      setLoadingActivity(false)
-    }
-  }
-
-  return (
-    <Drawer open={true} onOpenChange={(open) => !open && onClose()}>
-      <DrawerContent className="max-h-[90vh]">
-        <DrawerHeader>
-          <DrawerTitle>Edit Member</DrawerTitle>
-        </DrawerHeader>
-        <div className="px-4 pb-4 space-y-4 overflow-y-auto">
-          <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">Full Name</label>
-            <input
-              type="text"
-              value={formData.full_name}
-              onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">Status</label>
-            <select
-              value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value as UserProfile['status'] })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-            >
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-              <option value="expired">Expired</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">Role</label>
-            <select
-              value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value as 'member' | 'admin' })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-            >
-              <option value="member">Member</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">Membership Level</label>
-            <select
-              value={formData.membership_level}
-              onChange={(e) => setFormData({ ...formData, membership_level: e.target.value as MembershipLevel })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-            >
-              <option value="Full">Full</option>
-              <option value="Student">Student</option>
-              <option value="Associate">Associate</option>
-              <option value="Corporate">Corporate</option>
-              <option value="Honorary">Honorary</option>
-            </select>
-          </div>
-          {formData.membership_level === 'Student' && (
-            <div className="pt-2 border-t border-gray-200 space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Flight school / club</label>
-                <input
-                  type="text"
-                  value={formData.flight_school}
-                  onChange={(e) => setFormData({ ...formData, flight_school: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                  placeholder="e.g., Island Air, Freelance…"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Instructor name</label>
-                <input
-                  type="text"
-                  value={formData.instructor_name}
-                  onChange={(e) => setFormData({ ...formData, instructor_name: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                  placeholder="e.g., Jane Smith"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Payment Recording Section */}
-          <div className="pt-4 mt-4 border-t border-gray-200">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900">Payment & Subscription</h3>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Record manual payments (cash, PayPal, or wire transfer)
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  // Set default expiration to 1 year from now
-                  const defaultExpiresAt = new Date()
-                  defaultExpiresAt.setFullYear(defaultExpiresAt.getFullYear() + 1)
-                  setPaymentFormData({
-                    ...paymentFormData,
-                    membershipExpiresAt: defaultExpiresAt.toISOString().split('T')[0],
-                  })
-                  setShowPaymentForm(!showPaymentForm)
-                }}
-                className="px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
-              >
-                {showPaymentForm ? 'Cancel' : 'Record Payment'}
-              </button>
-            </div>
-
-            {/* Current Status */}
-            <div className="mb-3 p-3 bg-gray-50 rounded-md text-xs">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="col-span-2">
-                  <span className="text-gray-500">Membership:</span>{' '}
-                  <span className="font-medium text-gray-900">
-                    {member.membership_level ? getMembershipLevelLabel(member.membership_level) : 'Full'}
-                  </span>
-                  {isOnTrial(member.membership_level, member.created_at, member.status) && (
-                    <span className="ml-1 px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded font-medium">Trial</span>
-                  )}
-                  {member.stripe_subscription_id && (
-                    <span className="ml-1 px-1.5 py-0.5 bg-indigo-100 text-indigo-800 rounded font-medium">Stripe</span>
-                  )}
-                  {member.paypal_subscription_id && (
-                    <span className="ml-1 px-1.5 py-0.5 bg-sky-100 text-sky-800 rounded font-medium">PayPal</span>
-                  )}
-                </div>
-                <div>
-                  <span className="text-gray-500">Status:</span>{' '}
-                  <span className="font-medium text-gray-900">{member.status}</span>
-                </div>
-                <div>
-                  <span className="text-gray-500">Expires:</span>{' '}
-                  <span className="font-medium text-gray-900">
-                    {member.membership_expires_at
-                      ? new Date(member.membership_expires_at).toLocaleDateString('en-US', { timeZone: 'UTC' })
-                      : 'Not set'}
-                  </span>
-                </div>
-                {member.status === 'expired' && member.membership_expires_at && (
-                  <div className="col-span-2">
-                    <span className="text-amber-700 font-medium">
-                      Expired {new Date(member.membership_expires_at).toLocaleDateString('en-US', { timeZone: 'UTC' })}
-                    </span>
-                  </div>
-                )}
-                {member.subscription_cancel_at_period_end && (
-                  <div className="col-span-2">
-                    <span className="text-amber-700 font-medium">Cancellation scheduled</span>
-                  </div>
-                )}
-                {member.stripe_subscription_id && (
-                  <div className="col-span-2">
-                    <span className="text-gray-500">Stripe Subscription:</span>{' '}
-                    <span className="font-medium text-gray-900">Active</span>
-                  </div>
-                )}
-                {member.paypal_subscription_id && (
-                  <div className="col-span-2">
-                    <span className="text-gray-500">PayPal Subscription:</span>{' '}
-                    <span className="font-medium text-gray-900">Active</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Payment Form */}
-            {showPaymentForm && (
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-md space-y-3" style={{ overflow: 'visible' }}>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Payment Method
-                  </label>
-                  <select
-                    value={paymentFormData.paymentMethod}
-                    onChange={(e) =>
-                      setPaymentFormData({
-                        ...paymentFormData,
-                        paymentMethod: e.target.value as 'cash' | 'paypal' | 'wire',
-                      })
-                    }
-                    className="w-full px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                  >
-                    <option value="cash">Cash</option>
-                    <option value="paypal">PayPal</option>
-                    <option value="wire">Wire Transfer</option>
-                  </select>
-                </div>
-
-                <div className="relative" style={{ zIndex: 9999, isolation: 'isolate' }}>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Membership Expires At
-                  </label>
-                  <input
-                    type="date"
-                    value={paymentFormData.membershipExpiresAt}
-                    onChange={(e) =>
-                      setPaymentFormData({
-                        ...paymentFormData,
-                        membershipExpiresAt: e.target.value,
-                      })
-                    }
-                    onFocus={(e) => {
-                      // Prevent drawer from closing when date picker opens
-                      e.stopPropagation()
-                    }}
-                    onClick={(e) => {
-                      // Ensure the input is clickable and the calendar can open
-                      e.stopPropagation()
-                    }}
-                    onMouseDown={(e) => {
-                      // Prevent any event handlers from blocking the date picker
-                      e.stopPropagation()
-                    }}
-                    className="w-full px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
-                    style={{ position: 'relative', pointerEvents: 'auto', WebkitAppearance: 'none' }}
-                  />
-                  <p className="mt-1 text-xs text-gray-500">
-                    Defaults to 1 year from today if not set
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Notes (optional)
-                  </label>
-                  <textarea
-                    value={paymentFormData.notes}
-                    onChange={(e) =>
-                      setPaymentFormData({
-                        ...paymentFormData,
-                        notes: e.target.value,
-                      })
-                    }
-                    rows={2}
-                    className="w-full px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                    placeholder="Payment reference, receipt number, etc."
-                  />
-                </div>
-
-                {member.stripe_subscription_id && (
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="clearStripe"
-                      checked={paymentFormData.clearStripeSubscription}
-                      onChange={(e) =>
-                        setPaymentFormData({
-                          ...paymentFormData,
-                          clearStripeSubscription: e.target.checked,
-                        })
-                      }
-                      className="h-4 w-4 text-[#0d1e26] focus:ring-[#0d1e26] border-gray-300 rounded"
-                    />
-                    <label htmlFor="clearStripe" className="ml-2 text-xs text-gray-700">
-                      Clear Stripe subscription (recommended for cash/PayPal payments)
-                    </label>
-                  </div>
-                )}
-
-                <button
-                  onClick={async () => {
-                    setRecordingPayment(true)
-                    try {
-                      const response = await fetch('/api/admin/record-payment', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          userId: member.id,
-                          paymentMethod: paymentFormData.paymentMethod,
-                          membershipExpiresAt: paymentFormData.membershipExpiresAt
-                            ? new Date(paymentFormData.membershipExpiresAt).toISOString()
-                            : undefined,
-                          notes: paymentFormData.notes || undefined,
-                          clearStripeSubscription: paymentFormData.clearStripeSubscription,
-                        }),
-                      })
-
-                      if (response.ok) {
-                        const data = await response.json()
-                        alert('Payment recorded successfully!')
-                        setShowPaymentForm(false)
-                        setPaymentFormData({
-                          paymentMethod: 'cash',
-                          membershipExpiresAt: '',
-                          notes: '',
-                          clearStripeSubscription: true,
-                        })
-                        // Update the member with the new data - this will trigger reload
-                        onSave(member, {
-                          status: data.member.status,
-                          membership_expires_at: data.member.membership_expires_at,
-                          stripe_subscription_id: data.member.stripe_subscription_id,
-                          stripe_customer_id: data.member.stripe_customer_id,
-                          paypal_subscription_id: data.member.paypal_subscription_id,
-                        })
-                      } else {
-                        const error = await response.json()
-                        alert(error.error || 'Failed to record payment')
-                      }
-                    } catch (error) {
-                      console.error('Error recording payment:', error)
-                      alert('Failed to record payment')
-                    } finally {
-                      setRecordingPayment(false)
-                    }
-                  }}
-                  disabled={recordingPayment}
-                  className="w-full px-3 py-2 text-xs font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {recordingPayment ? 'Recording...' : 'Record Payment'}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-        <DrawerFooter>
-          <div className="flex justify-end space-x-2">
-            <DrawerClose asChild>
-              <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">
-                Cancel
-              </button>
-            </DrawerClose>
-            <button
-              onClick={() => {
-                onSave(member, {
-                  ...formData,
-                  is_student_pilot: formData.membership_level === 'Student',
-                } as Partial<UserProfile>)
-                onClose()
-              }}
-              className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c]"
-            >
-              Save
-            </button>
-          </div>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
   )
 }
 

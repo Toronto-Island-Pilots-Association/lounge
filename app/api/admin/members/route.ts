@@ -2,6 +2,9 @@ import { requireAdmin } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { sendMemberApprovalEmail } from '@/lib/resend'
 import { appendMemberToSheet } from '@/lib/google-sheets'
+import { getTrialEndDateAsync, getMembershipFeeForLevel } from '@/lib/settings'
+import type { MembershipLevelKey } from '@/lib/settings'
+import { getStripeInstance, isStripeEnabled } from '@/lib/stripe'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
@@ -18,7 +21,41 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    return NextResponse.json({ members: data })
+    const membersWithTrial = await Promise.all(
+      (data ?? []).map(async (member) => {
+        const level = (member.membership_level || 'Full') as MembershipLevelKey
+        const trialEnd = await getTrialEndDateAsync(level, member.created_at ?? null)
+        const expected_fee = await getMembershipFeeForLevel(level)
+        return {
+          ...member,
+          trial_end: trialEnd ? trialEnd.toISOString() : null,
+          expected_fee,
+        }
+      })
+    )
+
+    const { data: payments } = await supabase
+      .from('payments')
+      .select('user_id, amount, currency, payment_method')
+      .order('payment_date', { ascending: false })
+
+    const latestPaymentByUser = new Map<string, { amount: number; currency: string; payment_method: string }>()
+    for (const p of payments ?? []) {
+      if (!latestPaymentByUser.has(p.user_id)) {
+        latestPaymentByUser.set(p.user_id, {
+          amount: p.amount,
+          currency: p.currency || 'CAD',
+          payment_method: p.payment_method,
+        })
+      }
+    }
+
+    const membersWithPayment = membersWithTrial.map((member) => ({
+      ...member,
+      payment_summary: latestPaymentByUser.get(member.id) ?? null,
+    }))
+
+    return NextResponse.json({ members: membersWithPayment })
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || 'An error occurred' },
@@ -55,6 +92,53 @@ export async function PATCH(request: Request) {
 
     if (!currentMember) {
       return NextResponse.json({ error: 'Member not found' }, { status: 404 })
+    }
+
+    const membershipLevelChanged =
+      updates.membership_level != null && updates.membership_level !== currentMember.membership_level
+
+    if (membershipLevelChanged) {
+      if (currentMember.stripe_subscription_id && isStripeEnabled()) {
+        const stripe = getStripeInstance()
+        const newLevel = updates.membership_level as MembershipLevelKey
+        try {
+          const subscription = await stripe.subscriptions.retrieve(
+            currentMember.stripe_subscription_id,
+            { expand: ['items.data.price'] }
+          )
+          const item = subscription.items.data[0]
+          if (item) {
+            const newFee = await getMembershipFeeForLevel(newLevel)
+            const newPrice = await stripe.prices.create({
+              currency: 'cad',
+              unit_amount: Math.round(newFee * 100),
+              recurring: { interval: 'year' },
+              product_data: { name: `TIPA Annual Membership (${newLevel})` },
+            })
+            await stripe.subscriptions.update(currentMember.stripe_subscription_id, {
+              items: [{ id: item.id, price: newPrice.id }],
+              proration_behavior: 'create_prorations',
+            })
+          } else {
+            await stripe.subscriptions.cancel(currentMember.stripe_subscription_id)
+            updates.stripe_subscription_id = null
+            updates.subscription_cancel_at_period_end = false
+            updates.membership_expires_at = null
+          }
+        } catch (err) {
+          console.error('Failed to update Stripe subscription for member', id, err)
+          try {
+            await stripe.subscriptions.cancel(currentMember.stripe_subscription_id)
+          } catch (cancelErr) {
+            console.error('Failed to cancel Stripe subscription after update error', cancelErr)
+          }
+          updates.stripe_subscription_id = null
+          updates.subscription_cancel_at_period_end = false
+          updates.membership_expires_at = null
+        }
+      } else {
+        updates.membership_expires_at = null
+      }
     }
 
     // Check if status is being changed to 'approved' (from any status)

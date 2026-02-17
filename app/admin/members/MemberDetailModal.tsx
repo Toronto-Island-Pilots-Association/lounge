@@ -67,6 +67,7 @@ export default function MemberDetailModal({
   onSave: (member: UserProfile, updates: Partial<UserProfile>) => void
 }) {
   const [activeTab, setActiveTab] = useState<'overview' | 'edit' | 'membership' | 'activity'>('overview')
+  const [cancellingStripe, setCancellingStripe] = useState(false)
   const [formData, setFormData] = useState({
     full_name: member.full_name || '',
     first_name: member.first_name || '',
@@ -254,9 +255,7 @@ export default function MemberDetailModal({
                     <span className="text-gray-500">Membership level:</span>
                     <div className="font-medium text-gray-900 mt-1 flex flex-wrap items-center gap-2">
                       <span className={`inline-flex px-2 py-0.5 text-xs rounded ${
-                        member.membership_level === 'Full' || member.membership_level === 'Corporate' || member.membership_level === 'Honorary'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
+                        'bg-gray-100 text-gray-800'
                       }`}>
                         {member.membership_level ? getMembershipLevelLabel(member.membership_level) : 'Full'}
                       </span>
@@ -298,11 +297,6 @@ export default function MemberDetailModal({
                       {member.status === 'expired' && member.membership_expires_at && (
                         <span className="text-xs text-amber-700">
                           Expired {new Date(member.membership_expires_at).toLocaleDateString('en-US', { timeZone: 'UTC' })}
-                        </span>
-                      )}
-                      {member.subscription_cancel_at_period_end && (
-                        <span className="text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded">
-                          Cancellation scheduled
                         </span>
                       )}
                     </div>
@@ -1038,6 +1032,73 @@ export default function MemberDetailModal({
                     {showPaymentForm ? 'Cancel' : 'Record Payment'}
                   </button>
                 </div>
+
+                {/* Cancel Stripe subscription (admin) */}
+                {member.stripe_subscription_id && !member.subscription_cancel_at_period_end && (
+                  <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-md">
+                    <p className="text-xs font-medium text-gray-700 mb-2">Cancel Stripe subscription</p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!confirm('Cancel at end of billing period? The member will keep access until then.')) return
+                          setCancellingStripe(true)
+                          try {
+                            const res = await fetch('/api/admin/cancel-stripe-subscription', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ userId: member.id, cancelImmediately: false }),
+                            })
+                            const data = await res.json()
+                            if (res.ok) {
+                              onSave(member, data.member ?? { subscription_cancel_at_period_end: true })
+                            } else {
+                              alert(data.error || 'Failed to cancel subscription')
+                            }
+                          } catch (e) {
+                            console.error(e)
+                            alert('Failed to cancel subscription')
+                          } finally {
+                            setCancellingStripe(false)
+                          }
+                        }}
+                        disabled={cancellingStripe}
+                        className="px-3 py-1.5 text-xs font-medium text-amber-800 bg-amber-100 rounded-md hover:bg-amber-200 disabled:opacity-50"
+                      >
+                        {cancellingStripe ? 'Cancelling…' : 'Cancel at period end'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!confirm('Cancel immediately? The member will lose access right away.')) return
+                          setCancellingStripe(true)
+                          try {
+                            const res = await fetch('/api/admin/cancel-stripe-subscription', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ userId: member.id, cancelImmediately: true }),
+                            })
+                            const data = await res.json()
+                            if (res.ok) {
+                              onSave(member, data.member ?? { stripe_subscription_id: null, status: 'expired' })
+                            } else {
+                              alert(data.error || 'Failed to cancel subscription')
+                            }
+                          } catch (e) {
+                            console.error(e)
+                            alert('Failed to cancel subscription')
+                          } finally {
+                            setCancellingStripe(false)
+                          }
+                        }}
+                        disabled={cancellingStripe}
+                        className="px-3 py-1.5 text-xs font-medium text-red-800 bg-red-100 rounded-md hover:bg-red-200 disabled:opacity-50"
+                      >
+                        Cancel immediately
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Payment Form */}
                 {showPaymentForm && (
