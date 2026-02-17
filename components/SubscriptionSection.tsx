@@ -36,13 +36,14 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
     return null
   }
 
-  // Don't show subscription section for rejected members
-  if (profile.status === 'rejected') {
+  // Don't show subscription section for rejected or pending members
+  if (profile.status === 'rejected' || profile.status === 'pending') {
     return null
   }
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null)
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
+  const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [membershipFee, setMembershipFee] = useState<number | null>(null)
   const [stripeEnabled, setStripeEnabled] = useState<boolean | null>(null)
@@ -77,10 +78,11 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
 
   const loadMembershipFee = async () => {
     try {
-      const response = await fetch('/api/settings/membership-fee')
+      const response = await fetch('/api/settings/membership-fees')
       if (response.ok) {
         const data = await response.json()
-        setMembershipFee(data.fee)
+        const level = profile?.membership_level || 'Full'
+        setMembershipFee(data.fees?.[level] ?? null)
       }
     } catch (err) {
       console.error('Failed to load membership fee:', err)
@@ -109,16 +111,34 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
           // If not configured, don't show subscription section
           setSubscription({ hasSubscription: false })
           setError(null) // Don't show error, just don't display subscription
+        } else if (profile?.status === 'pending') {
+          // Pending users are not yet approved; API may return 401 – treat as no subscription, no error
+          setSubscription({ hasSubscription: false })
+          setError(null)
         } else {
           setError('Failed to load subscription information')
         }
       }
     } catch (err: any) {
-      // On error, don't show subscription
       setSubscription({ hasSubscription: false })
-      setError(null)
+      setError(profile?.status === 'pending' ? null : 'Failed to load subscription information')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleSyncSubscription = async () => {
+    try {
+      setSyncing(true)
+      setError(null)
+      const res = await fetch('/api/stripe/sync-my-subscription', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Sync failed')
+      await loadSubscription()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to sync subscription')
+    } finally {
+      setSyncing(false)
     }
   }
 
@@ -170,7 +190,6 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
       setProcessing(true)
       setError(null)
 
-      // Only allow cancellation if Stripe is enabled
       if (!stripeEnabled) {
         setError('Stripe payment processing is not currently available.')
         setProcessing(false)
@@ -179,23 +198,47 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
 
       const response = await fetch('/api/stripe/cancel-subscription', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cancelImmediately }),
       })
 
       const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to cancel subscription')
-      }
-
-      // Reload subscription data
+      if (!response.ok) throw new Error(data.error || 'Failed to cancel subscription')
       await loadSubscription()
       alert(data.message || 'Subscription cancelled successfully')
     } catch (err: any) {
       setError(err.message || 'Failed to cancel subscription')
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  const handleUndoCancel = async () => {
+    try {
+      setProcessing(true)
+      setError(null)
+      const response = await fetch('/api/stripe/undo-cancel-subscription', { method: 'POST' })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Failed to undo cancellation')
+      await loadSubscription()
+      alert(data.message || 'Cancellation undone.')
+    } catch (err: any) {
+      setError(err.message || 'Failed to undo cancellation')
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  const handleManageBilling = async () => {
+    try {
+      setProcessing(true)
+      setError(null)
+      const res = await fetch('/api/stripe/customer-portal', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to open billing portal')
+      if (data.url) window.location.href = data.url
+    } catch (err: any) {
+      setError(err.message || 'Failed to open billing portal')
     } finally {
       setProcessing(false)
     }
@@ -209,22 +252,26 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
     })
   }
 
+  // Treat trialing as Active for display (subscribed; first charge after trial)
+  const subscriptionStatus = subscription?.subscription?.status
+  const isActiveOrTrialing = subscriptionStatus === 'active' || subscriptionStatus === 'trialing'
+
   const getStatusBadge = (status: string) => {
     const statusColors: Record<string, string> = {
       active: 'bg-green-100 text-green-800',
-      trialing: 'bg-blue-100 text-blue-800',
+      trialing: 'bg-green-100 text-green-800',
       past_due: 'bg-yellow-100 text-yellow-800',
       canceled: 'bg-red-100 text-red-800',
       unpaid: 'bg-red-100 text-red-800',
     }
+    const displayStatus = status === 'trialing' ? 'Active' : status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')
+    const color = statusColors[status] || 'bg-gray-100 text-gray-800'
 
     return (
       <span
-        className={`px-2 py-1 text-xs font-semibold rounded-full ${
-          statusColors[status] || 'bg-gray-100 text-gray-800'
-        }`}
+        className={`px-2 py-1 text-xs font-semibold rounded-full ${color}`}
       >
-        {status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
+        {displayStatus}
       </span>
     )
   }
@@ -283,6 +330,17 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
               >
                 {processing ? 'Processing...' : 'Subscribe Now'}
               </button>
+              <p className="text-center text-xs text-gray-500 mt-2">
+                Already paid?{' '}
+                <button
+                  type="button"
+                  onClick={handleSyncSubscription}
+                  disabled={syncing}
+                  className="text-[#0d1e26] hover:underline font-medium disabled:opacity-50"
+                >
+                  {syncing ? 'Syncing...' : 'Sync subscription'}
+                </button>
+              </p>
             </div>
           </div>
         ) : (
@@ -292,7 +350,7 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
                 <p className="text-sm font-medium text-gray-900">Subscription Status</p>
                 <div className="mt-1">{getStatusBadge(subscription.subscription!.status)}</div>
               </div>
-              {subscription.subscription!.status === 'active' && (
+              {isActiveOrTrialing && (
                 <button
                   onClick={() => handleCancel(false)}
                   disabled={processing || subscription.subscription!.cancelAtPeriodEnd}
@@ -326,26 +384,43 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
                   {formatDate(subscription.subscription!.currentPeriodEnd)}
                 </span>
               </div>
+              {profile?.membership_expires_at && new Date(profile.membership_expires_at) > new Date(subscription.subscription!.currentPeriodEnd) && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Membership valid through:</span>
+                  <span className="text-gray-900 font-medium">
+                    {formatDate(profile.membership_expires_at)}
+                  </span>
+                </div>
+              )}
               {subscription.subscription!.cancelAtPeriodEnd && (
-                <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                  <p className="text-sm text-yellow-800">
-                    <strong>Note:</strong> Your subscription will be cancelled at the end of the current billing period (
-                    {formatDate(subscription.subscription!.currentPeriodEnd)}). You will continue to have access until then.
-                  </p>
+                <div className="mt-3 space-y-3">
+                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <p className="text-sm text-yellow-800">
+                      <strong>Note:</strong> Your subscription will be cancelled at the end of the current billing period (
+                      {formatDate(subscription.subscription!.currentPeriodEnd)}). You will continue to have access until then.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleUndoCancel}
+                    disabled={processing}
+                    className="w-full px-4 py-2 bg-[#0d1e26] text-white text-sm font-medium rounded-md hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0d1e26] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {processing ? 'Updating...' : 'Keep my subscription'}
+                  </button>
                 </div>
               )}
             </div>
 
-            {subscription.subscription!.status === 'active' && !subscription.subscription!.cancelAtPeriodEnd && profile.stripe_customer_id && (
+            {isActiveOrTrialing && profile.stripe_customer_id && (
               <div className="pt-4 border-t border-gray-200">
-                <a
-                  href={`https://billing.stripe.com/p/login/${profile.stripe_customer_id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-[#0d1e26] hover:text-[#0a171c] font-medium"
+                <button
+                  type="button"
+                  onClick={handleManageBilling}
+                  disabled={processing}
+                  className="text-sm text-[#0d1e26] hover:text-[#0a171c] font-medium disabled:opacity-50"
                 >
-                  Manage billing &rarr;
-                </a>
+                  {processing ? 'Opening...' : 'Manage billing & payment method →'}
+                </button>
               </div>
             )}
           </div>
@@ -398,6 +473,17 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
               >
                 {processing ? 'Processing...' : 'Subscribe Now'}
               </button>
+              <p className="text-center text-xs text-gray-500 mt-2">
+                Already paid?{' '}
+                <button
+                  type="button"
+                  onClick={handleSyncSubscription}
+                  disabled={syncing}
+                  className="text-[#0d1e26] hover:underline font-medium disabled:opacity-50"
+                >
+                  {syncing ? 'Syncing...' : 'Sync subscription'}
+                </button>
+              </p>
             </div>
           </div>
         ) : (
@@ -407,7 +493,7 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
                 <p className="text-sm font-medium text-gray-900">Subscription Status</p>
                 <div className="mt-1">{getStatusBadge(subscription.subscription!.status)}</div>
               </div>
-              {subscription.subscription!.status === 'active' && (
+              {isActiveOrTrialing && (
                 <button
                   onClick={() => handleCancel(false)}
                   disabled={processing || subscription.subscription!.cancelAtPeriodEnd}
@@ -441,26 +527,43 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
                   {formatDate(subscription.subscription!.currentPeriodEnd)}
                 </span>
               </div>
+              {profile?.membership_expires_at && new Date(profile.membership_expires_at) > new Date(subscription.subscription!.currentPeriodEnd) && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Membership valid through:</span>
+                  <span className="text-gray-900 font-medium">
+                    {formatDate(profile.membership_expires_at)}
+                  </span>
+                </div>
+              )}
               {subscription.subscription!.cancelAtPeriodEnd && (
-                <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                  <p className="text-sm text-yellow-800">
-                    <strong>Note:</strong> Your subscription will be cancelled at the end of the current billing period (
-                    {formatDate(subscription.subscription!.currentPeriodEnd)}). You will continue to have access until then.
-                  </p>
+                <div className="mt-3 space-y-3">
+                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <p className="text-sm text-yellow-800">
+                      <strong>Note:</strong> Your subscription will be cancelled at the end of the current billing period (
+                      {formatDate(subscription.subscription!.currentPeriodEnd)}). You will continue to have access until then.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleUndoCancel}
+                    disabled={processing}
+                    className="w-full px-4 py-2 bg-[#0d1e26] text-white text-sm font-medium rounded-md hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0d1e26] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {processing ? 'Updating...' : 'Keep my subscription'}
+                  </button>
                 </div>
               )}
             </div>
 
-            {subscription.subscription!.status === 'active' && !subscription.subscription!.cancelAtPeriodEnd && profile.stripe_customer_id && (
+            {isActiveOrTrialing && profile.stripe_customer_id && (
               <div className="pt-4 border-t border-gray-200">
-                <a
-                  href={`https://billing.stripe.com/p/login/${profile.stripe_customer_id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-[#0d1e26] hover:text-[#0a171c] font-medium"
+                <button
+                  type="button"
+                  onClick={handleManageBilling}
+                  disabled={processing}
+                  className="text-sm text-[#0d1e26] hover:text-[#0a171c] font-medium disabled:opacity-50"
                 >
-                  Manage billing &rarr;
-                </a>
+                  {processing ? 'Opening...' : 'Manage billing & payment method →'}
+                </button>
               </div>
             )}
           </div>

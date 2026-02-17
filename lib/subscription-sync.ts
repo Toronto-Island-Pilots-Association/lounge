@@ -1,4 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
+import { getMembershipExpiresAtFromSubscription } from '@/lib/settings'
 import { getStripeInstance, isStripeEnabled } from '@/lib/stripe'
 import Stripe from 'stripe'
 
@@ -16,12 +17,12 @@ export async function syncSubscriptionStatus(
   userId: string,
   subscriptionId: string | null
 ): Promise<{ status: 'approved' | 'expired'; membership_expires_at: string | null } | null> {
-  const supabase = await createClient()
+  const supabase = createServiceRoleClient()
 
   // Get current user profile
   const { data: profile, error: profileError } = await supabase
     .from('user_profiles')
-    .select('status, membership_expires_at, stripe_subscription_id')
+    .select('status, membership_expires_at, stripe_subscription_id, subscription_cancel_at_period_end')
     .eq('id', userId)
     .single()
 
@@ -73,46 +74,47 @@ export async function syncSubscriptionStatus(
     // Fetch subscription from Stripe
     const subscription = await stripe.subscriptions.retrieve(activeSubscriptionId)
     const currentPeriodEnd = new Date((subscription as any).current_period_end * 1000)
+    const currentPeriodStart = new Date((subscription as any).current_period_start * 1000)
     const now = new Date()
+    // If subscribed before Sept 1, expiry is Sept 1 next year; else use Stripe period end
+    const computedExpiresAt = getMembershipExpiresAtFromSubscription(currentPeriodEnd, currentPeriodStart)
 
     // Determine status based on subscription state
     let newStatus: 'approved' | 'expired' = 'approved'
-    let newExpiresAt: string | null = currentPeriodEnd.toISOString()
+    let newExpiresAt: string | null = computedExpiresAt
 
     // Active subscription states
     const activeStates = ['active', 'trialing', 'past_due']
     
     if (activeStates.includes(subscription.status)) {
-      // Subscription is active - user should be approved
       newStatus = 'approved'
-      newExpiresAt = currentPeriodEnd.toISOString()
+      newExpiresAt = computedExpiresAt
     } else if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
-      // Subscription is cancelled or unpaid
-      // If current period has ended, mark as expired
-      if (currentPeriodEnd < now) {
+      if (new Date(computedExpiresAt) < now) {
         newStatus = 'expired'
-        newExpiresAt = currentPeriodEnd.toISOString()
+        newExpiresAt = computedExpiresAt
       } else {
-        // Still within the paid period, keep as approved
         newStatus = 'approved'
-        newExpiresAt = currentPeriodEnd.toISOString()
+        newExpiresAt = computedExpiresAt
       }
     } else {
-      // Other states (incomplete, incomplete_expired, etc.) - treat as expired
       newStatus = 'expired'
-      newExpiresAt = currentPeriodEnd.toISOString()
+      newExpiresAt = computedExpiresAt
     }
 
-    // Update database if status or expiration changed
+    const cancelAtPeriodEnd = !!subscription.cancel_at_period_end
     const statusChanged = profile.status !== newStatus
     const expiresAtChanged = profile.membership_expires_at !== newExpiresAt
+    const cancelAtPeriodEndChanged = (profile as any).subscription_cancel_at_period_end !== cancelAtPeriodEnd
+    const needsBackfillExpires = !profile.membership_expires_at && newExpiresAt
 
-    if (statusChanged || expiresAtChanged) {
+    if (statusChanged || expiresAtChanged || cancelAtPeriodEndChanged || needsBackfillExpires) {
       await supabase
         .from('user_profiles')
         .update({
           status: newStatus,
           membership_expires_at: newExpiresAt,
+          subscription_cancel_at_period_end: cancelAtPeriodEnd,
         })
         .eq('id', userId)
 
@@ -121,6 +123,7 @@ export async function syncSubscriptionStatus(
         newStatus,
         oldExpiresAt: profile.membership_expires_at,
         newExpiresAt,
+        cancelAtPeriodEnd,
         stripeStatus: subscription.status,
       })
     }
@@ -147,6 +150,7 @@ export async function syncSubscriptionStatus(
           .update({
             status: newStatus,
             stripe_subscription_id: null,
+            subscription_cancel_at_period_end: false,
           })
           .eq('id', userId)
       }
@@ -171,7 +175,7 @@ export async function syncSubscriptionBySubscriptionId(
     return false
   }
 
-  const supabase = await createClient()
+  const supabase = createServiceRoleClient()
 
   // Find user by subscription ID
   const { data: profile } = await supabase
@@ -193,7 +197,7 @@ export async function syncSubscriptionBySubscriptionId(
  * Syncs subscription status for a user by their user ID
  */
 export async function syncSubscriptionByUserId(userId: string): Promise<boolean> {
-  const supabase = await createClient()
+  const supabase = createServiceRoleClient()
 
   const { data: profile } = await supabase
     .from('user_profiles')

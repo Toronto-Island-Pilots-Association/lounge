@@ -106,16 +106,16 @@ export async function POST(request: Request) {
             const membershipLevelFromMetadata = authUser?.user?.user_metadata?.membership_level
             const membershipLevel = membershipLevelFromMetadata || 'Associate'
 
-            // If no payments and no active subscription, set membership level and Oct 1st expiration
+            // If no payments and no active subscription, set membership level and Sept 1st expiration
             if (!hasPayments && !hasActiveSubscription) {
-              // Calculate October 1st - current year if before Oct 1, next year if after Oct 1
+              // Calculate September 1st - current year if before Sept 1, next year if after Sept 1
               const now = new Date()
               const currentYear = now.getFullYear()
-              const oct1ThisYear = new Date(currentYear, 9, 1) // Month is 0-indexed, so 9 = October
-              const oct1NextYear = new Date(currentYear + 1, 9, 1)
+              const sep1ThisYear = new Date(currentYear, 8, 1) // Month is 0-indexed, so 8 = September
+              const sep1NextYear = new Date(currentYear + 1, 8, 1)
               
-              // Use this year's Oct 1 if we're before it, otherwise next year's
-              const expirationDate = now < oct1ThisYear ? oct1ThisYear : oct1NextYear
+              // Use this year's Sept 1 if we're before it, otherwise next year's
+              const expirationDate = now < sep1ThisYear ? sep1ThisYear : sep1NextYear
 
               updateData.membership_level = membershipLevel
               updateData.membership_expires_at = expirationDate.toISOString()

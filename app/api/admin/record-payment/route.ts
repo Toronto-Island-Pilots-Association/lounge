@@ -2,7 +2,7 @@ import { requireAdmin, getCurrentUser } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { sendMemberApprovalEmail } from '@/lib/resend'
 import { appendMemberToSheet } from '@/lib/google-sheets'
-import { getMembershipFee } from '@/lib/settings'
+import { getMembershipFeeForLevel, type MembershipLevelKey } from '@/lib/settings'
 import { NextResponse } from 'next/server'
 
 /**
@@ -122,8 +122,9 @@ export async function POST(request: Request) {
       })
     }
 
-    // Get membership fee for payment record (use provided amount or fall back to default fee)
-    const membershipFee = amount ? parseFloat(amount) : await getMembershipFee()
+    // Get membership fee for payment record (use provided amount or fee for member's level)
+    const level = (currentMember.membership_level || 'Full') as MembershipLevelKey
+    const membershipFee = amount != null && amount !== '' ? parseFloat(String(amount)) : await getMembershipFeeForLevel(level)
     
     if (isNaN(membershipFee) || membershipFee <= 0) {
       return NextResponse.json(

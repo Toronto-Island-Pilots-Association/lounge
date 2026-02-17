@@ -5,8 +5,29 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Loading from '@/components/Loading'
 import { COUNTRIES, getStatesProvinces } from './constants'
+import type { MembershipLevelKey } from '@/lib/settings'
+
+const DEFAULT_FEES: Record<MembershipLevelKey, number> = {
+  Full: 45,
+  Student: 25,
+  Associate: 25,
+  Corporate: 125,
+  Honorary: 0,
+}
 
 function BecomeMemberForm() {
+  const [membershipFees, setMembershipFees] = useState<Record<MembershipLevelKey, number>>(DEFAULT_FEES)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/settings/membership-fees/public')
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('Failed to load fees'))))
+      .then((data: { fees: Record<MembershipLevelKey, number> }) => {
+        if (!cancelled && data.fees) setMembershipFees(data.fees)
+      })
+      .catch(() => { /* keep default fees */ })
+    return () => { cancelled = true }
+  }, [])
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -33,6 +54,7 @@ function BecomeMemberForm() {
     agreedToBylaws: false,
     agreedToGovernancePolicy: false,
     understandsApprovalProcess: false,
+    agreedToElectronicInfo: false,
     // Existing fields
     pilotLicenseType: '',
     aircraftType: '',
@@ -142,6 +164,7 @@ function BecomeMemberForm() {
           agreedToBylaws: formData.agreedToBylaws,
           agreedToGovernancePolicy: formData.agreedToGovernancePolicy,
           understandsApprovalProcess: formData.understandsApprovalProcess,
+          agreedToElectronicInfo: formData.agreedToElectronicInfo,
           // Existing fields
           pilotLicenseType: formData.pilotLicenseType,
           aircraftType: formData.aircraftType,
@@ -185,6 +208,7 @@ function BecomeMemberForm() {
         agreedToBylaws: false,
         agreedToGovernancePolicy: false,
         understandsApprovalProcess: false,
+        agreedToElectronicInfo: false,
         pilotLicenseType: '',
         aircraftType: '',
         callSign: '',
@@ -454,10 +478,10 @@ function BecomeMemberForm() {
                 onChange={handleChange}
               >
                 <option value="">Select...</option>
-                <option value="full">Full</option>
-                <option value="student">Student</option>
-                <option value="associate">Associate</option>
-                <option value="corporate">Corporate</option>
+                <option value="full">Full — ${membershipFees.Full}/year (trial until Sept 1)</option>
+                <option value="student">Student — ${membershipFees.Student}/year (12-month trial)</option>
+                <option value="associate">Associate — ${membershipFees.Associate}/year (trial until Sept 1)</option>
+                <option value="corporate">Corporate — ${membershipFees.Corporate}/year</option>
               </select>
             </div>
 
@@ -783,6 +807,19 @@ function BecomeMemberForm() {
                 />
                 <span className="text-sm text-gray-700">
                   I understand my application is subject to approval and does not create membership until approved <span className="text-red-500">*</span>
+                </span>
+              </label>
+              <label className="flex items-start">
+                <input
+                  type="checkbox"
+                  name="agreedToElectronicInfo"
+                  required
+                  className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]"
+                  checked={formData.agreedToElectronicInfo}
+                  onChange={handleChange}
+                />
+                <span className="text-sm text-gray-700">
+                  I agree to receive information electronically (e.g. by email) <span className="text-red-500">*</span>
                 </span>
               </label>
             </div>

@@ -36,6 +36,11 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Member ID is required' }, { status: 400 })
     }
 
+    // Convert empty strings to null for timestamp fields (PostgreSQL doesn't accept empty strings for timestamps)
+    if (updates.membership_expires_at === '') {
+      updates.membership_expires_at = null
+    }
+
     // Allow status changes from admin edit form
     // Status can be changed along with other fields when updating from the admin interface
 
@@ -55,7 +60,7 @@ export async function PATCH(request: Request) {
     // Check if status is being changed to 'approved' (from any status)
     const isApproving = updates.status === 'approved' && currentMember.status !== 'approved'
 
-    // If approving a member who hasn't paid yet, set Associate level and Oct 1st expiration
+    // If approving a member who hasn't paid yet, set Associate level and Sept 1st expiration
     if (isApproving) {
       // Check if member has any payments
       const { data: payments } = await supabase
@@ -68,19 +73,13 @@ export async function PATCH(request: Request) {
       const hasActiveSubscription = currentMember.stripe_subscription_id || currentMember.paypal_subscription_id
       const hasPayments = payments && payments.length > 0
 
-      // If no payments and no active subscription, set to Associate with Oct 1st expiration
+      // If no payments and no active subscription, set trial expiration to Sept 1st (keep existing membership_level)
       if (!hasPayments && !hasActiveSubscription) {
-        // Calculate October 1st - current year if before Oct 1, next year if after Oct 1
         const now = new Date()
         const currentYear = now.getFullYear()
-        const oct1ThisYear = new Date(currentYear, 9, 1) // Month is 0-indexed, so 9 = October
-        const oct1NextYear = new Date(currentYear + 1, 9, 1)
-        
-        // Use this year's Oct 1 if we're before it, otherwise next year's
-        const expirationDate = now < oct1ThisYear ? oct1ThisYear : oct1NextYear
-
-        // Add to updates (will override if already set)
-        updates.membership_level = 'Associate'
+        const sep1ThisYear = new Date(currentYear, 8, 1)
+        const sep1NextYear = new Date(currentYear + 1, 8, 1)
+        const expirationDate = now < sep1ThisYear ? sep1ThisYear : sep1NextYear
         updates.membership_expires_at = expirationDate.toISOString()
       }
     }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Payment } from '@/types/database'
+import { type MembershipLevel } from '@/types/database'
 import Loading from '@/components/Loading'
 import {
   Dialog,
@@ -10,27 +11,50 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 
-export default function MembershipPageClient() {
+export default function MembershipPageClient({
+  membershipLevel = 'Full',
+}: {
+  membershipLevel?: MembershipLevel
+}) {
   const [payments, setPayments] = useState<Payment[]>([])
   const [loadingPayments, setLoadingPayments] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
-  const [copiedEmail, setCopiedEmail] = useState(false)
-
-  const paymentEmail = 'tbd'
-
-  const copyEmail = async () => {
-    try {
-      await navigator.clipboard.writeText(paymentEmail)
-      setCopiedEmail(true)
-      setTimeout(() => setCopiedEmail(false), 2000)
-    } catch (err) {
-      console.error('Failed to copy email:', err)
-    }
-  }
+  const [stripeEnabled, setStripeEnabled] = useState<boolean | null>(null)
+  const [membershipFee, setMembershipFee] = useState<number | null>(null)
+  const [payProcessing, setPayProcessing] = useState(false)
+  const [payError, setPayError] = useState<string | null>(null)
 
   useEffect(() => {
     loadPayments()
   }, [])
+
+  useEffect(() => {
+    if (showPaymentModal) {
+      setPayError(null)
+      const check = async () => {
+        try {
+          const [statusRes, feesRes] = await Promise.all([
+            fetch('/api/stripe/status'),
+            fetch('/api/settings/membership-fees'),
+          ])
+          if (statusRes.ok) {
+            const d = await statusRes.json()
+            setStripeEnabled(d.enabled)
+          } else {
+            setStripeEnabled(false)
+          }
+          if (feesRes.ok) {
+            const d = await feesRes.json()
+            const level = membershipLevel || 'Full'
+            setMembershipFee(d.fees?.[level] ?? null)
+          }
+        } catch {
+          setStripeEnabled(false)
+        }
+      }
+      check()
+    }
+  }, [showPaymentModal, membershipLevel])
 
   const loadPayments = async () => {
     setLoadingPayments(true)
@@ -52,14 +76,8 @@ export default function MembershipPageClient() {
       {/* Payment History */}
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Payment History</h2>
-            <button
-              onClick={() => setShowPaymentModal(true)}
-              className="px-4 py-2 bg-[#0d1e26] text-white rounded-md hover:bg-[#0a171c] text-sm font-medium transition-colors"
-            >
-              Pay
-            </button>
           </div>
           {loadingPayments ? (
             <div className="text-center py-6">
@@ -98,71 +116,71 @@ export default function MembershipPageClient() {
         </div>
       </div>
 
-      {/* Payment Options Modal */}
+      {/* Pay modal - Stripe only for members */}
       <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Payment Options</DialogTitle>
+            <DialogTitle>Pay membership</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3 mt-4">
-            <a
-              href="https://www.paypal.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 p-4 bg-gray-50 rounded-md border border-gray-200 hover:border-[#0d1e26] hover:bg-gray-100 transition-colors"
-            >
-              <svg className="w-5 h-5 text-gray-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-gray-900">PayPal</div>
-                <div className="text-xs text-gray-500">Pay online</div>
+          <div className="space-y-4 mt-4">
+            {stripeEnabled === null ? (
+              <div className="flex justify-center py-6">
+                <Loading message="Loading..." size="sm" />
               </div>
-            </a>
-            <div className="p-4 bg-gray-50 rounded-md border border-gray-200">
-              <div className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-gray-900 mb-2">E-Transfer/Interac</div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 px-3 py-1.5 bg-white border border-gray-300 rounded text-sm text-gray-900 font-mono">
-                      {paymentEmail}
-                    </div>
-                    <button
-                      onClick={copyEmail}
-                      className="px-3 py-1.5 bg-[#0d1e26] text-white rounded text-sm font-medium hover:bg-[#0a171c] transition-colors flex items-center gap-1.5"
-                    >
-                      {copiedEmail ? (
-                        <>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          Copied
-                        </>
-                      ) : (
-                        <>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                          </svg>
-                          Copy
-                        </>
-                      )}
-                    </button>
+            ) : !stripeEnabled ? (
+              <p className="text-sm text-gray-600">
+                Online payment is not available at the moment. Please contact an administrator to pay or renew your membership.
+              </p>
+            ) : (
+              <>
+                {payError && (
+                  <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">
+                    {payError}
                   </div>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-md border border-gray-200">
-              <svg className="w-5 h-5 text-gray-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-gray-900">Cash</div>
-                <div className="text-xs text-gray-500">In person</div>
-              </div>
-            </div>
+                )}
+                {membershipFee != null && (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">Annual membership</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Billed annually</p>
+                      </div>
+                      <p className="text-xl font-bold text-gray-900">
+                        ${membershipFee.toFixed(2)}
+                        <span className="text-sm font-normal text-gray-500">/year</span>
+                      </p>
+                    </div>
+                  </div>
+                )}
+                <p className="text-sm text-gray-600">
+                  You will be redirected to Stripe to pay securely with your card.
+                </p>
+                <button
+                  onClick={async () => {
+                    setPayProcessing(true)
+                    setPayError(null)
+                    try {
+                      const res = await fetch('/api/stripe/create-checkout-session', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                      })
+                      const data = await res.json()
+                      if (!res.ok) throw new Error(data.error || 'Failed to start payment')
+                      if (data.url) window.location.href = data.url
+                      else throw new Error('No checkout URL received')
+                    } catch (e: unknown) {
+                      setPayError(e instanceof Error ? e.message : 'Something went wrong')
+                    } finally {
+                      setPayProcessing(false)
+                    }
+                  }}
+                  disabled={payProcessing}
+                  className="w-full px-4 py-3 bg-[#0d1e26] text-white font-medium rounded-md hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0d1e26] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {payProcessing ? 'Redirecting...' : 'Pay with card'}
+                </button>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>
