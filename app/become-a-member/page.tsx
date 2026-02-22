@@ -292,6 +292,7 @@ function BecomeMemberForm() {
                   name="firstName"
                   type="text"
                   required
+                  autoComplete="given-name"
                   className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
                   value={formData.firstName}
                   onChange={handleChange}
@@ -306,6 +307,7 @@ function BecomeMemberForm() {
                   name="lastName"
                   type="text"
                   required
+                  autoComplete="family-name"
                   className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
                   value={formData.lastName}
                   onChange={handleChange}
@@ -320,6 +322,7 @@ function BecomeMemberForm() {
                   name="email"
                   type="email"
                   required
+                  autoComplete="email"
                   className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
                   value={formData.email}
                   onChange={handleChange}
@@ -333,6 +336,7 @@ function BecomeMemberForm() {
                   id="phone"
                   name="phone"
                   type="tel"
+                  autoComplete="tel"
                   className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
                   value={formData.phone}
                   onChange={handleChange}
@@ -353,6 +357,7 @@ function BecomeMemberForm() {
                     name="street"
                     type="text"
                     required
+                    autoComplete="street-address"
                     className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
                     value={formData.street}
                     onChange={handleChange}
@@ -368,6 +373,7 @@ function BecomeMemberForm() {
                       name="city"
                       type="text"
                       required
+                      autoComplete="address-level2"
                       className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
                       value={formData.city}
                       onChange={handleChange}
@@ -381,6 +387,7 @@ function BecomeMemberForm() {
                       id="country"
                       name="country"
                       required
+                      autoComplete="country"
                       className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
                       value={formData.country}
                       onChange={(e) => {
@@ -410,6 +417,7 @@ function BecomeMemberForm() {
                       id="provinceState"
                       name="provinceState"
                       required
+                      autoComplete="address-level1"
                       className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
                       value={formData.provinceState}
                       onChange={handleChange}
@@ -430,6 +438,7 @@ function BecomeMemberForm() {
                       name="postalZipCode"
                       type="text"
                       required
+                      autoComplete="postal-code"
                       className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
                       value={formData.postalZipCode}
                       onChange={handleChange}
@@ -454,6 +463,7 @@ function BecomeMemberForm() {
                   type="password"
                   required
                   minLength={6}
+                  autoComplete="new-password"
                   className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
                   value={formData.password}
                   onChange={handleChange}
@@ -478,9 +488,9 @@ function BecomeMemberForm() {
                 onChange={handleChange}
               >
                 <option value="">Select...</option>
-                <option value="full">Full — ${membershipFees.Full}/year (trial until Sept 1)</option>
-                <option value="student">Student — ${membershipFees.Student}/year (12-month trial)</option>
-                <option value="associate">Associate — ${membershipFees.Associate}/year (trial until Sept 1)</option>
+                <option value="full">Full — ${membershipFees.Full}/year (free trial until Sept 1)</option>
+                <option value="student">Student — ${membershipFees.Student}/year (12-month free)</option>
+                <option value="associate">Associate — ${membershipFees.Associate}/year (free trial until Sept 1)</option>
                 <option value="corporate">Corporate — ${membershipFees.Corporate}/year</option>
               </select>
             </div>
