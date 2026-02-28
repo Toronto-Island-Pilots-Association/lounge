@@ -1,6 +1,7 @@
 import { requireAuth } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { sendReplyNotificationEmail } from '@/lib/resend'
 
 export async function GET(
   request: Request,
@@ -64,10 +65,10 @@ export async function POST(
 
     const supabase = await createClient()
 
-    // Verify thread exists
+    // Verify thread exists and get thread details for notifications
     const { data: thread } = await supabase
       .from('threads')
-      .select('id')
+      .select('id, title, created_by')
       .eq('id', id)
       .single()
 
@@ -75,10 +76,10 @@ export async function POST(
       return NextResponse.json({ error: 'Thread not found' }, { status: 404 })
     }
 
-    // Get user email before creating comment
+    // Get commenter's profile
     const { data: userProfile } = await supabase
       .from('user_profiles')
-      .select('email')
+      .select('email, full_name')
       .eq('id', user.id)
       .single()
 
@@ -97,12 +98,23 @@ export async function POST(
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    // Get author info
+    // Get author info for response
     const { data: author } = await supabase
       .from('user_profiles')
       .select('id, full_name, email, profile_picture_url')
       .eq('id', user.id)
       .single()
+
+    // Send reply notifications (non-blocking)
+    sendReplyNotifications({
+      supabase,
+      threadId: id,
+      threadTitle: thread.title,
+      threadAuthorId: thread.created_by,
+      commenterId: user.id,
+      commenterName: userProfile?.full_name || userProfile?.email?.split('@')[0] || 'Someone',
+      commentContent: content.trim(),
+    }).catch(err => console.error('Error sending reply notifications:', err))
 
     return NextResponse.json({ comment: { ...data, author } })
   } catch (error: any) {
@@ -111,5 +123,71 @@ export async function POST(
       { status: error.message === 'Forbidden: Authentication required' ? 403 : 500 }
     )
   }
+}
+
+async function sendReplyNotifications({
+  supabase,
+  threadId,
+  threadTitle,
+  threadAuthorId,
+  commenterId,
+  commenterName,
+  commentContent,
+}: {
+  supabase: any
+  threadId: string
+  threadTitle: string
+  threadAuthorId: string | null
+  commenterId: string
+  commenterName: string
+  commentContent: string
+}) {
+  // Collect all user IDs to notify: thread author + previous commenters
+  const userIdsToNotify = new Set<string>()
+
+  if (threadAuthorId && threadAuthorId !== commenterId) {
+    userIdsToNotify.add(threadAuthorId)
+  }
+
+  // Get distinct commenters on this thread (excluding current commenter)
+  const { data: previousComments } = await supabase
+    .from('comments')
+    .select('created_by')
+    .eq('thread_id', threadId)
+    .not('created_by', 'is', null)
+    .neq('created_by', commenterId)
+
+  previousComments?.forEach((c: { created_by: string }) => {
+    userIdsToNotify.add(c.created_by)
+  })
+
+  if (userIdsToNotify.size === 0) return
+
+  // Fetch profiles for all users to notify (only those with notifications enabled)
+  const { data: profiles } = await supabase
+    .from('user_profiles')
+    .select('id, email, full_name, notify_replies')
+    .in('id', Array.from(userIdsToNotify))
+    .eq('notify_replies', true)
+
+  if (!profiles || profiles.length === 0) return
+
+  // Send emails in parallel
+  const emailPromises = profiles.map((profile: { id: string; email: string; full_name: string | null }) => {
+    const reason = profile.id === threadAuthorId ? 'thread_author' as const : 'participant' as const
+    const recipientName = profile.full_name?.split(' ')[0] || profile.email.split('@')[0]
+
+    return sendReplyNotificationEmail(
+      profile.email,
+      recipientName,
+      threadTitle,
+      threadId,
+      commenterName,
+      commentContent,
+      reason
+    )
+  })
+
+  await Promise.allSettled(emailPromises)
 }
 

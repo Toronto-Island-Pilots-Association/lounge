@@ -70,6 +70,8 @@ export async function PATCH(request: Request) {
       instructor_name,
       // Interests
       interests,
+      // Notifications
+      notify_replies,
     } = body
 
     // Build update object with only provided fields
@@ -105,12 +107,13 @@ export async function PATCH(request: Request) {
     // Interests - store as JSON string if provided
     if (interests !== undefined) {
       if (interests && (typeof interests === 'string' || Array.isArray(interests))) {
-        // If it's already a JSON string, use it; otherwise stringify the array
         updates.interests = typeof interests === 'string' ? interests : JSON.stringify(interests)
       } else {
         updates.interests = null
       }
     }
+    // Notification preferences
+    if (notify_replies !== undefined) updates.notify_replies = Boolean(notify_replies)
 
     const { data, error } = await supabase
       .from('user_profiles')

@@ -43,6 +43,8 @@ export default function SettingsPage() {
     instructor_name: '',
     // Interests
     interests: [] as string[],
+    // Notifications
+    notify_replies: true,
   })
 
   useEffect(() => {
@@ -88,6 +90,7 @@ export default function SettingsPage() {
               return []
             }
           })(),
+          notify_replies: data.profile.notify_replies !== false,
         })
       } else if (response.status === 401) {
         router.push('/login')
@@ -125,6 +128,7 @@ export default function SettingsPage() {
           interests: formData.interests && formData.interests.length > 0 
             ? JSON.stringify(formData.interests) 
             : null,
+          notify_replies: formData.notify_replies,
         }),
       })
 
@@ -527,6 +531,28 @@ export default function SettingsPage() {
                   )}
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Notifications */}
+          <div className="bg-white shadow rounded-lg overflow-hidden">
+            <div className="px-6 py-5 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">Notifications</h2>
+              <p className="mt-1 text-sm text-gray-500">Control how you receive updates from Hangar Talk</p>
+            </div>
+            <div className="px-6 py-5">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.notify_replies}
+                  onChange={(e) => setFormData(prev => ({ ...prev, notify_replies: e.target.checked }))}
+                  className="h-4 w-4 mt-0.5 text-[#0d1e26] focus:ring-[#0d1e26] border-gray-300 rounded"
+                />
+                <div>
+                  <span className="text-sm font-medium text-gray-900">Reply notifications</span>
+                  <p className="text-xs text-gray-500 mt-0.5">Get an email when someone replies to a discussion you started or commented on</p>
+                </div>
+              </label>
             </div>
           </div>
 
