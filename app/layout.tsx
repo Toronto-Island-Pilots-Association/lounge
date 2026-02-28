@@ -25,7 +25,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${interTight.variable} antialiased pt-20 md:pt-0`}
+        className={`${interTight.variable} antialiased pt-16 sm:pt-20 md:pt-0`}
       >
         <Navbar />
         {children}
