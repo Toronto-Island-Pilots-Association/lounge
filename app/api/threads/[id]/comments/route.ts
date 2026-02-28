@@ -1,7 +1,7 @@
 import { requireAuth } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import { sendReplyNotificationEmail } from '@/lib/resend'
+import { sendReplyNotificationEmail, sendMentionNotificationEmail } from '@/lib/resend'
 
 export async function GET(
   request: Request,
@@ -125,6 +125,16 @@ export async function POST(
   }
 }
 
+function extractMentionedUserIds(content: string): string[] {
+  const mentionRegex = /@\[[^\]]+\]\(([^)]+)\)/g
+  const ids: string[] = []
+  let match
+  while ((match = mentionRegex.exec(content)) !== null) {
+    ids.push(match[1])
+  }
+  return ids
+}
+
 async function sendReplyNotifications({
   supabase,
   threadId,
@@ -142,14 +152,18 @@ async function sendReplyNotifications({
   commenterName: string
   commentContent: string
 }) {
-  // Collect all user IDs to notify: thread author + previous commenters
-  const userIdsToNotify = new Set<string>()
+  // Extract @mentioned user IDs from the comment
+  const mentionedUserIds = new Set(
+    extractMentionedUserIds(commentContent).filter(id => id !== commenterId)
+  )
+
+  // Collect reply notification recipients: thread author + previous commenters (excluding mentions, handled separately)
+  const replyUserIds = new Set<string>()
 
   if (threadAuthorId && threadAuthorId !== commenterId) {
-    userIdsToNotify.add(threadAuthorId)
+    replyUserIds.add(threadAuthorId)
   }
 
-  // Get distinct commenters on this thread (excluding current commenter)
   const { data: previousComments } = await supabase
     .from('comments')
     .select('created_by')
@@ -158,25 +172,38 @@ async function sendReplyNotifications({
     .neq('created_by', commenterId)
 
   previousComments?.forEach((c: { created_by: string }) => {
-    userIdsToNotify.add(c.created_by)
+    replyUserIds.add(c.created_by)
   })
 
-  if (userIdsToNotify.size === 0) return
+  // Remove mentioned users from reply set — they get the mention email instead
+  mentionedUserIds.forEach(id => replyUserIds.delete(id))
 
-  // Fetch profiles for all users to notify (only those with notifications enabled)
+  const allUserIds = new Set([...replyUserIds, ...mentionedUserIds])
+  if (allUserIds.size === 0) return
+
   const { data: profiles } = await supabase
     .from('user_profiles')
     .select('id, email, full_name, notify_replies')
-    .in('id', Array.from(userIdsToNotify))
+    .in('id', Array.from(allUserIds))
     .eq('notify_replies', true)
 
   if (!profiles || profiles.length === 0) return
 
-  // Send emails in parallel
   const emailPromises = profiles.map((profile: { id: string; email: string; full_name: string | null }) => {
-    const reason = profile.id === threadAuthorId ? 'thread_author' as const : 'participant' as const
     const recipientName = profile.full_name?.split(' ')[0] || profile.email.split('@')[0]
 
+    if (mentionedUserIds.has(profile.id)) {
+      return sendMentionNotificationEmail(
+        profile.email,
+        recipientName,
+        threadTitle,
+        threadId,
+        commenterName,
+        commentContent,
+      )
+    }
+
+    const reason = profile.id === threadAuthorId ? 'thread_author' as const : 'participant' as const
     return sendReplyNotificationEmail(
       profile.email,
       recipientName,
