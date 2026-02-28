@@ -1,6 +1,7 @@
 'use client'
 
 import LinkifiedText from '@/components/LinkifiedText'
+import { stripMentionFormat } from '@/lib/utils'
 
 interface ContentPreviewProps {
   content: string
@@ -8,56 +9,40 @@ interface ContentPreviewProps {
   className?: string
 }
 
-/**
- * Component that renders a formatted preview of content with markdown support
- * Truncates based on plain text length but preserves markdown formatting
- */
 export default function ContentPreview({ content, maxLength = 60, className = '' }: ContentPreviewProps) {
   if (!content) return null
 
-  // Strip markdown for length calculation
-  const stripMarkdown = (text: string): string => {
-    return text.replace(/\*\*(.+?)\*\*/g, '$1').replace(/\n/g, ' ').replace(/\s+/g, ' ').trim()
-  }
+  // Convert mentions to @Name for length calculation
+  const displayContent = stripMentionFormat(content)
 
-  const plainText = stripMarkdown(content)
+  const stripMarkdown = (text: string): string =>
+    text.replace(/\*\*(.+?)\*\*/g, '$1').replace(/\n/g, ' ').replace(/\s+/g, ' ').trim()
+
+  const plainText = stripMarkdown(displayContent)
   const isTruncated = plainText.length > maxLength
 
-  // Truncate content while preserving markdown pairs
-  let truncatedContent = content
+  let truncatedContent = displayContent
   if (isTruncated) {
-    // Count characters, skipping markdown markers
     let plainCharCount = 0
     let i = 0
     let lastSpaceIndex = -1
-    
-    while (i < content.length && plainCharCount < maxLength) {
-      // Check for markdown bold start/end
-      if (content.substring(i, i + 2) === '**') {
+
+    while (i < displayContent.length && plainCharCount < maxLength) {
+      if (displayContent.substring(i, i + 2) === '**') {
         i += 2
         continue
       }
-      
-      // Track spaces for word boundary truncation
-      if (content[i] === ' ') {
-        lastSpaceIndex = i
-      }
-      
+      if (displayContent[i] === ' ') lastSpaceIndex = i
       plainCharCount++
       i++
     }
-    
-    // Truncate at word boundary if possible
-    if (lastSpaceIndex > maxLength * 0.6 && lastSpaceIndex < i) {
-      truncatedContent = content.substring(0, lastSpaceIndex)
-    } else {
-      truncatedContent = content.substring(0, i)
-    }
-    
-    // Close any unclosed markdown tags
+
+    truncatedContent = lastSpaceIndex > maxLength * 0.6 && lastSpaceIndex < i
+      ? displayContent.substring(0, lastSpaceIndex)
+      : displayContent.substring(0, i)
+
     const openBoldCount = (truncatedContent.match(/\*\*/g) || []).length
     if (openBoldCount % 2 !== 0) {
-      // Remove the last incomplete bold marker
       truncatedContent = truncatedContent.replace(/\*\*$/, '')
     }
   }

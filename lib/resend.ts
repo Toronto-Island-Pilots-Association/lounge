@@ -659,6 +659,52 @@ export async function sendEventNotificationEmail(
   })
 }
 
+export async function sendMentionNotificationEmail(
+  email: string,
+  recipientName: string,
+  threadTitle: string,
+  threadId: string,
+  mentionedByName: string,
+  commentPreview: string,
+) {
+  const { mentionsToEmailHtml } = await import('@/lib/utils')
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const threadUrl = `${appUrl}/discussions/${threadId}`
+  const settingsUrl = `${appUrl}/settings`
+
+  const previewHtml = mentionsToEmailHtml(
+    commentPreview.length > 200
+      ? commentPreview.substring(0, 200).trim() + '...'
+      : commentPreview
+  )
+
+  return sendEmail({
+    to: email,
+    subject: `${mentionedByName} mentioned you in "${threadTitle}"`,
+    html: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <p style="color: #374151; line-height: 1.6;">Hi ${recipientName},</p>
+        <p style="color: #374151; line-height: 1.6;">
+          <strong>${mentionedByName}</strong> mentioned you in a discussion:
+        </p>
+        <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; margin: 20px 0; border-radius: 4px;">
+          <h3 style="color: #1f2937; margin: 0 0 8px 0; font-size: 16px;">${threadTitle}</h3>
+          <p style="color: #374151; line-height: 1.6; margin: 0; white-space: pre-wrap;">${previewHtml}</p>
+        </div>
+        <div style="margin: 24px 0; text-align: center;">
+          <a href="${threadUrl}" style="display: inline-block; background-color: #0d1e26; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+            View Discussion
+          </a>
+        </div>
+        <p style="margin-top: 30px; color: #9ca3af; font-size: 12px; line-height: 1.6;">
+          You were mentioned in this comment on Hangar Talk.
+          <a href="${settingsUrl}" style="color: #6b7280;">Manage notifications</a>
+        </p>
+      </div>
+    `,
+  })
+}
+
 export async function sendReplyNotificationEmail(
   email: string,
   recipientName: string,
@@ -668,6 +714,7 @@ export async function sendReplyNotificationEmail(
   commentPreview: string,
   reason: 'thread_author' | 'participant'
 ) {
+  const { mentionsToEmailHtml } = await import('@/lib/utils')
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
   const threadUrl = `${appUrl}/discussions/${threadId}`
   const settingsUrl = `${appUrl}/settings`
@@ -676,22 +723,24 @@ export async function sendReplyNotificationEmail(
     ? 'you started'
     : 'you commented on'
 
-  const truncatedPreview = commentPreview.length > 200
-    ? commentPreview.substring(0, 200).trim() + '...'
-    : commentPreview
+  const previewHtml = mentionsToEmailHtml(
+    commentPreview.length > 200
+      ? commentPreview.substring(0, 200).trim() + '...'
+      : commentPreview
+  )
 
   return sendEmail({
     to: email,
     subject: `${commenterName} replied to "${threadTitle}"`,
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <p style="color: #374151; line-height: 1.6;">Hi ${recipientName},</p>
         <p style="color: #374151; line-height: 1.6;">
           <strong>${commenterName}</strong> replied to a discussion ${reasonText}:
         </p>
         <div style="background-color: #f9fafb; border-left: 4px solid #0d1e26; padding: 16px; margin: 20px 0; border-radius: 4px;">
           <h3 style="color: #1f2937; margin: 0 0 8px 0; font-size: 16px;">${threadTitle}</h3>
-          <p style="color: #374151; line-height: 1.6; margin: 0; white-space: pre-wrap;">${truncatedPreview}</p>
+          <p style="color: #374151; line-height: 1.6; margin: 0; white-space: pre-wrap;">${previewHtml}</p>
         </div>
         <div style="margin: 24px 0; text-align: center;">
           <a href="${threadUrl}" style="display: inline-block; background-color: #0d1e26; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
@@ -723,6 +772,7 @@ export async function sendDiscussionDigestEmail(
     comment_count?: number
   }>
 ) {
+  const { stripFormatting } = await import('@/lib/utils')
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
   const discussionsUrl = `${appUrl}/discussions`
   
@@ -746,20 +796,6 @@ export async function sendDiscussionDigestEmail(
     }).format(date)
   }
 
-  const stripMarkdownAndHtml = (text: string) => {
-    return text
-      .replace(/<[^>]*>/g, '')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/\*\*(.*?)\*\*/g, '$1')
-      .replace(/\*(.*?)\*/g, '$1')
-      .replace(/__(.*?)__/g, '$1')
-      .replace(/_(.*?)_/g, '$1')
-      .replace(/#{1,6}\s/g, '')
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-      .replace(/`([^`]+)`/g, '$1')
-      .trim()
-  }
-
   const truncateText = (text: string, maxLength: number = 120) => {
     if (text.length <= maxLength) return text
     return text.substring(0, maxLength).trim() + '...'
@@ -768,7 +804,7 @@ export async function sendDiscussionDigestEmail(
   const threadsHtml = threads.map(thread => {
     const authorName = thread.author?.full_name || thread.author?.email || 'Anonymous'
     const categoryLabel = CATEGORY_LABELS[thread.category] || thread.category
-    const preview = truncateText(stripMarkdownAndHtml(thread.content))
+    const plainPreview = truncateText(stripFormatting(thread.content))
     const threadUrl = `${discussionsUrl}/${thread.id}`
     const replyCount = thread.comment_count || 0
     const replyText = replyCount === 1 ? '1 reply' : `${replyCount} replies`
@@ -780,7 +816,7 @@ export async function sendDiscussionDigestEmail(
             <tr>
               <td style="padding: 16px 20px;">
                 <a href="${threadUrl}" style="color: #0d1e26; text-decoration: none; font-size: 16px; font-weight: 600; line-height: 1.4;">${thread.title}</a>
-                <p style="color: #6b7280; font-size: 13px; line-height: 1.5; margin: 8px 0 12px 0;">${preview}</p>
+                <p style="color: #6b7280; font-size: 13px; line-height: 1.5; margin: 8px 0 12px 0;">${plainPreview}</p>
                 <table cellpadding="0" cellspacing="0" border="0">
                   <tr>
                     <td style="padding-right: 12px;">
