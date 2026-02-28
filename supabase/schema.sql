@@ -57,6 +57,18 @@ CREATE TABLE IF NOT EXISTS events (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Create event_rsvps table (who RSVPed to which event)
+CREATE TABLE IF NOT EXISTS event_rsvps (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(event_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_event_rsvps_event_id ON event_rsvps(event_id);
+CREATE INDEX IF NOT EXISTS idx_event_rsvps_user_id ON event_rsvps(user_id);
+
 -- Create settings table for app configuration
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
@@ -357,6 +369,7 @@ CREATE TRIGGER update_comments_updated_at
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE resources ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE event_rsvps ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE threads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
@@ -377,6 +390,9 @@ DROP POLICY IF EXISTS "Authenticated users can view events" ON events;
 DROP POLICY IF EXISTS "Admins can insert events" ON events;
 DROP POLICY IF EXISTS "Admins can update events" ON events;
 DROP POLICY IF EXISTS "Admins can delete events" ON events;
+DROP POLICY IF EXISTS "Authenticated users can view event RSVPs" ON event_rsvps;
+DROP POLICY IF EXISTS "Authenticated users can create event RSVPs" ON event_rsvps;
+DROP POLICY IF EXISTS "Users can delete own event RSVP" ON event_rsvps;
 DROP POLICY IF EXISTS "All users can view settings" ON settings;
 DROP POLICY IF EXISTS "Admins can update settings" ON settings;
 DROP POLICY IF EXISTS "Authenticated users can view threads" ON threads;
@@ -456,6 +472,22 @@ CREATE POLICY "Admins can update events"
 CREATE POLICY "Admins can delete events"
   ON events FOR DELETE
   USING (public.is_admin(auth.uid()));
+
+-- Event RSVPs policies
+-- All authenticated users can view RSVPs (to see who is attending)
+CREATE POLICY "Authenticated users can view event RSVPs"
+  ON event_rsvps FOR SELECT
+  USING (auth.role() = 'authenticated');
+
+-- Authenticated users can RSVP (add themselves)
+CREATE POLICY "Authenticated users can create event RSVPs"
+  ON event_rsvps FOR INSERT
+  WITH CHECK (auth.role() = 'authenticated' AND auth.uid() = user_id);
+
+-- Users can remove their own RSVP
+CREATE POLICY "Users can delete own event RSVP"
+  ON event_rsvps FOR DELETE
+  USING (auth.uid() = user_id);
 
 -- Settings policies
 -- All authenticated users can view settings

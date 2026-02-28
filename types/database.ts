@@ -87,6 +87,18 @@ export interface Event {
   created_by: string | null
   created_at: string
   updated_at: string
+  /** Number of RSVPs (included from API) */
+  rsvp_count?: number
+  /** Whether the current user has RSVPed (included from API) */
+  user_rsvped?: boolean
+}
+
+export interface EventRsvp {
+  id: string
+  user_id: string
+  display_name: string
+  profile_picture_url?: string | null
+  created_at: string
 }
 
 export type DiscussionCategory = 'aircraft_shares' | 'instructor_availability' | 'gear_for_sale' | 'flying_at_ytz' | 'general_aviation' | 'training_safety_proficiency' | 'wanted' | 'building_a_better_tipa' | 'other'

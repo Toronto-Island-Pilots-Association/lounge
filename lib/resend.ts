@@ -64,6 +64,18 @@ export async function sendEmail({
   }
 }
 
+/** Escape a value for iCal (SUMMARY, DESCRIPTION, etc.) */
+function escapeIcalValue(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/,/g, '\\,').replace(/;/g, '\\;').replace(/\n/g, '\\n')
+}
+
+/** Attendee for iCal VEVENT (syncs with calendar apps' RSVP/accepted) */
+export type ICalAttendee = {
+  email: string
+  displayName?: string | null
+  partstat?: 'ACCEPTED' | 'DECLINED' | 'TENTATIVE'
+}
+
 // Generate iCal format for calendar events
 export function generateICal({
   title,
@@ -72,6 +84,9 @@ export function generateICal({
   startTime,
   endTime,
   url,
+  attendees,
+  attendeeCount,
+  eventPageUrl,
 }: {
   title: string
   description?: string | null
@@ -79,6 +94,12 @@ export function generateICal({
   startTime: string
   endTime?: string | null
   url?: string
+  /** Attendees with PARTSTAT so calendar apps show accepted/declined (e.g. "You accepted") */
+  attendees?: ICalAttendee[] | null
+  /** Optional count to append to description: "X people attending" */
+  attendeeCount?: number | null
+  /** Optional link to event page for "See event page for who's attending" */
+  eventPageUrl?: string | null
 }): string {
   const formatDate = (date: string) => {
     return new Date(date).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
@@ -88,6 +109,15 @@ export function generateICal({
   const now = formatDate(new Date().toISOString())
   const dtstart = formatDate(startTime)
   const dtend = endTime ? formatDate(endTime) : formatDate(new Date(new Date(startTime).getTime() + 60 * 60 * 1000).toISOString())
+
+  let desc = description ?? ''
+  if (attendeeCount != null && attendeeCount > 0 && eventPageUrl) {
+    const suffix = `\n\n${attendeeCount} ${attendeeCount === 1 ? 'person' : 'people'} attending. See event page for details: ${eventPageUrl}`
+    desc = desc ? desc + suffix : suffix.trim()
+  } else if (attendeeCount != null && attendeeCount > 0) {
+    const suffix = `\n\n${attendeeCount} ${attendeeCount === 1 ? 'person' : 'people'} attending.`
+    desc = desc ? desc + suffix : suffix.trim()
+  }
 
   const ical = [
     'BEGIN:VCALENDAR',
@@ -100,19 +130,33 @@ export function generateICal({
     `DTSTAMP:${now}`,
     `DTSTART:${dtstart}`,
     `DTEND:${dtend}`,
-    `SUMMARY:${title.replace(/,/g, '\\,').replace(/;/g, '\\;')}`,
+    `SUMMARY:${escapeIcalValue(title)}`,
   ]
 
-  if (description) {
-    ical.push(`DESCRIPTION:${description.replace(/,/g, '\\,').replace(/;/g, '\\;').replace(/\n/g, '\\n')}`)
+  if (desc) {
+    ical.push(`DESCRIPTION:${escapeIcalValue(desc)}`)
   }
 
   if (location) {
-    ical.push(`LOCATION:${location.replace(/,/g, '\\,').replace(/;/g, '\\;')}`)
+    ical.push(`LOCATION:${escapeIcalValue(location)}`)
   }
 
   if (url) {
     ical.push(`URL:${url}`)
+  }
+
+  if (attendees?.length) {
+    for (const a of attendees) {
+      const params: string[] = []
+      if (a.displayName) {
+        params.push(`CN="${a.displayName.replace(/"/g, "'")}"`)
+      }
+      if (a.partstat) {
+        params.push(`PARTSTAT=${a.partstat}`)
+      }
+      const value = `mailto:${a.email}`
+      ical.push(params.length ? `ATTENDEE;${params.join(';')}:${value}` : `ATTENDEE:${value}`)
+    }
   }
 
   ical.push('END:VEVENT', 'END:VCALENDAR')
