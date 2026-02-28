@@ -91,7 +91,8 @@ export async function POST(request: Request) {
           .eq('id', userId)
           .single()
         const level = (existingProfile?.membership_level || 'Full') as MembershipLevelKey
-        const membershipFee = amountFromInvoice ?? (await getMembershipFeeForLevel(level))
+        const fullMembershipFee = await getMembershipFeeForLevel(level)
+        const amountPaid = amountFromInvoice ?? fullMembershipFee
 
         // Update user profile with subscription info (keep their membership level)
         await supabase
@@ -109,7 +110,7 @@ export async function POST(request: Request) {
           .insert({
             user_id: userId,
             payment_method: 'stripe',
-            amount: membershipFee,
+            amount: amountPaid,
             currency: 'CAD',
             payment_date: new Date().toISOString(),
             membership_expires_at: membershipExpiresAt,
@@ -134,7 +135,8 @@ export async function POST(request: Request) {
               profile.email,
               profile.full_name || 'Member',
               {
-                amount: membershipFee,
+                amountPaid,
+                nextAmount: fullMembershipFee,
                 currency: 'CAD',
                 nextChargeDate: currentPeriodEnd,
                 validUntil: new Date(membershipExpiresAt),

@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   flight_school TEXT,
   instructor_name TEXT,
   interests TEXT,
+  notify_replies BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

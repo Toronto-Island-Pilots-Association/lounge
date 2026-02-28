@@ -49,6 +49,7 @@ export interface UserProfile {
   is_student_pilot: boolean
   flight_school: string | null
   instructor_name: string | null
+  notify_replies: boolean
   created_at: string
   updated_at: string
   /** Server-computed trial end (ISO string). Set by admin members API from editable trial config. */

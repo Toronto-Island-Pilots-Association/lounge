@@ -168,8 +168,10 @@ export async function sendWelcomeEmail(email: string, name: string) {
 
 /** Details for subscription confirmation email (charge date, amount, validity). */
 export type SubscriptionConfirmationDetails = {
-  /** Amount charged or to be charged (e.g. 45 for $45 CAD). */
-  amount: number
+  /** Amount actually charged today (may be 0 for trial subscriptions). */
+  amountPaid: number
+  /** Amount that will be charged on the next renewal (full membership fee). */
+  nextAmount: number
   currency: string
   /** When the next payment will be taken (e.g. end of trial or next year). */
   nextChargeDate: Date | null
@@ -191,11 +193,11 @@ export async function sendSubscriptionConfirmationEmail(
   name: string,
   details: SubscriptionConfirmationDetails
 ) {
-  const { amount, currency, nextChargeDate, validUntil, paymentMethod } = details
-  const amountStr = new Intl.NumberFormat('en-CA', {
-    style: 'currency',
-    currency: currency,
-  }).format(amount)
+  const { amountPaid, nextAmount, currency, nextChargeDate, validUntil, paymentMethod } = details
+  const fmt = (v: number) =>
+    new Intl.NumberFormat('en-CA', { style: 'currency', currency }).format(v)
+  const amountPaidStr = fmt(amountPaid)
+  const nextAmountStr = fmt(nextAmount)
   const validUntilStr = formatDate(validUntil)
   const paymentLabel = 'Stripe'
 
@@ -203,7 +205,7 @@ export async function sendSubscriptionConfirmationEmail(
     nextChargeDate && nextChargeDate > new Date()
       ? `
         <p style="color: #374151; line-height: 1.6;">
-          <strong>Next payment:</strong> ${amountStr} on <strong>${formatDate(nextChargeDate)}</strong> (via ${paymentLabel}). Your membership will renew for another year from that date.
+          <strong>Next payment:</strong> ${nextAmountStr} on <strong>${formatDate(nextChargeDate)}</strong> (via ${paymentLabel}). Your membership will renew for another year from that date.
         </p>
       `
       : `
@@ -224,7 +226,7 @@ export async function sendSubscriptionConfirmationEmail(
         </p>
         <div style="background-color: #f0f9ff; border-left: 4px solid #0d1e26; padding: 16px; margin: 20px 0; border-radius: 4px;">
           <p style="color: #374151; line-height: 1.6; margin: 0 0 8px 0;">
-            <strong>Amount paid:</strong> ${amountStr}
+            <strong>Amount paid:</strong> ${amountPaidStr}
           </p>
           <p style="color: #374151; line-height: 1.6; margin: 0 0 8px 0;">
             <strong>Membership valid until:</strong> ${validUntilStr}
@@ -657,6 +659,54 @@ export async function sendEventNotificationEmail(
   })
 }
 
+export async function sendReplyNotificationEmail(
+  email: string,
+  recipientName: string,
+  threadTitle: string,
+  threadId: string,
+  commenterName: string,
+  commentPreview: string,
+  reason: 'thread_author' | 'participant'
+) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const threadUrl = `${appUrl}/discussions/${threadId}`
+  const settingsUrl = `${appUrl}/settings`
+
+  const reasonText = reason === 'thread_author'
+    ? 'you started'
+    : 'you commented on'
+
+  const truncatedPreview = commentPreview.length > 200
+    ? commentPreview.substring(0, 200).trim() + '...'
+    : commentPreview
+
+  return sendEmail({
+    to: email,
+    subject: `${commenterName} replied to "${threadTitle}"`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <p style="color: #374151; line-height: 1.6;">Hi ${recipientName},</p>
+        <p style="color: #374151; line-height: 1.6;">
+          <strong>${commenterName}</strong> replied to a discussion ${reasonText}:
+        </p>
+        <div style="background-color: #f9fafb; border-left: 4px solid #0d1e26; padding: 16px; margin: 20px 0; border-radius: 4px;">
+          <h3 style="color: #1f2937; margin: 0 0 8px 0; font-size: 16px;">${threadTitle}</h3>
+          <p style="color: #374151; line-height: 1.6; margin: 0; white-space: pre-wrap;">${truncatedPreview}</p>
+        </div>
+        <div style="margin: 24px 0; text-align: center;">
+          <a href="${threadUrl}" style="display: inline-block; background-color: #0d1e26; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+            View Discussion
+          </a>
+        </div>
+        <p style="margin-top: 30px; color: #9ca3af; font-size: 12px; line-height: 1.6;">
+          You're receiving this because ${reasonText} this thread on Hangar Talk.
+          <a href="${settingsUrl}" style="color: #6b7280;">Turn off reply notifications</a>
+        </p>
+      </div>
+    `,
+  })
+}
+
 export async function sendDiscussionDigestEmail(
   email: string,
   name: string,
@@ -680,6 +730,11 @@ export async function sendDiscussionDigestEmail(
     aircraft_shares: 'Aircraft Shares / Block Time',
     instructor_availability: 'Instructor Availability',
     gear_for_sale: 'Gear for Sale',
+    flying_at_ytz: 'Flying at YTZ',
+    general_aviation: 'General Aviation',
+    training_safety_proficiency: 'Training, Safety & Proficiency',
+    wanted: 'Wanted',
+    building_a_better_tipa: 'Building a Better TIPA',
     other: 'Other',
   }
 
@@ -688,16 +743,24 @@ export async function sendDiscussionDigestEmail(
     return new Intl.DateTimeFormat('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric',
     }).format(date)
   }
 
-  // Strip HTML tags and truncate content for preview
-  const stripHtml = (html: string) => {
-    return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()
+  const stripMarkdownAndHtml = (text: string) => {
+    return text
+      .replace(/<[^>]*>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/\*(.*?)\*/g, '$1')
+      .replace(/__(.*?)__/g, '$1')
+      .replace(/_(.*?)_/g, '$1')
+      .replace(/#{1,6}\s/g, '')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/`([^`]+)`/g, '$1')
+      .trim()
   }
 
-  const truncateText = (text: string, maxLength: number = 150) => {
+  const truncateText = (text: string, maxLength: number = 120) => {
     if (text.length <= maxLength) return text
     return text.substring(0, maxLength).trim() + '...'
   }
@@ -705,58 +768,98 @@ export async function sendDiscussionDigestEmail(
   const threadsHtml = threads.map(thread => {
     const authorName = thread.author?.full_name || thread.author?.email || 'Anonymous'
     const categoryLabel = CATEGORY_LABELS[thread.category] || thread.category
-    const preview = truncateText(stripHtml(thread.content))
+    const preview = truncateText(stripMarkdownAndHtml(thread.content))
     const threadUrl = `${discussionsUrl}/${thread.id}`
-    const commentText = thread.comment_count === 1 ? 'comment' : 'comments'
+    const replyCount = thread.comment_count || 0
+    const replyText = replyCount === 1 ? '1 reply' : `${replyCount} replies`
     
     return `
-      <div style="border-bottom: 1px solid #e5e7eb; padding: 20px 0; margin-bottom: 20px;">
-        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
-          <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #1f2937;">
-            <a href="${threadUrl}" style="color: #2563eb; text-decoration: none;">${thread.title}</a>
-          </h3>
-          <span style="font-size: 12px; color: #6b7280; background-color: #f3f4f6; padding: 4px 8px; border-radius: 4px;">
-            ${categoryLabel}
-          </span>
-        </div>
-        <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 8px 0;">
-          ${preview}
-        </p>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 12px; color: #9ca3af;">
-          <span>By ${authorName} • ${formatDate(thread.created_at)}</span>
-          ${thread.comment_count ? `<span>${thread.comment_count} ${commentText}</span>` : ''}
-        </div>
-      </div>
+      <tr>
+        <td style="padding: 0 0 16px 0;">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px;">
+            <tr>
+              <td style="padding: 16px 20px;">
+                <a href="${threadUrl}" style="color: #0d1e26; text-decoration: none; font-size: 16px; font-weight: 600; line-height: 1.4;">${thread.title}</a>
+                <p style="color: #6b7280; font-size: 13px; line-height: 1.5; margin: 8px 0 12px 0;">${preview}</p>
+                <table cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td style="padding-right: 12px;">
+                      <span style="font-size: 11px; font-weight: 600; color: #0d1e26; background-color: rgba(13,30,38,0.08); padding: 3px 8px; border-radius: 4px;">${categoryLabel}</span>
+                    </td>
+                    <td style="font-size: 12px; color: #9ca3af; padding-right: 12px;">${authorName}</td>
+                    <td style="font-size: 12px; color: #9ca3af; padding-right: 12px;">${formatDate(thread.created_at)}</td>
+                    <td style="font-size: 12px; color: #6b7280; font-weight: 500;">${replyText}</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
     `
   }).join('')
 
+  const firstName = name.split(' ')[0]
+
   return sendEmail({
     to: email,
-    subject: `TIPA Discussion Digest - ${threads.length} New Discussion${threads.length === 1 ? '' : 's'}`,
+    subject: `Hangar Talk This Week — ${threads.length} new ${threads.length === 1 ? 'discussion' : 'discussions'}`,
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h1 style="color: #1f2937; margin-bottom: 20px;">TIPA Hangar Talk Digest</h1>
-        <p style="color: #374151; line-height: 1.6;">Hi ${name},</p>
-        <p style="color: #374151; line-height: 1.6;">
-          Here are the latest Hangar Talk posts from the TIPA community over the past week:
-        </p>
-        <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          ${threadsHtml}
-        </div>
-        <p style="margin-top: 20px;">
-          <a href="${discussionsUrl}" 
-             style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
-            View All Hangar Talk
-          </a>
-        </p>
-        <p style="margin-top: 20px; color: #374151; line-height: 1.6; font-size: 14px;">
-          You're receiving this weekly digest because you're a member of TIPA. 
-          <a href="${appUrl}/settings" style="color: #2563eb;">Manage your email preferences</a>
-        </p>
-        <p style="margin-top: 20px; color: #374151; line-height: 1.6;">
-          Best regards,<br>
-          <strong>The TIPA Team</strong>
-        </p>
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f3f4f6;">
+        <!-- Header -->
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #0d1e26;">
+          <tr>
+            <td style="padding: 24px 24px 20px 24px;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.3px;">Hangar Talk</h1>
+              <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0 0; font-size: 13px;">Your weekly TIPA community digest</p>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Body -->
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td style="padding: 24px;">
+              <p style="color: #374151; line-height: 1.6; font-size: 15px; margin: 0 0 20px 0;">
+                Hi ${firstName}, here's what the community has been talking about:
+              </p>
+
+              <!-- Thread Cards -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${threadsHtml}
+              </table>
+
+              <!-- CTA -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="padding: 8px 0 24px 0;">
+                    <a href="${discussionsUrl}" style="display: inline-block; padding: 12px 28px; background-color: #0d1e26; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px;">
+                      View All Discussions
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Footer -->
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td style="padding: 0 24px 24px 24px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid #e5e7eb;">
+                <tr>
+                  <td style="padding-top: 16px;">
+                    <p style="color: #9ca3af; font-size: 12px; line-height: 1.6; margin: 0;">
+                      You're receiving this because you're a member of TIPA.<br>
+                      <a href="${appUrl}/settings" style="color: #6b7280; text-decoration: underline;">Manage email preferences</a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
       </div>
     `,
   })
