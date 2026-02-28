@@ -1,4 +1,4 @@
-import { requireAuth } from '@/lib/auth'
+import { requireAuthIncludingPending } from '@/lib/auth'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getStripeInstance, isStripeEnabled } from '@/lib/stripe'
 import { sendSubscriptionConfirmationEmail } from '@/lib/resend'
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const user = await requireAuth()
+    const user = await requireAuthIncludingPending()
     const body = await request.json().catch(() => ({}))
     const sessionId = typeof body.session_id === 'string' ? body.session_id.trim() : null
 
@@ -38,9 +38,13 @@ export async function POST(request: Request) {
       expand: ['subscription'],
     })
 
-    if (session.payment_status !== 'paid') {
+    const subscriptionObj = session.subscription as Stripe.Subscription | null
+    const subscriptionStatus = subscriptionObj?.status
+    const isTrialing = subscriptionStatus === 'trialing'
+    const isPaid = session.payment_status === 'paid'
+    if (!isPaid && !isTrialing) {
       return NextResponse.json(
-        { error: 'Session is not paid' },
+        { error: 'Session has no paid or trialing subscription' },
         { status: 400 }
       )
     }

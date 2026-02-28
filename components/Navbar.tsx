@@ -136,7 +136,7 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 sm:h-20">
             <Link 
-              href="/membership"
+              href="/discussions"
               onClick={handleLinkClick}
               className="flex items-center hover:opacity-80 transition-opacity"
             >
@@ -153,15 +153,6 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-4">
             {user ? (
               <>
-                <Link
-                  href="/membership"
-                  className="flex items-center gap-1.5 text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                  </svg>
-                  Membership
-                </Link>
                 {profile && (profile.status === 'approved' || profile.role === 'admin') && (
                   <>
                     <Link
@@ -193,6 +184,15 @@ export default function Navbar() {
                     </Link>
                   </>
                 )}
+                <Link
+                  href="/membership"
+                  className="flex items-center gap-1.5 text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                  Membership
+                </Link>
                 <div className="relative ml-2 pl-4 border-l border-gray-200" data-user-menu>
                   <button
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
@@ -372,16 +372,6 @@ export default function Navbar() {
         {mobileMenuOpen && user && (
           <div className="md:hidden border-t border-gray-200 py-4 max-h-[calc(100vh-4rem)] overflow-y-auto">
             <div className="space-y-1">
-                <Link
-                  href="/membership"
-                  onClick={handleLinkClick}
-                  className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                  </svg>
-                  Membership
-                </Link>
                 {profile && (profile.status === 'approved' || profile.role === 'admin') && (
                   <>
                     <Link
@@ -416,6 +406,16 @@ export default function Navbar() {
                     </Link>
                   </>
                 )}
+                <Link
+                  href="/membership"
+                  onClick={handleLinkClick}
+                  className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                  Membership
+                </Link>
                 <Link
                   href="/settings"
                   onClick={handleLinkClick}

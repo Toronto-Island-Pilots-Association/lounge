@@ -58,6 +58,7 @@ export const CLASSIFIED_CATEGORIES: DiscussionCategory[] = [
   'aircraft_shares',
   'instructor_availability',
   'gear_for_sale',
+  'wanted',
 ]
 
 // Discussion categories (general discussions)
@@ -65,7 +66,6 @@ export const DISCUSSION_CATEGORIES: DiscussionCategory[] = [
   'flying_at_ytz',
   'general_aviation',
   'training_safety_proficiency',
-  'wanted',
   'building_a_better_tipa',
   'other',
 ]

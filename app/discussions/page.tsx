@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Suspense } from 'react'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { Thread, DiscussionCategory, ThreadWithData, ThreadAuthor } from '@/types/database'
 import Sidebar from './Sidebar'
@@ -12,15 +12,25 @@ import { CATEGORY_LABELS, CATEGORY_DESCRIPTIONS } from './constants'
 import { CategoryIconLarge } from './CategoryIcons'
 import { formatRelativeDate } from './utils'
 
+const THREADS_PER_PAGE = 25
+
 export default async function DiscussionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sort?: string; category?: string }>
+  searchParams: Promise<{ sort?: string; category?: string; page?: string }>
 }) {
   const user = await getCurrentUser()
 
   if (!user) {
     redirect('/login')
+  }
+
+  if (shouldRequireProfileCompletion(user.profile)) {
+    redirect('/complete-profile')
+  }
+
+  if (shouldRequirePayment(user.profile)) {
+    redirect('/add-payment')
   }
 
   // Redirect pending users to approval page
@@ -35,60 +45,59 @@ export default async function DiscussionsPage({
   const categoryFilter = categoryParam && categoryParam !== 'all' 
     ? (categoryParam as DiscussionCategory)
     : undefined
+  const currentPage = Math.max(1, parseInt(params?.page || '1', 10) || 1)
+  const offset = (currentPage - 1) * THREADS_PER_PAGE
 
-  // Build query
+  // Build query with embedded comment count (DB-level aggregation)
   let query = supabase
     .from('threads')
-    .select('*')
+    .select('*, comments(count)', { count: 'exact' })
     .order('created_at', { ascending: false })
+    .range(offset, offset + THREADS_PER_PAGE - 1)
 
-  // Apply category filter if specified
   if (categoryFilter) {
     query = query.eq('category', categoryFilter)
   }
 
-  // Get threads
-  const { data: threads, error: threadsError } = await query
+  const { data: threads, error: threadsError, count: totalCount } = await query
 
   if (threadsError) {
     console.error('Error fetching threads:', threadsError)
   }
 
-  // Type the threads as Thread[]
-  const typedThreads = (threads || []) as Thread[]
+  const typedThreads = (threads || []) as (Thread & { comments: { count: number }[] })[]
+  const totalPages = Math.ceil((totalCount || 0) / THREADS_PER_PAGE)
 
-  // Get author info for each thread
-  const userIds = [...new Set(threads?.map(t => t.created_by).filter((id): id is string => id !== null) || [])]
-  const { data: authors } = userIds.length > 0 ? await supabase
-    .from('user_profiles')
-    .select('id, full_name, email, profile_picture_url')
-    .in('id', userIds) : { data: [] }
-
-  const authorsMap = new Map(authors?.map(a => [a.id, a]) || [])
-
-  // Get comment data for each thread (count and most recent comment time)
+  // Get author info and latest comment times in parallel
+  const userIds = [...new Set(typedThreads.map(t => t.created_by).filter((id): id is string => id !== null))]
   const threadIds = typedThreads.map(t => t.id)
-  const { data: comments } = await supabase
-    .from('comments')
-    .select('thread_id, created_at')
-    .in('thread_id', threadIds)
-    .order('created_at', { ascending: false })
 
-  const countsMap = new Map<string, number>()
+  const [authorsResult, latestCommentsResult] = await Promise.all([
+    userIds.length > 0
+      ? supabase.from('user_profiles').select('id, full_name, email, profile_picture_url').in('id', userIds)
+      : Promise.resolve({ data: [] }),
+    threadIds.length > 0
+      ? supabase
+          .from('comments')
+          .select('thread_id, created_at')
+          .in('thread_id', threadIds)
+          .order('created_at', { ascending: false })
+      : Promise.resolve({ data: [] }),
+  ])
+
+  const authorsMap = new Map(authorsResult.data?.map(a => [a.id, a]) || [])
+
+  // Build latest-comment map — only first occurrence per thread matters (already sorted desc)
   const latestCommentMap = new Map<string, Date>()
-  
-  comments?.forEach(c => {
-    countsMap.set(c.thread_id, (countsMap.get(c.thread_id) || 0) + 1)
-    // Track the most recent comment time for each thread
-    const existing = latestCommentMap.get(c.thread_id)
-    if (!existing || new Date(c.created_at) > existing) {
+  latestCommentsResult.data?.forEach(c => {
+    if (!latestCommentMap.has(c.thread_id)) {
       latestCommentMap.set(c.thread_id, new Date(c.created_at))
     }
   })
 
-  // Add comment counts and author info to threads
   let threadsWithData: ThreadWithData[] = typedThreads.map(thread => {
     const author = authorsMap.get(thread.created_by) as ThreadAuthor | undefined
+    const commentCount = thread.comments?.[0]?.count || 0
     return {
       id: thread.id,
       title: thread.title,
@@ -98,59 +107,35 @@ export default async function DiscussionsPage({
       author_email: thread.author_email,
       created_at: thread.created_at,
       updated_at: thread.updated_at,
-      comment_count: countsMap.get(thread.id) || 0,
+      comment_count: commentCount,
       latest_comment_at: latestCommentMap.get(thread.id) || null,
       author
     }
   })
 
-  // Sort threads based on sortBy parameter
   if (sortBy === 'hot') {
-    // Calculate hot score: combines comment count with recency
-    // Recent threads with comments rank higher
-    // Calculate hot score: use current time for sorting
-    // Note: This runs on server, so we use a stable reference
     const now = new Date().getTime()
     threadsWithData = [...threadsWithData].sort((a, b) => {
-      // Calculate hot score for each thread
       const calculateHotScore = (thread: ThreadWithData) => {
         const commentCount = thread.comment_count || 0
-        const threadAge = now - new Date(thread.created_at).getTime()
-        const hoursSinceThread = threadAge / (1000 * 60 * 60)
-        
-        // If thread has comments, use most recent comment time, otherwise use thread creation time
         const lastActivity = thread.latest_comment_at 
           ? new Date(thread.latest_comment_at).getTime()
           : new Date(thread.created_at).getTime()
         const hoursSinceActivity = (now - lastActivity) / (1000 * 60 * 60)
-        
-        // Hot score: comment count weighted by recency
-        // More recent activity = higher score
-        // Threads with recent comments get a boost
-        const recencyWeight = Math.max(0, 1 - hoursSinceActivity / 168) // Decay over 7 days
-        const commentWeight = Math.log10(commentCount + 1) // Logarithmic scale for comments
-        
+        const recencyWeight = Math.max(0, 1 - hoursSinceActivity / 168)
+        const commentWeight = Math.log10(commentCount + 1)
         return commentCount * recencyWeight + commentWeight * 10
       }
       
       const scoreA = calculateHotScore(a)
       const scoreB = calculateHotScore(b)
       
-      // Sort by hot score (descending)
-      if (scoreB !== scoreA) {
-        return scoreB - scoreA
-      }
-      
-      // Tiebreaker: most recent activity
+      if (scoreB !== scoreA) return scoreB - scoreA
+
       const lastActivityA = a.latest_comment_at ? new Date(a.latest_comment_at).getTime() : new Date(a.created_at).getTime()
       const lastActivityB = b.latest_comment_at ? new Date(b.latest_comment_at).getTime() : new Date(b.created_at).getTime()
       return lastActivityB - lastActivityA
     })
-  } else {
-    // Sort by created_at (descending) - already sorted, but ensure it's correct
-    threadsWithData = [...threadsWithData].sort((a, b) => 
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    )
   }
 
 
@@ -401,6 +386,47 @@ export default async function DiscussionsPage({
                       </Link>
                     )
                   })}
+                </div>
+              </div>
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="mt-6 flex items-center justify-between">
+                <p className="text-sm text-gray-500">
+                  Page {currentPage} of {totalPages}
+                </p>
+                <div className="flex items-center gap-2">
+                  {currentPage > 1 && (
+                    <Link
+                      href={`/discussions?${new URLSearchParams({
+                        ...(categoryFilter ? { category: categoryFilter } : {}),
+                        ...(sortBy !== 'latest' ? { sort: sortBy } : {}),
+                        page: String(currentPage - 1),
+                      }).toString()}`}
+                      className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                      Previous
+                    </Link>
+                  )}
+                  {currentPage < totalPages && (
+                    <Link
+                      href={`/discussions?${new URLSearchParams({
+                        ...(categoryFilter ? { category: categoryFilter } : {}),
+                        ...(sortBy !== 'latest' ? { sort: sortBy } : {}),
+                        page: String(currentPage + 1),
+                      }).toString()}`}
+                      className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      Next
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Link>
+                  )}
                 </div>
               </div>
             )}

@@ -43,24 +43,27 @@ export async function POST(request: Request) {
             }
           )
 
-          // Get user metadata to check if they were invited
+          // Get user metadata to check if they were invited (admin, member, or bulk)
           const { data: authUser } = await adminClient.auth.admin.getUserById(data.user.id)
-          const wasInvited = authUser?.user?.user_metadata?.invited_by_admin === true
+          const meta = authUser?.user?.user_metadata
+          const wasInvited =
+            meta?.invited_by_admin === true || meta?.invited_by_member === true
 
           if (wasInvited) {
-            // Get current profile status
+            // Get profile: we set status to 'approved' when they change password, so use that as source of truth
             const { data: profile } = await adminClient
               .from('user_profiles')
               .select('status')
               .eq('id', data.user.id)
               .single()
 
-            // Return flag indicating password change is needed
-            // Status will be updated when they change password
-            return NextResponse.json({ 
-              user: data.user,
-              requiresPasswordChange: true 
-            })
+            // Only require password change if still pending (have not completed first-time change)
+            if (profile?.status === 'pending') {
+              return NextResponse.json({
+                user: data.user,
+                requiresPasswordChange: true,
+              })
+            }
           }
         } catch (updateError) {
           // Don't fail login if status update fails

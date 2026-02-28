@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { getCurrentUserIncludingPending } from '@/lib/auth'
+import { getCurrentUserIncludingPending, shouldRequireProfileCompletion, shouldRequirePayment } from '@/lib/auth'
 import InviteMemberForm from './InviteMemberForm'
 
 export default async function InvitePage() {
@@ -7,6 +7,14 @@ export default async function InvitePage() {
 
   if (!user) {
     redirect('/login')
+  }
+
+  if (shouldRequireProfileCompletion(user.profile)) {
+    redirect('/complete-profile')
+  }
+
+  if (shouldRequirePayment(user.profile)) {
+    redirect('/add-payment')
   }
 
   // Only approved members can invite

@@ -74,9 +74,11 @@ export async function POST(request: Request) {
           }
         )
 
-        // Get user metadata to check if they were invited
+        // Get user metadata to check if they were invited (admin, member, or bulk)
         const { data: authUser } = await adminClient.auth.admin.getUserById(user.id)
-        const wasInvited = authUser?.user?.user_metadata?.invited_by_admin === true
+        const meta = authUser?.user?.user_metadata
+        const wasInvited =
+          meta?.invited_by_admin === true || meta?.invited_by_member === true
 
         if (wasInvited) {
           // Get full profile to check status and append to Google Sheets
@@ -139,6 +141,16 @@ export async function POST(request: Request) {
                 console.error('Failed to append invited user to Google Sheet after password change:', err)
               })
             }
+          }
+
+          // Clear invite flags from auth user_metadata so next login does not prompt for password change again
+          const currentMeta = authUser?.user?.user_metadata || {}
+          const { invited_by_admin: _a, invited_by_member: _m, ...rest } = currentMeta
+          const { error: metaError } = await adminClient.auth.admin.updateUserById(user.id, {
+            user_metadata: { ...rest, invited_by_admin: false, invited_by_member: false },
+          })
+          if (metaError) {
+            console.error('Error clearing invite flags from user_metadata:', metaError)
           }
         }
       } catch (statusError) {

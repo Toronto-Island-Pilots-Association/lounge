@@ -1,0 +1,7 @@
+{
+  "name": "fb-watchman",
+  "version": "2.0.2",
+  "description": "Stub for fb-watchman (Jest uses Node crawler/watcher instead)",
+  "main": "index.js",
+  "private": true
+}

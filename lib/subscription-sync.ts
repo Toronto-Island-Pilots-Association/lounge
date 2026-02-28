@@ -16,7 +16,7 @@ import Stripe from 'stripe'
 export async function syncSubscriptionStatus(
   userId: string,
   subscriptionId: string | null
-): Promise<{ status: 'approved' | 'expired'; membership_expires_at: string | null } | null> {
+): Promise<{ status: 'pending' | 'approved' | 'expired'; membership_expires_at: string | null } | null> {
   const supabase = createServiceRoleClient()
 
   // Get current user profile
@@ -79,26 +79,34 @@ export async function syncSubscriptionStatus(
     // If subscribed before Sept 1, expiry is Sept 1 next year; else use Stripe period end
     const computedExpiresAt = getMembershipExpiresAtFromSubscription(currentPeriodEnd, currentPeriodStart)
 
-    // Determine status based on subscription state
-    let newStatus: 'approved' | 'expired' = 'approved'
+    // Determine status based on subscription state.
+    // Never auto-promote 'pending' users to 'approved' -- only an admin can do that.
+    let newStatus: 'pending' | 'approved' | 'expired' = profile.status as 'pending' | 'approved' | 'expired'
     let newExpiresAt: string | null = computedExpiresAt
 
-    // Active subscription states
     const activeStates = ['active', 'trialing', 'past_due']
-    
+
     if (activeStates.includes(subscription.status)) {
-      newStatus = 'approved'
+      if (profile.status !== 'pending') {
+        newStatus = 'approved'
+      }
       newExpiresAt = computedExpiresAt
     } else if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
       if (new Date(computedExpiresAt) < now) {
-        newStatus = 'expired'
+        if (profile.status !== 'pending') {
+          newStatus = 'expired'
+        }
         newExpiresAt = computedExpiresAt
       } else {
-        newStatus = 'approved'
+        if (profile.status !== 'pending') {
+          newStatus = 'approved'
+        }
         newExpiresAt = computedExpiresAt
       }
     } else {
-      newStatus = 'expired'
+      if (profile.status !== 'pending') {
+        newStatus = 'expired'
+      }
       newExpiresAt = computedExpiresAt
     }
 
@@ -142,9 +150,13 @@ export async function syncSubscriptionStatus(
         ? new Date(profile.membership_expires_at) < new Date()
         : true
 
-      const newStatus: 'approved' | 'expired' = isExpired ? 'expired' : 'approved'
+      // Never auto-promote pending users
+      let newStatus = profile.status as 'pending' | 'approved' | 'expired'
+      if (profile.status !== 'pending') {
+        newStatus = isExpired ? 'expired' : 'approved'
+      }
 
-      if (profile.status !== newStatus) {
+      if (profile.status !== newStatus || profile.stripe_subscription_id) {
         await supabase
           .from('user_profiles')
           .update({

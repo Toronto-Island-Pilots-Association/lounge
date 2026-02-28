@@ -167,6 +167,47 @@ export async function requireAuth() {
   return user
 }
 
+/** Like requireAuth but allows pending users (e.g. for adding payment before approval). */
+export async function requireAuthIncludingPending() {
+  const user = await getCurrentUserIncludingPending()
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+  return user
+}
+
+/**
+ * True if the invited user still needs to fill in required profile fields
+ * (name, address, interests, COPA, acknowledgements) before proceeding.
+ * Only applies to users with 'pending' or 'approved' status; admins are excluded.
+ */
+export function shouldRequireProfileCompletion(profile: UserProfile): boolean {
+  if (!profile) return false
+  if (profile.role === 'admin') return false
+  if (profile.status !== 'pending' && profile.status !== 'approved') return false
+  const missing =
+    !profile.first_name?.trim() ||
+    !profile.last_name?.trim() ||
+    !profile.street?.trim() ||
+    !profile.city?.trim() ||
+    !profile.country?.trim() ||
+    !profile.province_state?.trim() ||
+    !profile.postal_zip_code?.trim()
+  return missing
+}
+
+/**
+ * True if the user must add payment before they can access the app.
+ * Applies to pending and approved members who have no Stripe subscription (Honorary excluded).
+ */
+export function shouldRequirePayment(profile: UserProfile): boolean {
+  if (!profile) return false
+  if (profile.membership_level === 'Honorary') return false
+  if (profile.status === 'rejected' || profile.status === 'expired') return false
+  if (profile.stripe_subscription_id) return false
+  return profile.status === 'pending' || profile.status === 'approved'
+}
+
 export async function requireAdmin() {
   const user = await requireAuth()
   if (user.profile.role !== 'admin') {

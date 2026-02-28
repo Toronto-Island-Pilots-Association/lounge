@@ -11,7 +11,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:ci": "jest --ci --coverage --maxWorkers=2"
+    "test:ci": "jest --ci --coverage --maxWorkers=2",
+    "postinstall": "node -e \"const fs=require('fs'); const p='node_modules/fb-watchman'; try { fs.readFileSync(p+'/package.json'); } catch(e) { const cp=require('child_process'); cp.execSync('rm -rf '+p); cp.execSync('cp -r stubs/fb-watchman '+p); }\""
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -39,6 +40,9 @@
     "tailwind-merge": "^3.4.0",
     "vaul": "^1.1.2",
     "zod": "^4.1.13"
+  },
+  "overrides": {
+    "fb-watchman": "file:./stubs/fb-watchman"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

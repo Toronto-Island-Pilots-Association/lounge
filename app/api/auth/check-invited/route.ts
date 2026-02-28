@@ -8,7 +8,9 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const wasInvited = user.user_metadata?.invited_by_admin === true
+    const wasInvited =
+      user.user_metadata?.invited_by_admin === true ||
+      user.user_metadata?.invited_by_member === true
 
     return NextResponse.json({ wasInvited })
   } catch (error: any) {

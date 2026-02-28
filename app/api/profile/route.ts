@@ -91,15 +91,14 @@ export async function PATCH(request: Request) {
     if (is_copa_member !== undefined) updates.is_copa_member = is_copa_member || null
     if (join_copa_flight_32 !== undefined) updates.join_copa_flight_32 = join_copa_flight_32 || null
     if (copa_membership_number !== undefined) updates.copa_membership_number = copa_membership_number || null
-    // Statement of Interest - read-only, only admins can update it
-    // Explicitly exclude statement_of_interest from member updates
+    // Statement of Interest (members can set on complete-profile)
+    if (statement_of_interest !== undefined) updates.statement_of_interest = statement_of_interest ? String(statement_of_interest).trim() || null : null
     // Aviation Information
     if (pilot_license_type !== undefined) updates.pilot_license_type = pilot_license_type || null
     if (aircraft_type !== undefined) updates.aircraft_type = aircraft_type || null
     if (call_sign !== undefined) updates.call_sign = call_sign || null
     if (how_often_fly_from_ytz !== undefined) updates.how_often_fly_from_ytz = how_often_fly_from_ytz || null
-    // how_did_you_hear is read-only, only admins can update it
-    // Explicitly exclude how_did_you_hear from member updates
+    if (how_did_you_hear !== undefined) updates.how_did_you_hear = how_did_you_hear || null
     if (is_student_pilot !== undefined) updates.is_student_pilot = Boolean(is_student_pilot)
     if (flight_school !== undefined) updates.flight_school = flight_school ? String(flight_school).trim() || null : null
     if (instructor_name !== undefined) updates.instructor_name = instructor_name ? String(instructor_name).trim() || null : null
