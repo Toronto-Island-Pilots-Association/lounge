@@ -1,7 +1,7 @@
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { Resource } from '@/types/database'
 
@@ -41,6 +41,14 @@ export default async function ResourceDetailPage({
 
   if (!user) {
     redirect('/login')
+  }
+
+  if (shouldRequireProfileCompletion(user.profile)) {
+    redirect('/complete-profile')
+  }
+
+  if (shouldRequirePayment(user.profile)) {
+    redirect('/add-payment')
   }
 
   // Redirect pending users to approval page

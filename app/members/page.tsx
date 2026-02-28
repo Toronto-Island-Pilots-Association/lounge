@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { UserProfile, getMembershipLevelLabel } from '@/types/database'
 
@@ -16,6 +16,14 @@ export default async function MembersPage({
 
   if (!user) {
     redirect('/login')
+  }
+
+  if (shouldRequireProfileCompletion(user.profile)) {
+    redirect('/complete-profile')
+  }
+
+  if (shouldRequirePayment(user.profile)) {
+    redirect('/add-payment')
   }
 
   const params = await searchParams

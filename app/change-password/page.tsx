@@ -10,6 +10,7 @@ function ChangePasswordContent() {
   const [passwordSuccess, setPasswordSuccess] = useState(false)
   const [changingPassword, setChangingPassword] = useState(false)
   const [wasInvited, setWasInvited] = useState(false)
+  const [redirectToProfileAfterSuccess, setRedirectToProfileAfterSuccess] = useState(false)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -96,11 +97,14 @@ function ChangePasswordContent() {
         newPassword: '',
         confirmPassword: '',
       })
-      setWasInvited(false) // No longer needs to change password
-      
-      // Redirect to membership after successful password change
+      const isInvited = wasInvited
+      setWasInvited(false)
+      setRedirectToProfileAfterSuccess(isInvited)
+
+      // Invited users go to membership application form to complete their info
+      const redirectTo = isInvited ? '/complete-profile' : '/membership'
       setTimeout(() => {
-        router.push('/membership')
+        router.push(redirectTo)
       }, 2000)
     } catch (err: any) {
       setPasswordError(err.message || 'Failed to change password')
@@ -140,7 +144,7 @@ function ChangePasswordContent() {
               </div>
               <div className="ml-3">
                 <p className="text-sm text-yellow-700">
-                  <strong>Action Required:</strong> Please change your temporary password to secure your account and activate full access.
+                  <strong>Action required:</strong> Change your temporary password to secure your account. After that, you will be asked to complete your membership profile.
                 </p>
               </div>
             </div>
@@ -156,7 +160,10 @@ function ChangePasswordContent() {
             )}
             {passwordSuccess && (
               <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md">
-                Password changed successfully! Your account status has been updated. Redirecting to membership...
+                Password changed successfully! Your account status has been updated.{' '}
+                {redirectToProfileAfterSuccess
+                  ? 'Redirecting to complete your profile...'
+                  : 'Redirecting to membership...'}
               </div>
             )}
             <form onSubmit={handlePasswordSubmit} className="space-y-6">

@@ -1,4 +1,4 @@
-import { requireAuth } from '@/lib/auth'
+import { requireAuthIncludingPending } from '@/lib/auth'
 import { getStripeInstance, isStripeEnabled } from '@/lib/stripe'
 import { NextResponse } from 'next/server'
 
@@ -11,7 +11,7 @@ export async function GET() {
       )
     }
 
-    const user = await requireAuth()
+    const user = await requireAuthIncludingPending()
 
     // Rejected members cannot have active subscriptions
     if (user.profile.status === 'rejected') {

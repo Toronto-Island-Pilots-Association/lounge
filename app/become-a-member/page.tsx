@@ -256,18 +256,18 @@ function BecomeMemberForm() {
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
               Registration Successful!
             </h2>
-            <p className="text-lg text-gray-700 mb-6">
+            <p className="text-lg text-gray-700 mb-4">
               Your account has been created successfully. You can now log in to access your account.
             </p>
-            <p className="text-sm text-gray-600 mb-6">
-              We've sent a welcome email to <strong>{userEmail}</strong>. Please note that your account is pending admin approval before you can access all features.
+            <p className="text-sm text-gray-600 mb-4">
+              Your account is pending admin approval before you can access all features.
             </p>
-            <div className="space-y-3">
+            <div className="mt-6">
               <Link
-                href="/login"
+                href="/login?redirectTo=%2Fadd-payment"
                 className="inline-block px-6 py-3 bg-[#0d1e26] text-white font-semibold rounded-lg hover:bg-[#0a171c] transition-colors"
               >
-                Go to Login
+                Log in
               </Link>
             </div>
           </div>
@@ -489,7 +489,7 @@ function BecomeMemberForm() {
               >
                 <option value="">Select...</option>
                 <option value="full">Full — ${membershipFees.Full}/year (free trial until Sept 1)</option>
-                <option value="student">Student — ${membershipFees.Student}/year (12-month free)</option>
+                <option value="student">Student — ${membershipFees.Student}/year (first 12-month free)</option>
                 <option value="associate">Associate — ${membershipFees.Associate}/year (free trial until Sept 1)</option>
                 <option value="corporate">Corporate — ${membershipFees.Corporate}/year</option>
               </select>
@@ -790,7 +790,11 @@ function BecomeMemberForm() {
                   onChange={handleChange}
                 />
                 <span className="text-sm text-gray-700">
-                  I have reviewed and agree to TIPA's By-Laws <span className="text-red-500">*</span>
+                  I have reviewed and agree to TIPA's{' '}
+                  <Link href="https://tipa.ca/tipa-by-laws/" target="_blank" rel="noopener noreferrer" className="text-[#0d1e26] underline hover:no-underline">
+                    By-Laws
+                  </Link>{' '}
+                  <span className="text-red-500">*</span>
                 </span>
               </label>
               <label className="flex items-start">
@@ -803,7 +807,11 @@ function BecomeMemberForm() {
                   onChange={handleChange}
                 />
                 <span className="text-sm text-gray-700">
-                  I have reviewed and agree to the Governance & Membership Policy <span className="text-red-500">*</span>
+                  I have reviewed and agree to the{' '}
+                  <Link href="https://tipa.ca/membership-policy/" target="_blank" rel="noopener noreferrer" className="text-[#0d1e26] underline hover:no-underline">
+                    Governance & Membership Policy
+                  </Link>{' '}
+                  <span className="text-red-500">*</span>
                 </span>
               </label>
               <label className="flex items-start">

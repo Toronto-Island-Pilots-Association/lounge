@@ -14,14 +14,17 @@ export default function LoginPage() {
   const router = useRouter()
 
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const redirectTo = urlParams.get('redirectTo')
+    const safeRedirect = redirectTo?.startsWith('/') && !redirectTo.startsWith('//') ? redirectTo : '/discussions'
+
     const checkAuth = async () => {
       try {
         const response = await fetch('/api/auth/session')
         const data = await response.json()
         
         if (data.authenticated) {
-          // Only redirect if we have a valid session
-          window.location.href = '/membership'
+          window.location.href = safeRedirect
         } else {
           setCheckingAuth(false)
         }
@@ -30,13 +33,10 @@ export default function LoginPage() {
       }
     }
     
-    // Check for OAuth error in URL params
-    const urlParams = new URLSearchParams(window.location.search)
     const errorParam = urlParams.get('error')
     if (errorParam) {
       setError(decodeURIComponent(errorParam))
       setCheckingAuth(false)
-      // Clean up URL
       window.history.replaceState({}, document.title, window.location.pathname)
     } else {
       checkAuth()
@@ -47,6 +47,10 @@ export default function LoginPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
+
+    const urlParams = new URLSearchParams(window.location.search)
+    const redirectTo = urlParams.get('redirectTo')
+    const safeRedirect = redirectTo?.startsWith('/') && !redirectTo.startsWith('//') ? redirectTo : '/discussions'
 
     try {
       const response = await fetch('/api/auth/login', {
@@ -63,12 +67,10 @@ export default function LoginPage() {
         throw new Error(data.error || 'Login failed')
       }
 
-      // If user needs to change password, redirect to change password page
       if (data.requiresPasswordChange) {
         window.location.href = '/change-password?required=true'
       } else {
-        // Use window.location for a full page reload to ensure cookies are set
-        window.location.href = '/membership'
+        window.location.href = safeRedirect
       }
     } catch (err: any) {
       setError(err.message)

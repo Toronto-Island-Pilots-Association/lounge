@@ -36,10 +36,11 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
     return null
   }
 
-  // Don't show subscription section for rejected, pending, or Honorary members
-  if (profile.status === 'rejected' || profile.status === 'pending' || profile.membership_level === 'Honorary') {
+  // Don't show for rejected or Honorary; show for pending (so applicants can add payment before approval)
+  if (profile.status === 'rejected' || profile.membership_level === 'Honorary') {
     return null
   }
+  const isPending = profile.status === 'pending'
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null)
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
@@ -236,9 +237,13 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
           <div className="space-y-4">
             <div>
               <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 p-4">
-                <p className="text-sm font-medium text-amber-900 mb-1">Add your payment details to keep your membership</p>
+                <p className="text-sm font-medium text-amber-900 mb-1">
+                  {isPending ? 'Add your payment details' : 'Add your payment details to keep your membership'}
+                </p>
                 <p className="text-sm text-amber-800">
-                  You will not be charged until September 1st. Set up your payment method now so your access continues without interruption.
+                  {isPending
+                    ? 'You will not be charged until your application is approved by an admin. If approved before the trial period (e.g. September 1st), your first charge will be at the end of the trial.'
+                    : 'You will not be charged until September 1st. Set up your payment method now so your access continues without interruption.'}
                 </p>
               </div>
               {membershipFee && (
@@ -246,7 +251,9 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-900">Annual Membership</p>
-                      <p className="text-xs text-gray-500 mt-1">Billed annually · First charge September 1st</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {isPending ? 'Billed annually · First charge after approval (or trial end, e.g. Sept 1st)' : 'Billed annually · First charge September 1st'}
+                      </p>
                     </div>
                     <p className="text-2xl font-bold text-gray-900">
                       ${membershipFee.toFixed(2)}
@@ -341,9 +348,13 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
           <div className="space-y-4">
             <div>
               <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 p-4">
-                <p className="text-sm font-medium text-amber-900 mb-1">Add your payment details to keep your membership</p>
+                <p className="text-sm font-medium text-amber-900 mb-1">
+                  {isPending ? 'Add your payment details' : 'Add your payment details to keep your membership'}
+                </p>
                 <p className="text-sm text-amber-800">
-                  You will not be charged until September 1st. Set up your payment method now so your access continues without interruption.
+                  {isPending
+                    ? 'You will not be charged until your application is approved by an admin. If approved before the trial period (e.g. September 1st), your first charge will be at the end of the trial.'
+                    : 'You will not be charged until September 1st. Set up your payment method now so your access continues without interruption.'}
                 </p>
               </div>
               {membershipFee && (
@@ -351,7 +362,9 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-900">Annual Membership</p>
-                      <p className="text-xs text-gray-500 mt-1">Billed annually · First charge September 1st</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {isPending ? 'Billed annually · First charge after approval (or trial end, e.g. Sept 1st)' : 'Billed annually · First charge September 1st'}
+                      </p>
                     </div>
                     <p className="text-2xl font-bold text-gray-900">
                       ${membershipFee.toFixed(2)}

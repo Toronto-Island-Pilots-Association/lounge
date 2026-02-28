@@ -550,6 +550,7 @@ export default function SettingsPage() {
                   { value: 'aircraft-maintenance', label: 'Aircraft Maintenance' },
                   { value: 'mentoring', label: 'Mentoring' },
                   { value: 'hangar-storage', label: 'Hangar/Storage' },
+                  { value: 'other', label: 'Other' },
                 ].map((interest) => (
                   <label key={interest.value} className="flex items-center">
                     <input

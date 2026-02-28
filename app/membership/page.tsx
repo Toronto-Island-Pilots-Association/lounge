@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { getCurrentUserIncludingPending } from '@/lib/auth'
+import { getCurrentUserIncludingPending, shouldRequireProfileCompletion, shouldRequirePayment } from '@/lib/auth'
 import { getMembershipFeeForLevel, getTrialEndDate, type MembershipLevelKey } from '@/lib/settings'
 import { createClient } from '@/lib/supabase/server'
 import { Resource, Event, getMembershipLevelLabel } from '@/types/database'
@@ -10,19 +10,38 @@ import SubscriptionSection from '@/components/SubscriptionSection'
 import MembershipPageClient from './MembershipPageClient'
 import StripeSuccessHandler from './StripeSuccessHandler'
 
-export default async function MembershipPage() {
+export default async function MembershipPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ subscription?: string; session_id?: string }>
+}) {
   const user = await getCurrentUserIncludingPending()
+  const params = await searchParams
 
   if (!user) {
     redirect('/login')
+  }
+
+  if (shouldRequireProfileCompletion(user.profile)) {
+    redirect('/complete-profile')
+  }
+
+  // Allow page to load when returning from Stripe so StripeSuccessHandler can confirm the session
+  const returningFromStripe =
+    params?.subscription === 'success' && typeof params?.session_id === 'string'
+
+  if (shouldRequirePayment(user.profile) && !returningFromStripe) {
+    redirect('/add-payment')
   }
 
   const isPending = user.profile.status === 'pending' && user.profile.role !== 'admin'
   const isRejected = user.profile.status === 'rejected' && user.profile.role !== 'admin'
   const isExpiredStatus = user.profile.status === 'expired' && user.profile.role !== 'admin'
 
-  // Check if user was invited and needs to change password
-  const wasInvited = user.user_metadata?.invited_by_admin === true
+  // Check if user was invited (admin, member, or bulk) and needs to change password
+  const wasInvited =
+    user.user_metadata?.invited_by_admin === true ||
+    user.user_metadata?.invited_by_member === true
   const needsPasswordChange = wasInvited && user.profile.status === 'pending'
 
   const membershipLevel = (user.profile.membership_level || 'Full') as MembershipLevelKey
@@ -68,7 +87,7 @@ export default async function MembershipPage() {
     membershipLevel === 'Full' || membershipLevel === 'Associate'
       ? <>Once approved, you will be registered as {article} <strong>{levelLabel} member</strong> (trial) until <strong>September 1st</strong></>
       : membershipLevel === 'Student'
-        ? <>Once approved, you will be registered as {article} <strong>{levelLabel} member</strong> with a 12-month trial from approval</>
+        ? <>Once approved, you will be registered as {article} <strong>{levelLabel} member</strong> with a free 12-months from approval</>
         : <>Once approved, you will be registered as {article} <strong>{levelLabel} member</strong></>
 
     // Fetch top resources, events, and threads (only for approved users)

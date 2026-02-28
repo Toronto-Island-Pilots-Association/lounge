@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Suspense } from 'react'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { Thread, Comment, DiscussionCategory } from '@/types/database'
 import CommentForm from './CommentForm'
@@ -20,6 +20,14 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
 
   if (!user) {
     redirect('/login')
+  }
+
+  if (shouldRequireProfileCompletion(user.profile)) {
+    redirect('/complete-profile')
+  }
+
+  if (shouldRequirePayment(user.profile)) {
+    redirect('/add-payment')
   }
 
   // Redirect rejected/pending users to approval page

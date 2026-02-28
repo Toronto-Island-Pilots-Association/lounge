@@ -26,7 +26,7 @@ export default async function PendingApprovalPage() {
     level === 'Full' || level === 'Associate'
       ? <>Once approved, you will be registered as {article} <strong>{levelLabel} member</strong> (trial) until <strong>September 1st</strong></>
       : level === 'Student'
-        ? <>Once approved, you will be registered as {article} <strong>{levelLabel} member</strong> with a 12-month trial from approval</>
+        ? <>Once approved, you will be registered as {article} <strong>{levelLabel} member</strong> with a free 12-month from approval</>
         : <>Once approved, you will be registered as {article} <strong>{levelLabel} member</strong></>
 
   return (
