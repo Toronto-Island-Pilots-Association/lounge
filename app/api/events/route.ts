@@ -30,7 +30,7 @@ async function getEventImageUrl(supabase: any, imageUrl: string | null): Promise
   }
 }
 
-// GET - Get all events (authenticated users)
+// GET - Get all events (authenticated users), with rsvp_count and user_rsvped
 export async function GET() {
   try {
     const user = await requireAuth()
@@ -45,22 +45,49 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    // Get signed URLs for all images
+    const events = data || []
+    const eventIds = events.map((e) => e.id)
+
+    // Fetch RSVP counts per event and current user's RSVPs
+    const [countsResult, userRsvpsResult] = await Promise.all([
+      eventIds.length > 0
+        ? supabase
+            .from('event_rsvps')
+            .select('event_id')
+            .in('event_id', eventIds)
+        : Promise.resolve({ data: [] }),
+      supabase
+        .from('event_rsvps')
+        .select('event_id')
+        .eq('user_id', user.id)
+        .in('event_id', eventIds.length > 0 ? eventIds : ['00000000-0000-0000-0000-000000000000']),
+    ])
+
+    const countByEvent = new Map<string, number>()
+    ;(countsResult.data || []).forEach((r: { event_id: string }) => {
+      countByEvent.set(r.event_id, (countByEvent.get(r.event_id) ?? 0) + 1)
+    })
+    const userRsvpedSet = new Set((userRsvpsResult.data || []).map((r: { event_id: string }) => r.event_id))
+
+    // Get signed URLs for all images and attach RSVP info
     const eventsWithSignedUrls = await Promise.all(
-      (data || []).map(async (event) => {
+      events.map(async (event) => {
         const signedImageUrl = await getEventImageUrl(supabase, event.image_url)
         return {
           ...event,
           image_url: signedImageUrl,
+          rsvp_count: countByEvent.get(event.id) ?? 0,
+          user_rsvped: userRsvpedSet.has(event.id),
         }
       })
     )
 
     return NextResponse.json({ events: eventsWithSignedUrls })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unauthorized'
     return NextResponse.json(
-      { error: error.message || 'Unauthorized' },
-      { status: error.message === 'Unauthorized' ? 401 : 500 }
+      { error: message },
+      { status: message === 'Unauthorized' ? 401 : 500 }
     )
   }
 }
