@@ -418,6 +418,7 @@ export default function MemberDetailModal({
                           'aircraft-maintenance': 'Aircraft Maintenance',
                           'mentoring': 'Mentoring',
                           'hangar-storage': 'Hangar/Storage',
+                          'volunteer-flying-public-benefit': 'Volunteer Flying (Public Benefit)',
                         }
 
                         return (

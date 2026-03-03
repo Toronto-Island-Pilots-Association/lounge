@@ -18,6 +18,7 @@ const INTEREST_OPTIONS = [
   { value: 'aircraft-maintenance', label: 'Aircraft Maintenance' },
   { value: 'mentoring', label: 'Mentoring' },
   { value: 'hangar-storage', label: 'Hangar/Storage' },
+  { value: 'volunteer-flying-public-benefit', label: 'Volunteer Flying (Public Benefit)' },
   { value: 'other', label: 'Other' },
 ]
 

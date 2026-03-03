@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter_Tight } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
+import NavbarWrapper from "@/components/NavbarWrapper";
 
 const interTight = Inter_Tight({
   variable: "--font-inter-tight",
@@ -27,7 +27,7 @@ export default function RootLayout({
       <body
         className={`${interTight.variable} antialiased pt-16 sm:pt-20 md:pt-0`}
       >
-        <Navbar />
+        <NavbarWrapper />
         {children}
         <SpeedInsights />
       </body>

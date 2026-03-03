@@ -218,6 +218,7 @@ export async function POST(request: Request) {
               role: 'member',
               membership_level: membershipLevel,
               status: 'pending', // Will be updated to 'approved' when they log in
+              invited_at: new Date().toISOString(),
             })
 
           if (profileError) {

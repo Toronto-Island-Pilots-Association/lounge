@@ -52,6 +52,8 @@ export interface UserProfile {
   notify_replies: boolean
   created_at: string
   updated_at: string
+  /** Set when the user was invited (admin or member invite); null for self-signup. */
+  invited_at?: string | null
   /** Server-computed trial end (ISO string). Set by admin members API from editable trial config. */
   trial_end?: string | null
   /** Latest payment summary from admin members API (amount, currency, payment_method). */
