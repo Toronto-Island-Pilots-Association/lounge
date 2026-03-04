@@ -249,7 +249,6 @@ export default async function DiscussionsPage({
                 <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden divide-y divide-gray-200">
                   {threadsWithData.map((thread) => {
                     const author = thread.author
-                    const lastActivity = thread.latest_comment_at || new Date(thread.created_at)
                     const replyCount = thread.comment_count || 0
                     const lastActive = formatRelativeDate(thread.latest_comment_at ? new Date(thread.latest_comment_at).toISOString() : thread.created_at)
                     const repliesAndActivity = (
@@ -287,18 +286,11 @@ export default async function DiscussionsPage({
                         <span className="text-xs text-gray-600 truncate min-w-0 flex-1 md:flex-initial md:w-[120px]">{authorLabel}</span>
                       </div>
                     )
-                    const metaBlock = (
-                      <div className="flex items-center gap-2 flex-shrink-0 md:w-[260px] md:min-w-[260px]">
-                        {authorBlock}
-                        <span aria-hidden className="text-gray-300 hidden sm:inline flex-shrink-0">·</span>
-                        <span className="flex-shrink-0">{repliesAndActivity}</span>
-                      </div>
-                    )
                     return (
                       <Link
                         key={thread.id}
                         href={`/discussions/${thread.id}`}
-                        className="block py-2.5 px-4 hover:bg-gray-50 transition-colors touch-manipulation"
+                        className="block py-5 px-4 hover:bg-gray-50 transition-colors touch-manipulation"
                       >
                         {/* Mobile: title + category, description, then avatar + name (left) and replies·timestamp (right) */}
                         <div className="md:hidden flex flex-col gap-2">
@@ -317,7 +309,7 @@ export default async function DiscussionsPage({
                           </div>
                         </div>
 
-                        {/* Desktop: top row = title + category (left), meta (avatar + name + replies·time) top right; then description */}
+                        {/* Desktop: row 1 = replies·time (left), title + category (right); row 2 = author under title; then description */}
                         <div className="hidden md:flex md:flex-col md:gap-2">
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex flex-wrap items-baseline gap-2 min-w-0">
@@ -329,8 +321,11 @@ export default async function DiscussionsPage({
                               </span>
                             </div>
                             <div className="flex-shrink-0">
-                              {metaBlock}
+                              {repliesAndActivity}
                             </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {authorBlock}
                           </div>
                           <ThreadContentPreview content={thread.content} maxLength={120} className="block" />
                         </div>
