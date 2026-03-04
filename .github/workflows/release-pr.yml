@@ -57,7 +57,11 @@ jobs:
               'Respond with exactly:\n' +
               'Line 1: A short PR title (e.g. "Release: feature X, fixes Y") — no quotes, one line.\n' +
               'Line 2: A blank line.\n' +
-              'Line 3+: A concise PR description (2–5 sentences) summarizing what this release includes and any notable changes. Use markdown if helpful.';
+              'Line 3+: A PR description in Markdown with these sections (omit a section if there are no items):\n' +
+              '- **New features** — bullet list of user-facing or notable new functionality.\n' +
+              '- **Bug fixes** — bullet list of fixes.\n' +
+              '- **Other changes** (optional) — bullet list of refactors, deps, or other changes.\n' +
+              'Keep each bullet concise. No raw commit SHAs.';
 
             const response = await fetch('https://models.inference.ai.azure.com/chat/completions', {
               method: 'POST',
@@ -68,7 +72,7 @@ jobs:
               body: JSON.stringify({
                 model: 'gpt-4o-mini',
                 messages: [{ role: 'user', content: prompt }],
-                max_tokens: 600,
+                max_tokens: 800,
               }),
             });
 
