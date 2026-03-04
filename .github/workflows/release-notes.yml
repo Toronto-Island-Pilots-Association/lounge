@@ -11,8 +11,8 @@ jobs:
   release-notes:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # create release, push CHANGELOG
-      pull-requests: read
+      contents: write   # create release, push branch
+      pull-requests: write  # open PR for CHANGELOG (main is protected)
       models: read
 
     steps:
@@ -114,18 +114,29 @@ jobs:
               : newSection + existing;
             fs.writeFileSync(changelogPath, updated);
 
-            // Commit and push CHANGELOG
+            // Push CHANGELOG via a PR (main is branch-protected)
             execSync('git config user.name "github-actions[bot]"', { encoding: 'utf-8' });
             execSync('git config user.email "github-actions[bot]@users.noreply.github.com"', { encoding: 'utf-8' });
             execSync('git add CHANGELOG.md', { encoding: 'utf-8' });
             try {
               execSync('git commit -m "docs: update CHANGELOG for release ' + tagName + '"', { encoding: 'utf-8' });
-              execSync('git push origin main', { encoding: 'utf-8' });
-              console.log('Updated CHANGELOG.md');
             } catch (e) {
               if (!e.message.includes('nothing to commit')) throw e;
               console.log('CHANGELOG unchanged (nothing to commit).');
+              return;
             }
+            const branchName = 'chore/changelog-' + date + '-' + shortSha;
+            execSync('git checkout -b ' + branchName, { encoding: 'utf-8' });
+            execSync('git push origin ' + branchName, { encoding: 'utf-8' });
+            await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: branchName,
+              base: 'main',
+              title: 'docs: CHANGELOG for release ' + tagName,
+              body: 'Auto-generated CHANGELOG update for [release ' + tagName + '](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/releases/tag/' + encodeURIComponent(tagName) + '). Merge to update in-repo changelog.',
+            });
+            console.log('Opened PR to update CHANGELOG.md (main is protected).');
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_EVENT_BEFORE: ${{ github.event.before }}
