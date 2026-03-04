@@ -17,17 +17,33 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     const supabase = createClient()
-    const hasHash = typeof window !== 'undefined' && /access_token|refresh_token/.test(window.location.hash)
 
     const init = async () => {
-      // Session may be in URL hash after user clicks email link; client recovers it
+      // Session may already be in storage (e.g. from a previous visit)
       let { data: { session } } = await supabase.auth.getSession()
-      if (!session && hasHash) {
-        // Give the client a moment to parse the hash and establish the session
-        await new Promise((r) => setTimeout(r, 500))
-        const result = await supabase.auth.getSession()
-        session = result.data.session
+
+      // If no session but URL has recovery tokens in the hash, set session explicitly.
+      // Supabase redirects with #access_token=...&refresh_token=...&type=recovery;
+      // the client does not always restore session from hash, so we do it here.
+      if (!session && typeof window !== 'undefined' && window.location.hash) {
+        const params = new URLSearchParams(window.location.hash.slice(1))
+        const accessToken = params.get('access_token')
+        const refreshToken = params.get('refresh_token')
+        const type = params.get('type')
+
+        if (type === 'recovery' && accessToken && refreshToken) {
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          })
+          if (!error && data.session) {
+            session = data.session
+            // Remove tokens from URL for security and cleaner UI
+            window.history.replaceState(null, '', window.location.pathname)
+          }
+        }
       }
+
       setSessionReady(!!session)
     }
 
