@@ -9,6 +9,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [checkingAuth, setCheckingAuth] = useState(true)
   const router = useRouter()
@@ -34,10 +35,15 @@ export default function LoginPage() {
     }
     
     const errorParam = urlParams.get('error')
+    const resetSuccess = urlParams.get('reset') === 'success'
     if (errorParam) {
       setError(decodeURIComponent(errorParam))
       setCheckingAuth(false)
       window.history.replaceState({}, document.title, window.location.pathname)
+    } else if (resetSuccess) {
+      setSuccessMessage('Your password has been updated. You can sign in now.')
+      window.history.replaceState({}, document.title, window.location.pathname)
+      checkAuth()
     } else {
       checkAuth()
     }
@@ -128,6 +134,11 @@ export default function LoginPage() {
                 <div className="text-sm text-red-800">{error}</div>
               </div>
             )}
+            {successMessage && (
+              <div className="rounded-md bg-green-50 p-4">
+                <div className="text-sm text-green-800">{successMessage}</div>
+              </div>
+            )}
             <div className="space-y-4">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
@@ -146,9 +157,17 @@ export default function LoginPage() {
                 />
               </div>
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                  Password
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                    Password
+                  </label>
+                  <Link
+                    href="/forgot-password"
+                    className="text-sm font-medium text-[#0d1e26] hover:text-[#416e82]"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
                 <input
                   id="password"
                   name="password"
