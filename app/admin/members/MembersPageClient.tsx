@@ -277,8 +277,8 @@ export default function MembersPageClient() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-        <div className="relative flex-1 sm:max-w-xs min-w-0">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <div className="relative flex-1 sm:flex-none sm:max-w-xs min-w-0 w-full sm:w-auto">
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -293,7 +293,7 @@ export default function MembersPageClient() {
             aria-label="Search members"
           />
         </div>
-        <div className="grid grid-cols-3 sm:flex sm:flex-row justify-end gap-2 shrink-0">
+        <div className="flex flex-row flex-wrap justify-end gap-2 shrink-0">
         <button
           onClick={async () => {
             try {
