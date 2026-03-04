@@ -44,15 +44,13 @@ const LinkPreviewCard: React.FC<{ url: string; className?: string }> = ({ url, c
   if (loading) {
     return (
       <div
-        className={`inline-block rounded-lg border border-gray-200 bg-gray-50 p-3 max-w-md ${className}`}
+        className={`inline-block rounded-lg border border-gray-200 bg-gray-50 overflow-hidden max-w-md ${className}`}
         aria-hidden
       >
-        <div className="flex gap-3">
-          <div className="w-24 h-14 rounded bg-gray-200 animate-pulse flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <div className="h-3 bg-gray-200 rounded animate-pulse mb-2 w-3/4" />
-            <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2" />
-          </div>
+        <div className="w-full aspect-video bg-gray-200 animate-pulse" />
+        <div className="p-3">
+          <div className="h-4 bg-gray-200 rounded animate-pulse mb-2 w-3/4" />
+          <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2" />
         </div>
       </div>
     )

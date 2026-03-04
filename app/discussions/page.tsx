@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Thread, DiscussionCategory, ThreadWithData, ThreadAuthor } from '@/types/database'
 import Sidebar from './Sidebar'
 import MobileFilters from './MobileFilters'
-import ContentPreview from './ContentPreview'
+import ThreadContentPreview from './ThreadContentPreview'
 import { CATEGORY_LABELS, CATEGORY_DESCRIPTIONS } from './constants'
 import { CategoryIconLarge } from './CategoryIcons'
 import { formatRelativeDate } from './utils'
@@ -264,13 +264,43 @@ export default async function DiscussionsPage({
                         <span>{lastActive}</span>
                       </span>
                     )
+                    const authorLabel = !thread.created_by && thread.author_email ? `${thread.author_email.split('@')[0]}...` : (author?.full_name || author?.email?.split('@')[0] || 'Anonymous')
+                    const authorBlock = (
+                      <div className="flex items-center gap-2 min-w-0">
+                        {author?.profile_picture_url ? (
+                          <div className="relative w-6 h-6 rounded-full overflow-hidden border border-gray-300 flex-shrink-0">
+                            <Image
+                              src={author.profile_picture_url}
+                              alt={author?.full_name || author?.email || 'User'}
+                              fill
+                              className="object-cover"
+                              sizes="24px"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center border border-gray-300 flex-shrink-0">
+                            <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                          </div>
+                        )}
+                        <span className="text-xs text-gray-600 truncate min-w-0 flex-1 md:flex-initial md:w-[120px]">{authorLabel}</span>
+                      </div>
+                    )
+                    const metaBlock = (
+                      <div className="flex items-center gap-2 flex-shrink-0 md:w-[260px] md:min-w-[260px]">
+                        {authorBlock}
+                        <span aria-hidden className="text-gray-300 hidden sm:inline flex-shrink-0">·</span>
+                        <span className="flex-shrink-0">{repliesAndActivity}</span>
+                      </div>
+                    )
                     return (
                       <Link
                         key={thread.id}
                         href={`/discussions/${thread.id}`}
                         className="block py-2.5 px-4 hover:bg-gray-50 transition-colors touch-manipulation"
                       >
-                        {/* Mobile: title + category, description, then avatar + author (left) and replies·timestamp (right) */}
+                        {/* Mobile: title + category, description, then avatar + name (left) and replies·timestamp (right) */}
                         <div className="md:hidden flex flex-col gap-2">
                           <div className="flex flex-wrap items-baseline gap-2">
                             <h3 className="text-base font-bold text-gray-900 line-clamp-2 leading-snug">
@@ -280,74 +310,29 @@ export default async function DiscussionsPage({
                               {CATEGORY_LABELS[thread.category]}
                             </span>
                           </div>
-                          <ContentPreview content={thread.content} maxLength={120} className="block" />
+                          <ThreadContentPreview content={thread.content} maxLength={120} className="block" />
                           <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-2 min-w-0">
-                              {author?.profile_picture_url ? (
-                                <div className="relative w-6 h-6 rounded-full overflow-hidden border border-gray-300 flex-shrink-0">
-                                  <Image
-                                    src={author?.profile_picture_url}
-                                    alt={author?.full_name || author?.email || 'User'}
-                                    fill
-                                    className="object-cover"
-                                    sizes="24px"
-                                  />
-                                </div>
-                              ) : (
-                                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center border border-gray-300 flex-shrink-0">
-                                  <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                  </svg>
-                                </div>
-                              )}
-                              <span className="text-xs text-gray-600 truncate">
-                                {!thread.created_by && thread.author_email ? `${thread.author_email.split('@')[0]}...` : (author?.full_name || author?.email?.split('@')[0] || 'Anonymous')}
-                              </span>
-                            </div>
-                            <div className="flex-shrink-0">
-                              {repliesAndActivity}
-                            </div>
+                            {authorBlock}
+                            <div className="flex-shrink-0">{repliesAndActivity}</div>
                           </div>
                         </div>
 
-                        {/* Desktop: title then category (after title), preview, then author row + replies·time */}
+                        {/* Desktop: top row = title + category (left), meta (avatar + name + replies·time) top right; then description */}
                         <div className="hidden md:flex md:flex-col md:gap-2">
-                          <div className="flex flex-wrap items-baseline gap-2">
-                            <h3 className="text-base font-semibold text-gray-900 hover:text-[#0d1e26] line-clamp-2 leading-snug">
-                              {thread.title}
-                            </h3>
-                            <span className="px-1.5 py-0.5 text-xs font-medium bg-[#0d1e26]/10 text-[#0d1e26] rounded flex-shrink-0">
-                              {CATEGORY_LABELS[thread.category]}
-                            </span>
-                          </div>
-                          <ContentPreview content={thread.content} maxLength={120} className="block" />
-                          <div className="flex items-center justify-between gap-3 pt-0.5">
-                            <div className="flex items-center gap-2 min-w-0">
-                              {author?.profile_picture_url ? (
-                                <div className="relative w-6 h-6 rounded-full overflow-hidden border border-gray-300 flex-shrink-0">
-                                  <Image
-                                    src={author?.profile_picture_url}
-                                    alt={author?.full_name || author?.email || 'User'}
-                                    fill
-                                    className="object-cover"
-                                    sizes="24px"
-                                  />
-                                </div>
-                              ) : (
-                                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center border border-gray-300 flex-shrink-0">
-                                  <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                  </svg>
-                                </div>
-                              )}
-                              <span className="text-xs text-gray-600 truncate">
-                                {!thread.created_by && thread.author_email ? `${thread.author_email.split('@')[0]}...` : (author?.full_name || author?.email?.split('@')[0] || 'Anonymous')}
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex flex-wrap items-baseline gap-2 min-w-0">
+                              <h3 className="text-base font-semibold text-gray-900 hover:text-[#0d1e26] line-clamp-2 leading-snug">
+                                {thread.title}
+                              </h3>
+                              <span className="px-1.5 py-0.5 text-xs font-medium bg-[#0d1e26]/10 text-[#0d1e26] rounded flex-shrink-0">
+                                {CATEGORY_LABELS[thread.category]}
                               </span>
                             </div>
                             <div className="flex-shrink-0">
-                              {repliesAndActivity}
+                              {metaBlock}
                             </div>
                           </div>
+                          <ThreadContentPreview content={thread.content} maxLength={120} className="block" />
                         </div>
                       </Link>
                     )
