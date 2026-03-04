@@ -43,6 +43,7 @@ export default function AdminDashboard() {
   const [showEventForm, setShowEventForm] = useState(false)
   const [showInviteForm, setShowInviteForm] = useState(false)
   const [showBulkInviteForm, setShowBulkInviteForm] = useState(false)
+  const [pendingExpanded, setPendingExpanded] = useState(false)
 
   const loadData = useCallback(async () => {
     try {
@@ -87,6 +88,50 @@ export default function AdminDashboard() {
     members.filter(m => m.status === 'pending'), 
     [members]
   )
+
+  type MembersSortKey = 'full_name' | 'email' | 'status' | 'role' | 'membership_level'
+  const [membersSortKey, setMembersSortKey] = useState<MembersSortKey>('full_name')
+  const [membersSortDir, setMembersSortDir] = useState<'asc' | 'desc'>('asc')
+  const [membersPage, setMembersPage] = useState(1)
+  const membersPageSize = 25
+  const sortedMembers = useMemo(() => {
+    const list = [...members]
+    const mult = membersSortDir === 'asc' ? 1 : -1
+    const orderStatus = { approved: 0, pending: 1, expired: 2, rejected: 3 }
+    list.sort((a, b) => {
+      switch (membersSortKey) {
+        case 'full_name':
+          return mult * (a.full_name || '').localeCompare(b.full_name || '', undefined, { sensitivity: 'base' })
+        case 'email':
+          return mult * (a.email || '').localeCompare(b.email || '', undefined, { sensitivity: 'base' })
+        case 'status':
+          return mult * ((orderStatus[a.status as keyof typeof orderStatus] ?? 4) - (orderStatus[b.status as keyof typeof orderStatus] ?? 4))
+        case 'role':
+          return mult * (a.role || '').localeCompare(b.role || '', undefined, { sensitivity: 'base' })
+        case 'membership_level':
+          return mult * (a.membership_level || '').localeCompare(b.membership_level || '', undefined, { sensitivity: 'base' })
+        default:
+          return 0
+      }
+    })
+    return list
+  }, [members, membersSortKey, membersSortDir])
+  const membersTotalPages = Math.max(1, Math.ceil(sortedMembers.length / membersPageSize))
+  const paginatedMembers = useMemo(() => {
+    const start = (membersPage - 1) * membersPageSize
+    return sortedMembers.slice(start, start + membersPageSize)
+  }, [sortedMembers, membersPage, membersPageSize])
+  const handleMembersSort = useCallback((key: MembersSortKey) => {
+    setMembersSortKey((prev) => {
+      if (prev === key) {
+        setMembersSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+        return prev
+      }
+      setMembersSortDir('asc')
+      return key
+    })
+    setMembersPage(1)
+  }, [])
 
   const topResources = useMemo(() => 
     resources.slice(0, 5), 
@@ -397,11 +442,18 @@ export default function AdminDashboard() {
                       Pending Review ({pendingMembers.length})
                     </h3>
                     <div className="space-y-3">
-                      {pendingMembers.map((member) => (
+                      {(pendingExpanded ? pendingMembers : pendingMembers.slice(0, 10)).map((member) => (
                         <div key={member.id} className="bg-white rounded-lg p-4 border border-yellow-200">
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                             <div className="flex-1">
-                              <div className="font-medium text-gray-900">{member.full_name || 'N/A'}</div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-medium text-gray-900">{member.full_name || 'N/A'}</span>
+                                {member.invited_at && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                    Invited
+                                  </span>
+                                )}
+                              </div>
                               <div className="text-sm text-gray-600">{member.email}</div>
                               {member.call_sign && (
                                 <div className="text-xs text-gray-500 mt-1">Call Sign: {member.call_sign}</div>
@@ -458,6 +510,17 @@ export default function AdminDashboard() {
                         </div>
                       ))}
                     </div>
+                    {pendingMembers.length > 10 && (
+                      <button
+                        type="button"
+                        onClick={() => setPendingExpanded((e) => !e)}
+                        className="mt-3 text-sm font-medium text-yellow-800 hover:text-yellow-900"
+                      >
+                        {pendingExpanded
+                          ? 'Show less'
+                          : `Show more (${pendingMembers.length - 10} more)`}
+                      </button>
+                    )}
                   </div>
                 )}
 
@@ -515,11 +578,18 @@ export default function AdminDashboard() {
                     <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
                       {/* Mobile Card View */}
                       <div className="sm:hidden space-y-3">
-                        {members.map((member) => (
+                        {paginatedMembers.map((member) => (
                           <div key={member.id} className="bg-white border border-gray-200 rounded-lg p-4">
                             <div className="flex justify-between items-start mb-2">
                               <div className="flex-1 min-w-0">
-                                <div className="font-medium text-gray-900 truncate">{member.full_name || 'N/A'}</div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="font-medium text-gray-900 truncate">{member.full_name || 'N/A'}</span>
+                                  {member.status === 'pending' && member.invited_at && (
+                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded font-medium shrink-0">
+                                      Invited
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="text-xs text-gray-500 mt-1 truncate">{member.email}</div>
                               </div>
                               <button
@@ -558,19 +628,29 @@ export default function AdminDashboard() {
                         <thead className="bg-gray-50">
                           <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Name
+                              <button type="button" onClick={() => handleMembersSort('full_name')} className="inline-flex items-center gap-1 hover:text-gray-900">
+                                Name {membersSortKey === 'full_name' && (membersSortDir === 'asc' ? '↑' : '↓')}
+                              </button>
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Email
+                              <button type="button" onClick={() => handleMembersSort('email')} className="inline-flex items-center gap-1 hover:text-gray-900">
+                                Email {membersSortKey === 'email' && (membersSortDir === 'asc' ? '↑' : '↓')}
+                              </button>
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Status
+                              <button type="button" onClick={() => handleMembersSort('status')} className="inline-flex items-center gap-1 hover:text-gray-900">
+                                Status {membersSortKey === 'status' && (membersSortDir === 'asc' ? '↑' : '↓')}
+                              </button>
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Role
+                              <button type="button" onClick={() => handleMembersSort('role')} className="inline-flex items-center gap-1 hover:text-gray-900">
+                                Role {membersSortKey === 'role' && (membersSortDir === 'asc' ? '↑' : '↓')}
+                              </button>
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Membership
+                              <button type="button" onClick={() => handleMembersSort('membership_level')} className="inline-flex items-center gap-1 hover:text-gray-900">
+                                Membership {membersSortKey === 'membership_level' && (membersSortDir === 'asc' ? '↑' : '↓')}
+                              </button>
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Actions
@@ -578,10 +658,17 @@ export default function AdminDashboard() {
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {members.map((member) => (
+                          {paginatedMembers.map((member) => (
                             <tr key={member.id}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                {member.full_name || 'N/A'}
+                              <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span>{member.full_name || 'N/A'}</span>
+                                  {member.status === 'pending' && member.invited_at && (
+                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded font-medium">
+                                      Invited
+                                    </span>
+                                  )}
+                                </div>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {member.email}
@@ -672,6 +759,34 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 </div>
+                {sortedMembers.length > 0 && (
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mt-4">
+                    <span className="text-sm text-gray-600">
+                      Showing {(membersPage - 1) * membersPageSize + 1}–{Math.min(membersPage * membersPageSize, sortedMembers.length)} of {sortedMembers.length}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setMembersPage((p) => Math.max(1, p - 1))}
+                        disabled={membersPage <= 1}
+                        className="px-3 py-1.5 text-sm font-medium rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none"
+                      >
+                        Previous
+                      </button>
+                      <span className="px-3 py-1.5 text-sm text-gray-600">
+                        Page {membersPage} of {membersTotalPages}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setMembersPage((p) => Math.min(membersTotalPages, p + 1))}
+                        disabled={membersPage >= membersTotalPages}
+                        className="px-3 py-1.5 text-sm font-medium rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

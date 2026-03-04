@@ -32,12 +32,59 @@ function getPaymentStatus(member: MemberWithPayment): { label: string; badgeClas
   return { label: 'No payment set up', badgeClass: 'bg-red-100 text-red-800' }
 }
 
+const PENDING_LIST_INITIAL_SHOW = 10
+const PAGE_SIZE = 50
+
+export type MembersSortKey = 'member_number' | 'full_name' | 'email' | 'status' | 'membership_level' | 'membership_expires_at'
+export type SortDirection = 'asc' | 'desc'
+
+function compareMembers(
+  a: MemberWithPayment,
+  b: MemberWithPayment,
+  key: MembersSortKey,
+  dir: SortDirection
+): number {
+  const mult = dir === 'asc' ? 1 : -1
+  switch (key) {
+    case 'member_number': {
+      const an = a.member_number?.replace(/\D/g, '') || ''
+      const bn = b.member_number?.replace(/\D/g, '') || ''
+      if (!an && !bn) return 0
+      if (!an) return 1
+      if (!bn) return -1
+      return mult * (parseInt(an, 10) - parseInt(bn, 10))
+    }
+    case 'full_name':
+      return mult * ((a.full_name || '').localeCompare(b.full_name || '', undefined, { sensitivity: 'base' }))
+    case 'email':
+      return mult * ((a.email || '').localeCompare(b.email || '', undefined, { sensitivity: 'base' }))
+    case 'status': {
+      const order = { approved: 0, pending: 1, expired: 2, rejected: 3 }
+      return mult * ((order[a.status as keyof typeof order] ?? 4) - (order[b.status as keyof typeof order] ?? 4))
+    }
+    case 'membership_level':
+      return mult * ((a.membership_level || '').localeCompare(b.membership_level || '', undefined, { sensitivity: 'base' }))
+    case 'membership_expires_at': {
+      const ad = a.membership_expires_at ? new Date(a.membership_expires_at).getTime() : 0
+      const bd = b.membership_expires_at ? new Date(b.membership_expires_at).getTime() : 0
+      return mult * (ad - bd)
+    }
+    default:
+      return 0
+  }
+}
+
 export default function MembersPageClient() {
   const [members, setMembers] = useState<UserProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [editingMember, setEditingMember] = useState<UserProfile | null>(null)
   const [showInviteForm, setShowInviteForm] = useState(false)
   const [showBulkInviteForm, setShowBulkInviteForm] = useState(false)
+  const [pendingExpanded, setPendingExpanded] = useState(false)
+  const [sortKey, setSortKey] = useState<MembersSortKey>('full_name')
+  const [sortDir, setSortDir] = useState<SortDirection>('asc')
+  const [page, setPage] = useState(1)
+  const pageSize = PAGE_SIZE
 
   const loadData = useCallback(async () => {
     try {
@@ -59,6 +106,30 @@ export default function MembersPageClient() {
     members.filter(m => m.status === 'pending'), 
     [members]
   )
+
+  const sortedMembers = useMemo(() => {
+    const list = [...members] as MemberWithPayment[]
+    list.sort((a, b) => compareMembers(a, b, sortKey, sortDir))
+    return list
+  }, [members, sortKey, sortDir])
+
+  const totalPages = Math.max(1, Math.ceil(sortedMembers.length / pageSize))
+  const paginatedMembers = useMemo(() => {
+    const start = (page - 1) * pageSize
+    return sortedMembers.slice(start, start + pageSize)
+  }, [sortedMembers, page, pageSize])
+
+  const handleSort = useCallback((key: MembersSortKey) => {
+    setSortKey((prev) => {
+      if (prev === key) {
+        setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+        return prev
+      }
+      setSortDir('asc')
+      return key
+    })
+    setPage(1)
+  }, [])
 
   const handleInviteMember = async (memberData: {
     email: string
@@ -177,11 +248,18 @@ export default function MembersPageClient() {
             Pending Review ({pendingMembers.length})
           </h3>
           <div className="space-y-3">
-            {pendingMembers.map((member) => (
+            {(pendingExpanded ? pendingMembers : pendingMembers.slice(0, PENDING_LIST_INITIAL_SHOW)).map((member) => (
               <div key={member.id} className="bg-white rounded-lg p-4 border border-yellow-200">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div className="flex-1">
-                    <div className="font-medium text-gray-900">{member.full_name || '-'}</div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium text-gray-900">{member.full_name || '-'}</span>
+                      {member.invited_at && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                          Invited
+                        </span>
+                      )}
+                    </div>
                     <div className="text-sm text-gray-600">{member.email}</div>
                     <div className="text-xs text-gray-500 mt-1">Member #: {hasPaymentSetUp(member) ? (member.member_number || '-') : '-'}</div>
                     {member.call_sign && (
@@ -209,6 +287,17 @@ export default function MembersPageClient() {
               </div>
             ))}
           </div>
+          {pendingMembers.length > PENDING_LIST_INITIAL_SHOW && (
+            <button
+              type="button"
+              onClick={() => setPendingExpanded((e) => !e)}
+              className="mt-3 text-sm font-medium text-yellow-800 hover:text-yellow-900"
+            >
+              {pendingExpanded
+                ? 'Show less'
+                : `Show more (${pendingMembers.length - PENDING_LIST_INITIAL_SHOW} more)`}
+            </button>
+          )}
         </div>
       )}
 
@@ -266,14 +355,27 @@ export default function MembersPageClient() {
 
       <div className="overflow-x-auto -mx-4 sm:mx-0">
         <div className="inline-block min-w-full align-middle">
-          <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
+          <div className="overflow-hidden border border-gray-200 sm:rounded-lg">
             {/* Mobile Card View */}
             <div className="sm:hidden space-y-3">
-              {members.map((member) => (
+              {paginatedMembers.map((member) => (
                 <div key={member.id} className="bg-white border border-gray-200 rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex justify-between items-start mb-2">
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-gray-900 truncate">{member.full_name || '-'}</div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditingMember(member)}
+                          className="font-medium text-gray-900 truncate hover:text-[#0d1e26] hover:underline cursor-pointer text-left"
+                        >
+                          {member.full_name || '-'}
+                        </button>
+                        {member.status === 'pending' && member.invited_at && (
+                          <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded font-medium shrink-0">
+                            Invited
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xs text-gray-500 mt-1 truncate">{member.email}</div>
                       <div className="text-xs text-gray-400 mt-1">Member #: {hasPaymentSetUp(member) ? (member.member_number || '-') : '-'}</div>
                       {member.is_student_pilot && (
@@ -332,28 +434,63 @@ export default function MembersPageClient() {
             <table className="min-w-full divide-y divide-gray-200 hidden sm:table">
               <thead className="bg-gray-100 border-b border-gray-200">
                 <tr>
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Member #</th>
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</th>
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</th>
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Membership</th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <button type="button" onClick={() => handleSort('member_number')} className="inline-flex items-center gap-1 hover:text-gray-900">
+                      Member # {sortKey === 'member_number' && (sortDir === 'asc' ? '↑' : '↓')}
+                    </button>
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <button type="button" onClick={() => handleSort('full_name')} className="inline-flex items-center gap-1 hover:text-gray-900">
+                      Name {sortKey === 'full_name' && (sortDir === 'asc' ? '↑' : '↓')}
+                    </button>
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <button type="button" onClick={() => handleSort('email')} className="inline-flex items-center gap-1 hover:text-gray-900">
+                      Email {sortKey === 'email' && (sortDir === 'asc' ? '↑' : '↓')}
+                    </button>
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <button type="button" onClick={() => handleSort('status')} className="inline-flex items-center gap-1 hover:text-gray-900">
+                      Status {sortKey === 'status' && (sortDir === 'asc' ? '↑' : '↓')}
+                    </button>
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <button type="button" onClick={() => handleSort('membership_level')} className="inline-flex items-center gap-1 hover:text-gray-900">
+                      Membership {sortKey === 'membership_level' && (sortDir === 'asc' ? '↑' : '↓')}
+                    </button>
+                  </th>
                   <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Payment</th>
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Expires</th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <button type="button" onClick={() => handleSort('membership_expires_at')} className="inline-flex items-center gap-1 hover:text-gray-900">
+                      Expires {sortKey === 'membership_expires_at' && (sortDir === 'asc' ? '↑' : '↓')}
+                    </button>
+                  </th>
                   <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {members.map((member) => (
+                {paginatedMembers.map((member) => (
                   <tr key={member.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-600 tabular-nums">
                       {hasPaymentSetUp(member) ? (member.member_number || '-') : '-'}
                     </td>
                     <td className="px-5 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      <div className="flex items-center gap-2">
-                        <span>{member.full_name || '-'}</span>
+                      <div className="flex items-center gap-2 flex-nowrap min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => setEditingMember(member)}
+                          className="truncate min-w-0 text-left font-medium text-gray-900 hover:text-[#0d1e26] hover:underline cursor-pointer"
+                        >
+                          {member.full_name || '-'}
+                        </button>
                         {member.role === 'admin' && (
-                          <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded font-medium">
+                          <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded font-medium shrink-0">
                             Admin
+                          </span>
+                        )}
+                        {member.status === 'pending' && member.invited_at && (
+                          <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded font-medium shrink-0">
+                            Invited
                           </span>
                         )}
                       </div>
@@ -432,6 +569,38 @@ export default function MembersPageClient() {
           </div>
         </div>
       </div>
+
+      {/* Pagination */}
+      {sortedMembers.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mt-4 px-0 sm:px-1">
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-600">
+              Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, sortedMembers.length)} of {sortedMembers.length}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="px-3 py-1.5 text-sm font-medium rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none"
+            >
+              Previous
+            </button>
+            <span className="px-3 py-1.5 text-sm text-gray-600">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="px-3 py-1.5 text-sm font-medium rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modals */}
       {editingMember && (

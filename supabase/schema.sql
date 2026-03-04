@@ -29,8 +29,12 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   interests TEXT,
   notify_replies BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  invited_at TIMESTAMPTZ
 );
+
+-- Backfill: add invited_at for existing deployments (no-op if already present)
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS invited_at TIMESTAMPTZ;
 
 -- Create resources table
 CREATE TABLE IF NOT EXISTS resources (
@@ -243,7 +247,8 @@ BEGIN
     status,
     is_student_pilot,
     flight_school,
-    instructor_name
+    instructor_name,
+    invited_at
   )
   VALUES (
     NEW.id,
@@ -263,7 +268,8 @@ BEGIN
     'pending',
     v_is_student_pilot,
     v_flight_school,
-    v_instructor_name
+    v_instructor_name,
+    CASE WHEN (NEW.raw_user_meta_data->>'invited_by_admin') = 'true' OR (NEW.raw_user_meta_data->>'invited_by_member') = 'true' THEN NOW() ELSE NULL END
   )
   ON CONFLICT (id) DO NOTHING;
 
