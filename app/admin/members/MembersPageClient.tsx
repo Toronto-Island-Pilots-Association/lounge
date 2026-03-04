@@ -34,7 +34,7 @@ function getPaymentStatus(member: MemberWithPayment): { label: string; badgeClas
 
 const PAGE_SIZE = 50
 
-export type MembersSortKey = 'member_number' | 'full_name' | 'email' | 'status' | 'membership_level' | 'membership_expires_at'
+export type MembersSortKey = 'member_number' | 'full_name' | 'email' | 'status' | 'membership_level' | 'membership_expires_at' | 'created_at'
 export type SortDirection = 'asc' | 'desc'
 
 function compareMembers(
@@ -68,6 +68,11 @@ function compareMembers(
       const bd = b.membership_expires_at ? new Date(b.membership_expires_at).getTime() : 0
       return mult * (ad - bd)
     }
+    case 'created_at': {
+      const ad = a.created_at ? new Date(a.created_at).getTime() : 0
+      const bd = b.created_at ? new Date(b.created_at).getTime() : 0
+      return mult * (ad - bd)
+    }
     default:
       return 0
   }
@@ -80,9 +85,10 @@ export default function MembersPageClient() {
   const [showInviteForm, setShowInviteForm] = useState(false)
   const [showBulkInviteForm, setShowBulkInviteForm] = useState(false)
   const [resendingMemberId, setResendingMemberId] = useState<string | null>(null)
-  const [sortKey, setSortKey] = useState<MembersSortKey>('full_name')
-  const [sortDir, setSortDir] = useState<SortDirection>('asc')
+  const [sortKey, setSortKey] = useState<MembersSortKey>('created_at')
+  const [sortDir, setSortDir] = useState<SortDirection>('desc')
   const [page, setPage] = useState(1)
+  const [searchQuery, setSearchQuery] = useState('')
   const pageSize = PAGE_SIZE
 
   const loadData = useCallback(async () => {
@@ -107,11 +113,27 @@ export default function MembersPageClient() {
     return list
   }, [members, sortKey, sortDir])
 
-  const totalPages = Math.max(1, Math.ceil(sortedMembers.length / pageSize))
+  const filteredMembers = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return sortedMembers
+    return sortedMembers.filter((m) => {
+      const name = (m.full_name || '').toLowerCase()
+      const email = (m.email || '').toLowerCase()
+      const memberNum = (m.member_number || '').toLowerCase()
+      return name.includes(q) || email.includes(q) || memberNum.includes(q)
+    })
+  }, [sortedMembers, searchQuery])
+
+  // Reset to first page when search changes
+  useEffect(() => {
+    setPage(1)
+  }, [searchQuery])
+
+  const totalPages = Math.max(1, Math.ceil(filteredMembers.length / pageSize))
   const paginatedMembers = useMemo(() => {
     const start = (page - 1) * pageSize
-    return sortedMembers.slice(start, start + pageSize)
-  }, [sortedMembers, page, pageSize])
+    return filteredMembers.slice(start, start + pageSize)
+  }, [filteredMembers, page, pageSize])
 
   const handleSort = useCallback((key: MembersSortKey) => {
     setSortKey((prev) => {
@@ -255,7 +277,23 @@ export default function MembersPageClient() {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 sm:flex sm:flex-row justify-end gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+        <div className="relative flex-1 sm:max-w-xs min-w-0">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </span>
+          <input
+            type="search"
+            placeholder="Search by name, email, or member #"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] text-sm"
+            aria-label="Search members"
+          />
+        </div>
+        <div className="grid grid-cols-3 sm:flex sm:flex-row justify-end gap-2 shrink-0">
         <button
           onClick={async () => {
             try {
@@ -305,6 +343,7 @@ export default function MembersPageClient() {
           <span className="hidden sm:inline">Bulk Invite (CSV)</span>
           <span className="sm:hidden">Bulk</span>
         </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto -mx-4 sm:mx-0">
@@ -330,8 +369,10 @@ export default function MembersPageClient() {
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-gray-500 mt-1 truncate">{member.email}</div>
-                      <div className="text-xs text-gray-400 mt-1">Member #: {hasPaymentSetUp(member) ? (member.member_number || '-') : '-'}</div>
+                      <div className="text-xs text-gray-500 mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
+                        <span className="truncate">{member.email}</span>
+                        <span className="text-gray-400 shrink-0">· Member #: {hasPaymentSetUp(member) ? (member.member_number || '-') : '-'}</span>
+                      </div>
                       {member.is_student_pilot && (
                         <div className="text-xs text-gray-500 mt-1">Student pilot</div>
                       )}
@@ -433,6 +474,11 @@ export default function MembersPageClient() {
                       Expires {sortKey === 'membership_expires_at' && (sortDir === 'asc' ? '↑' : '↓')}
                     </button>
                   </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <button type="button" onClick={() => handleSort('created_at')} className="inline-flex items-center gap-1 hover:text-gray-900">
+                      Added {sortKey === 'created_at' && (sortDir === 'asc' ? '↑' : '↓')}
+                    </button>
+                  </th>
                   <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -507,6 +553,9 @@ export default function MembersPageClient() {
                           ? new Date(member.membership_expires_at).toLocaleDateString('en-US', { timeZone: 'UTC' })
                           : '-'}
                     </td>
+                    <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {member.created_at ? new Date(member.created_at).toLocaleDateString('en-US', { timeZone: 'UTC' }) : '-'}
+                    </td>
                     <td className="px-5 py-4 whitespace-nowrap text-sm font-medium">
                       {member.status === 'pending' && (
                         <>
@@ -553,11 +602,11 @@ export default function MembersPageClient() {
       </div>
 
       {/* Pagination */}
-      {sortedMembers.length > 0 && (
+      {filteredMembers.length > 0 && (
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mt-4 px-0 sm:px-1">
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-600">
-              Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, sortedMembers.length)} of {sortedMembers.length}
+              Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, filteredMembers.length)} of {filteredMembers.length}
             </span>
           </div>
           <div className="flex items-center gap-1">
