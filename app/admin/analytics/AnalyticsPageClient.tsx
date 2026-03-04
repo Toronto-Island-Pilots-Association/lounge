@@ -157,7 +157,12 @@ export default function AnalyticsPageClient() {
               <div className="h-[220px] w-full sm:h-[280px]">
                 <TimeChart
                   data={chartsData.members}
-                  dataKeys={[{ key: 'cumulative', label: 'Total members' }]}
+                  dataKeys={[
+                    { key: 'approved', label: 'Approved' },
+                    { key: 'pending', label: 'Pending' },
+                    { key: 'rejected', label: 'Rejected' },
+                    { key: 'expired', label: 'Expired' },
+                  ]}
                   period={typeof chartsData.period === 'number' ? chartsData.period : 365}
                   type="area"
                   valueFormatter={(v) => v.toLocaleString()}

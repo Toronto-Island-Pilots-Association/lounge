@@ -43,7 +43,6 @@ export default function AdminDashboard() {
   const [showEventForm, setShowEventForm] = useState(false)
   const [showInviteForm, setShowInviteForm] = useState(false)
   const [showBulkInviteForm, setShowBulkInviteForm] = useState(false)
-  const [pendingExpanded, setPendingExpanded] = useState(false)
 
   const loadData = useCallback(async () => {
     try {
@@ -82,12 +81,6 @@ export default function AdminDashboard() {
   useEffect(() => {
     loadData()
   }, [loadData])
-
-  // Memoize expensive computations - MUST be before any conditional returns
-  const pendingMembers = useMemo(() => 
-    members.filter(m => m.status === 'pending'), 
-    [members]
-  )
 
   type MembersSortKey = 'full_name' | 'email' | 'status' | 'role' | 'membership_level'
   const [membersSortKey, setMembersSortKey] = useState<MembersSortKey>('full_name')
@@ -435,95 +428,6 @@ export default function AdminDashboard() {
           <div className="p-4 sm:p-6">
             {activeTab === 'members' && (
               <div className="space-y-4">
-                {/* Pending Review Section */}
-                {pendingMembers.length > 0 && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                    <h3 className="text-lg font-semibold text-yellow-900 mb-3">
-                      Pending Review ({pendingMembers.length})
-                    </h3>
-                    <div className="space-y-3">
-                      {(pendingExpanded ? pendingMembers : pendingMembers.slice(0, 10)).map((member) => (
-                        <div key={member.id} className="bg-white rounded-lg p-4 border border-yellow-200">
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                            <div className="flex-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="font-medium text-gray-900">{member.full_name || 'N/A'}</span>
-                                {member.invited_at && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                    Invited
-                                  </span>
-                                )}
-                              </div>
-                              <div className="text-sm text-gray-600">{member.email}</div>
-                              {member.call_sign && (
-                                <div className="text-xs text-gray-500 mt-1">Call Sign: {member.call_sign}</div>
-                              )}
-                            </div>
-                            <div className="flex gap-2">
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    const response = await fetch('/api/admin/members', {
-                                      method: 'PATCH',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ id: member.id, status: 'approved' }),
-                                    })
-                                    if (response.ok) {
-                                      loadData()
-                                    } else {
-                                      alert('Failed to approve member')
-                                    }
-                                  } catch (error) {
-                                    console.error('Error approving member:', error)
-                                    alert('Failed to approve member')
-                                  }
-                                }}
-                                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium"
-                              >
-                                Approve
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  if (!confirm('Are you sure you want to reject this member?')) return
-                                  try {
-                                    const response = await fetch('/api/admin/members', {
-                                      method: 'PATCH',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ id: member.id, status: 'rejected' }),
-                                    })
-                                    if (response.ok) {
-                                      loadData()
-                                    } else {
-                                      alert('Failed to reject member')
-                                    }
-                                  } catch (error) {
-                                    console.error('Error rejecting member:', error)
-                                    alert('Failed to reject member')
-                                  }
-                                }}
-                                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium"
-                              >
-                                Reject
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {pendingMembers.length > 10 && (
-                      <button
-                        type="button"
-                        onClick={() => setPendingExpanded((e) => !e)}
-                        className="mt-3 text-sm font-medium text-yellow-800 hover:text-yellow-900"
-                      >
-                        {pendingExpanded
-                          ? 'Show less'
-                          : `Show more (${pendingMembers.length - 10} more)`}
-                      </button>
-                    )}
-                  </div>
-                )}
-
                 <div className="flex flex-col sm:flex-row justify-end gap-2">
                   <button
                     onClick={async () => {
@@ -652,7 +556,7 @@ export default function AdminDashboard() {
                                 Membership {membersSortKey === 'membership_level' && (membersSortDir === 'asc' ? '↑' : '↓')}
                               </button>
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="sticky right-0 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 z-10 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
                               Actions
                             </th>
                           </tr>
@@ -695,7 +599,7 @@ export default function AdminDashboard() {
                                   {member.membership_level ? getMembershipLevelLabel(member.membership_level) : 'Full'}
                                 </span>
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <td className="sticky right-0 px-6 py-4 whitespace-nowrap text-sm font-medium bg-white z-10 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
                                 {member.status === 'pending' && (
                                   <>
                                     <button

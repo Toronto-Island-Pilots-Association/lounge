@@ -1,5 +1,5 @@
 import { requireAdmin } from '@/lib/auth'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { sendMemberApprovalEmail } from '@/lib/resend'
 import { appendMemberToSheet } from '@/lib/google-sheets'
 import { getTrialEndDateAsync, getMembershipFeeForLevel } from '@/lib/settings'
@@ -92,6 +92,33 @@ export async function PATCH(request: Request) {
 
     if (!currentMember) {
       return NextResponse.json({ error: 'Member not found' }, { status: 404 })
+    }
+
+    // If admin is changing email: update Auth first, then profile stays in sync via updates below
+    if (typeof updates.email === 'string') {
+      const newEmail = updates.email.trim().toLowerCase()
+      if (!newEmail) {
+        return NextResponse.json({ error: 'Email cannot be empty' }, { status: 400 })
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(newEmail)) {
+        return NextResponse.json({ error: 'Invalid email format' }, { status: 400 })
+      }
+      const currentEmail = (currentMember.email || '').trim().toLowerCase()
+      if (newEmail !== currentEmail) {
+        const adminClient = createServiceRoleClient()
+        const { error: authError } = await adminClient.auth.admin.updateUserById(id, {
+          email: newEmail,
+          email_confirm: true,
+        })
+        if (authError) {
+          return NextResponse.json(
+            { error: authError.message || 'Failed to update email in authentication' },
+            { status: 400 }
+          )
+        }
+        updates.email = newEmail
+      }
     }
 
     const membershipLevelChanged =

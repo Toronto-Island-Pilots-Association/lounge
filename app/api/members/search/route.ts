@@ -25,18 +25,14 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    // Deduplicate by name, preferring entries with a profile picture
-    const seen = new Map<string, typeof members[0]>()
+    // Deduplicate by id so multiple users with the same display name all appear
+    const byId = new Map<string, typeof members[0]>()
     for (const m of members || []) {
-      const name = m.full_name || m.email.split('@')[0]
-      const existing = seen.get(name)
-      if (!existing || (!existing.profile_picture_url && m.profile_picture_url)) {
-        seen.set(name, m)
-      }
+      if (!byId.has(m.id)) byId.set(m.id, m)
     }
 
     return NextResponse.json({
-      members: Array.from(seen.values()).map(m => ({
+      members: Array.from(byId.values()).map(m => ({
         id: m.id,
         name: m.full_name || m.email.split('@')[0],
         profile_picture_url: m.profile_picture_url,

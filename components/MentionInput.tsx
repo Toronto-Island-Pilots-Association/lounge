@@ -23,6 +23,8 @@ interface MentionInputProps {
   minRows?: number
   id?: string
   required?: boolean
+  /** When true, omit border/rounded/shadow so the input fits inside a parent container */
+  embedded?: boolean
 }
 
 const toDisplayText = (value: string): string =>
@@ -148,6 +150,7 @@ export default function MentionInput({
   minRows = 2,
   id,
   required,
+  embedded = false,
 }: MentionInputProps) {
   const [displayValue, setDisplayValue] = useState(() => toDisplayText(value))
   const [mentions, setMentions] = useState<TrackedMention[]>(() => extractMentions(value))
@@ -333,11 +336,16 @@ export default function MentionInput({
     <div className="relative" ref={containerRef}>
       {/* Editor frame */}
       <div
-        className={`relative rounded-lg border transition-all duration-150 cursor-text ${
-          focused
-            ? 'border-[#0d1e26] shadow-[0_0_0_3px_rgba(13,30,38,0.08)] bg-white'
-            : 'border-gray-300 bg-white hover:border-gray-400'
+        className={`relative transition-all duration-150 cursor-text ${
+          embedded
+            ? 'bg-transparent'
+            : `rounded-lg border ${
+                focused
+                  ? 'border-[#0d1e26] shadow-[0_0_0_3px_rgba(13,30,38,0.08)] bg-white'
+                  : 'border-gray-300 bg-white hover:border-gray-400'
+              }`
         }`}
+        style={embedded ? { border: 'none', boxShadow: 'none' } : undefined}
         onClick={() => textareaRef.current?.focus()}
       >
         {/* Formatted overlay — mirrors textarea text with pills */}

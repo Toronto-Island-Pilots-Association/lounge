@@ -20,7 +20,7 @@ const CHART_COLORS = {
   tooltipBorder: '#e5e7eb',
 }
 
-const SERIES_COLORS = ['rgb(99, 102, 241)', 'rgb(16, 185, 129)', 'rgb(245, 158, 11)']
+const SERIES_COLORS = ['rgb(99, 102, 241)', 'rgb(16, 185, 129)', 'rgb(245, 158, 11)', 'rgb(239, 68, 68)']
 
 function formatShortDate(dateStr: string, period: number, isAllTime?: boolean): string {
   const d = new Date(dateStr)

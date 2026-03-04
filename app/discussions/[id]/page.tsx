@@ -10,10 +10,11 @@ import ReactionButton from './ReactionButton'
 import DeleteThreadButton from './DeleteThreadButton'
 import DeleteCommentButton from './DeleteCommentButton'
 import ThreadImages from '@/components/ThreadImages'
-import LinkifiedText from '@/components/LinkifiedText'
+import ContentWithLinkPreviews from '@/components/ContentWithLinkPreviews'
 import Sidebar from '../Sidebar'
 import { CATEGORY_LABELS } from '../constants'
 import { formatDetailDate } from '../utils'
+import MarkThreadNotificationsRead from './MarkThreadNotificationsRead'
 
 export default async function DiscussionPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser()
@@ -152,6 +153,7 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
+      <MarkThreadNotificationsRead threadId={id} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-4 sm:mb-6">
           <Link
@@ -229,8 +231,12 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
           </h1>
 
           {/* Description/Content */}
-          <div className="prose max-w-none text-gray-700 whitespace-pre-wrap mb-4">
-            <LinkifiedText text={threadWithAuthor.content} />
+          <div className="mb-4">
+            <ContentWithLinkPreviews
+              content={threadWithAuthor.content}
+              contentClassName="prose max-w-none text-gray-700 whitespace-pre-wrap"
+              previewsClassName="mb-4"
+            />
           </div>
 
           {/* Thread Images */}
@@ -323,9 +329,18 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
                             <div className="text-xs text-gray-500">{formatDetailDate(comment.created_at)}</div>
                           </div>
                         </div>
-                        <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap mb-3">
-                          <LinkifiedText text={comment.content} />
+                        <div className="mb-3">
+                          <ContentWithLinkPreviews
+                            content={comment.content}
+                            contentClassName="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap"
+                            maxPreviews={2}
+                          />
                         </div>
+                        {comment.image_urls && comment.image_urls.length > 0 && (
+                          <div className="mb-3">
+                            <ThreadImages imageUrls={comment.image_urls} />
+                          </div>
+                        )}
                         {/* Comment Reactions */}
                         <div className="mt-2">
                           <ReactionButton

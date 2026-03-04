@@ -1,11 +1,15 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
+import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { DiscussionCategory } from '@/types/database'
-import ThreadImageUpload from '@/components/ThreadImageUpload'
 import MentionInput from '@/components/MentionInput'
-import { CATEGORY_LABELS, CATEGORY_DESCRIPTIONS, ALL_CATEGORIES, CATEGORY_PLACEHOLDERS } from '../constants'
+import ThreadImageUpload from '@/components/ThreadImageUpload'
+import { CATEGORY_LABELS, CATEGORY_DESCRIPTIONS, ALL_CATEGORIES, CATEGORY_PLACEHOLDERS, CATEGORY_TITLE_PLACEHOLDERS } from '../constants'
+
+const MAX_THREAD_IMAGES = 5
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
 // Structured fields for classified categories
 interface ClassifiedFields {
@@ -53,6 +57,45 @@ function NewDiscussionFormContent() {
   const [useStructuredForm, setUseStructuredForm] = useState(false)
   const [showGuidelines, setShowGuidelines] = useState(false)
   const [isClicked, setIsClicked] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+    if (imageUrls.length + files.length > MAX_THREAD_IMAGES) {
+      setUploadError(`Max ${MAX_THREAD_IMAGES} images`)
+      return
+    }
+    setUploadError(null)
+    setUploading(true)
+    try {
+      const uploads = await Promise.all(
+        files.map(async (file) => {
+          if (!file.type.startsWith('image/')) throw new Error('Images only')
+          if (file.size > MAX_FILE_SIZE) throw new Error(`${file.name} exceeds 10MB`)
+          const formData = new FormData()
+          formData.append('file', file)
+          const res = await fetch('/api/threads/upload-image', { method: 'POST', credentials: 'include', body: formData })
+          const data = await res.json()
+          if (!res.ok) throw new Error(data.error || 'Upload failed')
+          return data.url as string
+        })
+      )
+      setImageUrls((prev) => [...prev, ...uploads].slice(0, MAX_THREAD_IMAGES))
+    } catch (err: unknown) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed')
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  const removeImage = (index: number) => {
+    setImageUrls((prev) => prev.filter((_, i) => i !== index))
+    setUploadError(null)
+  }
 
   // Pre-fill category from URL parameter
   useEffect(() => {
@@ -191,40 +234,9 @@ function NewDiscussionFormContent() {
       </div>
 
       <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700">
-            Title
-          </label>
-          {/* Community Guidelines - Subtle, grayed out, shows on hover/click */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => {
-                setIsClicked(!isClicked)
-                setShowGuidelines(!isClicked)
-              }}
-              onMouseEnter={() => !isClicked && setShowGuidelines(true)}
-              onMouseLeave={() => !isClicked && setShowGuidelines(false)}
-              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span>Community Guidelines</span>
-            </button>
-            
-            {showGuidelines && (
-              <div className="absolute bottom-full right-0 mb-2 w-64 bg-gray-900 text-white text-xs rounded-lg p-3 shadow-lg z-10">
-                <p className="leading-relaxed">
-                  <strong>Community Guidelines:</strong> Keep it respectful, practical, and aviation-focused. Posts may be moved or closed if needed.
-                </p>
-                <div className="absolute bottom-0 right-4 transform translate-y-full">
-                  <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+          Title
+        </label>
         <input
           type="text"
           id="title"
@@ -232,7 +244,7 @@ function NewDiscussionFormContent() {
           onChange={(e) => setTitle(e.target.value)}
           required
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-transparent"
-          placeholder="Enter discussion title..."
+          placeholder={CATEGORY_TITLE_PLACEHOLDERS[category] ?? 'Enter discussion title...'}
         />
       </div>
 
@@ -658,21 +670,104 @@ function NewDiscussionFormContent() {
         <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
           {useStructuredForm ? 'Additional Details (Optional)' : 'Description'}
         </label>
-        <MentionInput
-          id="content"
-          value={content}
-          onChange={setContent}
-          required={!useStructuredForm}
-          minRows={useStructuredForm ? 5 : 8}
-          placeholder={useStructuredForm ? 'Add any additional information...' : CATEGORY_PLACEHOLDERS[category]}
-        />
-      </div>
+        {/* Single input-style box: images + content + footer with attach & guidelines */}
+        <div className="rounded-lg border border-gray-300 bg-white hover:border-gray-400 focus-within:border-[#0d1e26] focus-within:shadow-[0_0_0_3px_rgba(13,30,38,0.08)] transition-all duration-150">
+          {/* Image thumbnails inside the input */}
+          {imageUrls.length > 0 && (
+            <div className="flex flex-wrap gap-2 px-3 pt-2 pb-1 border-b border-gray-100">
+              {imageUrls.map((url, index) => (
+                <div key={index} className="relative w-14 h-14 rounded-md overflow-hidden border border-gray-200 bg-gray-50 flex-shrink-0">
+                  <Image src={url} alt="" fill className="object-cover" sizes="56px" />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(index)}
+                    className="absolute top-0.5 right-0.5 bg-black/60 text-white rounded-full p-1 hover:bg-black/80"
+                    aria-label="Remove image"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
 
-      <div className="mb-6">
-        <ThreadImageUpload
-          onImagesChange={setImageUrls}
-          maxImages={5}
-        />
+          <div className="px-1">
+            <MentionInput
+              id="content"
+              value={content}
+              onChange={setContent}
+              required={!useStructuredForm}
+              minRows={useStructuredForm ? 5 : 8}
+              placeholder={useStructuredForm ? 'Add any additional information...' : CATEGORY_PLACEHOLDERS[category]}
+              embedded
+            />
+          </div>
+
+          {/* Footer inside the input: attach, guidelines */}
+          <div className="flex items-center justify-between px-2 pb-2 pt-0 gap-2 flex-wrap">
+            <div className="flex items-center gap-2 min-w-0">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                onChange={handleFileSelect}
+                disabled={uploading || imageUrls.length >= MAX_THREAD_IMAGES}
+                multiple
+                className="hidden"
+                id="thread-image-upload"
+              />
+              <label
+                htmlFor="thread-image-upload"
+                className={`flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors cursor-pointer shrink-0 ${
+                  uploading || imageUrls.length >= MAX_THREAD_IMAGES ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+                title="Attach image"
+              >
+                {uploading ? (
+                  <span className="inline-block w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                )}
+                <span className="hidden sm:inline">
+                  {imageUrls.length >= MAX_THREAD_IMAGES ? `${MAX_THREAD_IMAGES}/${MAX_THREAD_IMAGES}` : `${imageUrls.length}/${MAX_THREAD_IMAGES}`}
+                </span>
+              </label>
+              {uploadError && (
+                <span className="text-xs text-red-600 truncate" title={uploadError}>
+                  {uploadError}
+                </span>
+              )}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => { setIsClicked(!isClicked); setShowGuidelines(!isClicked) }}
+                  onMouseEnter={() => !isClicked && setShowGuidelines(true)}
+                  onMouseLeave={() => !isClicked && setShowGuidelines(false)}
+                  className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors shrink-0"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Guidelines</span>
+                </button>
+                {showGuidelines && (
+                  <div className="absolute bottom-full right-0 mb-2 w-64 bg-gray-900 text-white text-xs rounded-lg p-3 shadow-lg z-10">
+                    <p className="leading-relaxed">
+                      <strong>Community Guidelines:</strong> Keep it respectful, practical, and aviation-focused. Posts may be moved or closed if needed.
+                    </p>
+                    <div className="absolute bottom-0 right-4 transform translate-y-full">
+                      <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="flex items-center gap-4">

@@ -54,7 +54,7 @@ export async function POST(
     const user = await requireAuth()
     const { id } = await params
     const body = await request.json()
-    const { content } = body
+    const { content, image_urls } = body
 
     if (!content || !content.trim()) {
       return NextResponse.json(
@@ -62,6 +62,11 @@ export async function POST(
         { status: 400 }
       )
     }
+
+    // Validate image_urls (array of strings, max 3 per comment)
+    const imageUrls = Array.isArray(image_urls)
+      ? image_urls.filter((url: unknown): url is string => typeof url === 'string').slice(0, 3)
+      : []
 
     const supabase = await createClient()
 
@@ -88,6 +93,7 @@ export async function POST(
       .insert({
         thread_id: id,
         content: content.trim(),
+        image_urls: imageUrls.length > 0 ? imageUrls : null,
         created_by: user.id,
         author_email: userProfile?.email || user.email || null
       })

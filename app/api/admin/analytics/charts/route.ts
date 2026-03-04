@@ -55,10 +55,21 @@ function getWeekStart(d: Date): string {
   return toDateKey(getWeekStartDate(d))
 }
 
+const MEMBER_STATUSES = ['approved', 'pending', 'rejected', 'expired'] as const
+export type MemberStatus = (typeof MEMBER_STATUSES)[number]
+
 export interface ChartsPayload {
   period: number | 'all' | 'last_year'
   dateRange: { from: string; to: string }
-  members: { date: string; newMembers: number; cumulative: number }[]
+  members: {
+    date: string
+    newMembers: number
+    cumulative: number
+    approved: number
+    pending: number
+    rejected: number
+    expired: number
+  }[]
   revenue: { date: string; amount: number; count: number }[]
   events: { date: string; events: number; rsvps: number }[]
   discussions: { date: string; threads: number; comments: number; reactions: number }[]
@@ -113,9 +124,23 @@ export async function GET(request: Request) {
     const bucketKey = byWeek ? (d: Date) => getWeekStart(d) : (d: Date) => toDateKey(d)
 
     // Fetch raw data for the range (no upper bound for 'all' to get all history, then filter)
-    const [membersRes, paymentsRes, eventsRes, rsvpsRes, threadsRes, commentsRes, reactionsRes] =
+    const [membersRes, membersBeforeByStatus, paymentsRes, eventsRes, rsvpsRes, threadsRes, commentsRes, reactionsRes] =
       await Promise.all([
-        supabase.from('user_profiles').select('created_at').gte('created_at', startIso).lte('created_at', endIso),
+        supabase.from('user_profiles').select('created_at, status').gte('created_at', startIso).lte('created_at', endIso),
+        Promise.all(
+          MEMBER_STATUSES.map((status) =>
+            supabase
+              .from('user_profiles')
+              .select('id', { count: 'exact', head: true })
+              .eq('status', status)
+              .lt('created_at', startIso)
+          )
+        ).then((results) => ({
+          approved: results[0].count ?? 0,
+          pending: results[1].count ?? 0,
+          rejected: results[2].count ?? 0,
+          expired: results[3].count ?? 0,
+        })),
         supabase.from('payments').select('payment_date, amount').eq('status', 'completed').gte('payment_date', startIso).lte('payment_date', endIso),
         supabase.from('events').select('created_at').gte('created_at', startIso).lte('created_at', endIso),
         supabase.from('event_rsvps').select('created_at').gte('created_at', startIso).lte('created_at', endIso),
@@ -124,27 +149,40 @@ export async function GET(request: Request) {
         supabase.from('reactions').select('created_at').gte('created_at', startIso).lte('created_at', endIso),
       ])
 
-    const membersByBucket: Record<string, number> = {}
+    type StatusBucket = { approved: number; pending: number; rejected: number; expired: number }
+    const membersByBucket: Record<string, StatusBucket> = {}
     dates.forEach((d) => {
-      membersByBucket[d] = 0
+      membersByBucket[d] = { approved: 0, pending: 0, rejected: 0, expired: 0 }
     })
     const membersList = membersRes.data ?? []
     membersList.forEach((m) => {
       const key = bucketKey(new Date(m.created_at))
-      if (membersByBucket[key] != null) membersByBucket[key] += 1
+      const status = (m.status ?? 'pending') as MemberStatus
+      if (membersByBucket[key] && MEMBER_STATUSES.includes(status)) {
+        membersByBucket[key][status] += 1
+      }
     })
-    let cumulative = 0
-    const membersBeforeStart = await supabase
-      .from('user_profiles')
-      .select('id', { count: 'exact', head: true })
-      .lt('created_at', startIso)
-    cumulative = membersBeforeStart.count ?? 0
+    const cumulativeByStatus = { ...membersBeforeByStatus }
     const membersSeries = dates.map((date) => {
-      cumulative += membersByBucket[date] ?? 0
+      const bucket = membersByBucket[date] ?? { approved: 0, pending: 0, rejected: 0, expired: 0 }
+      cumulativeByStatus.approved += bucket.approved
+      cumulativeByStatus.pending += bucket.pending
+      cumulativeByStatus.rejected += bucket.rejected
+      cumulativeByStatus.expired += bucket.expired
+      const newMembers = bucket.approved + bucket.pending + bucket.rejected + bucket.expired
+      const cumulative =
+        cumulativeByStatus.approved +
+        cumulativeByStatus.pending +
+        cumulativeByStatus.rejected +
+        cumulativeByStatus.expired
       return {
         date,
-        newMembers: membersByBucket[date] ?? 0,
+        newMembers,
         cumulative,
+        approved: cumulativeByStatus.approved,
+        pending: cumulativeByStatus.pending,
+        rejected: cumulativeByStatus.rejected,
+        expired: cumulativeByStatus.expired,
       }
     })
 

@@ -69,6 +69,7 @@ export default function MemberDetailModal({
   const [activeTab, setActiveTab] = useState<'overview' | 'edit' | 'membership' | 'activity'>('overview')
   const [cancellingStripe, setCancellingStripe] = useState(false)
   const [formData, setFormData] = useState({
+    email: member.email || '',
     full_name: member.full_name || '',
     first_name: member.first_name || '',
     last_name: member.last_name || '',
@@ -104,6 +105,7 @@ export default function MemberDetailModal({
   // Update formData when member changes
   useEffect(() => {
     setFormData({
+      email: member.email || '',
       full_name: member.full_name || '',
       first_name: member.first_name || '',
       last_name: member.last_name || '',
@@ -482,11 +484,12 @@ export default function MemberDetailModal({
                         <label className="block text-sm font-medium text-gray-900 mb-1">Email</label>
                         <input
                           type="email"
-                          value={member.email}
-                          disabled
-                          className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-500 cursor-not-allowed"
+                          value={formData.email}
+                          onChange={(e) => setFormData({ ...formData, email: e.target.value.trim() })}
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                          placeholder="member@example.com"
                         />
-                        <p className="mt-1 text-xs text-gray-500">Email cannot be changed</p>
+                        <p className="mt-1 text-xs text-gray-500">Admin can change email. Auth and profile will be updated.</p>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-900 mb-1">First Name</label>
