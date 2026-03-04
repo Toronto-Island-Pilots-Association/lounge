@@ -89,6 +89,26 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
+### Syncing prod data to lounge-dev (development only)
+
+To copy data from the **lounge** (prod) database into **lounge-dev** for local/testing use:
+
+1. **Requirements:** `pg_dump` and `psql` **version 17 or newer** (Supabase uses Postgres 17). Install with `brew install postgresql@17` and ensure `$(brew --prefix postgresql@17)/bin` is on your PATH, or the script will use it from the default Homebrew location if present.
+
+2. **Env vars** (same `.env` / `.env.local` as the rest of the app; do not commit secrets):
+   - `SUPABASE_PROD_DATABASE_URL` – direct Postgres URI for **lounge** (prod). Use the read-only `sync_reader_login` role; see SQL in repo for creating it.
+   - `SUPABASE_DEV_DATABASE_URL` – direct Postgres URI for **lounge-dev** (same project as `NEXT_PUBLIC_SUPABASE_URL`). From Supabase Dashboard → lounge-dev → Settings → Database → Connection string (URI).
+
+   Same format as other Supabase vars (URI string); these are the **database** connection strings for `pg_dump`/`psql`, not the API URL or anon/service role keys. If the password contains special characters (e.g. `)`, `@`, `#`), URL-encode them in the URI or the host will be parsed wrong: `)` → `%29`, `@` → `%40`, `#` → `%23`.
+
+3. **Run the sync:**
+   ```bash
+   source .env.local && npm run db:sync
+   ```
+   Or: `export SUPABASE_PROD_DATABASE_URL=... SUPABASE_DEV_DATABASE_URL=... && npm run db:sync`
+
+This dumps `public` and `auth` data from lounge, truncates lounge-dev, and restores. **Do not** set these URLs in production; this is for developer use only.
+
 ## Project Structure
 
 ```

@@ -34,7 +34,7 @@ export default function AdminDashboard() {
   const [resources, setResources] = useState<Resource[]>([])
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'members' | 'resources' | 'events' | 'settings'>('members')
+  const [activeTab, setActiveTab] = useState<'members' | 'pending' | 'resources' | 'events' | 'settings'>('members')
   const [settings, setSettings] = useState<Record<string, string>>({})
   const [editingMember, setEditingMember] = useState<UserProfile | null>(null)
   const [editingResource, setEditingResource] = useState<Resource | null>(null)
@@ -43,7 +43,6 @@ export default function AdminDashboard() {
   const [showEventForm, setShowEventForm] = useState(false)
   const [showInviteForm, setShowInviteForm] = useState(false)
   const [showBulkInviteForm, setShowBulkInviteForm] = useState(false)
-  const [pendingExpanded, setPendingExpanded] = useState(false)
 
   const loadData = useCallback(async () => {
     try {
@@ -139,7 +138,7 @@ export default function AdminDashboard() {
   )
 
   // Memoize callbacks to prevent unnecessary re-renders
-  const handleSetActiveTab = useCallback((tab: 'members' | 'resources' | 'events' | 'settings') => {
+  const handleSetActiveTab = useCallback((tab: 'members' | 'pending' | 'resources' | 'events' | 'settings') => {
     setActiveTab(tab)
   }, [])
 
@@ -400,6 +399,16 @@ export default function AdminDashboard() {
                 Members ({members.length})
               </button>
               <button
+                onClick={() => handleSetActiveTab('pending')}
+                className={`py-3 px-4 sm:py-4 sm:px-6 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap ${
+                  activeTab === 'pending'
+                    ? 'border-[#0d1e26] text-[#0d1e26]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Pending Review ({pendingMembers.length})
+              </button>
+              <button
                 onClick={() => setActiveTab('resources')}
                 className={`py-3 px-4 sm:py-4 sm:px-6 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'resources'
@@ -433,19 +442,17 @@ export default function AdminDashboard() {
           </div>
 
           <div className="p-4 sm:p-6">
-            {activeTab === 'members' && (
+            {activeTab === 'pending' && (
               <div className="space-y-4">
-                {/* Pending Review Section */}
-                {pendingMembers.length > 0 && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                    <h3 className="text-lg font-semibold text-yellow-900 mb-3">
-                      Pending Review ({pendingMembers.length})
-                    </h3>
-                    <div className="space-y-3">
-                      {(pendingExpanded ? pendingMembers : pendingMembers.slice(0, 10)).map((member) => (
+                <h2 className="text-lg font-semibold text-gray-900">Pending Review</h2>
+                {pendingMembers.length === 0 ? (
+                  <p className="text-gray-500">No members pending review.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {pendingMembers.map((member) => (
                         <div key={member.id} className="bg-white rounded-lg p-4 border border-yellow-200">
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                            <div className="flex-1">
+                          <div className="flex flex-col gap-3">
+                            <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2">
                                 <span className="font-medium text-gray-900">{member.full_name || 'N/A'}</span>
                                 {member.invited_at && (
@@ -454,12 +461,12 @@ export default function AdminDashboard() {
                                   </span>
                                 )}
                               </div>
-                              <div className="text-sm text-gray-600">{member.email}</div>
+                              <div className="text-sm text-gray-600 truncate" title={member.email}>{member.email}</div>
                               {member.call_sign && (
                                 <div className="text-xs text-gray-500 mt-1">Call Sign: {member.call_sign}</div>
                               )}
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 flex-shrink-0">
                               <button
                                 onClick={async () => {
                                   try {
@@ -509,21 +516,13 @@ export default function AdminDashboard() {
                           </div>
                         </div>
                       ))}
-                    </div>
-                    {pendingMembers.length > 10 && (
-                      <button
-                        type="button"
-                        onClick={() => setPendingExpanded((e) => !e)}
-                        className="mt-3 text-sm font-medium text-yellow-800 hover:text-yellow-900"
-                      >
-                        {pendingExpanded
-                          ? 'Show less'
-                          : `Show more (${pendingMembers.length - 10} more)`}
-                      </button>
-                    )}
                   </div>
                 )}
+              </div>
+            )}
 
+            {activeTab === 'members' && (
+              <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row justify-end gap-2">
                   <button
                     onClick={async () => {
@@ -652,7 +651,7 @@ export default function AdminDashboard() {
                                 Membership {membersSortKey === 'membership_level' && (membersSortDir === 'asc' ? '↑' : '↓')}
                               </button>
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="sticky right-0 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 z-10 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
                               Actions
                             </th>
                           </tr>
@@ -695,7 +694,7 @@ export default function AdminDashboard() {
                                   {member.membership_level ? getMembershipLevelLabel(member.membership_level) : 'Full'}
                                 </span>
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <td className="sticky right-0 px-6 py-4 whitespace-nowrap text-sm font-medium bg-white z-10 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
                                 {member.status === 'pending' && (
                                   <>
                                     <button

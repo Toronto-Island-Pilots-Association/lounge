@@ -140,6 +140,7 @@ export interface Comment {
   content: string
   created_by: string | null
   author_email?: string | null
+  image_urls?: string[] | null
   created_at: string
   updated_at: string
   author?: UserProfile

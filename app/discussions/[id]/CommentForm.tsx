@@ -3,10 +3,14 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import MentionInput from '@/components/MentionInput'
+import ThreadImageUpload from '@/components/ThreadImageUpload'
+
+const MAX_COMMENT_IMAGES = 3
 
 export default function CommentForm({ threadId }: { threadId: string }) {
   const router = useRouter()
   const [content, setContent] = useState('')
+  const [imageUrls, setImageUrls] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [expanded, setExpanded] = useState(false)
@@ -20,7 +24,7 @@ export default function CommentForm({ threadId }: { threadId: string }) {
       const res = await fetch(`/api/threads/${threadId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, image_urls: imageUrls.length > 0 ? imageUrls : undefined }),
       })
 
       const data = await res.json()
@@ -30,6 +34,7 @@ export default function CommentForm({ threadId }: { threadId: string }) {
       }
 
       setContent('')
+      setImageUrls([])
       setExpanded(false)
       router.refresh()
     } catch (err: any) {
@@ -41,7 +46,7 @@ export default function CommentForm({ threadId }: { threadId: string }) {
 
   const [showGuidelines, setShowGuidelines] = useState(false)
   const [isClicked, setIsClicked] = useState(false)
-  const isActive = expanded || !!content
+  const isActive = expanded || !!content.trim() || imageUrls.length > 0
 
   return (
     <form onSubmit={handleSubmit}>
@@ -56,12 +61,21 @@ export default function CommentForm({ threadId }: { threadId: string }) {
           value={content}
           onChange={setContent}
           onFocus={() => setExpanded(true)}
-          onBlur={() => !content && setExpanded(false)}
+          onBlur={() => !content && imageUrls.length === 0 && setExpanded(false)}
           placeholder="Add a comment..."
           minRows={isActive ? 3 : 1}
           required
         />
       </div>
+
+      {isActive && (
+        <div className="mb-3">
+          <ThreadImageUpload
+            onImagesChange={setImageUrls}
+            maxImages={MAX_COMMENT_IMAGES}
+          />
+        </div>
+      )}
 
       {isActive && (
         <div className="flex items-center justify-between">

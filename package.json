@@ -12,6 +12,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --maxWorkers=2",
+    "db:sync": "./scripts/sync-lounge-to-dev.sh",
     "postinstall": "node -e \"const fs=require('fs'); const p='node_modules/fb-watchman'; try { fs.readFileSync(p+'/package.json'); } catch(e) { const cp=require('child_process'); cp.execSync('rm -rf '+p); cp.execSync('cp -r stubs/fb-watchman '+p); }\""
   },
   "dependencies": {
