@@ -510,7 +510,11 @@ export default function AdminDashboard() {
                                 member.status === 'expired' ? 'bg-amber-100 text-amber-800' :
                                 'bg-red-100 text-red-800'
                               }`}>
-                                {member.status ? member.status.charAt(0).toUpperCase() + member.status.slice(1) : 'Pending'}
+                                {member.status === 'pending' && member.invited_at
+                                  ? 'Invited'
+                                  : member.status
+                                    ? member.status.charAt(0).toUpperCase() + member.status.slice(1)
+                                    : 'Pending'}
                               </span>
                               <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded">
                                 {member.role}
@@ -584,7 +588,11 @@ export default function AdminDashboard() {
                                   member.status === 'expired' ? 'bg-amber-100 text-amber-800' :
                                   'bg-red-100 text-red-800'
                                 }`}>
-                                  {member.status ? member.status.charAt(0).toUpperCase() + member.status.slice(1) : 'Pending'}
+                                  {member.status === 'pending' && member.invited_at
+                                    ? 'Invited'
+                                    : member.status
+                                      ? member.status.charAt(0).toUpperCase() + member.status.slice(1)
+                                      : 'Pending'}
                                 </span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

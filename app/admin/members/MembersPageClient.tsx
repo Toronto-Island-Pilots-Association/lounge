@@ -79,6 +79,7 @@ export default function MembersPageClient() {
   const [editingMember, setEditingMember] = useState<UserProfile | null>(null)
   const [showInviteForm, setShowInviteForm] = useState(false)
   const [showBulkInviteForm, setShowBulkInviteForm] = useState(false)
+  const [resendingMemberId, setResendingMemberId] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState<MembersSortKey>('full_name')
   const [sortDir, setSortDir] = useState<SortDirection>('asc')
   const [page, setPage] = useState(1)
@@ -228,6 +229,26 @@ export default function MembersPageClient() {
     }
   }
 
+  const handleResendReminder = async (memberId: string) => {
+    setResendingMemberId(memberId)
+    try {
+      const response = await fetch(`/api/admin/members/${memberId}/resend-invite`, { method: 'POST' })
+      const data = await response.json()
+      if (response.ok) {
+        await loadData()
+        setEditingMember((prev) => (prev?.id === memberId ? { ...prev, last_reminder_sent_at: new Date().toISOString(), reminder_count: (prev.reminder_count ?? 0) + 1 } : prev))
+        alert('Reminder sent successfully.')
+      } else {
+        alert(data.error || 'Failed to send reminder')
+      }
+    } catch (error) {
+      console.error('Error sending reminder:', error)
+      alert('Failed to send reminder')
+    } finally {
+      setResendingMemberId(null)
+    }
+  }
+
   if (loading) {
     return <Loading message="Loading members..." />
   }
@@ -321,6 +342,16 @@ export default function MembersPageClient() {
                     >
                       Edit
                     </button>
+                    {member.status === 'pending' && member.invited_at && (member.reminder_count ?? 0) < 3 && (
+                      <button
+                        type="button"
+                        onClick={() => handleResendReminder(member.id)}
+                        disabled={resendingMemberId === member.id}
+                        className="ml-2 text-blue-600 hover:text-blue-800 text-sm shrink-0 disabled:opacity-50"
+                      >
+                        {resendingMemberId === member.id ? 'Sending…' : 'Resend reminder'}
+                      </button>
+                    )}
                   </div>
                   <div className="flex flex-wrap gap-2 text-xs">
                     {member.role === 'admin' && (
@@ -334,7 +365,11 @@ export default function MembersPageClient() {
                       member.status === 'expired' ? 'bg-amber-100 text-amber-800' :
                       'bg-red-100 text-red-800'
                     }`}>
-                      {member.status ? member.status.charAt(0).toUpperCase() + member.status.slice(1) : 'Pending'}
+                      {member.status === 'pending' && member.invited_at
+                        ? 'Invited'
+                        : member.status
+                          ? member.status.charAt(0).toUpperCase() + member.status.slice(1)
+                          : 'Pending'}
                     </span>
                     <span className="px-2 py-1 rounded font-medium bg-gray-100 text-gray-800">
                       {member.membership_level ? getMembershipLevelLabel(member.membership_level) : 'Full'}
@@ -437,7 +472,11 @@ export default function MembersPageClient() {
                           member.status === 'expired' ? 'bg-amber-100 text-amber-800' :
                           'bg-red-100 text-red-800'
                         }`}>
-                          {member.status ? member.status.charAt(0).toUpperCase() + member.status.slice(1) : 'Pending'}
+                          {member.status === 'pending' && member.invited_at
+                            ? 'Invited'
+                            : member.status
+                              ? member.status.charAt(0).toUpperCase() + member.status.slice(1)
+                              : 'Pending'}
                         </span>
                         {member.status === 'expired' && member.membership_expires_at && (
                           <span className="text-xs text-amber-700">
@@ -487,6 +526,16 @@ export default function MembersPageClient() {
                             Reject
                           </button>
                         </>
+                      )}
+                      {member.status === 'pending' && member.invited_at && (member.reminder_count ?? 0) < 3 && (
+                        <button
+                          type="button"
+                          onClick={() => handleResendReminder(member.id)}
+                          disabled={resendingMemberId === member.id}
+                          className="text-blue-600 hover:text-blue-800 mr-3 disabled:opacity-50"
+                        >
+                          {resendingMemberId === member.id ? 'Sending…' : 'Resend reminder'}
+                        </button>
                       )}
                       <button
                         onClick={() => setEditingMember(member)}
@@ -541,6 +590,8 @@ export default function MembersPageClient() {
           member={editingMember}
           onClose={() => setEditingMember(null)}
           onSave={handleUpdateMember}
+          onResendReminder={handleResendReminder}
+          resendingMemberId={resendingMemberId}
         />
       )}
 

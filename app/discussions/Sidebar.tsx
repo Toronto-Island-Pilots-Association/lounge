@@ -22,7 +22,7 @@ function CategorySection({
   const sortBy = currentSort || 'latest'
 
   return (
-    <nav className="space-y-1">
+    <nav className="space-y-0.5">
       {categories.map((category) => {
         const isActive = selectedCategory === category
         
@@ -31,14 +31,14 @@ function CategorySection({
             key={category}
             href={`/discussions?category=${category}&sort=${sortBy}`}
             prefetch={true}
-            className={`group flex flex-col px-3 py-2 rounded-md text-sm transition-all duration-200 ${
+            className={`group flex flex-col px-3 py-1.5 rounded-md text-sm transition-all duration-200 ${
               isActive
                 ? 'bg-[#0d1e26] text-white font-medium'
                 : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
             <div className="flex items-center justify-between w-full">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 flex-1 min-w-0">
                 <span className="text-base flex-shrink-0">
                   <CategoryIcon category={category} className="w-4 h-4" />
                 </span>
@@ -47,7 +47,7 @@ function CategorySection({
                 </span>
               </div>
               <Suspense fallback={
-                <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 animate-pulse ${
+                <span className={`text-xs px-1.5 py-0.5 rounded-full flex-shrink-0 animate-pulse ${
                   isActive
                     ? 'bg-white/20 text-white'
                     : 'bg-gray-100 text-gray-600'
@@ -77,7 +77,7 @@ function CategoryList({ currentCategory, currentSort }: { currentCategory?: Disc
 
       {/* Discussions Section */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <h3 className="text-sm font-semibold text-gray-900 mb-3 uppercase tracking-wide">Discussions</h3>
+        <h3 className="text-sm font-semibold text-gray-900 mb-2 uppercase tracking-wide">Discussions</h3>
         <CategorySection 
           categories={DISCUSSION_CATEGORIES} 
           currentCategory={currentCategory}
@@ -88,7 +88,7 @@ function CategoryList({ currentCategory, currentSort }: { currentCategory?: Disc
 
       {/* Classifieds Section */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <h3 className="text-sm font-semibold text-gray-900 mb-3 uppercase tracking-wide">Classifieds</h3>
+        <h3 className="text-sm font-semibold text-gray-900 mb-2 uppercase tracking-wide">Classifieds</h3>
         <CategorySection 
           categories={CLASSIFIED_CATEGORIES} 
           currentCategory={currentCategory}
@@ -117,7 +117,7 @@ async function CategoryCount({ category, isActive }: { category: DiscussionCateg
   }
 
   return (
-    <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
+    <span className={`text-xs px-1.5 py-0.5 rounded-full flex-shrink-0 ${
       isActive
         ? 'bg-white/20 text-white'
         : 'bg-gray-100 text-gray-600'

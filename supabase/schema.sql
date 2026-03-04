@@ -30,11 +30,18 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   notify_replies BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  invited_at TIMESTAMPTZ
+  invited_at TIMESTAMPTZ,
+  last_reminder_sent_at TIMESTAMPTZ,
+  reminder_count INT NOT NULL DEFAULT 0
 );
 
 -- Backfill: add invited_at for existing deployments (no-op if already present)
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS invited_at TIMESTAMPTZ;
+-- Backfill: invite reminder fields (migration 20250303170000)
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS last_reminder_sent_at TIMESTAMPTZ;
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS reminder_count INT NOT NULL DEFAULT 0;
+COMMENT ON COLUMN public.user_profiles.last_reminder_sent_at IS 'When the last invitation reminder email was sent (for rate limiting).';
+COMMENT ON COLUMN public.user_profiles.reminder_count IS 'Number of reminder emails sent after the initial invite (max 3).';
 
 -- Create resources table
 CREATE TABLE IF NOT EXISTS resources (
@@ -103,8 +110,12 @@ CREATE TABLE IF NOT EXISTS comments (
   created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   author_email TEXT, -- Store email for deleted users
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  image_urls text[] DEFAULT NULL
 );
+
+COMMENT ON COLUMN comments.image_urls IS 'Optional array of image URLs (e.g. from storage); max 3 recommended.';
+ALTER TABLE comments ADD COLUMN IF NOT EXISTS image_urls text[] DEFAULT NULL;
 
 -- Create reactions table for threads and comments
 CREATE TABLE IF NOT EXISTS reactions (
@@ -116,6 +127,24 @@ CREATE TABLE IF NOT EXISTS reactions (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(thread_id, comment_id, user_id, reaction_type)
 );
+
+-- Notifications table (in-app notifications for thread replies and @mentions, migration 20250303160000)
+CREATE TABLE IF NOT EXISTS notifications (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN ('reply', 'mention')),
+  thread_id UUID NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+  comment_id UUID NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
+  actor_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  read_at TIMESTAMPTZ DEFAULT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_read_created ON notifications(user_id, read_at, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_thread_id ON notifications(thread_id);
+
+COMMENT ON TABLE notifications IS 'In-app notifications for Hangar Talk replies and @mentions';
 
 -- Create payments table for payment tracking and audit trail
 CREATE TABLE IF NOT EXISTS payments (
@@ -173,7 +202,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create function to automatically create user profile on signup
+-- Create function to automatically create user profile on signup (aligned with migration 20250303120000)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -189,9 +218,10 @@ DECLARE
   v_role TEXT;
   v_membership_level TEXT;
   v_member_number TEXT;
+  v_is_student_pilot BOOLEAN;
+  v_flight_school TEXT;
+  v_instructor_name TEXT;
 BEGIN
-  -- Helper function to convert empty strings to NULL
-  -- NULLIF converts empty string to NULL, then COALESCE handles NULL
   v_full_name := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'full_name', '')), '');
   v_first_name := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'first_name', '')), '');
   v_last_name := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'last_name', '')), '');
@@ -201,34 +231,23 @@ BEGIN
   v_call_sign := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'call_sign', '')), '');
   v_how_often_fly_from_ytz := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'how_often_fly_from_ytz', '')), '');
   v_how_did_you_hear := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'how_did_you_hear', '')), '');
-  -- Ensure role and membership_level match the CHECK constraints exactly
-  v_role := COALESCE(
-    NULLIF(LOWER(TRIM(COALESCE(NEW.raw_user_meta_data->>'role', ''))), ''),
-    'member'
-  );
-  -- Ensure it's one of the valid values
+  v_role := COALESCE(NULLIF(LOWER(TRIM(COALESCE(NEW.raw_user_meta_data->>'role', ''))), ''), 'member');
   IF v_role NOT IN ('member', 'admin') THEN
     v_role := 'member';
   END IF;
-  
-  v_membership_level := COALESCE(
-    NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'membership_level', '')), ''),
-    'Associate'
-  );
-  -- Ensure it's one of the valid values
+  v_membership_level := COALESCE(NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'membership_level', '')), ''), 'Associate');
   IF v_membership_level NOT IN ('Full', 'Student', 'Associate', 'Corporate', 'Honorary') THEN
     v_membership_level := 'Associate';
   END IF;
-
-  -- Generate unique member number
   v_member_number := public.generate_member_number();
+  v_is_student_pilot := COALESCE((NEW.raw_user_meta_data->>'is_student_pilot')::boolean, false);
+  v_flight_school := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'flight_school', '')), '');
+  v_instructor_name := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'instructor_name', '')), '');
 
-  -- Ensure email is not null (should never happen, but safety check)
   IF NEW.email IS NULL OR TRIM(NEW.email) = '' THEN
     RAISE EXCEPTION 'Email cannot be null or empty';
   END IF;
 
-  -- Insert user profile with error handling
   INSERT INTO public.user_profiles (
     id,
     email,
@@ -276,11 +295,7 @@ BEGIN
   RETURN NEW;
 EXCEPTION
   WHEN OTHERS THEN
-    -- Log the error but don't fail the user creation
-    -- This allows the user to be created even if profile creation fails
-    -- We'll catch this error in the application and create the profile manually
     RAISE WARNING 'Error creating user profile for user %: %', NEW.id, SQLERRM;
-    -- Return NEW to allow user creation to proceed
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -369,6 +384,68 @@ CREATE TRIGGER update_comments_updated_at
   BEFORE UPDATE ON comments
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+-- Function and trigger for comment notifications (migration 20250303160000)
+CREATE OR REPLACE FUNCTION public.create_comment_notifications()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_thread_author_id UUID;
+  v_mentioned_ids TEXT[] := ARRAY[]::TEXT[];
+  v_match TEXT[];
+  v_content TEXT := COALESCE(NEW.content, '');
+BEGIN
+  -- Get thread author
+  SELECT created_by INTO v_thread_author_id
+  FROM threads WHERE id = NEW.thread_id;
+
+  -- Extract mentioned user IDs: @[Name](userId) -> capture userId
+  FOR v_match IN SELECT (regexp_matches(v_content, '@\[[^\]]+\]\(([^)]+)\)', 'g'))
+  LOOP
+    IF v_match[1] IS NOT NULL AND v_match[1] <> NEW.created_by::TEXT THEN
+      v_mentioned_ids := array_append(v_mentioned_ids, v_match[1]);
+    END IF;
+  END LOOP;
+  v_mentioned_ids := ARRAY(SELECT DISTINCT unnest(v_mentioned_ids));
+
+  -- Notify mentioned users (type = mention)
+  IF array_length(v_mentioned_ids, 1) > 0 THEN
+    INSERT INTO notifications (user_id, type, thread_id, comment_id, actor_id)
+    SELECT u::UUID, 'mention', NEW.thread_id, NEW.id, NEW.created_by
+    FROM unnest(v_mentioned_ids) AS u;
+  END IF;
+
+  -- Notify thread author (if not the commenter and not already mentioned)
+  IF v_thread_author_id IS NOT NULL
+     AND v_thread_author_id <> NEW.created_by
+     AND NOT (v_thread_author_id::TEXT = ANY(v_mentioned_ids)) THEN
+    INSERT INTO notifications (user_id, type, thread_id, comment_id, actor_id)
+    VALUES (v_thread_author_id, 'reply', NEW.thread_id, NEW.id, NEW.created_by);
+  END IF;
+
+  -- Notify previous commenters (reply), excluding commenter, thread author, and mentioned
+  INSERT INTO notifications (user_id, type, thread_id, comment_id, actor_id)
+  SELECT DISTINCT c.created_by, 'reply', NEW.thread_id, NEW.id, NEW.created_by
+  FROM comments c
+  WHERE c.thread_id = NEW.thread_id
+    AND c.id <> NEW.id
+    AND c.created_by IS NOT NULL
+    AND c.created_by <> NEW.created_by
+    AND (v_thread_author_id IS NULL OR c.created_by <> v_thread_author_id)
+    AND NOT (c.created_by::TEXT = ANY(v_mentioned_ids));
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trigger_create_comment_notifications ON comments;
+CREATE TRIGGER trigger_create_comment_notifications
+  AFTER INSERT ON comments
+  FOR EACH ROW
+  EXECUTE FUNCTION public.create_comment_notifications();
+
 -- Row Level Security (RLS) Policies
 
 -- Enable RLS
@@ -381,6 +458,7 @@ ALTER TABLE threads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies if they exist (for clean re-runs)
 DROP POLICY IF EXISTS "Users can view own profile" ON user_profiles;
@@ -419,6 +497,8 @@ DROP POLICY IF EXISTS "Users can view own payments" ON payments;
 DROP POLICY IF EXISTS "Admins can view all payments" ON payments;
 DROP POLICY IF EXISTS "Admins can insert payments" ON payments;
 DROP POLICY IF EXISTS "Service role can insert payments" ON payments;
+DROP POLICY IF EXISTS "Users can view own notifications" ON notifications;
+DROP POLICY IF EXISTS "Users can update own notifications" ON notifications;
 
 -- User profiles policies
 -- All authenticated users can view all profiles
@@ -559,6 +639,16 @@ CREATE POLICY "Users can delete own comments"
 CREATE POLICY "Admins can delete comments"
   ON comments FOR DELETE
   USING (public.is_admin(auth.uid()));
+
+-- Notifications policies (migration 20250303160000)
+CREATE POLICY "Users can view own notifications"
+  ON notifications FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own notifications"
+  ON notifications FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
 
 -- Reactions policies
 -- All authenticated users can view reactions
