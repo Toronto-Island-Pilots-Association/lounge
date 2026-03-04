@@ -20,8 +20,6 @@ export default async function AddPaymentPage() {
     redirect('/membership')
   }
 
-  const isPending = user.profile.status === 'pending'
-
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-2xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
@@ -30,10 +28,7 @@ export default async function AddPaymentPage() {
             Add your payment information
           </h1>
           <p className="mt-2 text-gray-600">
-            You need to add a payment method before you can access the rest of the lounge features.
-            {isPending
-              ? ' You will not be charged until your application is approved by an admin. If approved before the trial period (e.g. September 1st), your first charge will be at the end of the trial.'
-              : ' You will not be charged until the end of your trial period (e.g. September 1st). Set up your payment method now so your access continues without interruption.'}
+            Add a payment method to access lounge features. You won’t be charged until you’re approved or the trial ends (e.g. September 1st).
           </p>
         </div>
 

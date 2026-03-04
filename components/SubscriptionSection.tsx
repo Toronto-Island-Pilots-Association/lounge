@@ -236,16 +236,9 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
         {!subscription?.hasSubscription ? (
           <div className="space-y-4">
             <div>
-              <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 p-4">
-                <p className="text-sm font-medium text-amber-900 mb-1">
-                  {isPending ? 'Add your payment details' : 'Add your payment details to keep your membership'}
-                </p>
-                <p className="text-sm text-amber-800">
-                  {isPending
-                    ? 'You will not be charged until your application is approved by an admin. If approved before the trial period (e.g. September 1st), your first charge will be at the end of the trial.'
-                    : 'You will not be charged until September 1st. Set up your payment method now so your access continues without interruption.'}
-                </p>
-              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                No charge until you’re approved or the trial ends.
+              </p>
               {membershipFee && (
                 <div className="bg-gray-50 rounded-lg p-4 mb-4">
                   <div className="flex items-center justify-between">
@@ -347,16 +340,9 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
         {!subscription?.hasSubscription ? (
           <div className="space-y-4">
             <div>
-              <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 p-4">
-                <p className="text-sm font-medium text-amber-900 mb-1">
-                  {isPending ? 'Add your payment details' : 'Add your payment details to keep your membership'}
-                </p>
-                <p className="text-sm text-amber-800">
-                  {isPending
-                    ? 'You will not be charged until your application is approved by an admin. If approved before the trial period (e.g. September 1st), your first charge will be at the end of the trial.'
-                    : 'You will not be charged until September 1st. Set up your payment method now so your access continues without interruption.'}
-                </p>
-              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                No charge until you’re approved or the trial ends.
+              </p>
               {membershipFee && (
                 <div className="bg-gray-50 rounded-lg p-4 mb-4">
                   <div className="flex items-center justify-between">

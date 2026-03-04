@@ -32,7 +32,6 @@ function getPaymentStatus(member: MemberWithPayment): { label: string; badgeClas
   return { label: 'No payment set up', badgeClass: 'bg-red-100 text-red-800' }
 }
 
-const PENDING_LIST_INITIAL_SHOW = 10
 const PAGE_SIZE = 50
 
 export type MembersSortKey = 'member_number' | 'full_name' | 'email' | 'status' | 'membership_level' | 'membership_expires_at'
@@ -80,7 +79,6 @@ export default function MembersPageClient() {
   const [editingMember, setEditingMember] = useState<UserProfile | null>(null)
   const [showInviteForm, setShowInviteForm] = useState(false)
   const [showBulkInviteForm, setShowBulkInviteForm] = useState(false)
-  const [pendingExpanded, setPendingExpanded] = useState(false)
   const [sortKey, setSortKey] = useState<MembersSortKey>('full_name')
   const [sortDir, setSortDir] = useState<SortDirection>('asc')
   const [page, setPage] = useState(1)
@@ -101,11 +99,6 @@ export default function MembersPageClient() {
   useEffect(() => {
     loadData()
   }, [loadData])
-
-  const pendingMembers = useMemo(() => 
-    members.filter(m => m.status === 'pending'), 
-    [members]
-  )
 
   const sortedMembers = useMemo(() => {
     const list = [...members] as MemberWithPayment[]
@@ -241,66 +234,6 @@ export default function MembersPageClient() {
 
   return (
     <div className="space-y-4">
-      {/* Pending Review Section */}
-      {pendingMembers.length > 0 && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-          <h3 className="text-lg font-semibold text-yellow-900 mb-3">
-            Pending Review ({pendingMembers.length})
-          </h3>
-          <div className="space-y-3">
-            {(pendingExpanded ? pendingMembers : pendingMembers.slice(0, PENDING_LIST_INITIAL_SHOW)).map((member) => (
-              <div key={member.id} className="bg-white rounded-lg p-4 border border-yellow-200">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div className="flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium text-gray-900">{member.full_name || '-'}</span>
-                      {member.invited_at && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                          Invited
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-sm text-gray-600">{member.email}</div>
-                    <div className="text-xs text-gray-500 mt-1">Member #: {hasPaymentSetUp(member) ? (member.member_number || '-') : '-'}</div>
-                    {member.call_sign && (
-                      <div className="text-xs text-gray-500 mt-1">Call Sign: {member.call_sign}</div>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleApproveReject(member.id, 'approved')}
-                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium"
-                    >
-                      Approve
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (!confirm('Are you sure you want to reject this member?')) return
-                        handleApproveReject(member.id, 'rejected')
-                      }}
-                      className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium"
-                    >
-                      Reject
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          {pendingMembers.length > PENDING_LIST_INITIAL_SHOW && (
-            <button
-              type="button"
-              onClick={() => setPendingExpanded((e) => !e)}
-              className="mt-3 text-sm font-medium text-yellow-800 hover:text-yellow-900"
-            >
-              {pendingExpanded
-                ? 'Show less'
-                : `Show more (${pendingMembers.length - PENDING_LIST_INITIAL_SHOW} more)`}
-            </button>
-          )}
-        </div>
-      )}
-
       <div className="grid grid-cols-3 sm:flex sm:flex-row justify-end gap-2">
         <button
           onClick={async () => {

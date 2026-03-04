@@ -9,6 +9,12 @@ export default function CategoryIcon({ category, className = 'w-4 h-4' }: Catego
   const iconClass = className
 
   switch (category) {
+    case 'introduce_yourself':
+      return (
+        <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      )
     case 'aircraft_shares':
       return (
         <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">

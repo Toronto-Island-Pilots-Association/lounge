@@ -103,7 +103,7 @@ export interface EventRsvp {
   created_at: string
 }
 
-export type DiscussionCategory = 'aircraft_shares' | 'instructor_availability' | 'gear_for_sale' | 'flying_at_ytz' | 'general_aviation' | 'training_safety_proficiency' | 'wanted' | 'building_a_better_tipa' | 'other'
+export type DiscussionCategory = 'introduce_yourself' | 'aircraft_shares' | 'instructor_availability' | 'gear_for_sale' | 'flying_at_ytz' | 'general_aviation' | 'training_safety_proficiency' | 'wanted' | 'building_a_better_tipa' | 'other'
 
 export interface Thread {
   id: string

@@ -14,6 +14,7 @@ import ContentWithLinkPreviews from '@/components/ContentWithLinkPreviews'
 import Sidebar from '../Sidebar'
 import { CATEGORY_LABELS } from '../constants'
 import { formatDetailDate } from '../utils'
+import MarkThreadNotificationsRead from './MarkThreadNotificationsRead'
 
 export default async function DiscussionPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser()
@@ -152,6 +153,7 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
+      <MarkThreadNotificationsRead threadId={id} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-4 sm:mb-6">
           <Link

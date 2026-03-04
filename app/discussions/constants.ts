@@ -1,6 +1,7 @@
 import { DiscussionCategory } from '@/types/database'
 
 export const CATEGORY_LABELS: Record<DiscussionCategory, string> = {
+  introduce_yourself: 'Introduce Yourself',
   aircraft_shares: 'Aircraft Shares / Block Time',
   instructor_availability: 'Instructor Availability',
   gear_for_sale: 'Gear for Sale',
@@ -13,6 +14,7 @@ export const CATEGORY_LABELS: Record<DiscussionCategory, string> = {
 }
 
 export const CATEGORY_DESCRIPTIONS: Record<DiscussionCategory, string> = {
+  introduce_yourself: 'Say hello to the community—share your background, flying goals, and what brought you to TIPA.',
   aircraft_shares: 'Share ownership opportunities, block time arrangements, and aircraft partnerships available at YTZ or nearby airports.',
   instructor_availability: 'Find certified flight instructors, schedule training sessions, and discuss instruction availability and rates.',
   gear_for_sale: 'Buy, sell, or trade aviation equipment, pilot gear, headsets, books, and other flight-related items.',
@@ -25,6 +27,7 @@ export const CATEGORY_DESCRIPTIONS: Record<DiscussionCategory, string> = {
 }
 
 export const CATEGORY_ICONS: Record<DiscussionCategory, string> = {
+  introduce_yourself: '👋',
   aircraft_shares: '✈️',
   instructor_availability: '👨‍✈️',
   gear_for_sale: '🛒',
@@ -37,6 +40,7 @@ export const CATEGORY_ICONS: Record<DiscussionCategory, string> = {
 }
 
 export const ALL_CATEGORIES: DiscussionCategory[] = [
+  'introduce_yourself',
   'aircraft_shares',
   'instructor_availability',
   'gear_for_sale',
@@ -63,6 +67,7 @@ export const CLASSIFIED_CATEGORIES: DiscussionCategory[] = [
 
 // Discussion categories (general discussions)
 export const DISCUSSION_CATEGORIES: DiscussionCategory[] = [
+  'introduce_yourself',
   'flying_at_ytz',
   'general_aviation',
   'training_safety_proficiency',
@@ -70,8 +75,14 @@ export const DISCUSSION_CATEGORIES: DiscussionCategory[] = [
   'other',
 ]
 
+// Optional category-specific placeholders for the title field (fallback: "Enter discussion title...")
+export const CATEGORY_TITLE_PLACEHOLDERS: Partial<Record<DiscussionCategory, string>> = {
+  introduce_yourself: "e.g. Hi, I'm [Name] or your name",
+}
+
 // Category-specific placeholders for the description field
 export const CATEGORY_PLACEHOLDERS: Record<DiscussionCategory, string> = {
+  introduce_yourself: 'Tell the community a bit about yourself—your flying background, goals, and what brought you to TIPA...',
   aircraft_shares: 'Include aircraft type, share percentage or block time details, pricing, location, and contact information...',
   instructor_availability: 'Include your certifications, availability schedule, rates, experience level, and contact information...',
   gear_for_sale: 'Include item name, condition, price, location, and contact information...',

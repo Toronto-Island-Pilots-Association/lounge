@@ -13,6 +13,7 @@ export default function Navbar() {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [isDevEnvironment, setIsDevEnvironment] = useState(false)
   const [pendingCount, setPendingCount] = useState<number>(0)
+  const [notificationCount, setNotificationCount] = useState<number>(0)
   const router = useRouter()
 
   // Check if we're in a dev environment
@@ -45,10 +46,16 @@ export default function Navbar() {
           } else if (data.profile?.role !== 'admin') {
             setPendingCount(0)
           }
+          if (data.profile?.status === 'approved' || data.profile?.role === 'admin') {
+            fetchNotificationCount()
+          } else {
+            setNotificationCount(0)
+          }
         } else {
           setProfile(null)
           setUser(null)
           setPendingCount(0)
+          setNotificationCount(0)
         }
       } catch (error) {
         console.error('Error loading user data:', error)
@@ -83,6 +90,21 @@ export default function Navbar() {
     } catch (error) {
       console.error('Error fetching pending count:', error)
       setPendingCount(0)
+    }
+  }
+
+  const fetchNotificationCount = async () => {
+    try {
+      const response = await fetch('/api/notifications?limit=0')
+      if (response.ok) {
+        const data = await response.json()
+        setNotificationCount(data.unreadCount ?? 0)
+      } else {
+        setNotificationCount(0)
+      }
+    } catch (error) {
+      console.error('Error fetching notification count:', error)
+      setNotificationCount(0)
     }
   }
 
@@ -193,7 +215,27 @@ export default function Navbar() {
                   </svg>
                   Membership
                 </Link>
-                <div className="relative ml-2 pl-4 border-l border-gray-200" data-user-menu>
+                {profile && (profile.status === 'approved' || profile.role === 'admin') && (
+                  <div className="ml-1 pl-1 -mr-[14px] border-l border-gray-200 self-stretch flex items-center">
+                    <Link
+                      href="/notifications"
+                      className="flex items-center justify-center px-1.5 py-2 text-gray-700 hover:text-gray-900 rounded-md text-sm font-medium transition-colors"
+                      aria-label="Notifications"
+                    >
+                      <span className="relative inline-flex">
+                        <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                        {notificationCount > 0 && (
+                          <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[14px] h-[14px] px-0.5 bg-[#0d1e26] text-white text-[9px] font-bold rounded-full leading-none">
+                            {notificationCount > 99 ? '99+' : notificationCount}
+                          </span>
+                        )}
+                      </span>
+                    </Link>
+                  </div>
+                )}
+                <div className="relative ml-0.5 pl-3 border-l border-gray-200 self-stretch flex items-center" data-user-menu>
                   <button
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
                     className="flex items-center space-x-2 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:ring-offset-2 rounded-md p-1"
@@ -248,7 +290,7 @@ export default function Navbar() {
                   </button>
 
                   {userMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+                    <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
                       <Link
                         href="/settings"
                         onClick={() => setUserMenuOpen(false)}
@@ -403,6 +445,21 @@ export default function Navbar() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                       YTZ Flying Updates
+                    </Link>
+                    <Link
+                      href="/notifications"
+                      onClick={handleLinkClick}
+                      className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                      </svg>
+                      Notifications
+                      {notificationCount > 0 && (
+                        <span className="ml-auto flex items-center justify-center min-w-[20px] h-[20px] px-1.5 bg-[#0d1e26] text-white text-xs font-bold rounded-full">
+                          {notificationCount > 99 ? '99+' : notificationCount}
+                        </span>
+                      )}
                     </Link>
                   </>
                 )}

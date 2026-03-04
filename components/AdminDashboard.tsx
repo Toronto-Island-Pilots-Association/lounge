@@ -34,7 +34,7 @@ export default function AdminDashboard() {
   const [resources, setResources] = useState<Resource[]>([])
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'members' | 'pending' | 'resources' | 'events' | 'settings'>('members')
+  const [activeTab, setActiveTab] = useState<'members' | 'resources' | 'events' | 'settings'>('members')
   const [settings, setSettings] = useState<Record<string, string>>({})
   const [editingMember, setEditingMember] = useState<UserProfile | null>(null)
   const [editingResource, setEditingResource] = useState<Resource | null>(null)
@@ -81,12 +81,6 @@ export default function AdminDashboard() {
   useEffect(() => {
     loadData()
   }, [loadData])
-
-  // Memoize expensive computations - MUST be before any conditional returns
-  const pendingMembers = useMemo(() => 
-    members.filter(m => m.status === 'pending'), 
-    [members]
-  )
 
   type MembersSortKey = 'full_name' | 'email' | 'status' | 'role' | 'membership_level'
   const [membersSortKey, setMembersSortKey] = useState<MembersSortKey>('full_name')
@@ -138,7 +132,7 @@ export default function AdminDashboard() {
   )
 
   // Memoize callbacks to prevent unnecessary re-renders
-  const handleSetActiveTab = useCallback((tab: 'members' | 'pending' | 'resources' | 'events' | 'settings') => {
+  const handleSetActiveTab = useCallback((tab: 'members' | 'resources' | 'events' | 'settings') => {
     setActiveTab(tab)
   }, [])
 
@@ -399,16 +393,6 @@ export default function AdminDashboard() {
                 Members ({members.length})
               </button>
               <button
-                onClick={() => handleSetActiveTab('pending')}
-                className={`py-3 px-4 sm:py-4 sm:px-6 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap ${
-                  activeTab === 'pending'
-                    ? 'border-[#0d1e26] text-[#0d1e26]'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Pending Review ({pendingMembers.length})
-              </button>
-              <button
                 onClick={() => setActiveTab('resources')}
                 className={`py-3 px-4 sm:py-4 sm:px-6 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'resources'
@@ -442,85 +426,6 @@ export default function AdminDashboard() {
           </div>
 
           <div className="p-4 sm:p-6">
-            {activeTab === 'pending' && (
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-gray-900">Pending Review</h2>
-                {pendingMembers.length === 0 ? (
-                  <p className="text-gray-500">No members pending review.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {pendingMembers.map((member) => (
-                        <div key={member.id} className="bg-white rounded-lg p-4 border border-yellow-200">
-                          <div className="flex flex-col gap-3">
-                            <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="font-medium text-gray-900">{member.full_name || 'N/A'}</span>
-                                {member.invited_at && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                    Invited
-                                  </span>
-                                )}
-                              </div>
-                              <div className="text-sm text-gray-600 truncate" title={member.email}>{member.email}</div>
-                              {member.call_sign && (
-                                <div className="text-xs text-gray-500 mt-1">Call Sign: {member.call_sign}</div>
-                              )}
-                            </div>
-                            <div className="flex gap-2 flex-shrink-0">
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    const response = await fetch('/api/admin/members', {
-                                      method: 'PATCH',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ id: member.id, status: 'approved' }),
-                                    })
-                                    if (response.ok) {
-                                      loadData()
-                                    } else {
-                                      alert('Failed to approve member')
-                                    }
-                                  } catch (error) {
-                                    console.error('Error approving member:', error)
-                                    alert('Failed to approve member')
-                                  }
-                                }}
-                                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium"
-                              >
-                                Approve
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  if (!confirm('Are you sure you want to reject this member?')) return
-                                  try {
-                                    const response = await fetch('/api/admin/members', {
-                                      method: 'PATCH',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ id: member.id, status: 'rejected' }),
-                                    })
-                                    if (response.ok) {
-                                      loadData()
-                                    } else {
-                                      alert('Failed to reject member')
-                                    }
-                                  } catch (error) {
-                                    console.error('Error rejecting member:', error)
-                                    alert('Failed to reject member')
-                                  }
-                                }}
-                                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium"
-                              >
-                                Reject
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </div>
-            )}
-
             {activeTab === 'members' && (
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row justify-end gap-2">

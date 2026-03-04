@@ -821,6 +821,7 @@ export async function sendDiscussionDigestEmail(
   const discussionsUrl = `${appUrl}/discussions`
   
   const CATEGORY_LABELS: Record<string, string> = {
+    introduce_yourself: 'Introduce Yourself',
     aircraft_shares: 'Aircraft Shares / Block Time',
     instructor_availability: 'Instructor Availability',
     gear_for_sale: 'Gear for Sale',
