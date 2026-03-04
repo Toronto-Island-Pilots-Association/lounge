@@ -419,6 +419,41 @@ export async function sendInvitationWithPasswordEmail(
   })
 }
 
+/** Password reset email sent from TIPA (not Supabase). Uses Resend so the email is from your domain. */
+export async function sendPasswordResetEmail(
+  email: string,
+  resetLink: string
+) {
+  return sendEmail({
+    to: email,
+    subject: 'Reset your TIPA password',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #1f2937; margin-bottom: 20px;">Reset your password</h1>
+        <p style="color: #374151; line-height: 1.6;">
+          You requested a password reset for your Toronto Island Pilots Association (TIPA) account.
+        </p>
+        <p style="color: #374151; line-height: 1.6;">
+          Click the button below to set a new password. This link expires in about an hour.
+        </p>
+        <div style="margin: 30px 0; text-align: center;">
+          <a href="${resetLink}"
+             style="display: inline-block; background-color: #0d1e26; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+            Reset password
+          </a>
+        </div>
+        <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">
+          If you didn't request this, you can ignore this email. Your password will stay the same.
+        </p>
+        <p style="margin-top: 20px; color: #374151; line-height: 1.6;">
+          Best regards,<br>
+          <strong>The TIPA Team</strong>
+        </p>
+      </div>
+    `,
+  })
+}
+
 /** Reminder email for invited members who haven't logged in yet. Sends a new temporary password. */
 export async function sendInvitationReminderEmail(
   email: string,
