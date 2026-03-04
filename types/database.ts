@@ -54,6 +54,10 @@ export interface UserProfile {
   updated_at: string
   /** Set when the user was invited (admin or member invite); null for self-signup. */
   invited_at?: string | null
+  /** When the last invitation reminder was sent; used for 24h cooldown. */
+  last_reminder_sent_at?: string | null
+  /** Number of reminder emails sent (max 3). */
+  reminder_count?: number | null
   /** Server-computed trial end (ISO string). Set by admin members API from editable trial config. */
   trial_end?: string | null
   /** Latest payment summary from admin members API (amount, currency, payment_method). */

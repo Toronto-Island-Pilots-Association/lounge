@@ -61,10 +61,14 @@ export default function MemberDetailModal({
   member,
   onClose,
   onSave,
+  onResendReminder,
+  resendingMemberId,
 }: {
   member: UserProfile
   onClose: () => void
   onSave: (member: UserProfile, updates: Partial<UserProfile>) => void
+  onResendReminder?: (memberId: string) => void
+  resendingMemberId?: string | null
 }) {
   const [activeTab, setActiveTab] = useState<'overview' | 'edit' | 'membership' | 'activity'>('overview')
   const [cancellingStripe, setCancellingStripe] = useState(false)
@@ -294,8 +298,22 @@ export default function MemberDetailModal({
                         member.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                         'bg-red-100 text-red-800'
                       }`}>
-                        {member.status ? member.status.charAt(0).toUpperCase() + member.status.slice(1) : 'Pending'}
+                        {member.status === 'pending' && member.invited_at
+                          ? 'Invited'
+                          : member.status
+                            ? member.status.charAt(0).toUpperCase() + member.status.slice(1)
+                            : 'Pending'}
                       </span>
+                      {member.status === 'pending' && member.invited_at && (member.reminder_count ?? 0) < 3 && onResendReminder && (
+                        <button
+                          type="button"
+                          onClick={() => onResendReminder(member.id)}
+                          disabled={resendingMemberId === member.id}
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium disabled:opacity-50"
+                        >
+                          {resendingMemberId === member.id ? 'Sending…' : 'Resend reminder'}
+                        </button>
+                      )}
                       {member.status === 'expired' && member.membership_expires_at && (
                         <span className="text-xs text-amber-700">
                           Expired {new Date(member.membership_expires_at).toLocaleDateString('en-US', { timeZone: 'UTC' })}

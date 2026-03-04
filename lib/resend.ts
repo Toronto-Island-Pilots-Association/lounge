@@ -419,6 +419,60 @@ export async function sendInvitationWithPasswordEmail(
   })
 }
 
+/** Reminder email for invited members who haven't logged in yet. Sends a new temporary password. */
+export async function sendInvitationReminderEmail(
+  email: string,
+  name: string,
+  newTempPassword: string,
+  appUrl: string
+) {
+  const loginUrl = `${appUrl}/login`
+
+  return sendEmail({
+    to: email,
+    subject: 'Reminder: Complete Your TIPA Registration',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #1f2937; margin-bottom: 20px;">Reminder: Complete Your TIPA Registration</h1>
+        <p style="color: #374151; line-height: 1.6;">
+          Hi ${name},
+        </p>
+        <p style="color: #374151; line-height: 1.6;">
+          You were invited to join the Toronto Island Pilots Association (TIPA), but we haven't seen you log in yet. Here's a fresh way to get started:
+        </p>
+        <div style="background-color: #f0f9ff; border-left: 4px solid #0d1e26; padding: 16px; margin: 20px 0; border-radius: 4px;">
+          <p style="color: #374151; line-height: 1.6; margin: 0 0 12px 0;">
+            <strong>Your new temporary password:</strong>
+          </p>
+          <div style="background-color: #ffffff; border: 2px solid #0d1e26; border-radius: 6px; padding: 12px; font-family: monospace; font-size: 18px; font-weight: bold; text-align: center; letter-spacing: 2px; color: #0d1e26;">
+            ${newTempPassword}
+          </div>
+          <p style="color: #374151; line-height: 1.6; margin: 12px 0 0 0; font-size: 14px;">
+            Please change this password after your first login for security.
+          </p>
+        </div>
+        <p style="color: #374151; line-height: 1.6;">
+          Log in with:
+        </p>
+        <ul style="color: #374151; line-height: 1.8; margin-left: 20px;">
+          <li><strong>Email:</strong> ${email}</li>
+          <li><strong>Password:</strong> The new temporary password above</li>
+        </ul>
+        <div style="margin: 30px 0; text-align: center;">
+          <a href="${loginUrl}"
+             style="display: inline-block; background-color: #0d1e26; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+            Log In to Your Account
+          </a>
+        </div>
+        <p style="margin-top: 20px; color: #374151; line-height: 1.6;">
+          Best regards,<br>
+          <strong>The TIPA Team</strong>
+        </p>
+      </div>
+    `,
+  })
+}
+
 export async function sendNewMemberNotificationToAdmins(
   memberEmail: string,
   memberName: string | null,
