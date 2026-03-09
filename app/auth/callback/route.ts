@@ -17,6 +17,32 @@ export async function GET(request: Request) {
       return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(error.message)}`, requestUrl.origin))
     }
 
+    // If user signed in with Google and granted calendar scope, store refresh token for RSVP → Calendar sync
+    const session = data.session
+    const isGoogle = data.user?.app_metadata?.provider === 'google' ||
+      data.user?.identities?.some((id: { provider?: string }) => id.provider === 'google')
+    if (session?.provider_refresh_token && data.user?.id && isGoogle) {
+      try {
+        const { encryptCalendarToken } = await import('@/lib/calendar-crypto')
+        const key = process.env.GOOGLE_CALENDAR_ENCRYPTION_KEY
+        if (key) {
+          const encrypted = encryptCalendarToken(session.provider_refresh_token, key)
+          await supabase
+            .from('user_google_calendar_tokens')
+            .upsert(
+              {
+                user_id: data.user.id,
+                refresh_token_encrypted: encrypted,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: 'user_id' }
+            )
+        }
+      } catch (calendarTokenErr) {
+        console.error('Failed to store Google Calendar token:', calendarTokenErr)
+      }
+    }
+
     if (data.user) {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
       let adminClient = null

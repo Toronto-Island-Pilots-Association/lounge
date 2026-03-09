@@ -43,7 +43,7 @@ ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS reminder_count INT NOT NULL D
 COMMENT ON COLUMN public.user_profiles.last_reminder_sent_at IS 'When the last invitation reminder email was sent (for rate limiting).';
 COMMENT ON COLUMN public.user_profiles.reminder_count IS 'Number of reminder emails sent after the initial invite (max 3).';
 
--- Create resources table
+-- Create resources table (Announcements with categories)
 CREATE TABLE IF NOT EXISTS resources (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   title TEXT NOT NULL,
@@ -51,6 +51,10 @@ CREATE TABLE IF NOT EXISTS resources (
   url TEXT,
   content TEXT,
   resource_type TEXT NOT NULL DEFAULT 'link' CHECK (resource_type IN ('link', 'document', 'video', 'other')),
+  category TEXT NOT NULL DEFAULT 'other' CHECK (category IN ('tipa_newsletters', 'airport_updates', 'reminder', 'other')),
+  image_url TEXT DEFAULT NULL,
+  file_url TEXT DEFAULT NULL,
+  file_name TEXT DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -202,7 +206,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create function to automatically create user profile on signup (aligned with migration 20250303120000)
+-- Create function to automatically create user profile on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -218,10 +222,9 @@ DECLARE
   v_role TEXT;
   v_membership_level TEXT;
   v_member_number TEXT;
-  v_is_student_pilot BOOLEAN;
-  v_flight_school TEXT;
-  v_instructor_name TEXT;
 BEGIN
+  -- Helper function to convert empty strings to NULL
+  -- NULLIF converts empty string to NULL, then COALESCE handles NULL
   v_full_name := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'full_name', '')), '');
   v_first_name := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'first_name', '')), '');
   v_last_name := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'last_name', '')), '');
@@ -231,23 +234,34 @@ BEGIN
   v_call_sign := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'call_sign', '')), '');
   v_how_often_fly_from_ytz := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'how_often_fly_from_ytz', '')), '');
   v_how_did_you_hear := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'how_did_you_hear', '')), '');
-  v_role := COALESCE(NULLIF(LOWER(TRIM(COALESCE(NEW.raw_user_meta_data->>'role', ''))), ''), 'member');
+  -- Ensure role and membership_level match the CHECK constraints exactly
+  v_role := COALESCE(
+    NULLIF(LOWER(TRIM(COALESCE(NEW.raw_user_meta_data->>'role', ''))), ''),
+    'member'
+  );
+  -- Ensure it's one of the valid values
   IF v_role NOT IN ('member', 'admin') THEN
     v_role := 'member';
   END IF;
-  v_membership_level := COALESCE(NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'membership_level', '')), ''), 'Associate');
+  
+  v_membership_level := COALESCE(
+    NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'membership_level', '')), ''),
+    'Associate'
+  );
+  -- Ensure it's one of the valid values
   IF v_membership_level NOT IN ('Full', 'Student', 'Associate', 'Corporate', 'Honorary') THEN
     v_membership_level := 'Associate';
   END IF;
-  v_member_number := public.generate_member_number();
-  v_is_student_pilot := COALESCE((NEW.raw_user_meta_data->>'is_student_pilot')::boolean, false);
-  v_flight_school := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'flight_school', '')), '');
-  v_instructor_name := NULLIF(TRIM(COALESCE(NEW.raw_user_meta_data->>'instructor_name', '')), '');
 
+  -- Generate unique member number
+  v_member_number := public.generate_member_number();
+
+  -- Ensure email is not null (should never happen, but safety check)
   IF NEW.email IS NULL OR TRIM(NEW.email) = '' THEN
     RAISE EXCEPTION 'Email cannot be null or empty';
   END IF;
 
+  -- Insert user profile with error handling
   INSERT INTO public.user_profiles (
     id,
     email,
@@ -295,7 +309,11 @@ BEGIN
   RETURN NEW;
 EXCEPTION
   WHEN OTHERS THEN
+    -- Log the error but don't fail the user creation
+    -- This allows the user to be created even if profile creation fails
+    -- We'll catch this error in the application and create the profile manually
     RAISE WARNING 'Error creating user profile for user %: %', NEW.id, SQLERRM;
+    -- Return NEW to allow user creation to proceed
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

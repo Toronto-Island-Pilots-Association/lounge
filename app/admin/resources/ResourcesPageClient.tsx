@@ -3,8 +3,15 @@
 import { useEffect, useState, useCallback, Suspense } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { Resource } from '@/types/database'
+import { Resource, ResourceCategory } from '@/types/database'
 import Loading from '@/components/Loading'
+
+const CATEGORY_LABELS: Record<ResourceCategory, string> = {
+  tipa_newsletters: 'TIPA Newsletters',
+  airport_updates: 'Airport Updates',
+  reminder: 'Reminder',
+  other: 'Other',
+}
 import {
   Drawer,
   DrawerContent,
@@ -110,7 +117,7 @@ export default function ResourcesPageClient() {
   }
 
   if (loading) {
-    return <Loading message="Loading YTZ Flying Updates..." />
+    return <Loading message="Loading Announcements..." />
   }
 
   return (
@@ -123,7 +130,7 @@ export default function ResourcesPageClient() {
           }}
           className="bg-[#0d1e26] text-white px-4 py-2 rounded-md hover:bg-[#0a171c] text-sm w-full sm:w-auto"
         >
-          Add Update
+          Add Announcement
         </button>
       </div>
       <div className="space-y-4">
@@ -157,9 +164,16 @@ export default function ResourcesPageClient() {
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-3 mb-2">
-                      <h3 className="text-lg sm:text-xl font-semibold text-gray-900 flex-1">
-                        {resource.title}
-                      </h3>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
+                          {resource.title}
+                        </h3>
+                        {resource.category && (
+                          <span className="inline-block mt-1 text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                            {CATEGORY_LABELS[resource.category as ResourceCategory] ?? resource.category}
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <Link
                           href={`/resources/${resource.id}`}
@@ -399,7 +413,7 @@ function ResourceFormModal({
                 placeholder={
                   isExternalLink
                     ? "Optional: Add a description or additional information about this external link..."
-                    : "Enter the YTZ Flying Update content. The beginning will be automatically used as a preview on the YTZ Flying Updates list page..."
+                    : "Enter the announcement content. The beginning will be automatically used as a preview on the Announcements list page..."
                 }
               />
             </Suspense>

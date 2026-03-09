@@ -14,7 +14,7 @@ import {
 
 const NAV_ITEMS = [
   { href: '/admin/members', label: 'Members', icon: Users },
-  { href: '/admin/resources', label: 'YTZ Flying Updates', icon: FileText },
+  { href: '/admin/resources', label: 'Announcements', icon: FileText },
   { href: '/admin/events', label: 'Events', icon: Calendar },
   { href: '/admin/payments', label: 'Payments', icon: CreditCard },
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },

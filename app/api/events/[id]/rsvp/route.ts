@@ -50,6 +50,39 @@ export async function POST(
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
+    // Auto-add event to user's Google Calendar if they authorized calendar sync (Gmail sign-in)
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const eventPageUrl = `${appUrl}/events`
+    ;(async () => {
+      try {
+        const { data: tokenRow } = await supabase
+          .from('user_google_calendar_tokens')
+          .select('refresh_token_encrypted')
+          .eq('user_id', user.id)
+          .single()
+        if (!tokenRow?.refresh_token_encrypted) return
+
+        const { data: eventData } = await supabase
+          .from('events')
+          .select('id, title, description, location, start_time, end_time')
+          .eq('id', eventId)
+          .single()
+        if (!eventData) return
+
+        const { addEventToUserCalendar } = await import('@/lib/google-calendar')
+        await addEventToUserCalendar(tokenRow.refresh_token_encrypted, {
+          title: eventData.title,
+          description: eventData.description,
+          location: eventData.location,
+          start_time: eventData.start_time,
+          end_time: eventData.end_time,
+          event_page_url: eventPageUrl,
+        })
+      } catch (err) {
+        console.error('Calendar sync after RSVP:', err)
+      }
+    })()
+
     return NextResponse.json({ message: 'RSVP successful' })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'An error occurred'
