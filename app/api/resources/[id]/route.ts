@@ -1,6 +1,9 @@
 import { requireAuth, requireAdmin } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import type { ResourceCategory } from '@/types/database'
+
+const VALID_ANNOUNCEMENT_CATEGORIES: ResourceCategory[] = ['tipa_newsletters', 'airport_updates', 'reminder', 'other']
 
 // Helper function to get signed URL for resource file/image
 async function getResourceFileUrl(supabase: any, fileUrl: string | null): Promise<string | null> {
@@ -79,6 +82,13 @@ export async function PATCH(
     await requireAdmin()
     const { id } = await params
     const body = await request.json()
+
+    if (body.category !== undefined && !VALID_ANNOUNCEMENT_CATEGORIES.includes(body.category)) {
+      return NextResponse.json(
+        { error: `Invalid category. Must be one of: ${VALID_ANNOUNCEMENT_CATEGORIES.join(', ')}` },
+        { status: 400 }
+      )
+    }
 
     const supabase = await createClient()
 

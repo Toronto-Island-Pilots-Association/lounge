@@ -179,7 +179,15 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
             {/* Thread */}
             <div className="bg-white shadow rounded-lg p-4 sm:p-6 mb-4 sm:mb-6 relative">
           {(thread.created_by === user.id && thread.created_by !== null) || user.profile.role === 'admin' ? (
-            <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
+            <div className="absolute top-4 right-4 sm:top-6 sm:right-6 flex items-center gap-2">
+              {thread.created_by === user.id && thread.created_by !== null ? (
+                <Link
+                  href={`/discussions/${id}/edit`}
+                  className="text-sm text-gray-600 hover:text-[#0d1e26] font-medium"
+                >
+                  Edit
+                </Link>
+              ) : null}
               <DeleteThreadButton
                 threadId={id}
                 isOwner={thread.created_by === user.id && thread.created_by !== null}
@@ -221,7 +229,14 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
               <div className={`text-sm font-medium ${isThreadAuthorDeleted ? 'text-gray-600 italic' : 'text-gray-900'}`}>
                 {threadDisplayName}
               </div>
-              <div className="text-xs text-gray-500">{formatDetailDate(threadWithAuthor.created_at)}</div>
+              <div className="text-xs text-gray-500 flex items-center gap-2 flex-wrap">
+                <span>{formatDetailDate(threadWithAuthor.created_at)}</span>
+                {thread.updated_at && thread.created_at && new Date(thread.updated_at).getTime() - new Date(thread.created_at).getTime() > 60 * 1000 && (
+                  <span className="text-gray-400" title={formatDetailDate(thread.updated_at)}>
+                    (edited)
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
