@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Loading from '@/components/Loading'
+import PasswordInput from '@/components/PasswordInput'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -168,10 +169,9 @@ export default function LoginPage() {
                     Forgot password?
                   </Link>
                 </div>
-                <input
+                <PasswordInput
                   id="password"
                   name="password"
-                  type="password"
                   autoComplete="current-password"
                   required
                   className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"

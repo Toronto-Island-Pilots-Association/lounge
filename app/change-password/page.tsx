@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Loading from '@/components/Loading'
+import PasswordInput from '@/components/PasswordInput'
 
 function ChangePasswordContent() {
   const [passwordError, setPasswordError] = useState<string | null>(null)
@@ -174,8 +175,7 @@ function ChangePasswordContent() {
                 >
                   Current Password
                 </label>
-                <input
-                  type="password"
+                <PasswordInput
                   name="currentPassword"
                   id="currentPassword"
                   value={passwordData.currentPassword}
@@ -191,8 +191,7 @@ function ChangePasswordContent() {
                 >
                   New Password
                 </label>
-                <input
-                  type="password"
+                <PasswordInput
                   name="newPassword"
                   id="newPassword"
                   value={passwordData.newPassword}
@@ -212,8 +211,7 @@ function ChangePasswordContent() {
                 >
                   Confirm New Password
                 </label>
-                <input
-                  type="password"
+                <PasswordInput
                   name="confirmPassword"
                   id="confirmPassword"
                   value={passwordData.confirmPassword}
