@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Loading from '@/components/Loading'
+import PasswordInput from '@/components/PasswordInput'
 
 export default function ResetPasswordPage() {
   const [newPassword, setNewPassword] = useState('')
@@ -172,10 +173,9 @@ export default function ResetPasswordPage() {
                 >
                   New password
                 </label>
-                <input
+                <PasswordInput
                   id="newPassword"
                   name="newPassword"
-                  type="password"
                   autoComplete="new-password"
                   required
                   minLength={8}
@@ -195,10 +195,9 @@ export default function ResetPasswordPage() {
                 >
                   Confirm new password
                 </label>
-                <input
+                <PasswordInput
                   id="confirmPassword"
                   name="confirmPassword"
-                  type="password"
                   autoComplete="new-password"
                   required
                   minLength={8}
