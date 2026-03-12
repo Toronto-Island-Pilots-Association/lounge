@@ -662,6 +662,7 @@ export async function sendNewMemberNotificationToAdmins(
 export async function sendMemberApprovalEmail(email: string, name: string | null) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
   const dashboardUrl = `${appUrl}/dashboard`
+  const introduceYourselfUrl = `${appUrl}/discussions?category=introduce_yourself`
 
   return sendEmail({
     to: email,
@@ -683,11 +684,21 @@ export async function sendMemberApprovalEmail(email: string, name: string | null
           <li>Stay informed on advocacy efforts for GA at CYTZ</li>
         </ul>
         <p style="margin: 30px 0;">
-          <a href="${dashboardUrl}" 
+          <a href="${dashboardUrl}"
              style="display: inline-block; padding: 12px 24px; background-color: #0d1e26; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
             Access Your Dashboard
           </a>
         </p>
+        <div style="margin: 30px 0; padding: 20px; background-color: #f0f9ff; border-left: 4px solid #0d1e26; border-radius: 4px;">
+          <p style="color: #1f2937; font-weight: 600; margin: 0 0 8px 0;">✈️ Say hello to the community!</p>
+          <p style="color: #374151; line-height: 1.6; margin: 0 0 16px 0;">
+            Introduce yourself in Hangar Talk — tell us about your flying background, what you fly, and what brings you to CYTZ.
+          </p>
+          <a href="${introduceYourselfUrl}"
+             style="display: inline-block; padding: 10px 20px; background-color: #ffffff; color: #0d1e26; text-decoration: none; border-radius: 6px; font-weight: 600; border: 2px solid #0d1e26;">
+            Post an Introduction
+          </a>
+        </div>
         <p style="margin-top: 30px; color: #374151; line-height: 1.6;">
           We look forward to seeing you at our events and working together to support general aviation at Billy Bishop Toronto City Airport.
         </p>
