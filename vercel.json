@@ -8,6 +8,10 @@
     {
       "path": "/api/cron/expire-members",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/nudge-pending-members",
+      "schedule": "0 10 * * 3"
     }
   ]
 }
