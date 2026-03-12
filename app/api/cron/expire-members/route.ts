@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { sendMembershipExpiredEmail } from '@/lib/resend'
 import { NextResponse } from 'next/server'
 
 // This endpoint should be protected with a secret token or Vercel Cron
@@ -80,6 +81,19 @@ export async function GET(request: Request) {
       memberIds: updatedMembers?.map(m => m.id),
       emails: updatedMembers?.map(m => m.email),
     })
+
+    // Notify each expired member
+    if (updatedMembers && updatedMembers.length > 0) {
+      await Promise.allSettled(
+        updatedMembers
+          .filter(m => m.email)
+          .map(m =>
+            sendMembershipExpiredEmail(m.email, m.full_name).catch(err =>
+              console.error(`Failed to send expiry email to ${m.email}:`, err)
+            )
+          )
+      )
+    }
 
     return NextResponse.json({
       success: true,

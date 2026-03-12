@@ -889,6 +889,40 @@ export async function sendReplyNotificationEmail(
   })
 }
 
+export async function sendMembershipExpiredEmail(email: string, name: string | null) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const renewUrl = `${appUrl}/membership`
+
+  return sendEmail({
+    to: email,
+    subject: 'Your TIPA Membership Has Expired',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #1f2937; margin-bottom: 20px;">Your TIPA Membership Has Expired</h1>
+        <p style="color: #374151; line-height: 1.6;">
+          Hi ${name || 'Member'},
+        </p>
+        <p style="color: #374151; line-height: 1.6;">
+          Your Toronto Island Pilots Association membership has expired. To continue enjoying access to member resources, events, and the Hangar Talk community, please renew your membership.
+        </p>
+        <p style="margin: 30px 0;">
+          <a href="${renewUrl}"
+             style="display: inline-block; padding: 12px 24px; background-color: #0d1e26; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
+            Renew Your Membership
+          </a>
+        </p>
+        <p style="color: #374151; line-height: 1.6;">
+          If you have any questions or believe this is an error, please reply to this email or contact us directly.
+        </p>
+        <p style="margin-top: 20px; color: #374151; line-height: 1.6;">
+          Best regards,<br>
+          <strong>The TIPA Team</strong>
+        </p>
+      </div>
+    `,
+  })
+}
+
 export async function sendDiscussionDigestEmail(
   email: string,
   name: string,

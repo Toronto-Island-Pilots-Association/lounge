@@ -277,9 +277,7 @@ export async function POST(request: Request) {
 
             if (admins && admins.length > 0) {
               const adminEmails = admins.map(a => a.email).filter(Boolean)
-              
-              // Send notification to each admin (non-blocking but properly handled)
-              Promise.all(
+              const results = await Promise.all(
                 adminEmails.map(adminEmail =>
                   sendNewMemberNotificationToAdmins(
                     profile.email,
@@ -312,12 +310,9 @@ export async function POST(request: Request) {
                     return { success: false, error: err }
                   })
                 )
-              ).then(results => {
-                const successCount = results.filter(r => r?.success !== false).length
-                console.log(`Admin notifications sent: ${successCount}/${adminEmails.length} successful`)
-              }).catch(err => {
-                console.error('Error sending admin notifications:', err)
-              })
+              )
+              const successCount = results.filter(r => r?.success !== false).length
+              console.log(`Admin notifications sent: ${successCount}/${adminEmails.length} successful`)
             } else {
               console.warn('No admin emails found to notify about new member')
             }
@@ -337,9 +332,7 @@ export async function POST(request: Request) {
 
             if (admins && admins.length > 0) {
               const adminEmails = admins.map(a => a.email).filter(Boolean)
-              
-              // Send notification to each admin (non-blocking but properly handled)
-              Promise.all(
+              const results = await Promise.all(
                 adminEmails.map(adminEmail =>
                   sendNewMemberNotificationToAdmins(
                     profile.email,
@@ -372,12 +365,9 @@ export async function POST(request: Request) {
                     return { success: false, error: err }
                   })
                 )
-              ).then(results => {
-                const successCount = results.filter(r => r?.success !== false).length
-                console.log(`Admin notifications sent: ${successCount}/${adminEmails.length} successful`)
-              }).catch(err => {
-                console.error('Error sending admin notifications:', err)
-              })
+              )
+              const successCount = results.filter(r => r?.success !== false).length
+              console.log(`Admin notifications sent: ${successCount}/${adminEmails.length} successful`)
             } else {
               console.warn('No admin emails found to notify about new member')
             }
