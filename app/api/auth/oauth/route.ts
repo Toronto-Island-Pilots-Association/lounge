@@ -13,8 +13,6 @@ export async function GET(request: Request) {
       provider: provider as 'google',
       options: {
         redirectTo,
-        // Request calendar scope so we can add RSVP events to the user's Google Calendar
-        scopes: provider === 'google' ? 'https://www.googleapis.com/auth/calendar.events' : undefined,
       },
     })
 

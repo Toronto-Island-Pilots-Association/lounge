@@ -85,6 +85,7 @@ export default function MembersPageClient() {
   const [showInviteForm, setShowInviteForm] = useState(false)
   const [showBulkInviteForm, setShowBulkInviteForm] = useState(false)
   const [resendingMemberId, setResendingMemberId] = useState<string | null>(null)
+  const [approvingAll, setApprovingAll] = useState(false)
   const [sortKey, setSortKey] = useState<MembersSortKey>('created_at')
   const [sortDir, setSortDir] = useState<SortDirection>('desc')
   const [page, setPage] = useState(1)
@@ -251,6 +252,37 @@ export default function MembersPageClient() {
     }
   }
 
+  const handleApproveAll = async () => {
+    const pendingMembers = members.filter((m) => m.status === 'pending')
+    if (pendingMembers.length === 0) return
+    if (!confirm(`Approve all ${pendingMembers.length} pending member${pendingMembers.length === 1 ? '' : 's'}?`)) return
+
+    setApprovingAll(true)
+    try {
+      const results = await Promise.allSettled(
+        pendingMembers.map((m) =>
+          fetch('/api/admin/members', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: m.id, status: 'approved' }),
+          })
+        )
+      )
+      const failed = results.filter(
+        (r) => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.ok)
+      ).length
+      await loadData()
+      if (failed > 0) {
+        alert(`Approved ${pendingMembers.length - failed} members. ${failed} failed.`)
+      }
+    } catch (error) {
+      console.error('Error approving all members:', error)
+      alert('Failed to approve all members')
+    } finally {
+      setApprovingAll(false)
+    }
+  }
+
   const handleResendReminder = async (memberId: string) => {
     setResendingMemberId(memberId)
     try {
@@ -294,6 +326,15 @@ export default function MembersPageClient() {
           />
         </div>
         <div className="flex flex-row flex-wrap justify-end gap-2 shrink-0">
+        {members.some((m) => m.status === 'pending') && (
+          <button
+            onClick={handleApproveAll}
+            disabled={approvingAll}
+            className="bg-green-600 text-white px-2 py-1.5 sm:px-4 sm:py-2 rounded-md hover:bg-green-700 disabled:opacity-50 text-xs sm:text-sm"
+          >
+            {approvingAll ? 'Approving...' : `Approve All Pending (${members.filter((m) => m.status === 'pending').length})`}
+          </button>
+        )}
         <button
           onClick={async () => {
             try {
