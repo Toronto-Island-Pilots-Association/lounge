@@ -425,7 +425,7 @@ export async function POST(request: Request) {
       }
     }
 
-    Sentry.metrics.count('member.signup', 1, { tags: { membership_level: membershipLevel } })
+    Sentry.metrics.count('member.signup', 1, { attributes: { membership_level: membershipLevel } })
 
     return NextResponse.json({
       user: data.user,

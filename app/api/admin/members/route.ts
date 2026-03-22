@@ -212,7 +212,7 @@ export async function PATCH(request: Request) {
     const statusChangedToApproved = currentMember.status !== 'approved' && updatedMember.status === 'approved'
 
     if (statusChangedToApproved) {
-      Sentry.metrics.count('member.approved', 1, { tags: { membership_level: updatedMember.membership_level } })
+      Sentry.metrics.count('member.approved', 1, { attributes: { membership_level: updatedMember.membership_level } })
 
       // Send approval email
       const memberName = updatedMember.full_name || updatedMember.first_name || null

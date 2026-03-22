@@ -114,7 +114,7 @@ export async function POST(request: Request) {
 
     const session = await stripe.checkout.sessions.create(sessionParams)
 
-    Sentry.metrics.count('payment.checkout_initiated', 1, { tags: { membership_level: level } })
+    Sentry.metrics.count('payment.checkout_initiated', 1, { attributes: { membership_level: level } })
 
     return NextResponse.json({
       sessionId: session.id,

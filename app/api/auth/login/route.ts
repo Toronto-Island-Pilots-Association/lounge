@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     })
 
     if (error) {
-      Sentry.metrics.count('member.login', 1, { tags: { result: 'failure' } })
+      Sentry.metrics.count('member.login', 1, { attributes: { result: 'failure' } })
       return NextResponse.json({ error: error.message }, { status: 401 })
     }
 
@@ -74,7 +74,7 @@ export async function POST(request: Request) {
       }
     }
 
-    Sentry.metrics.count('member.login', 1, { tags: { result: 'success' } })
+    Sentry.metrics.count('member.login', 1, { attributes: { result: 'success' } })
     return NextResponse.json({ user: data.user, requiresPasswordChange: false })
   } catch (error) {
     console.error('Login error:', error)

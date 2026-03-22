@@ -120,7 +120,7 @@ export async function POST(request: Request) {
             status: 'completed',
           })
 
-        Sentry.metrics.count('payment.subscription_purchased', 1, { tags: { membership_level: level } })
+        Sentry.metrics.count('payment.subscription_purchased', 1, { attributes: { membership_level: level } })
 
         // Sync subscription status (will update status field based on Stripe subscription state)
         await syncSubscriptionStatus(userId, subscriptionId)
