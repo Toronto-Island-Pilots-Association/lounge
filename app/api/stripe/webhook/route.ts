@@ -1,5 +1,6 @@
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getStripeInstance, isStripeEnabled } from '@/lib/stripe'
+import * as Sentry from '@sentry/nextjs'
 import { sendSubscriptionConfirmationEmail } from '@/lib/resend'
 import { syncSubscriptionBySubscriptionId, syncSubscriptionStatus } from '@/lib/subscription-sync'
 import { getMembershipFeeForLevel, getMembershipExpiresAtFromSubscription, type MembershipLevelKey } from '@/lib/settings'
@@ -118,6 +119,8 @@ export async function POST(request: Request) {
             stripe_payment_intent_id: paymentIntentId,
             status: 'completed',
           })
+
+        Sentry.metrics.count('payment.subscription_purchased', 1, { tags: { membership_level: level } })
 
         // Sync subscription status (will update status field based on Stripe subscription state)
         await syncSubscriptionStatus(userId, subscriptionId)

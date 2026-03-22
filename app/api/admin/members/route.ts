@@ -1,5 +1,6 @@
 import { requireAdmin } from '@/lib/auth'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import * as Sentry from '@sentry/nextjs'
 import { sendMemberApprovalEmail } from '@/lib/resend'
 import { appendMemberToSheet } from '@/lib/google-sheets'
 import { getTrialEndDateAsync, getMembershipFeeForLevel } from '@/lib/settings'
@@ -211,6 +212,8 @@ export async function PATCH(request: Request) {
     const statusChangedToApproved = currentMember.status !== 'approved' && updatedMember.status === 'approved'
 
     if (statusChangedToApproved) {
+      Sentry.metrics.count('member.approved', 1, { tags: { membership_level: updatedMember.membership_level } })
+
       // Send approval email
       const memberName = updatedMember.full_name || updatedMember.first_name || null
       sendMemberApprovalEmail(updatedMember.email, memberName).catch(err => {

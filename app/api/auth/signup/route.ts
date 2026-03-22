@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { sendWelcomeEmail, sendNewMemberNotificationToAdmins } from '@/lib/resend'
 import { NextResponse } from 'next/server'
+import * as Sentry from '@sentry/nextjs'
 
 export async function POST(request: Request) {
   try {
@@ -423,6 +424,8 @@ export async function POST(request: Request) {
         // Don't fail the signup if email fails
       }
     }
+
+    Sentry.metrics.count('member.signup', 1, { tags: { membership_level: membershipLevel } })
 
     return NextResponse.json({
       user: data.user,

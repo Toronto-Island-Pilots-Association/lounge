@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import * as Sentry from '@sentry/nextjs'
 
 export async function POST(request: Request) {
   try {
@@ -20,6 +21,7 @@ export async function POST(request: Request) {
     })
 
     if (error) {
+      Sentry.metrics.count('member.login', 1, { tags: { result: 'failure' } })
       return NextResponse.json({ error: error.message }, { status: 401 })
     }
 
@@ -72,6 +74,7 @@ export async function POST(request: Request) {
       }
     }
 
+    Sentry.metrics.count('member.login', 1, { tags: { result: 'success' } })
     return NextResponse.json({ user: data.user, requiresPasswordChange: false })
   } catch (error) {
     console.error('Login error:', error)

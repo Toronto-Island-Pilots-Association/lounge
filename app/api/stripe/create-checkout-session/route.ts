@@ -1,6 +1,7 @@
 import { requireAuthIncludingPending } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { getStripeInstance, isStripeEnabled } from '@/lib/stripe'
+import * as Sentry from '@sentry/nextjs'
 import {
   getMembershipFeeForLevel,
   getTrialEndDateAsync,
@@ -112,6 +113,8 @@ export async function POST(request: Request) {
     ]
 
     const session = await stripe.checkout.sessions.create(sessionParams)
+
+    Sentry.metrics.count('payment.checkout_initiated', 1, { tags: { membership_level: level } })
 
     return NextResponse.json({
       sessionId: session.id,
