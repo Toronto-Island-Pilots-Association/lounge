@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter_Tight } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import NavbarWrapper from "@/components/NavbarWrapper";
 
@@ -30,6 +31,7 @@ export default function RootLayout({
         <NavbarWrapper />
         {children}
         <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );

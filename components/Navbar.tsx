@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { UserProfile, getMembershipLevelLabel } from '@/types/database'
+import { createClient } from '@/lib/supabase/client'
 
 export default function Navbar() {
   const [user, setUser] = useState<any>(null)
@@ -39,8 +40,7 @@ export default function Navbar() {
           const data = await response.json()
           setProfile(data.profile)
           setUser({ id: data.profile.id, email: data.profile.email })
-          
-          // Fetch pending count if admin (only on initial load)
+
           if (shouldFetchPendingCount && data.profile?.role === 'admin') {
             fetchPendingCount()
           } else if (data.profile?.role !== 'admin') {
@@ -65,16 +65,23 @@ export default function Navbar() {
       }
     }
 
-    // Initial load - fetch pending count
+    // Initial load
     loadUserData(true)
 
-    // Poll for auth state changes every 5 seconds (don't fetch pending count)
-    const authCheckInterval = setInterval(() => {
-      loadUserData(false)
-    }, 5000)
+    // React to auth changes (sign in / sign out) without polling
+    const supabase = createClient()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN') loadUserData(true)
+      if (event === 'SIGNED_OUT') {
+        setProfile(null)
+        setUser(null)
+        setPendingCount(0)
+        setNotificationCount(0)
+      }
+    })
 
     return () => {
-      clearInterval(authCheckInterval)
+      subscription.unsubscribe()
     }
   }, [])
 
