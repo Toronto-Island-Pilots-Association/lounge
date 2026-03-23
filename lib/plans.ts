@@ -26,6 +26,8 @@ export type PlanFeatures = {
   analytics: boolean
   customDomain: boolean
   membershipTiers: boolean
+  // Branding: when false, "Powered by ClubLounge" badge is shown
+  hideBranding: boolean
 }
 
 export type PlanDefinition = {
@@ -52,6 +54,7 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
       analytics: false,
       customDomain: false,
       membershipTiers: false,
+      hideBranding: false,
     },
   },
   starter: {
@@ -70,6 +73,7 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
       analytics: false,
       customDomain: true,
       membershipTiers: false,
+      hideBranding: true,
     },
   },
   community: {
@@ -88,6 +92,7 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
       analytics: true,
       customDomain: true,
       membershipTiers: false,
+      hideBranding: true,
     },
   },
   club_pro: {
@@ -106,6 +111,7 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
       analytics: true,
       customDomain: true,
       membershipTiers: true,
+      hideBranding: true,
     },
   },
 }

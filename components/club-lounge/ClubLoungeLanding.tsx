@@ -386,6 +386,9 @@ export function ClubLoungeLanding({
                 <span className="cl-check">✓</span>Custom domain
               </li>
               <li>
+                <span className="cl-check">✓</span>Remove ClubLounge branding
+              </li>
+              <li>
                 <span className="cl-cross">—</span>Discussions
               </li>
               <li>

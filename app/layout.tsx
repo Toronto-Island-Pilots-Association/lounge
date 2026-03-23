@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { headers } from "next/headers";
 import "./globals.css";
 import NavbarWrapper from "@/components/NavbarWrapper";
+import PoweredByBadge from "@/components/PoweredByBadge";
 
 const interTight = Inter_Tight({
   variable: "--font-inter-tight",
@@ -35,6 +36,7 @@ export default async function RootLayout({
       >
         {isOrg && <NavbarWrapper />}
         {children}
+        {isOrg && <PoweredByBadge />}
         <SpeedInsights />
         <Analytics />
       </body>
