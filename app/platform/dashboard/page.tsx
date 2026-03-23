@@ -18,7 +18,6 @@ export default async function PlatformDashboard() {
     .from('org_memberships')
     .select('org_id, role, status')
     .eq('user_id', user.id)
-    .in('status', ['approved', 'active'])
 
   const membershipsForUser = (memberProfiles ?? []).filter((p: any) => p.org_id)
   const orgIds = [...new Set(membershipsForUser.map((m: any) => m.org_id))]
@@ -103,13 +102,21 @@ export default async function PlatformDashboard() {
                               {url}
                             </a>
                           </div>
-                          <a
-                            href={url}
-                            target="_blank"
-                            className="shrink-0 border rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
-                          >
-                            Open
-                          </a>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Link
+                              href={`/platform/dashboard/${org.id}/billing`}
+                              className="border rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
+                            >
+                              Billing
+                            </Link>
+                            <a
+                              href={url}
+                              target="_blank"
+                              className="border rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
+                            >
+                              Open
+                            </a>
+                          </div>
                         </div>
 
                         <div className="pt-4 border-t flex items-center justify-between">

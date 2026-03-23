@@ -87,11 +87,13 @@ export function slugify(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
-/** Build the public URL for an org, using custom domain if set. */
+/** Build the public URL for an org, using custom domain if set (prod only). */
 export function buildOrgUrl(org: { subdomain: string; custom_domain?: string | null }): string {
-  const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
-  const port = process.env.NODE_ENV === 'development' ? ':3000' : ''
-  if (org.custom_domain) return `${protocol}://${org.custom_domain}${port}`
+  const isDev = process.env.NODE_ENV === 'development'
+  const protocol = isDev ? 'http' : 'https'
+  const port = isDev ? ':3000' : ''
+  // In dev, always use the subdomain so custom domains (which aren't proxied locally) don't break routing
+  if (!isDev && org.custom_domain) return `https://${org.custom_domain}`
   return `${protocol}://${org.subdomain}.${ROOT_DOMAIN}${port}`
 }
 
