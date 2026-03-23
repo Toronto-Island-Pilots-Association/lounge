@@ -71,16 +71,44 @@ export async function POST(request: Request) {
       }
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const host = request.headers.get('host') ?? 'localhost:3000'
+    const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
+    const baseUrl = `${protocol}://${host}`
+
+    // Look up the org's Stripe Connect account (if configured)
+    const orgId = request.headers.get('x-org-id')
+    let connectedAccountId: string | null = null
+    if (orgId) {
+      const { createServiceRoleClient } = await import('@/lib/supabase/server')
+      const db = createServiceRoleClient()
+      const { data: org } = await db
+        .from('organizations')
+        .select('stripe_account_id, stripe_onboarding_complete')
+        .eq('id', orgId)
+        .maybeSingle()
+      if (org?.stripe_onboarding_complete && org?.stripe_account_id) {
+        connectedAccountId = org.stripe_account_id
+      }
+    }
+
+    // For connected accounts, customer objects are account-scoped — use email instead
+    const sessionCustomer = connectedAccountId ? undefined : customerId
 
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
-      customer: customerId,
+      ...(sessionCustomer ? { customer: sessionCustomer } : { customer_email: user.profile.email }),
       mode: 'subscription',
       success_url: `${baseUrl}/membership?subscription=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/membership?subscription=cancelled`,
       metadata: {
         userId: user.id,
+        ...(orgId ? { orgId } : {}),
       },
+      // Platform fee: 2% of the transaction
+      ...(connectedAccountId ? {
+        payment_intent_data: {
+          application_fee_amount: Math.round(membershipFee * 100 * 0.02),
+        },
+      } : {}),
     }
 
     if (hasTrial) {
@@ -112,7 +140,8 @@ export async function POST(request: Request) {
       },
     ]
 
-    const session = await stripe.checkout.sessions.create(sessionParams)
+    const stripeOptions = connectedAccountId ? { stripeAccount: connectedAccountId } : undefined
+    const session = await stripe.checkout.sessions.create(sessionParams, stripeOptions)
 
     Sentry.metrics.count('payment.checkout_initiated', 1, { attributes: { membership_level: level } })
 

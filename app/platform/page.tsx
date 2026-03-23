@@ -1,20 +1,19 @@
-import Link from 'next/link'
+import { ClubLoungeLanding } from '@/components/club-lounge/ClubLoungeLanding'
+
+const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'
+const IS_DEV = process.env.NODE_ENV === 'development'
+const PROTOCOL = IS_DEV ? 'http' : 'https'
+const PORT = IS_DEV ? ':3000' : ''
 
 export default function PlatformHome() {
+  const demoOrigin = `${PROTOCOL}://tipa.${ROOT_DOMAIN}${PORT}`
+
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-8 bg-gray-50">
-      <div className="max-w-md w-full text-center space-y-6">
-        <h1 className="text-3xl font-bold tracking-tight">ClubLounge Platform</h1>
-        <p className="text-gray-600">
-          Create and manage your club&apos;s private lounge. Get your own subdomain or bring your own domain.
-        </p>
-        <Link
-          href="/platform/create"
-          className="inline-block w-full bg-black text-white rounded-lg px-6 py-3 font-medium hover:bg-gray-800 transition-colors"
-        >
-          Create your club lounge
-        </Link>
-      </div>
-    </main>
+    <ClubLoungeLanding
+      rootDomain={ROOT_DOMAIN}
+      signupHref="/signup"
+      demoHref={demoOrigin}
+      internalLinks
+    />
   )
 }

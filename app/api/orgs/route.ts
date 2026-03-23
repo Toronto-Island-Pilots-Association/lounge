@@ -11,6 +11,10 @@ import { NextResponse } from 'next/server'
  * Called from platform.clublounge.app/create.
  */
 export async function POST(request: Request) {
+  if (request.headers.get('x-domain-type') !== 'platform') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
   try {
     const { name, slug, adminEmail, customDomain } = await request.json()
 
@@ -106,6 +110,10 @@ export async function POST(request: Request) {
  * Check if a slug is available.
  */
 export async function GET(request: Request) {
+  if (request.headers.get('x-domain-type') !== 'platform') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
   const { searchParams } = new URL(request.url)
   const slug = searchParams.get('slug')
 

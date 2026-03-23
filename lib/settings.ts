@@ -185,6 +185,221 @@ export function getTrialEndDate(
   return computeTrialEndFromConfig(DEFAULT_TRIAL_CONFIG[level], profileCreatedAt)
 }
 
+// ─── Org Feature Flags ───────────────────────────────────────────────────────
+
+export type OrgFeatureFlags = {
+  discussions: boolean
+  events: boolean
+  resources: boolean
+  memberDirectory: boolean
+  requireMemberApproval: boolean
+  allowMemberInvitations: boolean
+}
+
+const DEFAULT_FEATURE_FLAGS: OrgFeatureFlags = {
+  discussions: true,
+  events: true,
+  resources: true,
+  memberDirectory: true,
+  requireMemberApproval: true,
+  allowMemberInvitations: true,
+}
+
+export async function getFeatureFlags(): Promise<OrgFeatureFlags> {
+  const supabase = await createClient()
+  const orgId = await getOrgId()
+  const keys = [
+    'feature_discussions', 'feature_events', 'feature_resources',
+    'feature_member_directory', 'require_member_approval', 'allow_member_invitations',
+  ]
+  const { data: rows } = await supabase.from('settings').select('key, value').in('key', keys).eq('org_id', orgId)
+  const map = new Map((rows ?? []).map(r => [r.key, r.value]))
+  const b = (key: string, def: boolean) => map.has(key) ? map.get(key) === 'true' : def
+  return {
+    discussions:           b('feature_discussions',      DEFAULT_FEATURE_FLAGS.discussions),
+    events:                b('feature_events',           DEFAULT_FEATURE_FLAGS.events),
+    resources:             b('feature_resources',        DEFAULT_FEATURE_FLAGS.resources),
+    memberDirectory:       b('feature_member_directory', DEFAULT_FEATURE_FLAGS.memberDirectory),
+    requireMemberApproval: b('require_member_approval',  DEFAULT_FEATURE_FLAGS.requireMemberApproval),
+    allowMemberInvitations:b('allow_member_invitations', DEFAULT_FEATURE_FLAGS.allowMemberInvitations),
+  }
+}
+
+export async function setFeatureFlags(flags: Partial<OrgFeatureFlags>): Promise<void> {
+  const supabase = await createClient()
+  const orgId = await getOrgId()
+  const keyMap: Record<keyof OrgFeatureFlags, string> = {
+    discussions:            'feature_discussions',
+    events:                 'feature_events',
+    resources:              'feature_resources',
+    memberDirectory:        'feature_member_directory',
+    requireMemberApproval:  'require_member_approval',
+    allowMemberInvitations: 'allow_member_invitations',
+  }
+  const rows = (Object.keys(flags) as (keyof OrgFeatureFlags)[])
+    .filter(k => flags[k] !== undefined)
+    .map(k => ({ key: keyMap[k], value: String(flags[k]), org_id: orgId, updated_at: new Date().toISOString() }))
+  if (rows.length === 0) return
+  const { error } = await supabase.from('settings').upsert(rows, { onConflict: 'key,org_id' })
+  if (error) throw new Error(`Failed to save feature flags: ${error.message}`)
+}
+
+// ─── Org Identity ─────────────────────────────────────────────────────────────
+
+export type OrgIdentity = {
+  description: string
+  contactEmail: string
+  websiteUrl: string
+  accentColor: string
+  displayName: string
+  timezone: string
+}
+
+const DEFAULT_IDENTITY: OrgIdentity = {
+  description: '',
+  contactEmail: '',
+  websiteUrl: '',
+  accentColor: '#0d1e26',
+  displayName: '',
+  timezone: 'America/Toronto',
+}
+
+export async function getOrgIdentity(): Promise<OrgIdentity> {
+  const supabase = await createClient()
+  const orgId = await getOrgId()
+  const keys = ['club_description', 'contact_email', 'website_url', 'accent_color', 'club_display_name', 'timezone']
+  const { data: rows } = await supabase.from('settings').select('key, value').in('key', keys).eq('org_id', orgId)
+  const map = new Map((rows ?? []).map(r => [r.key, r.value]))
+  const s = (key: string, def: string) => map.get(key) ?? def
+  return {
+    description:  s('club_description',  DEFAULT_IDENTITY.description),
+    contactEmail: s('contact_email',     DEFAULT_IDENTITY.contactEmail),
+    websiteUrl:   s('website_url',       DEFAULT_IDENTITY.websiteUrl),
+    accentColor:  s('accent_color',      DEFAULT_IDENTITY.accentColor),
+    displayName:  s('club_display_name', DEFAULT_IDENTITY.displayName),
+    timezone:     s('timezone',          DEFAULT_IDENTITY.timezone),
+  }
+}
+
+export async function setOrgIdentity(identity: Partial<OrgIdentity>): Promise<void> {
+  const supabase = await createClient()
+  const orgId = await getOrgId()
+  const keyMap: Record<keyof OrgIdentity, string> = {
+    description:  'club_description',
+    contactEmail: 'contact_email',
+    websiteUrl:   'website_url',
+    accentColor:  'accent_color',
+    displayName:  'club_display_name',
+    timezone:     'timezone',
+  }
+  const rows = (Object.keys(identity) as (keyof OrgIdentity)[])
+    .filter(k => identity[k] !== undefined)
+    .map(k => ({ key: keyMap[k], value: identity[k] as string, org_id: orgId, updated_at: new Date().toISOString() }))
+  if (rows.length === 0) return
+  const { error } = await supabase.from('settings').upsert(rows, { onConflict: 'key,org_id' })
+  if (error) throw new Error(`Failed to save club identity: ${error.message}`)
+}
+
+// ─── Enabled Membership Levels ────────────────────────────────────────────────
+
+export async function getEnabledLevels(): Promise<Record<MembershipLevelKey, boolean>> {
+  const supabase = await createClient()
+  const orgId = await getOrgId()
+  const keys = MEMBERSHIP_LEVELS.map(l => `level_${l.toLowerCase()}_enabled`)
+  const { data: rows } = await supabase.from('settings').select('key, value').in('key', keys).eq('org_id', orgId)
+  const map = new Map((rows ?? []).map(r => [r.key, r.value]))
+  return Object.fromEntries(
+    MEMBERSHIP_LEVELS.map(l => [l, map.get(`level_${l.toLowerCase()}_enabled`) !== 'false'])
+  ) as Record<MembershipLevelKey, boolean>
+}
+
+export async function setEnabledLevels(levels: Record<MembershipLevelKey, boolean>): Promise<void> {
+  const supabase = await createClient()
+  const orgId = await getOrgId()
+  const rows = MEMBERSHIP_LEVELS.map(l => ({
+    key: `level_${l.toLowerCase()}_enabled`,
+    value: String(levels[l] ?? true),
+    org_id: orgId,
+    updated_at: new Date().toISOString(),
+  }))
+  const { error } = await supabase.from('settings').upsert(rows, { onConflict: 'key,org_id' })
+  if (error) throw new Error(`Failed to save enabled levels: ${error.message}`)
+}
+
+// ─── Signup Fields Config ─────────────────────────────────────────────────────
+
+export type SignupField = {
+  key: string
+  label: string
+  group: string
+  enabled: boolean
+  required: boolean
+}
+
+const DEFAULT_SIGNUP_FIELDS: SignupField[] = [
+  { key: 'phone',                label: 'Phone',                    group: 'contact',     enabled: true,  required: false },
+  { key: 'address',              label: 'Mailing Address',          group: 'address',     enabled: true,  required: false },
+  { key: 'membership_class',     label: 'Membership Class',         group: 'membership',  enabled: true,  required: true  },
+  { key: 'aviation_info',        label: 'Aviation Information',     group: 'aviation',    enabled: true,  required: false },
+  { key: 'fly_frequency',        label: 'How Often Fly From YTZ',   group: 'aviation',    enabled: false, required: false },
+  { key: 'student_pilot',        label: 'Student Pilot Info',       group: 'student',     enabled: true,  required: false },
+  { key: 'copa_membership',      label: 'COPA Membership',          group: 'copa',        enabled: false, required: false },
+  { key: 'statement_of_interest',label: 'Statement of Interest',    group: 'application', enabled: true,  required: false },
+  { key: 'interests',            label: 'Interests',                group: 'application', enabled: true,  required: false },
+  { key: 'how_did_you_hear',     label: 'How Did You Hear',         group: 'application', enabled: true,  required: false },
+]
+
+export async function getSignupFieldsConfig(): Promise<SignupField[]> {
+  const raw = await getSetting('signup_fields_config')
+  if (!raw) return DEFAULT_SIGNUP_FIELDS
+  try {
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) return parsed as SignupField[]
+  } catch { /* fall through */ }
+  return DEFAULT_SIGNUP_FIELDS
+}
+
+export async function setSignupFieldsConfig(fields: SignupField[]): Promise<void> {
+  const supabase = await createClient()
+  const orgId = await getOrgId()
+  const { error } = await supabase.from('settings').upsert(
+    { key: 'signup_fields_config', value: JSON.stringify(fields), org_id: orgId, updated_at: new Date().toISOString() },
+    { onConflict: 'key,org_id' }
+  )
+  if (error) throw new Error(`Failed to save signup fields: ${error.message}`)
+}
+
+// ─── Email Templates ──────────────────────────────────────────────────────────
+
+export type EmailTemplates = { subject: string; body: string }
+
+export async function getEmailTemplates(): Promise<EmailTemplates> {
+  const supabase = await createClient()
+  const orgId = await getOrgId()
+  const { data: rows } = await supabase
+    .from('settings').select('key, value')
+    .in('key', ['welcome_email_subject', 'welcome_email_body'])
+    .eq('org_id', orgId)
+  const map = new Map((rows ?? []).map(r => [r.key, r.value]))
+  return {
+    subject: map.get('welcome_email_subject') ?? 'Welcome!',
+    body:    map.get('welcome_email_body')    ?? '',
+  }
+}
+
+export async function setEmailTemplates(templates: Partial<EmailTemplates>): Promise<void> {
+  const supabase = await createClient()
+  const orgId = await getOrgId()
+  const rows = []
+  if (templates.subject !== undefined)
+    rows.push({ key: 'welcome_email_subject', value: templates.subject, org_id: orgId, updated_at: new Date().toISOString() })
+  if (templates.body !== undefined)
+    rows.push({ key: 'welcome_email_body', value: templates.body, org_id: orgId, updated_at: new Date().toISOString() })
+  if (rows.length === 0) return
+  const { error } = await supabase.from('settings').upsert(rows, { onConflict: 'key,org_id' })
+  if (error) throw new Error(`Failed to save email templates: ${error.message}`)
+}
+
 /**
  * Membership expiry when syncing from Stripe.
  * If the subscription started before Sept 1st (trial period), extend to Sept 1st next year

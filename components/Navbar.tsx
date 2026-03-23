@@ -7,6 +7,14 @@ import { useEffect, useState } from 'react'
 import { UserProfile, getMembershipLevelLabel } from '@/types/database'
 import { createClient } from '@/lib/supabase/client'
 
+type OrgConfig = {
+  org: { name: string; displayName: string; logoUrl: string | null }
+  features: {
+    discussions: boolean; events: boolean; resources: boolean
+    memberDirectory: boolean; allowMemberInvitations: boolean
+  }
+}
+
 export default function Navbar() {
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -15,6 +23,7 @@ export default function Navbar() {
   const [isDevEnvironment, setIsDevEnvironment] = useState(false)
   const [pendingCount, setPendingCount] = useState<number>(0)
   const [notificationCount, setNotificationCount] = useState<number>(0)
+  const [orgConfig, setOrgConfig] = useState<OrgConfig | null>(null)
   const router = useRouter()
 
   // Check if we're in a dev environment
@@ -67,6 +76,12 @@ export default function Navbar() {
 
     // Initial load
     loadUserData(true)
+
+    // Load org config (features, branding) — public, no auth needed
+    fetch('/api/org/config')
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(d => setOrgConfig(d))
+      .catch(() => {})
 
     // React to auth changes (sign in / sign out) without polling
     const supabase = createClient()
@@ -184,33 +199,39 @@ export default function Navbar() {
               <>
                 {profile && (profile.status === 'approved' || profile.role === 'admin') && (
                   <>
-                    <Link
-                      href="/discussions"
-                      className="flex items-center gap-1.5 text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                      </svg>
-                      Hangar Talk
-                    </Link>
-                    <Link
-                      href="/events"
-                      className="flex items-center gap-1.5 text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      Events
-                    </Link>
-                    <Link
-                      href="/resources"
-                      className="flex items-center gap-1.5 text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      Announcements
-                    </Link>
+                    {(orgConfig?.features.discussions ?? true) && (
+                      <Link
+                        href="/discussions"
+                        className="flex items-center gap-1.5 text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                        Hangar Talk
+                      </Link>
+                    )}
+                    {(orgConfig?.features.events ?? true) && (
+                      <Link
+                        href="/events"
+                        className="flex items-center gap-1.5 text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        Events
+                      </Link>
+                    )}
+                    {(orgConfig?.features.resources ?? true) && (
+                      <Link
+                        href="/resources"
+                        className="flex items-center gap-1.5 text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Announcements
+                      </Link>
+                    )}
                   </>
                 )}
                 <Link
@@ -309,7 +330,7 @@ export default function Navbar() {
                         </svg>
                         Settings
                       </Link>
-                      {profile && (profile.status === 'approved' || profile.role === 'admin') && (
+                      {profile && (profile.status === 'approved' || profile.role === 'admin') && (orgConfig?.features.allowMemberInvitations ?? true) && (
                         <Link
                           href="/invite"
                           onClick={() => setUserMenuOpen(false)}
@@ -318,7 +339,7 @@ export default function Navbar() {
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                           </svg>
-                          Help Grow TIPA
+                          Help Grow {orgConfig?.org.displayName || orgConfig?.org.name || 'Us'}
                         </Link>
                       )}
                       <a
@@ -423,36 +444,42 @@ export default function Navbar() {
             <div className="space-y-1">
                 {profile && (profile.status === 'approved' || profile.role === 'admin') && (
                   <>
-                    <Link
-                      href="/discussions"
-                      onClick={handleLinkClick}
-                      className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                      </svg>
-                      Hangar Talk
-                    </Link>
-                    <Link
-                      href="/events"
-                      onClick={handleLinkClick}
-                      className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      Events
-                    </Link>
-                    <Link
-                      href="/resources"
-                      onClick={handleLinkClick}
-                      className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      Announcements
-                    </Link>
+                    {(orgConfig?.features.discussions ?? true) && (
+                      <Link
+                        href="/discussions"
+                        onClick={handleLinkClick}
+                        className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                        Hangar Talk
+                      </Link>
+                    )}
+                    {(orgConfig?.features.events ?? true) && (
+                      <Link
+                        href="/events"
+                        onClick={handleLinkClick}
+                        className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        Events
+                      </Link>
+                    )}
+                    {(orgConfig?.features.resources ?? true) && (
+                      <Link
+                        href="/resources"
+                        onClick={handleLinkClick}
+                        className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Announcements
+                      </Link>
+                    )}
                     <Link
                       href="/notifications"
                       onClick={handleLinkClick}
@@ -491,7 +518,7 @@ export default function Navbar() {
                     </svg>
                     Settings
                   </Link>
-                {profile && (profile.status === 'approved' || profile.role === 'admin') && (
+                {profile && (profile.status === 'approved' || profile.role === 'admin') && (orgConfig?.features.allowMemberInvitations ?? true) && (
                   <Link
                     href="/invite"
                     onClick={handleLinkClick}
@@ -500,7 +527,7 @@ export default function Navbar() {
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                     </svg>
-                    Help Grow TIPA
+                    Help Grow {orgConfig?.org.displayName || orgConfig?.org.name || 'Us'}
                   </Link>
                 )}
                 <a

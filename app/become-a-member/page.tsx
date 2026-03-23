@@ -6,7 +6,7 @@ import Link from 'next/link'
 import Loading from '@/components/Loading'
 import PasswordInput from '@/components/PasswordInput'
 import { COUNTRIES, getStatesProvinces } from './constants'
-import type { MembershipLevelKey } from '@/lib/settings'
+import type { MembershipLevelKey, SignupField } from '@/lib/settings'
 
 const DEFAULT_FEES: Record<MembershipLevelKey, number> = {
   Full: 45,
@@ -18,15 +18,32 @@ const DEFAULT_FEES: Record<MembershipLevelKey, number> = {
 
 function BecomeMemberForm() {
   const [membershipFees, setMembershipFees] = useState<Record<MembershipLevelKey, number>>(DEFAULT_FEES)
+  const [signupFields, setSignupFields] = useState<SignupField[] | null>(null)
+  const [enabledLevels, setEnabledLevels] = useState<Record<MembershipLevelKey, boolean> | null>(null)
+  const [orgName, setOrgName] = useState<string>('')
+
+  // Helper: is a signup field section enabled?
+  const fieldEnabled = (key: string) => {
+    if (!signupFields) return true // default to showing everything while loading
+    return signupFields.find(f => f.key === key)?.enabled ?? true
+  }
+  const fieldRequired = (key: string) => {
+    if (!signupFields) return false
+    return signupFields.find(f => f.key === key)?.required ?? false
+  }
 
   useEffect(() => {
     let cancelled = false
-    fetch('/api/settings/membership-fees/public')
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('Failed to load fees'))))
-      .then((data: { fees: Record<MembershipLevelKey, number> }) => {
-        if (!cancelled && data.fees) setMembershipFees(data.fees)
+    fetch('/api/org/config')
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => {
+        if (cancelled) return
+        if (data.membership?.fees) setMembershipFees(data.membership.fees)
+        if (data.signupFields)     setSignupFields(data.signupFields)
+        if (data.membership?.enabledLevels) setEnabledLevels(data.membership.enabledLevels)
+        if (data.org?.name)        setOrgName(data.org.displayName || data.org.name)
       })
-      .catch(() => { /* keep default fees */ })
+      .catch(() => { /* keep defaults */ })
     return () => { cancelled = true }
   }, [])
   const [formData, setFormData] = useState({
@@ -124,8 +141,8 @@ function BecomeMemberForm() {
     e.preventDefault()
     setError('')
     
-    // Validate interests
-    if (!Array.isArray(formData.interests) || formData.interests.length === 0) {
+    // Validate interests (only if the field is enabled)
+    if (fieldEnabled('interests') && (!Array.isArray(formData.interests) || formData.interests.length === 0)) {
       setError('Please select at least one interest')
       return
     }
@@ -233,9 +250,11 @@ function BecomeMemberForm() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Become a Member
           </h1>
-          <p className="text-gray-600">
-            Join the Toronto Island Pilots Association
-          </p>
+          {orgName && (
+            <p className="text-gray-600">
+              Join {orgName}
+            </p>
+          )}
         </div>
 
         {!success && (
@@ -329,24 +348,27 @@ function BecomeMemberForm() {
                   onChange={handleChange}
                 />
               </div>
-              <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone Number
-                </label>
-                <input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  autoComplete="tel"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                  value={formData.phone}
-                  onChange={handleChange}
-                />
-              </div>
+              {fieldEnabled('phone') && (
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone Number {fieldRequired('phone') && <span className="text-red-500">*</span>}
+                  </label>
+                  <input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    autoComplete="tel"
+                    required={fieldRequired('phone')}
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    value={formData.phone}
+                    onChange={handleChange}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Mailing Address */}
-            <div className="mt-4 pt-4 border-t border-gray-200">
+            {fieldEnabled('address') && <div className="mt-4 pt-4 border-t border-gray-200">
               <h3 className="text-md font-medium text-gray-900 mb-3">Mailing Address</h3>
               <div className="grid grid-cols-1 gap-4">
                 <div>
@@ -447,7 +469,7 @@ function BecomeMemberForm() {
                   </div>
                 </div>
               </div>
-            </div>
+            </div>}
           </div>
 
           {/* Account Information */}
@@ -473,11 +495,12 @@ function BecomeMemberForm() {
           </div>
 
           {/* Membership Application */}
+          {fieldEnabled('membership_class') && (
           <div className="bg-gray-50 p-6 rounded-lg">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Membership Application</h2>
             <div>
               <label htmlFor="membershipClass" className="block text-sm font-medium text-gray-700 mb-1">
-                Applying for TIPA Membership Class: <span className="text-red-500">*</span>
+                Membership Class <span className="text-red-500">*</span>
               </label>
               <select
                 id="membershipClass"
@@ -487,17 +510,18 @@ function BecomeMemberForm() {
                 value={formData.membershipClass}
                 onChange={handleChange}
               >
-                <option value="">Select...</option>
-                <option value="full">Full — ${membershipFees.Full}/year (free trial until Sept 1)</option>
-                <option value="student">Student — ${membershipFees.Student}/year (first 12-month free)</option>
-                <option value="associate">Associate — ${membershipFees.Associate}/year (free trial until Sept 1)</option>
-                <option value="corporate">Corporate — ${membershipFees.Corporate}/year</option>
+                <option value="">Select…</option>
+                {(enabledLevels?.Full     ?? true) && <option value="full">Full — ${membershipFees.Full}/year</option>}
+                {(enabledLevels?.Student  ?? true) && <option value="student">Student — ${membershipFees.Student}/year</option>}
+                {(enabledLevels?.Associate ?? true) && <option value="associate">Associate — ${membershipFees.Associate}/year</option>}
+                {(enabledLevels?.Corporate ?? true) && <option value="corporate">Corporate — ${membershipFees.Corporate}/year</option>}
               </select>
             </div>
-
           </div>
+          )}
 
           {/* Aviation Information */}
+          {fieldEnabled('aviation_info') && (
           <div className="bg-gray-50 p-6 rounded-lg">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Aviation Information</h2>
             <p className="text-sm text-gray-600 mb-4">
@@ -552,14 +576,15 @@ function BecomeMemberForm() {
                   placeholder="e.g., C-GABC"
                 />
               </div>
+              {fieldEnabled('fly_frequency') && (
               <div>
                 <label htmlFor="howOftenFlyFromYTZ" className="block text-sm font-medium text-gray-700 mb-1">
-                  How Often Do You Fly From YTZ? {formData.membershipClass === 'student' && <span className="text-red-500">*</span>}
+                  How Often Do You Fly From YTZ? {fieldRequired('fly_frequency') && <span className="text-red-500">*</span>}
                 </label>
                 <select
                   id="howOftenFlyFromYTZ"
                   name="howOftenFlyFromYTZ"
-                  required={formData.membershipClass === 'student'}
+                  required={fieldRequired('fly_frequency')}
                   className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
                   value={formData.howOftenFlyFromYTZ}
                   onChange={handleChange}
@@ -572,10 +597,11 @@ function BecomeMemberForm() {
                   <option value="rarely">Rarely</option>
                 </select>
               </div>
+              )}
             </div>
 
-            {/* Student Pilot Fields - Show if student membership class OR student pilot license type */}
-            {(formData.membershipClass === 'student' || formData.pilotLicenseType === 'student') && (
+            {/* Student Pilot Fields */}
+            {fieldEnabled('student_pilot') && (formData.membershipClass === 'student' || formData.pilotLicenseType === 'student') && (
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <h3 className="text-md font-semibold text-gray-900 mb-4">Student Pilot Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -629,14 +655,16 @@ function BecomeMemberForm() {
               </div>
             )}
           </div>
+          )}
 
           {/* COPA Membership */}
+          {fieldEnabled('copa_membership') && (
           <div className="bg-gray-50 p-6 rounded-lg">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">COPA Membership</h2>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Are you a COPA Member? <span className="text-red-500">*</span>
+                  Are you a COPA Member? {fieldRequired('copa_membership') && <span className="text-red-500">*</span>}
                 </label>
                 <div className="flex gap-6">
                   <label className="flex items-center">
@@ -715,8 +743,10 @@ function BecomeMemberForm() {
               )}
             </div>
           </div>
+          )}
 
           {/* Interests */}
+          {fieldEnabled('interests') && (
           <div className="bg-gray-50 p-6 rounded-lg">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Interests</h2>
             <div>
@@ -758,24 +788,28 @@ function BecomeMemberForm() {
               )}
             </div>
           </div>
+          )}
 
           {/* Statement of Interest */}
+          {fieldEnabled('statement_of_interest') && (
           <div className="bg-gray-50 p-6 rounded-lg">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Statement of Interest</h2>
             <div>
               <label htmlFor="statementOfInterest" className="block text-sm font-medium text-gray-700 mb-1">
-                Briefly describe your connection to YTZ or interest in supporting TIPA.
+                Briefly describe your interest in joining. {fieldRequired('statement_of_interest') && <span className="text-red-500">*</span>}
               </label>
               <textarea
                 id="statementOfInterest"
                 name="statementOfInterest"
                 rows={4}
+                required={fieldRequired('statement_of_interest')}
                 className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
                 value={formData.statementOfInterest}
                 onChange={handleChange}
               />
             </div>
           </div>
+          )}
 
           {/* Acknowledgements */}
           <div className="bg-gray-50 p-6 rounded-lg">

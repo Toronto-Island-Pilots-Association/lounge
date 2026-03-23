@@ -5,7 +5,10 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const provider = searchParams.get('provider') || 'google'
-    const redirectTo = searchParams.get('redirectTo') || `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/callback`
+    const host = request.headers.get('host') ?? 'localhost:3000'
+    const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
+    const defaultRedirectTo = `${protocol}://${host}/auth/callback`
+    const redirectTo = searchParams.get('redirectTo') || defaultRedirectTo
 
     const supabase = await createClient()
     

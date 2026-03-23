@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter_Tight } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
+import { headers } from "next/headers";
 import "./globals.css";
 import NavbarWrapper from "@/components/NavbarWrapper";
 
@@ -18,17 +19,21 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headersList = await headers();
+  const domainType = headersList.get("x-domain-type") ?? "org";
+  const isOrg = domainType === "org";
+
   return (
     <html lang="en">
       <body
-        className={`${interTight.variable} antialiased pt-16 sm:pt-20 md:pt-0`}
+        className={`${interTight.variable} antialiased ${isOrg ? "pt-16 sm:pt-20 md:pt-0" : ""}`}
       >
-        <NavbarWrapper />
+        {isOrg && <NavbarWrapper />}
         {children}
         <SpeedInsights />
         <Analytics />
