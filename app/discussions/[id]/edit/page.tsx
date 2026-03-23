@@ -24,6 +24,7 @@ export default async function EditThreadPage({
     .from('threads')
     .select('*')
     .eq('id', id)
+    .eq('org_id', user.profile.org_id)
     .single()
 
   if (error || !thread) {

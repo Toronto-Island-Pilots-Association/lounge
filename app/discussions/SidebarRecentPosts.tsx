@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { headers } from 'next/headers'
 import { DiscussionCategory } from '@/types/database'
 import { ALL_CATEGORIES } from './constants'
 import CategoryIcon from './CategoryIcons'
@@ -7,11 +8,13 @@ import { formatRelativeDate } from './utils'
 
 export default async function SidebarRecentPosts() {
   const supabase = await createClient()
+  const orgId = (await headers()).get('x-org-id')
 
   // Get recent threads for sidebar
   const { data: recentThreads } = await supabase
     .from('threads')
     .select('id, title, category, created_at')
+    .eq('org_id', orgId ?? '')
     .order('created_at', { ascending: false })
     .limit(5)
 

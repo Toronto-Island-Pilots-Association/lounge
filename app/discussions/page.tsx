@@ -52,6 +52,7 @@ export default async function DiscussionsPage({
   let query = supabase
     .from('threads')
     .select('*, comments(count)', { count: 'exact' })
+    .eq('org_id', user.profile.org_id)
     .order('created_at', { ascending: false })
     .range(offset, offset + THREADS_PER_PAGE - 1)
 

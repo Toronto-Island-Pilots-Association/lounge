@@ -121,6 +121,7 @@ export default async function MembershipPage({
     const { data: threads } = await supabase
       .from('threads')
       .select('id, title, created_at, created_by')
+      .eq('org_id', user.profile.org_id)
       .order('created_at', { ascending: false })
       .limit(5)
 
@@ -129,10 +130,10 @@ export default async function MembershipPage({
       const threadUserIds = [...new Set(threads.map(t => t.created_by).filter((id): id is string => id !== null))]
       const { data: threadAuthors } = threadUserIds.length > 0 ? await supabase
         .from('user_profiles')
-        .select('id, full_name, email')
-        .in('id', threadUserIds) : { data: [] }
+        .select('user_id, full_name, email')
+        .in('user_id', threadUserIds) : { data: [] }
 
-      const threadAuthorsMap = new Map(threadAuthors?.map(a => [a.id, a]) || [])
+      const threadAuthorsMap = new Map(threadAuthors?.map(a => [a.user_id, a]) || [])
 
       // Get comment counts for threads
       const threadIds = threads.map(t => t.id)

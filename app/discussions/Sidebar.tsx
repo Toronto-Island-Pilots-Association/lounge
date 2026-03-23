@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { headers } from 'next/headers'
 import { DiscussionCategory } from '@/types/database'
 import SortButtons from './SortButtons'
 import CategoryIcon from './CategoryIcons'
@@ -103,11 +104,13 @@ function CategoryList({ currentCategory, currentSort }: { currentCategory?: Disc
 // Component that fetches all category counts in one query and returns the count for a specific category
 async function CategoryCount({ category, isActive }: { category: DiscussionCategory | 'all', isActive: boolean }) {
   const supabase = await createClient()
-  
+  const orgId = (await headers()).get('x-org-id')
+
   // Fetch all threads once to get all counts
   const { data: threads } = await supabase
     .from('threads')
     .select('category')
+    .eq('org_id', orgId ?? '')
 
   let count = 0
   if (category === 'all') {

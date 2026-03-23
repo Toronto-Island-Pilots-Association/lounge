@@ -39,11 +39,12 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
   const { id } = await params
   const supabase = await createClient()
 
-  // Get thread
+  // Get thread — scoped to this org so users can't read other orgs' threads by ID
   const { data: thread, error: threadError } = await supabase
     .from('threads')
     .select('*')
     .eq('id', id)
+    .eq('org_id', user.profile.org_id)
     .single()
 
   if (threadError || !thread) {
