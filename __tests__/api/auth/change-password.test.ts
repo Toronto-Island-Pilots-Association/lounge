@@ -39,7 +39,7 @@ describe('/api/auth/change-password - Complex Flow', () => {
       },
     }
 
-    let queryCallCount = 0
+    const _queryCallCount = 0
     const mockAdminClient = {
       auth: {
         admin: {

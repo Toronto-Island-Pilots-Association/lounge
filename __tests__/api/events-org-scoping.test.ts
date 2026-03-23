@@ -185,7 +185,8 @@ describe('Events org scoping', () => {
 
     expect(eventsVerifyFrom.eq).toHaveBeenCalledWith('org_id', 'org-1')
     expect(rsvpsFrom.eq).toHaveBeenCalledWith('org_id', 'org-1')
-    expect(profilesFrom.eq).toHaveBeenCalledWith('org_id', 'org-1')
+    // user_profiles no longer has org_id (moved to org_memberships); profiles are fetched by user_id
+    expect(profilesFrom.in).toHaveBeenCalledWith('user_id', expect.any(Array))
   })
 })
 
