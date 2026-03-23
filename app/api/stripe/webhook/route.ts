@@ -87,9 +87,9 @@ export async function POST(request: Request) {
         }
 
         const { data: existingProfile } = await supabase
-          .from('user_profiles')
+          .from('org_memberships')
           .select('membership_level')
-          .eq('id', userId)
+          .eq('user_id', userId)
           .single()
         const level = (existingProfile?.membership_level || 'Full') as MembershipLevelKey
         const fullMembershipFee = await getMembershipFeeForLevel(level)
@@ -97,13 +97,13 @@ export async function POST(request: Request) {
 
         // Update user profile with subscription info (keep their membership level)
         await supabase
-          .from('user_profiles')
+          .from('org_memberships')
           .update({
             stripe_subscription_id: subscriptionId,
             stripe_customer_id: customerId,
             membership_expires_at: membershipExpiresAt,
           })
-          .eq('id', userId)
+          .eq('user_id', userId)
 
         // Record payment in payments table
         await supabase
@@ -129,7 +129,7 @@ export async function POST(request: Request) {
         const { data: profile } = await supabase
           .from('user_profiles')
           .select('email, full_name')
-          .eq('id', userId)
+          .eq('user_id', userId)
           .single()
 
         if (profile) {
@@ -175,7 +175,7 @@ export async function POST(request: Request) {
 
         // Find user by subscription ID
         const { data: profile } = await supabase
-          .from('user_profiles')
+          .from('org_memberships')
           .select('id, membership_expires_at')
           .eq('stripe_subscription_id', subscriptionId)
           .single()
@@ -188,7 +188,7 @@ export async function POST(request: Request) {
 
           // Update subscription fields and sync status
           await supabase
-            .from('user_profiles')
+            .from('org_memberships')
             .update({
               stripe_subscription_id: null,
               status: isExpired ? 'expired' : 'approved',

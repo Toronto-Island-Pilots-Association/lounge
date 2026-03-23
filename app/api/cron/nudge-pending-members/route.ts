@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     }
 
     const adminClient = createServiceRoleClient()
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'
 
     const cutoff = new Date(Date.now() - NUDGE_INTERVAL_DAYS * 24 * 60 * 60 * 1000).toISOString()
 
@@ -41,8 +41,8 @@ export async function GET(request: Request) {
     // - invited but never reminded, OR last reminder was >7 days ago
     // - under the 3-reminder cap
     const { data: members, error: fetchError } = await adminClient
-      .from('user_profiles')
-      .select('id, email, full_name, reminder_count, last_reminder_sent_at')
+      .from('member_profiles')
+      .select('id, user_id, email, full_name, reminder_count, last_reminder_sent_at')
       .eq('status', 'pending')
       .not('invited_at', 'is', null)
       .lt('reminder_count', MAX_REMINDERS)
@@ -64,7 +64,7 @@ export async function GET(request: Request) {
       try {
         const newTempPassword = generateTempPassword()
 
-        const { error: authError } = await adminClient.auth.admin.updateUserById(member.id, {
+        const { error: authError } = await adminClient.auth.admin.updateUserById(member.user_id, {
           password: newTempPassword,
         })
 
@@ -82,7 +82,7 @@ export async function GET(request: Request) {
         )
 
         await adminClient
-          .from('user_profiles')
+          .from('org_memberships')
           .update({
             last_reminder_sent_at: new Date().toISOString(),
             reminder_count: (Number(member.reminder_count) || 0) + 1,

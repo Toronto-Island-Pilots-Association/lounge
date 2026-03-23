@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { sendWelcomeEmail, sendNewMemberNotificationToAdmins } from '@/lib/resend'
 import { NextResponse } from 'next/server'
 import * as Sentry from '@sentry/nextjs'
+import { TIPA_ORG_ID } from '@/types/database'
 
 export async function POST(request: Request) {
   try {
@@ -50,6 +51,7 @@ export async function POST(request: Request) {
     }
 
     const supabase = await createClient()
+    const orgId = request.headers.get('x-org-id') ?? TIPA_ORG_ID
 
     // Normalize email to lowercase and trim
     const normalizedEmail = email.toLowerCase().trim()
@@ -73,7 +75,7 @@ export async function POST(request: Request) {
 
     // Disable Supabase's default confirmation email by setting emailRedirectTo
     // We'll handle confirmation in our welcome email instead
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'
     const { data, error } = await supabase.auth.signUp({
       email: normalizedEmail,
       password,
@@ -113,6 +115,7 @@ export async function POST(request: Request) {
           is_student_pilot: Boolean(isStudentPilot),
           flight_school: isStudentPilot ? toNullIfEmpty(flightSchool) : null,
           instructor_name: isStudentPilot ? toNullIfEmpty(instructorName) : null,
+          org_id: orgId,
           role: 'member',
           membership_level: membershipLevel,
         },
@@ -173,10 +176,11 @@ export async function POST(request: Request) {
           
           try {
             const { data: fetchedProfile, error: fetchedError } = await adminClient
-              .from('user_profiles')
+              .from('member_profiles')
               .select('*')
-              .eq('id', data.user.id)
-              .single()
+              .eq('user_id', data.user.id)
+              .eq('org_id', orgId)
+              .maybeSingle()
             
             if (!fetchedError && fetchedProfile) {
               profile = fetchedProfile
@@ -199,11 +203,12 @@ export async function POST(request: Request) {
             // Ensure membership_level and role match the database constraints exactly
             const membershipLevel = getMembershipLevel(membershipClass)
             const userRole: 'member' | 'admin' = 'member'
-            
-            const { data: createdProfile, error: createError } = await adminClient
+
+            // Upsert identity fields into user_profiles
+            const { error: profileInsertError } = await adminClient
               .from('user_profiles')
-              .insert({
-                id: data.user.id,
+              .upsert({
+                user_id: data.user.id,
                 email: (data.user.email || normalizedEmail).toLowerCase().trim(),
                 full_name: toNullIfEmpty(fullName) || toNullIfEmpty(`${firstName || ''} ${lastName || ''}`.trim()) || null,
                 first_name: toNullIfEmpty(firstName),
@@ -215,6 +220,18 @@ export async function POST(request: Request) {
                 province_state: toNullIfEmpty(provinceState),
                 postal_zip_code: toNullIfEmpty(postalZipCode),
                 country: toNullIfEmpty(country),
+              }, { onConflict: 'user_id' })
+
+            if (profileInsertError) {
+              console.error('Failed to upsert user_profiles row manually:', profileInsertError)
+            }
+
+            // Insert membership fields into org_memberships
+            const { error: membershipInsertError } = await adminClient
+              .from('org_memberships')
+              .insert({
+                user_id: data.user.id,
+                org_id: orgId,
                 // Membership Application
                 membership_class: toNullIfEmpty(membershipClass),
                 // COPA Membership
@@ -222,12 +239,12 @@ export async function POST(request: Request) {
                 join_copa_flight_32: toNullIfEmpty(joinCopaFlight32),
                 copa_membership_number: toNullIfEmpty(copaMembershipNumber),
                 // Statement of Interest (append student notes if provided)
-                statement_of_interest: studentNotes 
+                statement_of_interest: studentNotes
                   ? `${toNullIfEmpty(statementOfInterest) || ''}\n\nStudent Information:\n${studentNotes}`.trim()
                   : toNullIfEmpty(statementOfInterest),
                 // Interests (store as JSON array string)
-                interests: interests && Array.isArray(interests) && interests.length > 0 
-                  ? JSON.stringify(interests) 
+                interests: interests && Array.isArray(interests) && interests.length > 0
+                  ? JSON.stringify(interests)
                   : null,
                 // Aviation Information
                 pilot_license_type: toNullIfEmpty(pilotLicenseType),
@@ -242,13 +259,22 @@ export async function POST(request: Request) {
                 membership_level: membershipLevel,
                 status: 'pending',
               })
-              .select()
-              .single()
-            
-            if (!createError && createdProfile) {
-              profile = createdProfile
-            } else {
-              console.error('Failed to create user profile manually:', createError)
+
+            if (membershipInsertError) {
+              console.error('Failed to create org_memberships row manually:', membershipInsertError)
+            }
+
+            // Fetch the joined view for downstream use
+            if (!profileInsertError && !membershipInsertError) {
+              const { data: createdProfile } = await adminClient
+                .from('member_profiles')
+                .select('*')
+                .eq('user_id', data.user.id)
+                .eq('org_id', orgId)
+                .maybeSingle()
+              if (createdProfile) {
+                profile = createdProfile
+              }
             }
           } catch (error) {
             console.error('Error creating user profile manually:', error)
@@ -267,9 +293,10 @@ export async function POST(request: Request) {
         // Store custom field values from admin-configured form fields
         if (profile && customFields && typeof customFields === 'object' && Object.keys(customFields).length > 0) {
           await adminClient
-            .from('user_profiles')
+            .from('org_memberships')
             .update({ custom_data: customFields })
             .eq('id', profile.id)
+            .eq('org_id', orgId)
         }
 
         // Note: Google Sheets append happens when status changes from 'pending' to 'approved'
@@ -281,10 +308,11 @@ export async function POST(request: Request) {
           const clientForAdmins = adminClient || supabase
           try {
             const { data: admins } = await clientForAdmins
-              .from('user_profiles')
+              .from('member_profiles')
               .select('email')
               .eq('role', 'admin')
               .eq('status', 'approved')
+              .eq('org_id', orgId)
 
             if (admins && admins.length > 0) {
               const adminEmails = admins.map(a => a.email).filter(Boolean)
@@ -336,10 +364,11 @@ export async function POST(request: Request) {
         if (profile) {
           try {
             const { data: admins } = await supabase
-              .from('user_profiles')
+              .from('member_profiles')
               .select('email')
               .eq('role', 'admin')
               .eq('status', 'approved')
+              .eq('org_id', orgId)
 
             if (admins && admins.length > 0) {
               const adminEmails = admins.map(a => a.email).filter(Boolean)

@@ -57,7 +57,7 @@ RESEND_API_KEY=your_resend_api_key
 RESEND_FROM_EMAIL=noreply@yourdomain.com
 
 # App
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_APP_URL=http://clublounge.local:3000
 ```
 
 ### 3. Supabase Setup
@@ -87,7 +87,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://clublounge.local:3000](http://clublounge.local:3000) in your browser.
 
 ### Syncing prod data to lounge-dev (development only)
 

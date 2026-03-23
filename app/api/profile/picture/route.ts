@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     const { data: profile } = await supabase
       .from('user_profiles')
       .select('profile_picture_url')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .single()
 
     if (profile?.profile_picture_url) {
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
     const { error: updateError } = await supabase
       .from('user_profiles')
       .update({ profile_picture_url: publicUrl })
-      .eq('id', user.id)
+      .eq('user_id', user.id)
 
     if (updateError) {
       // If update fails, try to clean up the uploaded file
@@ -166,7 +166,7 @@ export async function DELETE() {
     const { data: profile } = await supabase
       .from('user_profiles')
       .select('profile_picture_url')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .single()
 
     if (profile?.profile_picture_url) {
@@ -187,7 +187,7 @@ export async function DELETE() {
     const { error: updateError } = await supabase
       .from('user_profiles')
       .update({ profile_picture_url: null })
-      .eq('id', user.id)
+      .eq('user_id', user.id)
 
     if (updateError) {
       return NextResponse.json(

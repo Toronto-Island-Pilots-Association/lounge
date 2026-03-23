@@ -51,7 +51,7 @@ export async function POST(
     }
 
     // Auto-add event to user's Google Calendar if they authorized calendar sync (Gmail sign-in)
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'
     const eventPageUrl = `${appUrl}/events`
     ;(async () => {
       try {

@@ -5,7 +5,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const provider = searchParams.get('provider') || 'google'
-    const host = request.headers.get('host') ?? 'localhost:3000'
+    const host = request.headers.get('host') ?? 'clublounge.local:3000'
     const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
 
     // `next` is an optional absolute URL to land on after auth (e.g. an org subdomain URL).

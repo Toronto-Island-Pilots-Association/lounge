@@ -6,6 +6,19 @@ export async function proxy(request: NextRequest) {
   const hostname = request.headers.get('host') ?? ''
   const { pathname } = request.nextUrl
 
+  // Marketing domain renders at `/marketing/*` via middleware rewrites.
+  // Exempt root-level auth pages so `/login` (and friends) resolve to the
+  // real routes in `app/login`, `app/forgot-password`, etc.
+  const marketingRewriteExemptPaths = [
+    '/login',
+    '/forgot-password',
+    '/reset-password',
+    '/change-password',
+  ]
+
+  const isMarketingAuthExempt =
+    marketingRewriteExemptPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+
   // In local dev, allow ?__domain=platform|marketing|tipa (or any org slug) to simulate domains
   const devDomainOverride = process.env.NODE_ENV === 'development'
     ? request.nextUrl.searchParams.get('__domain')
@@ -55,7 +68,12 @@ export async function proxy(request: NextRequest) {
   // [org].clublounge.app/foo    → /foo (unchanged)
   // Don't rewrite API routes — they resolve to their actual paths regardless of domain
   if (!pathname.startsWith('/api')) {
-    if (domainType === 'marketing' && !pathname.startsWith('/marketing') && !pathname.startsWith('/auth')) {
+    if (
+      domainType === 'marketing' &&
+      !pathname.startsWith('/marketing') &&
+      !pathname.startsWith('/auth') &&
+      !isMarketingAuthExempt
+    ) {
       const rewriteUrl = request.nextUrl.clone()
       rewriteUrl.pathname = `/marketing${pathname === '/' ? '' : pathname}`
       return NextResponse.rewrite(rewriteUrl, { headers: requestHeaders })

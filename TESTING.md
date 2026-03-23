@@ -56,7 +56,7 @@ import { NextRequest } from 'next/server'
 
 describe('/api/auth/login', () => {
   it('should return 400 if email is missing', async () => {
-    const request = new NextRequest('http://localhost:3000/api/auth/login', {
+    const request = new NextRequest('http://clublounge.local:3000/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ password: 'password123' }),
     })

@@ -1,15 +1,15 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { UserProfile } from '@/types/database'
+import { MemberProfile } from '@/types/database'
 import Loading from './Loading'
 
 interface SubscriptionSectionProps {
   user?: {
     id: string
-    profile: UserProfile
+    profile: MemberProfile
   }
-  profile?: UserProfile
+  profile?: MemberProfile
   embedded?: boolean // If true, removes outer card styling for embedding in other sections
 }
 

@@ -30,6 +30,10 @@ function generateTempPassword(): string {
 export async function POST(request: Request) {
   try {
     await requireAdmin()
+    const orgId = request.headers.get('x-org-id')
+    if (!orgId) {
+      return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
+    }
     const {
       email,
       firstName,
@@ -74,10 +78,11 @@ export async function POST(request: Request) {
     // Check if profile exists first (simpler check)
     const supabase = await createClient()
     const { data: existingMember } = await supabase
-      .from('user_profiles')
+      .from('member_profiles')
       .select('id, email, full_name')
       .eq('email', normalizedEmail)
-      .single()
+      .eq('org_id', orgId)
+      .maybeSingle()
 
     if (existingMember) {
       return NextResponse.json(
@@ -105,6 +110,7 @@ export async function POST(request: Request) {
         last_name: lastName || null,
         role: 'member',
         membership_level: membershipLevel,
+        org_id: orgId,
         invited_by_admin: true, // Flag to indicate this user was invited
       }
     })
@@ -142,10 +148,11 @@ export async function POST(request: Request) {
       }
       
       const { data: fetchedProfile } = await adminClient
-        .from('user_profiles')
+        .from('member_profiles')
         .select('*')
-        .eq('id', newUser.user.id)
-        .single()
+        .eq('user_id', newUser.user.id)
+        .eq('org_id', orgId)
+        .maybeSingle()
       
       if (fetchedProfile) {
         profile = fetchedProfile
@@ -159,25 +166,38 @@ export async function POST(request: Request) {
       const { error: profileError } = await adminClient
         .from('user_profiles')
         .insert({
-          id: newUser.user.id,
+          user_id: newUser.user.id,
           email: normalizedEmail,
           full_name: fullName,
           first_name: firstName || null,
           last_name: lastName || null,
+        })
+
+      if (profileError) {
+        console.error('Error creating user_profiles row:', profileError)
+        // User was created but profile failed - still send email
+      }
+
+      // Insert membership row into org_memberships
+      const { error: membershipError } = await adminClient
+        .from('org_memberships')
+        .insert({
+          user_id: newUser.user.id,
+          org_id: orgId,
           role: 'member',
           membership_level: membershipLevel,
           status: 'pending', // Will be updated to 'approved' when they log in
           invited_at: new Date().toISOString(),
         })
 
-      if (profileError) {
-        console.error('Error creating profile:', profileError)
-        // User was created but profile failed - still send email
+      if (membershipError) {
+        console.error('Error creating org_memberships row:', membershipError)
+        // User was created but membership failed - still send email
       }
     }
 
     // Send invitation email with temporary password
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'
     await sendInvitationWithPasswordEmail(
       normalizedEmail,
       fullName || normalizedEmail,

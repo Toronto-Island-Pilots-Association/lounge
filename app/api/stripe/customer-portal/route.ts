@@ -25,7 +25,7 @@ export async function POST() {
       )
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'
     const returnUrl = `${baseUrl}/membership`
 
     const stripe = getStripeInstance()

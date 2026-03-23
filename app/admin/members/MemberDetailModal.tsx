@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { UserProfile, MembershipLevel, getMembershipLevelLabel, Payment } from '@/types/database'
+import { MemberProfile, MembershipLevel, getMembershipLevelLabel, Payment } from '@/types/database'
 import { isOnTrial, getTrialEndDate } from '@/lib/trial'
 import { COUNTRIES, getStatesProvinces } from '@/app/become-a-member/constants'
 import {
@@ -64,9 +64,9 @@ export default function MemberDetailModal({
   onResendReminder,
   resendingMemberId,
 }: {
-  member: UserProfile
+  member: MemberProfile
   onClose: () => void
-  onSave: (member: UserProfile, updates: Partial<UserProfile>) => void
+  onSave: (member: MemberProfile, updates: Partial<MemberProfile>) => void
   onResendReminder?: (memberId: string) => void
   resendingMemberId?: string | null
 }) {
@@ -651,7 +651,7 @@ export default function MemberDetailModal({
                         <label className="block text-sm font-medium text-gray-900 mb-1">Status</label>
                         <select
                           value={formData.status}
-                          onChange={(e) => setFormData({ ...formData, status: e.target.value as UserProfile['status'] })}
+                          onChange={(e) => setFormData({ ...formData, status: e.target.value as MemberProfile['status'] })}
                           className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
                         >
                           <option value="pending">Pending</option>
@@ -1438,7 +1438,7 @@ export default function MemberDetailModal({
                 onSave(member, {
                   ...formData,
                   is_student_pilot: formData.membership_level === 'Student',
-                } as Partial<UserProfile>)
+                } as Partial<MemberProfile>)
                 onClose()
               }}
               className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c]"

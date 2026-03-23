@@ -20,6 +20,10 @@ import { NextResponse } from 'next/server'
 export async function POST(request: Request) {
   try {
     await requireAdmin()
+    const orgId = request.headers.get('x-org-id')
+    if (!orgId) {
+      return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
+    }
 
     const body = await request.json()
     const {
@@ -49,9 +53,10 @@ export async function POST(request: Request) {
 
     // Get current member data
     const { data: currentMember, error: fetchError } = await supabase
-      .from('user_profiles')
+      .from('member_profiles')
       .select('*')
       .eq('id', userId)
+      .eq('org_id', orgId)
       .single()
 
     if (fetchError || !currentMember) {
@@ -85,9 +90,10 @@ export async function POST(request: Request) {
 
     // Update the member
     const { data: updatedMember, error: updateError } = await supabase
-      .from('user_profiles')
+      .from('org_memberships')
       .update(updates)
       .eq('id', userId)
+      .eq('org_id', orgId)
       .select()
       .single()
 
@@ -133,7 +139,8 @@ export async function POST(request: Request) {
     const { data: paymentRecord, error: paymentError } = await supabase
       .from('payments')
       .insert({
-        user_id: userId,
+        org_id: orgId,
+        user_id: currentMember.user_id,
         payment_method: paymentMethod,
         amount: membershipFee,
         currency: 'CAD',

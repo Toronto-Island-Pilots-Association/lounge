@@ -22,10 +22,10 @@ export async function GET() {
     const userIds = [...new Set(threads?.map(t => t.created_by).filter((id): id is string => id !== null) || [])]
     const { data: authors } = userIds.length > 0 ? await supabase
       .from('user_profiles')
-      .select('id, full_name, email, profile_picture_url')
-      .in('id', userIds) : { data: [] }
+      .select('user_id, full_name, email, profile_picture_url')
+      .in('user_id', userIds) : { data: [] }
 
-    const authorsMap = new Map(authors?.map(a => [a.id, a]) || [])
+    const authorsMap = new Map(authors?.map(a => [a.user_id, a]) || [])
 
     // Get comment counts for each thread
     const threadIds = threads?.map(t => t.id) || []
@@ -61,6 +61,11 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { title, content, category, image_urls } = body
 
+    const orgId = user.profile?.org_id
+    if (!orgId) {
+      return NextResponse.json({ error: 'Organization not found' }, { status: 400 })
+    }
+
     if (!title || !content) {
       return NextResponse.json(
         { error: 'Title and content are required' },
@@ -85,7 +90,7 @@ export async function POST(request: Request) {
     const { data: userProfile } = await supabase
       .from('user_profiles')
       .select('email')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .single()
 
     const { data, error } = await supabase
@@ -96,6 +101,7 @@ export async function POST(request: Request) {
         category: threadCategory,
         image_urls: imageUrls.length > 0 ? imageUrls : null,
         created_by: user.id,
+        org_id: orgId,
         author_email: userProfile?.email || user.email || null
       })
       .select('*')
@@ -108,8 +114,8 @@ export async function POST(request: Request) {
     // Get author info
     const { data: author } = await supabase
       .from('user_profiles')
-      .select('id, full_name, email, profile_picture_url')
-      .eq('id', user.id)
+      .select('user_id, full_name, email, profile_picture_url')
+      .eq('user_id', user.id)
       .single()
 
     return NextResponse.json({ thread: { ...data, comment_count: 0, author } })

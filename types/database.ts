@@ -21,10 +21,10 @@ export function getMembershipLevelLabel(level: MembershipLevel): string {
 export type UserRole = 'member' | 'admin'
 export type UserStatus = 'pending' | 'approved' | 'rejected' | 'expired'
 
+/** Global identity — one row per user across all orgs. */
 export interface UserProfile {
-  id: string        // surrogate UUID (profile id)
+  id: string        // surrogate UUID
   user_id: string   // auth.users.id
-  org_id: string    // organizations.id
   email: string
   full_name: string | null
   first_name: string | null
@@ -36,50 +36,62 @@ export interface UserProfile {
   province_state: string | null
   postal_zip_code: string | null
   country: string | null
-  // Membership
+  profile_picture_url: string | null
+  notify_replies: boolean
+  created_at: string
+  updated_at: string
+}
+
+/** Per-org membership — one row per (user, org) pair. */
+export interface OrgMembership {
+  id: string        // surrogate UUID
+  user_id: string   // auth.users.id
+  org_id: string    // organizations.id
+  role: UserRole
+  status: UserStatus
+  membership_level: MembershipLevel
   membership_class: string | null
+  member_number: string | null
+  membership_expires_at: string | null
+  invited_at: string | null
+  last_reminder_sent_at: string | null
+  reminder_count: number | null
+  stripe_subscription_id: string | null
+  stripe_customer_id: string | null
+  paypal_subscription_id: string | null
+  subscription_cancel_at_period_end: boolean | null
+  // Application fields
+  statement_of_interest: string | null
+  interests: string | null
+  how_did_you_hear: string | null
   // COPA Membership
   is_copa_member: string | null
   join_copa_flight_32: string | null
   copa_membership_number: string | null
-  // Statement of Interest
-  statement_of_interest: string | null
-  // Interests
-  interests: string | null
-  // Aviation Information
+  // Aviation Information (TIPA-specific; other orgs use custom_data)
   pilot_license_type: string | null
   aircraft_type: string | null
   call_sign: string | null
   how_often_fly_from_ytz: string | null
-  how_did_you_hear: string | null
-  role: UserRole
-  membership_level: MembershipLevel
-  status: UserStatus
-  membership_expires_at: string | null
-  paypal_subscription_id: string | null
-  stripe_subscription_id: string | null
-  stripe_customer_id: string | null
-  subscription_cancel_at_period_end: boolean | null
-  profile_picture_url: string | null
-  member_number: string | null
   is_student_pilot: boolean
   flight_school: string | null
   instructor_name: string | null
-  notify_replies: boolean
+  // Org-defined custom signup fields
   custom_data: Record<string, unknown> | null
   created_at: string
   updated_at: string
-  /** Set when the user was invited (admin or member invite); null for self-signup. */
-  invited_at?: string | null
-  /** When the last invitation reminder was sent; used for 24h cooldown. */
-  last_reminder_sent_at?: string | null
-  /** Number of reminder emails sent (max 3). */
-  reminder_count?: number | null
-  /** Server-computed trial end (ISO string). Set by admin members API from editable trial config. */
+  /** Server-computed trial end. Set by admin members API. */
   trial_end?: string | null
-  /** Latest payment summary from admin members API (amount, currency, payment_method). */
+  /** Latest payment summary from admin members API. */
   payment_summary?: { amount: number; currency: string; payment_method: string } | null
 }
+
+/**
+ * Flattened join of UserProfile + OrgMembership — mirrors the member_profiles view.
+ * Use this everywhere a "full member record" is needed.
+ * `id` refers to org_memberships.id (the org-scoped record).
+ */
+export type MemberProfile = OrgMembership & Omit<UserProfile, 'id' | 'created_at' | 'updated_at'>
 
 export type ResourceType = 'link' | 'document' | 'video' | 'other'
 export type ResourceCategory = 'tipa_newsletters' | 'airport_updates' | 'reminder' | 'other'

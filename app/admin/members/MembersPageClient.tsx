@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { UserProfile, MembershipLevel, getMembershipLevelLabel, Payment } from '@/types/database'
+import { MemberProfile, MembershipLevel, getMembershipLevelLabel, Payment } from '@/types/database'
 import { isOnTrial } from '@/lib/trial'
 import Loading from '@/components/Loading'
 import MemberDetailModal from './MemberDetailModal'
@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/drawer'
 
 type PaymentSummary = { amount: number; currency: string; payment_method: string } | null
-type MemberWithPayment = UserProfile & { payment_summary?: PaymentSummary }
+type MemberWithPayment = MemberProfile & { payment_summary?: PaymentSummary }
 
 function hasPaymentSetUp(member: MemberWithPayment): boolean {
   return !!(member.stripe_subscription_id || member.payment_summary)
@@ -79,9 +79,9 @@ function compareMembers(
 }
 
 export default function MembersPageClient() {
-  const [members, setMembers] = useState<UserProfile[]>([])
+  const [members, setMembers] = useState<MemberProfile[]>([])
   const [loading, setLoading] = useState(true)
-  const [editingMember, setEditingMember] = useState<UserProfile | null>(null)
+  const [editingMember, setEditingMember] = useState<MemberProfile | null>(null)
   const [showInviteForm, setShowInviteForm] = useState(false)
   const [showBulkInviteForm, setShowBulkInviteForm] = useState(false)
   const [resendingMemberId, setResendingMemberId] = useState<string | null>(null)
@@ -219,7 +219,7 @@ export default function MembersPageClient() {
     }
   }
 
-  const handleUpdateMember = async (member: UserProfile, updates: Partial<UserProfile>) => {
+  const handleUpdateMember = async (member: MemberProfile, updates: Partial<MemberProfile>) => {
     try {
       const response = await fetch('/api/admin/members', {
         method: 'PATCH',

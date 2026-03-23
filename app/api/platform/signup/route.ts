@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createServiceRoleClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { validateOrgSlug, ROOT_DOMAIN } from '@/lib/org'
 import { addDomainToProject } from '@/lib/vercel'
 
@@ -9,14 +9,18 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { email, password, firstName, lastName, orgName, slug, customDomain } = await request.json()
+    const {
+      email,
+      password,
+      firstName,
+      lastName,
+      orgName,
+      slug,
+      customDomain,
+    } = await request.json()
 
-    if (!email || !password || !firstName || !orgName || !slug) {
+    if (!orgName || !slug) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
-    }
-
-    if (password.length < 8) {
-      return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 })
     }
 
     const slugValidation = validateOrgSlug(slug)
@@ -25,6 +29,8 @@ export async function POST(request: Request) {
     }
 
     const supabase = createServiceRoleClient()
+
+    const isCreatingAuthUser = typeof email === 'string' && typeof password === 'string' && email && password
 
     // Check slug availability
     const { data: existing } = await supabase
@@ -37,32 +43,69 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'This subdomain is already taken' }, { status: 409 })
     }
 
-    // Try to create the auth user; if they already exist, reuse their account
+    // Determine which user the org should belong to:
+    // - if email/password is provided: create/reuse auth user by those credentials
+    // - if email/password is omitted: require an existing logged-in platform session
     let userId: string
-    let isNewUser = true
+    let isNewUser = false
+    let resolvedEmail = email as string | undefined
+    let resolvedFirstName = firstName as string | undefined
+    let resolvedLastName = (lastName as string | undefined) ?? ''
 
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { first_name: firstName, last_name: lastName ?? '' },
-    })
+    if (isCreatingAuthUser) {
+      if (!password || password.length < 8) {
+        return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 })
+      }
 
-    if (authError) {
-      if (authError.message.includes('already registered') || authError.message.includes('already been registered')) {
-        // Existing account — look up the user and create the org for them
-        isNewUser = false
-        const { data: { users }, error: lookupError } = await supabase.auth.admin.listUsers({ perPage: 1000 })
-        const existingUser = users?.find(u => u.email === email)
-        if (lookupError || !existingUser) {
-          return NextResponse.json({ error: 'Account lookup failed. Please try again.' }, { status: 500 })
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: email as string,
+        password,
+        email_confirm: true,
+        user_metadata: { first_name: resolvedFirstName ?? '', last_name: resolvedLastName },
+      })
+
+      if (authError) {
+        if (authError.message.includes('already registered') || authError.message.includes('already been registered')) {
+          // Existing account — look up the user and create the org for them
+          isNewUser = false
+          const { data: { users }, error: lookupError } = await supabase.auth.admin.listUsers({ perPage: 1000 })
+          const existingUser = users?.find(u => u.email === resolvedEmail)
+          if (lookupError || !existingUser) {
+            return NextResponse.json({ error: 'Account lookup failed. Please try again.' }, { status: 500 })
+          }
+          userId = existingUser.id
+        } else {
+          return NextResponse.json({ error: authError.message ?? 'Failed to create account' }, { status: 500 })
         }
-        userId = existingUser.id
       } else {
-        return NextResponse.json({ error: authError.message ?? 'Failed to create account' }, { status: 500 })
+        userId = authData.user!.id
       }
     } else {
-      userId = authData.user!.id
+      const supabaseUser = await createClient()
+      const { data: authUser, error } = await supabaseUser.auth.getUser()
+      if (error || !authUser?.user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+
+      userId = authUser.user.id
+      resolvedEmail = authUser.user.email ?? resolvedEmail
+
+      const md = (authUser.user.user_metadata ?? {}) as any
+      resolvedFirstName = resolvedFirstName ?? (md.first_name ?? md.firstName ?? '')
+      resolvedLastName = resolvedLastName || (md.last_name ?? md.lastName ?? '')
+      isNewUser = false
+    }
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Failed to determine user' }, { status: 500 })
+    }
+    if (!resolvedEmail) {
+      return NextResponse.json({ error: 'Missing email for admin profile' }, { status: 400 })
+    }
+
+    if (!resolvedFirstName) {
+      // Keep onboarding moving even if metadata is missing.
+      resolvedFirstName = 'Admin'
     }
 
     // Create org
@@ -87,22 +130,30 @@ export async function POST(request: Request) {
     // Seed default settings
     await supabase.rpc('create_default_org_settings', { p_org_id: org.id })
 
-    // Create admin user_profile
-    const { error: profileError } = await supabase.from('user_profiles').insert({
-      id: userId,
+    // Upsert identity fields into user_profiles
+    const { error: profileError } = await supabase.from('user_profiles').upsert({
+      user_id: userId,
+      email: resolvedEmail,
+      first_name: resolvedFirstName,
+      last_name: resolvedLastName ? resolvedLastName : null,
+      full_name: [resolvedFirstName, resolvedLastName].filter(Boolean).join(' '),
+    }, { onConflict: 'user_id' })
+
+    if (profileError) {
+      console.error('Failed to create admin user_profile:', profileError)
+    }
+
+    // Create membership row in org_memberships
+    const { error: membershipError } = await supabase.from('org_memberships').insert({
       user_id: userId,
       org_id: org.id,
-      email,
-      first_name: firstName,
-      last_name: lastName ?? null,
-      full_name: [firstName, lastName].filter(Boolean).join(' '),
       role: 'admin',
       status: 'approved',
       membership_level: 'Full',
     })
 
-    if (profileError) {
-      console.error('Failed to create admin profile:', profileError)
+    if (membershipError) {
+      console.error('Failed to create admin org_membership:', membershipError)
     }
 
     // Register Vercel domains

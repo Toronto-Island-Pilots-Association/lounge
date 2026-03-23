@@ -26,10 +26,14 @@ export interface AnalyticsPayload {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     await requireAdmin()
     const supabase = await createClient()
+    const orgId = request.headers.get('x-org-id')
+    if (!orgId) {
+      return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
+    }
 
     const now = new Date()
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -52,14 +56,15 @@ export async function GET() {
       reactionsCount,
     ] = await Promise.all([
       // Total members
-      supabase.from('user_profiles').select('id', { count: 'exact', head: true }),
+      supabase.from('org_memberships').select('id', { count: 'exact', head: true }).eq('org_id', orgId),
       // Members by status (one query per status for simplicity; could use raw SQL for single query)
       Promise.all(
         ['pending', 'approved', 'rejected', 'expired'].map((status) =>
           supabase
-            .from('user_profiles')
+            .from('org_memberships')
             .select('id', { count: 'exact', head: true })
             .eq('status', status)
+            .eq('org_id', orgId)
         )
       ).then((results) => ({
         pending: results[0].count ?? 0,
@@ -69,33 +74,37 @@ export async function GET() {
       })),
       // New members this month
       supabase
-        .from('user_profiles')
+        .from('org_memberships')
         .select('id', { count: 'exact', head: true })
-        .gte('created_at', startOfMonthIso),
+        .gte('created_at', startOfMonthIso)
+        .eq('org_id', orgId),
       // All completed payments (for total revenue and by method)
       supabase
         .from('payments')
         .select('amount, payment_method')
-        .eq('status', 'completed'),
+        .eq('status', 'completed')
+        .eq('org_id', orgId),
       // Payments this year (for revenue this year)
       supabase
         .from('payments')
         .select('amount')
         .eq('status', 'completed')
-        .gte('payment_date', startOfYearIso),
+        .gte('payment_date', startOfYearIso)
+        .eq('org_id', orgId),
       // Events count
-      supabase.from('events').select('id', { count: 'exact', head: true }),
+      supabase.from('events').select('id', { count: 'exact', head: true }).eq('org_id', orgId),
       // Total RSVPs
-      supabase.from('event_rsvps').select('id', { count: 'exact', head: true }),
+      supabase.from('event_rsvps').select('id', { count: 'exact', head: true }).eq('org_id', orgId),
       // Upcoming events (start_time >= now)
       supabase
         .from('events')
         .select('id', { count: 'exact', head: true })
-        .gte('start_time', now.toISOString()),
+        .gte('start_time', now.toISOString())
+        .eq('org_id', orgId),
       // Discussions
-      supabase.from('threads').select('id', { count: 'exact', head: true }),
-      supabase.from('comments').select('id', { count: 'exact', head: true }),
-      supabase.from('reactions').select('id', { count: 'exact', head: true }),
+      supabase.from('threads').select('id', { count: 'exact', head: true }).eq('org_id', orgId),
+      supabase.from('comments').select('id', { count: 'exact', head: true }).eq('org_id', orgId),
+      supabase.from('reactions').select('id', { count: 'exact', head: true }).eq('org_id', orgId),
     ])
 
     const totalMembers = membersAll.count ?? 0

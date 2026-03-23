@@ -40,7 +40,7 @@ export async function GET(
     const rsvpCount = rsvpRows?.length ?? 0
     const userRsvped = rsvpRows?.some((r) => r.user_id === user.id) ?? false
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'
     const eventPageUrl = `${appUrl}/events`
 
     const displayName =

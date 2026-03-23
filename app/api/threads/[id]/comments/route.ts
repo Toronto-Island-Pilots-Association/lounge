@@ -73,12 +73,17 @@ export async function POST(
     // Verify thread exists and get thread details for notifications
     const { data: thread } = await supabase
       .from('threads')
-      .select('id, title, created_by')
+      .select('id, title, created_by, org_id')
       .eq('id', id)
       .single()
 
     if (!thread) {
       return NextResponse.json({ error: 'Thread not found' }, { status: 404 })
+    }
+
+    const orgId = thread.org_id
+    if (!orgId) {
+      return NextResponse.json({ error: 'Thread org_id not found' }, { status: 400 })
     }
 
     // Get commenter's profile
@@ -95,6 +100,7 @@ export async function POST(
         content: content.trim(),
         image_urls: imageUrls.length > 0 ? imageUrls : null,
         created_by: user.id,
+        org_id: orgId,
         author_email: userProfile?.email || user.email || null
       })
       .select('*')

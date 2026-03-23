@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense, useMemo, useCallback } from 'react'
 import dynamic from 'next/dynamic'
-import { UserProfile, Resource, Event, MembershipLevel, getMembershipLevelLabel } from '@/types/database'
+import { MemberProfile, Resource, Event, MembershipLevel, getMembershipLevelLabel } from '@/types/database'
 import Loading from './Loading'
 import {
   Drawer,
@@ -30,13 +30,13 @@ const AdminFileUpload = dynamic(() => import('./AdminFileUpload'), {
 })
 
 export default function AdminDashboard() {
-  const [members, setMembers] = useState<UserProfile[]>([])
+  const [members, setMembers] = useState<MemberProfile[]>([])
   const [resources, setResources] = useState<Resource[]>([])
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'members' | 'resources' | 'events' | 'settings'>('members')
   const [settings, setSettings] = useState<Record<string, string>>({})
-  const [editingMember, setEditingMember] = useState<UserProfile | null>(null)
+  const [editingMember, setEditingMember] = useState<MemberProfile | null>(null)
   const [editingResource, setEditingResource] = useState<Resource | null>(null)
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
   const [showResourceForm, setShowResourceForm] = useState(false)
@@ -204,7 +204,7 @@ export default function AdminDashboard() {
     }
   }
 
-  const handleUpdateMember = async (member: UserProfile, updates: Partial<UserProfile>) => {
+  const handleUpdateMember = async (member: MemberProfile, updates: Partial<MemberProfile>) => {
     try {
       const response = await fetch('/api/admin/members', {
         method: 'PATCH',
@@ -928,9 +928,9 @@ function MemberEditModal({
   onClose,
   onSave,
 }: {
-  member: UserProfile
+  member: MemberProfile
   onClose: () => void
-  onSave: (member: UserProfile, updates: Partial<UserProfile>) => void
+  onSave: (member: MemberProfile, updates: Partial<MemberProfile>) => void
 }) {
   const [formData, setFormData] = useState({
     full_name: member.full_name || '',
@@ -959,7 +959,7 @@ function MemberEditModal({
             <label className="block text-sm font-medium text-gray-900 mb-1">Status</label>
             <select
               value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value as UserProfile['status'] })}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value as MemberProfile['status'] })}
               className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
             >
               <option value="pending">Pending</option>

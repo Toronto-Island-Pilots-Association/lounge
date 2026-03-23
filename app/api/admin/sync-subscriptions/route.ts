@@ -16,6 +16,10 @@ import { NextResponse } from 'next/server'
 export async function POST(request: Request) {
   try {
     await requireAdmin()
+    const orgId = request.headers.get('x-org-id')
+    if (!orgId) {
+      return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
+    }
 
     const body = await request.json()
     const { userId, subscriptionId, all } = body
@@ -24,9 +28,10 @@ export async function POST(request: Request) {
       // Sync all users with Stripe subscriptions
       const supabase = await createClient()
       const { data: profiles, error } = await supabase
-        .from('user_profiles')
+        .from('org_memberships')
         .select('id, stripe_subscription_id')
         .not('stripe_subscription_id', 'is', null)
+        .eq('org_id', orgId)
 
       if (error) {
         return NextResponse.json(
@@ -37,7 +42,7 @@ export async function POST(request: Request) {
 
       const results = await Promise.allSettled(
         (profiles || []).map(profile =>
-          syncSubscriptionBySubscriptionId(profile.stripe_subscription_id!)
+          syncSubscriptionBySubscriptionId(profile.stripe_subscription_id!, orgId)
         )
       )
 
@@ -53,7 +58,7 @@ export async function POST(request: Request) {
     }
 
     if (subscriptionId) {
-      const success = await syncSubscriptionBySubscriptionId(subscriptionId)
+      const success = await syncSubscriptionBySubscriptionId(subscriptionId, orgId)
       if (success) {
         return NextResponse.json({
           message: 'Subscription synced successfully',
@@ -68,7 +73,7 @@ export async function POST(request: Request) {
     }
 
     if (userId) {
-      const success = await syncSubscriptionByUserId(userId)
+      const success = await syncSubscriptionByUserId(userId, orgId)
       if (success) {
         return NextResponse.json({
           message: 'User subscription synced successfully',

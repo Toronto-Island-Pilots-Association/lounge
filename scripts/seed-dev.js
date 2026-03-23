@@ -40,6 +40,20 @@ async function main() {
     auth: { autoRefreshToken: false, persistSession: false },
   })
 
+  // Use the founding org (TIPA) for all seeded tenant data.
+  const { data: tipaOrg, error: orgErr } = await supabase
+    .from('organizations')
+    .select('id')
+    .eq('slug', 'tipa')
+    .single()
+
+  if (orgErr || !tipaOrg?.id) {
+    console.error('Unable to resolve TIPA org id (expected organizations.slug=tipa):', orgErr?.message)
+    process.exit(1)
+  }
+
+  const orgId = tipaOrg.id
+
   const firstNames = [
     'Alex', 'Jordan', 'Sam', 'Casey', 'Morgan', 'Riley', 'Quinn', 'Avery',
     'Drew', 'Jamie', 'Skyler', 'Reese', 'Finley', 'Parker', 'Cameron', 'Blair',
@@ -53,9 +67,9 @@ async function main() {
   // Existing dev users: find highest index so we only create new ones
   const { data: existingProfiles } = await supabase
     .from('user_profiles')
-    .select('id, email')
+    .select('user_id, email')
     .like('email', 'dev-%@dev.local')
-  const existingUserIds = (existingProfiles || []).map((p) => p.id)
+  const existingUserIds = (existingProfiles || []).map((p) => p.user_id)
   const existingIndices = (existingProfiles || [])
     .map((p) => {
       const m = p.email?.match(/^dev-(\d+)@dev\.local$/)
@@ -86,13 +100,18 @@ async function main() {
         last_name: lastName,
         role: 'member',
         membership_level: membershipLevel,
+        org_id: orgId,
       },
     })
     if (error) {
       if (error.message?.toLowerCase().includes('already') || error.message?.toLowerCase().includes('exists')) {
-        const { data: existingProfile } = await supabase.from('user_profiles').select('id').eq('email', email).single()
+        const { data: existingProfile } = await supabase
+          .from('user_profiles')
+          .select('user_id')
+          .eq('email', email)
+          .single()
         if (existingProfile) {
-          newUserIds.push(existingProfile.id)
+          newUserIds.push(existingProfile.user_id)
         } else {
           const { data: listData } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
           const authUser = listData?.users?.find((u) => (u.email || '').toLowerCase() === email)
@@ -122,14 +141,19 @@ async function main() {
   console.log('  Waiting for profiles (trigger), then ensuring all have user_profiles...')
   await new Promise((r) => setTimeout(r, 2000))
 
-  const { data: profiles } = await supabase.from('user_profiles').select('id').in('id', userIds)
-  const profileIds = (profiles || []).map((p) => p.id)
-  const missingProfileIds = newUserIds.filter((id) => !profileIds.includes(id))
-  if (missingProfileIds.length > 0) {
+  const { data: profiles } = await supabase
+    .from('user_profiles')
+    .select('user_id')
+    .in('user_id', userIds)
+  const profileUserIds = (profiles || []).map((p) => p.user_id)
+  const missingUserIds = newUserIds.filter((id) => !profileUserIds.includes(id))
+  if (missingUserIds.length > 0) {
     for (const meta of newUserMeta) {
-      if (!missingProfileIds.includes(meta.id)) continue
+      if (!missingUserIds.includes(meta.id)) continue
       const { error: insErr } = await supabase.from('user_profiles').insert({
         id: meta.id,
+        user_id: meta.id,
+        org_id: orgId,
         email: meta.email,
         full_name: meta.fullName,
         first_name: meta.firstName,
@@ -140,9 +164,12 @@ async function main() {
       })
       if (insErr) console.error(`  Profile insert for ${meta.email}:`, insErr.message)
     }
-    console.log(`  Created ${missingProfileIds.length} missing user_profiles so they show in Admin Members.`)
+    console.log(`  Created ${missingUserIds.length} missing user_profiles so they show in Admin Members.`)
   }
-  const { data: profilesAfter } = await supabase.from('user_profiles').select('id').in('id', userIds)
+  const { data: profilesAfter } = await supabase
+    .from('user_profiles')
+    .select('id')
+    .in('user_id', userIds)
   const profileIdsAfter = (profilesAfter || []).map((p) => p.id)
   if (profileIdsAfter.length > 0) {
     const { error: upErr } = await supabase
@@ -162,6 +189,7 @@ async function main() {
         content: `This is seed content for thread ${t + 1}. Some **markdown** and real-looking discussion.`,
         created_by: pick(userIds),
         category: pick(THREAD_CATEGORIES),
+        org_id: orgId,
       })
       .select('id')
       .single()
@@ -177,6 +205,7 @@ async function main() {
         thread_id: thread.id,
         content: `Seed comment ${c + 1} on thread ${t + 1}.`,
         created_by: pick(userIds),
+        org_id: orgId,
       })
     }
   }
@@ -198,6 +227,7 @@ async function main() {
       comment_id: targetComment,
       user_id: pick(userIds),
       reaction_type: pick(REACTION_TYPES),
+      org_id: orgId,
     })
     if (!error) reactionsAdded++
     else if (!error.message?.includes('duplicate') && !error.message?.includes('unique')) {
@@ -221,6 +251,7 @@ async function main() {
       start_time: start.toISOString(),
       end_time: end.toISOString(),
       created_by: pick(userIds),
+      org_id: orgId,
     })
   }
 

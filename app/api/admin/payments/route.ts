@@ -15,6 +15,10 @@ import { NextResponse } from 'next/server'
 export async function GET(request: Request) {
   try {
     await requireAdmin()
+    const orgId = request.headers.get('x-org-id')
+    if (!orgId) {
+      return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
+    }
 
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
@@ -28,6 +32,7 @@ export async function GET(request: Request) {
     let query = supabase
       .from('payments')
       .select('*')
+      .eq('org_id', orgId)
       .order('payment_date', { ascending: false })
       .range(offset, offset + limit - 1)
 
@@ -53,9 +58,10 @@ export async function GET(request: Request) {
       (payments || []).map(async (payment) => {
         // Get user profile for payment.user_id
         const { data: userProfile } = await supabase
-          .from('user_profiles')
+          .from('member_profiles')
           .select('id, email, full_name, member_number')
-          .eq('id', payment.user_id)
+          .eq('user_id', payment.user_id)
+          .eq('org_id', orgId)
           .single()
 
         // Get user profile for payment.recorded_by (if exists)
@@ -63,8 +69,8 @@ export async function GET(request: Request) {
         if (payment.recorded_by) {
           const { data: recordedByProfile } = await supabase
             .from('user_profiles')
-            .select('id, email, full_name')
-            .eq('id', payment.recorded_by)
+            .select('user_id, email, full_name')
+            .eq('user_id', payment.recorded_by)
             .single()
           recordedByUser = recordedByProfile
         }
@@ -81,6 +87,7 @@ export async function GET(request: Request) {
     let countQuery = supabase
       .from('payments')
       .select('*', { count: 'exact', head: true })
+      .eq('org_id', orgId)
 
     if (userId) {
       countQuery = countQuery.eq('user_id', userId)

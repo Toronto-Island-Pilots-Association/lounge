@@ -121,10 +121,11 @@ export async function getTrialConfig(): Promise<Record<string, TrialConfigItem>>
 }
 
 /** Compute trial end date from config. Returns null if no trial or missing created_at when type is months. */
-function computeTrialEndFromConfig(
-  config: TrialConfigItem,
+export function computeTrialEndFromConfig(
+  config: TrialConfigItem | undefined,
   profileCreatedAt: string | null
 ): Date | null {
+  if (!config) return null
   if (config.type === 'none') return null
   const now = new Date()
   if (config.type === 'sept1') {
@@ -141,13 +142,30 @@ function computeTrialEndFromConfig(
   return null
 }
 
+/** Normalize a membership level key to match the lowercase keys stored in config. */
+export function normalizeMembershipLevelKey(level: string): string {
+  return level?.toLowerCase?.() ?? level
+}
+
+/** Case-insensitive lookup into getTrialConfig() result (which uses lowercase keys). */
+export function getTrialConfigItemForLevel(
+  config: Record<string, TrialConfigItem>,
+  level: string,
+): TrialConfigItem | undefined {
+  const levelKey = normalizeMembershipLevelKey(level)
+  return config[levelKey] ?? config[level]
+}
+
 /** Trial end date for a membership level (reads admin config from DB). Use this on the server. */
 export async function getTrialEndDateAsync(
   level: MembershipLevelKey,
   profileCreatedAt: string | null
 ): Promise<Date | null> {
   const config = await getTrialConfig()
-  return computeTrialEndFromConfig(config[level], profileCreatedAt)
+  // getTrialConfig() keys are stored lowercase (e.g. "full", "student"),
+  // but member profiles may store "Full"/"Student" or custom casing.
+  const item = getTrialConfigItemForLevel(config, level)
+  return computeTrialEndFromConfig(item, profileCreatedAt)
 }
 
 /** Update trial config for one level. Mutates the levels config. */

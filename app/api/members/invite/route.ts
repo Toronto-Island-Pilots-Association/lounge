@@ -31,6 +31,10 @@ export async function POST(request: Request) {
   try {
     // Allow any authenticated member to invite
     const user = await requireAuth()
+    const orgId = user.profile?.org_id
+    if (!orgId) {
+      return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
+    }
     
     // Only allow approved members to invite (not pending/rejected/expired)
     if (user.profile.status !== 'approved' && user.profile.role !== 'admin') {
@@ -113,6 +117,7 @@ export async function POST(request: Request) {
         last_name: lastName || null,
         role: 'member',
         membership_level: membershipLevel,
+        org_id: orgId,
         invited_by_member: true, // Flag to indicate this user was invited by a member
         invited_by: user.id, // Track who invited them
       }
@@ -184,7 +189,7 @@ export async function POST(request: Request) {
     }
 
     // Send invitation email with temporary password
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'
     await sendInvitationWithPasswordEmail(
       normalizedEmail,
       fullName || normalizedEmail,

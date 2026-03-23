@@ -9,19 +9,8 @@ export async function GET() {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    const supabase = await createClient()
-
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
-    }
-
-    return NextResponse.json({ profile: data })
+    // profile is already the fully joined MemberProfile from getCurrentUserIncludingPending
+    return NextResponse.json({ profile: user.profile })
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || 'Unauthorized' },
@@ -41,90 +30,80 @@ export async function PATCH(request: Request) {
 
     const body = await request.json()
     const {
-      full_name,
-      first_name,
-      last_name,
-      phone,
-      // Mailing Address
-      street,
-      city,
-      province_state,
-      postal_zip_code,
-      country,
-      // Membership
-      membership_class,
-      // COPA Membership
-      is_copa_member,
-      join_copa_flight_32,
-      copa_membership_number,
-      // Statement of Interest
-      statement_of_interest,
-      // Aviation Information
-      pilot_license_type,
-      aircraft_type,
-      call_sign,
-      how_often_fly_from_ytz,
-      how_did_you_hear,
-      is_student_pilot,
-      flight_school,
-      instructor_name,
-      // Interests
-      interests,
-      // Notifications
+      first_name, last_name, phone,
+      street, city, province_state, postal_zip_code, country,
       notify_replies,
+      // Org-specific / membership fields
+      is_copa_member, join_copa_flight_32, copa_membership_number,
+      statement_of_interest,
+      pilot_license_type, aircraft_type, call_sign,
+      how_often_fly_from_ytz, how_did_you_hear,
+      is_student_pilot, flight_school, instructor_name,
+      interests,
     } = body
 
-    // Build update object with only provided fields
-    const updates: Record<string, any> = {}
-    // full_name is read-only, only admins can update it
-    // Explicitly exclude full_name from member updates
-    if (first_name !== undefined) updates.first_name = first_name || null
-    if (last_name !== undefined) updates.last_name = last_name || null
-    if (phone !== undefined) updates.phone = phone || null
-    // Mailing Address
-    if (street !== undefined) updates.street = street || null
-    if (city !== undefined) updates.city = city || null
-    if (province_state !== undefined) updates.province_state = province_state || null
-    if (postal_zip_code !== undefined) updates.postal_zip_code = postal_zip_code || null
-    if (country !== undefined) updates.country = country || null
-    // Membership - membership_class is read-only, only admins can update it
-    // Explicitly exclude membership_class from member updates
-    // COPA Membership
-    if (is_copa_member !== undefined) updates.is_copa_member = is_copa_member || null
-    if (join_copa_flight_32 !== undefined) updates.join_copa_flight_32 = join_copa_flight_32 || null
-    if (copa_membership_number !== undefined) updates.copa_membership_number = copa_membership_number || null
-    // Statement of Interest (members can set on complete-profile)
-    if (statement_of_interest !== undefined) updates.statement_of_interest = statement_of_interest ? String(statement_of_interest).trim() || null : null
-    // Aviation Information
-    if (pilot_license_type !== undefined) updates.pilot_license_type = pilot_license_type || null
-    if (aircraft_type !== undefined) updates.aircraft_type = aircraft_type || null
-    if (call_sign !== undefined) updates.call_sign = call_sign || null
-    if (how_often_fly_from_ytz !== undefined) updates.how_often_fly_from_ytz = how_often_fly_from_ytz || null
-    if (how_did_you_hear !== undefined) updates.how_did_you_hear = how_did_you_hear || null
-    if (is_student_pilot !== undefined) updates.is_student_pilot = Boolean(is_student_pilot)
-    if (flight_school !== undefined) updates.flight_school = flight_school ? String(flight_school).trim() || null : null
-    if (instructor_name !== undefined) updates.instructor_name = instructor_name ? String(instructor_name).trim() || null : null
-    // Interests - store as JSON string if provided
+    // Identity fields → user_profiles
+    const identityUpdates: Record<string, any> = {}
+    if (first_name !== undefined) identityUpdates.first_name = first_name || null
+    if (last_name !== undefined) identityUpdates.last_name = last_name || null
+    if (phone !== undefined) identityUpdates.phone = phone || null
+    if (street !== undefined) identityUpdates.street = street || null
+    if (city !== undefined) identityUpdates.city = city || null
+    if (province_state !== undefined) identityUpdates.province_state = province_state || null
+    if (postal_zip_code !== undefined) identityUpdates.postal_zip_code = postal_zip_code || null
+    if (country !== undefined) identityUpdates.country = country || null
+    if (notify_replies !== undefined) identityUpdates.notify_replies = Boolean(notify_replies)
+
+    // Org-specific fields → org_memberships
+    const membershipUpdates: Record<string, any> = {}
+    if (is_copa_member !== undefined) membershipUpdates.is_copa_member = is_copa_member || null
+    if (join_copa_flight_32 !== undefined) membershipUpdates.join_copa_flight_32 = join_copa_flight_32 || null
+    if (copa_membership_number !== undefined) membershipUpdates.copa_membership_number = copa_membership_number || null
+    if (statement_of_interest !== undefined) membershipUpdates.statement_of_interest = statement_of_interest ? String(statement_of_interest).trim() || null : null
+    if (pilot_license_type !== undefined) membershipUpdates.pilot_license_type = pilot_license_type || null
+    if (aircraft_type !== undefined) membershipUpdates.aircraft_type = aircraft_type || null
+    if (call_sign !== undefined) membershipUpdates.call_sign = call_sign || null
+    if (how_often_fly_from_ytz !== undefined) membershipUpdates.how_often_fly_from_ytz = how_often_fly_from_ytz || null
+    if (how_did_you_hear !== undefined) membershipUpdates.how_did_you_hear = how_did_you_hear || null
+    if (is_student_pilot !== undefined) membershipUpdates.is_student_pilot = Boolean(is_student_pilot)
+    if (flight_school !== undefined) membershipUpdates.flight_school = flight_school ? String(flight_school).trim() || null : null
+    if (instructor_name !== undefined) membershipUpdates.instructor_name = instructor_name ? String(instructor_name).trim() || null : null
     if (interests !== undefined) {
-      if (interests && (typeof interests === 'string' || Array.isArray(interests))) {
-        updates.interests = typeof interests === 'string' ? interests : JSON.stringify(interests)
-      } else {
-        updates.interests = null
-      }
+      membershipUpdates.interests = interests && (typeof interests === 'string' || Array.isArray(interests))
+        ? (typeof interests === 'string' ? interests : JSON.stringify(interests))
+        : null
     }
-    // Notification preferences
-    if (notify_replies !== undefined) updates.notify_replies = Boolean(notify_replies)
 
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .update(updates)
-      .eq('id', user.id)
-      .select()
+    const errors: string[] = []
+
+    if (Object.keys(identityUpdates).length > 0) {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update(identityUpdates)
+        .eq('user_id', user.id)
+      if (error) errors.push(error.message)
+    }
+
+    if (Object.keys(membershipUpdates).length > 0) {
+      const { error } = await supabase
+        .from('org_memberships')
+        .update(membershipUpdates)
+        .eq('user_id', user.id)
+        .eq('org_id', user.profile.org_id)
+      if (error) errors.push(error.message)
+    }
+
+    if (errors.length > 0) {
+      return NextResponse.json({ error: errors.join('; ') }, { status: 400 })
+    }
+
+    // Re-fetch the updated joined profile
+    const { data } = await supabase
+      .from('member_profiles')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('org_id', user.profile.org_id)
       .single()
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
-    }
 
     return NextResponse.json({ profile: data })
   } catch (error: any) {

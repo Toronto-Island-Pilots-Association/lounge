@@ -13,15 +13,27 @@ export default async function PlatformDashboard() {
   if (!user) redirect('/platform/login')
 
   const db = createServiceRoleClient()
-  const { data: profiles } = await db
-    .from('user_profiles')
-    .select('org_id, role, organizations(*)')
+  const { data: memberProfiles } = await db
+    .from('member_profiles')
+    .select('org_id, role, status')
     .eq('user_id', user.id)
+    // org_memberships.status uses 'approved'/'pending'/...; keep 'active' for backward compatibility.
     .in('status', ['approved', 'active'])
 
-  const memberships = (profiles ?? [])
-    .filter((p: any) => p.organizations)
-    .map((p: any) => ({ org: p.organizations, role: p.role as string }))
+  const membershipsForUser = (memberProfiles ?? []).filter((p: any) => p.org_id)
+  const orgIds = [...new Set(membershipsForUser.map((m: any) => m.org_id))]
+
+  const { data: orgs } = orgIds.length > 0
+    ? await db.from('organizations').select('*').in('id', orgIds)
+    : { data: [] }
+
+  const orgById = new Map((orgs ?? []).map((o: any) => [o.id, o]))
+  const memberships = membershipsForUser
+    .map((m: any) => {
+      const org = orgById.get(m.org_id)
+      return org ? { org, role: m.role as string } : null
+    })
+    .filter(Boolean) as { org: any; role: string }[]
 
   const adminOrgs = memberships.filter(m => m.role === 'admin').map(m => m.org)
   const memberOrgs = memberships.filter(m => m.role !== 'admin').map(m => ({ ...m.org, memberRole: m.role }))

@@ -21,7 +21,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'
     const redirectTo = `${appUrl}/reset-password`
 
     // Send from TIPA via Resend when configured; otherwise Supabase sends the email

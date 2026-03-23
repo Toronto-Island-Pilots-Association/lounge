@@ -1,5 +1,5 @@
 import { google } from 'googleapis'
-import type { UserProfile } from '@/types/database'
+import type { MemberProfile } from '@/types/database'
 
 /**
  * Appends a new member to a Google Sheet
@@ -11,7 +11,7 @@ import type { UserProfile } from '@/types/database'
  * 
  * The service account email must have edit access to the Google Sheet
  */
-export async function appendMemberToSheet(member: UserProfile): Promise<void> {
+export async function appendMemberToSheet(member: MemberProfile): Promise<void> {
   const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID
   const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
   const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n')

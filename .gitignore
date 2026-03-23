@@ -45,4 +45,5 @@ next-env.d.ts
 
 # Database dumps
 *.dump
-*.sql
+/dump_*.sql
+/dump*.sql

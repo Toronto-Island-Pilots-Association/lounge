@@ -15,16 +15,20 @@ import Stripe from 'stripe'
  */
 export async function syncSubscriptionStatus(
   userId: string,
-  subscriptionId: string | null
+  subscriptionId: string | null,
+  orgId?: string
 ): Promise<{ status: 'pending' | 'approved' | 'expired'; membership_expires_at: string | null } | null> {
   const supabase = createServiceRoleClient()
 
   // Get current user profile
-  const { data: profile, error: profileError } = await supabase
-    .from('user_profiles')
+  let membershipQuery = supabase
+    .from('org_memberships')
     .select('status, membership_expires_at, stripe_subscription_id, subscription_cancel_at_period_end')
-    .eq('id', userId)
-    .single()
+    .eq('user_id', userId)
+
+  if (orgId) membershipQuery = membershipQuery.eq('org_id', orgId)
+
+  const { data: profile, error: profileError } = await membershipQuery.single()
 
   if (profileError || !profile) {
     console.error('Error fetching user profile:', profileError)
@@ -117,14 +121,17 @@ export async function syncSubscriptionStatus(
     const needsBackfillExpires = !profile.membership_expires_at && newExpiresAt
 
     if (statusChanged || expiresAtChanged || cancelAtPeriodEndChanged || needsBackfillExpires) {
-      await supabase
-        .from('user_profiles')
+      let updateQuery = supabase
+        .from('org_memberships')
         .update({
           status: newStatus,
           membership_expires_at: newExpiresAt,
           subscription_cancel_at_period_end: cancelAtPeriodEnd,
         })
-        .eq('id', userId)
+        .eq('user_id', userId)
+
+      if (orgId) updateQuery = updateQuery.eq('org_id', orgId)
+      await updateQuery
 
       console.log(`Synced subscription for user ${userId}:`, {
         oldStatus: profile.status,
@@ -157,14 +164,17 @@ export async function syncSubscriptionStatus(
       }
 
       if (profile.status !== newStatus || profile.stripe_subscription_id) {
-        await supabase
-          .from('user_profiles')
+        let updateQuery = supabase
+          .from('org_memberships')
           .update({
             status: newStatus,
             stripe_subscription_id: null,
             subscription_cancel_at_period_end: false,
           })
-          .eq('id', userId)
+          .eq('user_id', userId)
+
+        if (orgId) updateQuery = updateQuery.eq('org_id', orgId)
+        await updateQuery
       }
 
       return {
@@ -181,7 +191,8 @@ export async function syncSubscriptionStatus(
  * Syncs subscription status for a user by their Stripe subscription ID
  */
 export async function syncSubscriptionBySubscriptionId(
-  subscriptionId: string
+  subscriptionId: string,
+  orgId?: string
 ): Promise<boolean> {
   if (!isStripeEnabled()) {
     return false
@@ -190,37 +201,41 @@ export async function syncSubscriptionBySubscriptionId(
   const supabase = createServiceRoleClient()
 
   // Find user by subscription ID
-  const { data: profile } = await supabase
-    .from('user_profiles')
-    .select('id, stripe_subscription_id')
+  let membershipQuery = supabase
+    .from('org_memberships')
+    .select('user_id, stripe_subscription_id')
     .eq('stripe_subscription_id', subscriptionId)
-    .single()
+  if (orgId) membershipQuery = membershipQuery.eq('org_id', orgId)
+
+  const { data: profile } = await membershipQuery.single()
 
   if (!profile) {
     console.warn(`No user found with subscription ID: ${subscriptionId}`)
     return false
   }
 
-  const result = await syncSubscriptionStatus(profile.id, subscriptionId)
+  const result = await syncSubscriptionStatus(profile.user_id, subscriptionId, orgId)
   return result !== null
 }
 
 /**
  * Syncs subscription status for a user by their user ID
  */
-export async function syncSubscriptionByUserId(userId: string): Promise<boolean> {
+export async function syncSubscriptionByUserId(userId: string, orgId?: string): Promise<boolean> {
   const supabase = createServiceRoleClient()
 
-  const { data: profile } = await supabase
-    .from('user_profiles')
+  let membershipQuery = supabase
+    .from('org_memberships')
     .select('stripe_subscription_id')
-    .eq('id', userId)
-    .single()
+    .eq('user_id', userId)
+  if (orgId) membershipQuery = membershipQuery.eq('org_id', orgId)
+
+  const { data: profile } = await membershipQuery.single()
 
   if (!profile) {
     return false
   }
 
-  const result = await syncSubscriptionStatus(userId, profile.stripe_subscription_id || null)
+  const result = await syncSubscriptionStatus(userId, profile.stripe_subscription_id || null, orgId)
   return result !== null
 }

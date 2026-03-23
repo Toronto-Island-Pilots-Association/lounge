@@ -43,7 +43,7 @@ export async function POST() {
     if (!orgId) return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
 
     const h = await headers()
-    const host = h.get('host') ?? 'localhost:3000'
+    const host = h.get('host') ?? 'clublounge.local:3000'
     const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
 
     const supabase = createServiceRoleClient()

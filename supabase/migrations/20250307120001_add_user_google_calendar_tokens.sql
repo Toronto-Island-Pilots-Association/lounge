@@ -14,10 +14,18 @@ CREATE INDEX IF NOT EXISTS idx_user_google_calendar_tokens_user_id ON user_googl
 ALTER TABLE user_google_calendar_tokens ENABLE ROW LEVEL SECURITY;
 
 -- Users can insert/update/select only their own token (callback writes, RSVP flow reads via service role or same user)
-CREATE POLICY "Users can manage own google calendar token"
-  ON user_google_calendar_tokens
-  FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'user_google_calendar_tokens'
+      AND policyname = 'Users can manage own google calendar token'
+  ) THEN
+    CREATE POLICY "Users can manage own google calendar token"
+      ON user_google_calendar_tokens
+      FOR ALL
+      USING (auth.uid() = user_id)
+      WITH CHECK (auth.uid() = user_id);
+  END IF;
+END $$;
 
 COMMENT ON TABLE user_google_calendar_tokens IS 'Encrypted Google OAuth refresh tokens for adding RSVP events to user Google Calendar';

@@ -18,8 +18,24 @@ function isTrustedNextUrl(next: string, requestOrigin: string): boolean {
   }
 }
 
+function getRequestOrigin(request: Request): string {
+  const forwardedProto = request.headers.get('x-forwarded-proto')
+  const forwardedHost = request.headers.get('x-forwarded-host')
+  const host = request.headers.get('host')
+
+  const proto = forwardedProto || (process.env.NODE_ENV === 'development' ? 'http' : 'https')
+  const resolvedHost = (forwardedHost ?? host)?.split(',')[0]?.trim()
+
+  if (resolvedHost) return `${proto}://${resolvedHost}`
+
+  // Fallback: should rarely happen, but ensures we always return a valid origin.
+  const u = new URL(request.url)
+  return u.origin
+}
+
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
+  const requestOrigin = getRequestOrigin(request)
   const code = requestUrl.searchParams.get('code')
   const rawNext = requestUrl.searchParams.get('next') || '/discussions'
 
@@ -27,13 +43,13 @@ export async function GET(request: Request) {
   // or a relative path. Resolve to absolute for validation, then use appropriately.
   let resolvedNext: URL
   try {
-    resolvedNext = new URL(rawNext, requestUrl.origin)
+    resolvedNext = new URL(rawNext, requestOrigin)
   } catch {
-    resolvedNext = new URL('/discussions', requestUrl.origin)
+    resolvedNext = new URL('/discussions', requestOrigin)
   }
-  const next = isTrustedNextUrl(resolvedNext.href, requestUrl.origin)
+  const next = isTrustedNextUrl(resolvedNext.href, requestOrigin)
     ? resolvedNext.href
-    : new URL('/discussions', requestUrl.origin).href
+    : new URL('/discussions', requestOrigin).href
   // Determine org context. The proxy sets x-org-id when running on an org subdomain,
   // but when the callback is centralised on the platform domain the header won't be set.
   // In that case, derive the org from the `next` URL's subdomain.
@@ -58,7 +74,7 @@ export async function GET(request: Request) {
 
   // The origin to use for onboarding redirects (e.g. /become-a-member, /complete-profile).
   // For cross-domain callbacks, use the org's origin; otherwise use the current request origin.
-  const orgOrigin = nextUrl.origin !== requestUrl.origin ? nextUrl.origin : requestUrl.origin
+  const orgOrigin = nextUrl.origin !== requestOrigin ? nextUrl.origin : requestOrigin
 
   if (code) {
     const supabase = await createClient()
@@ -68,7 +84,9 @@ export async function GET(request: Request) {
 
     if (error) {
       console.error('Error exchanging code for session:', error)
-      return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(error.message)}`, requestUrl.origin))
+      return NextResponse.redirect(
+        new URL(`/login?error=${encodeURIComponent(error.message)}`, requestOrigin),
+      )
     }
 
     // If user signed in with Google and granted calendar scope, store refresh token for RSVP → Calendar sync
@@ -140,7 +158,7 @@ export async function GET(request: Request) {
           
           try {
             const { data: fetchedProfile, error: fetchedError } = await adminClient
-              .from('user_profiles')
+              .from('member_profiles')
               .select('*')
               .eq('user_id', data.user.id)
               .eq('org_id', orgId)
@@ -161,7 +179,7 @@ export async function GET(request: Request) {
       } else {
         // Fallback: try with regular client
         const { data: fetchedProfile, error: fetchedError } = await supabase
-          .from('user_profiles')
+          .from('member_profiles')
           .select('*')
           .eq('user_id', data.user.id)
           .eq('org_id', orgId)
@@ -233,7 +251,7 @@ export async function GET(request: Request) {
         const clientForAdmins = adminClient || supabase
         try {
           const { data: admins } = await clientForAdmins
-            .from('user_profiles')
+            .from('member_profiles')
             .select('email')
             .eq('role', 'admin')
             .eq('status', 'approved')
@@ -298,6 +316,6 @@ export async function GET(request: Request) {
   }
 
   // If no code, redirect to login
-  return NextResponse.redirect(new URL('/login', requestUrl.origin))
+  return NextResponse.redirect(new URL('/login', requestOrigin))
 }
 

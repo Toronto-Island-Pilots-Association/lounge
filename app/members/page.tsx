@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment } from '@/lib/auth'
 import { getFeatureFlags } from '@/lib/settings'
 import { createClient } from '@/lib/supabase/server'
-import { UserProfile, getMembershipLevelLabel } from '@/types/database'
+import { MemberProfile, getMembershipLevelLabel } from '@/types/database'
 
 const MEMBERS_PER_PAGE = 25
 
@@ -41,13 +41,13 @@ export default async function MembersPage({
   
   // Get total count of approved members only
   const { count } = await supabase
-    .from('user_profiles')
+    .from('member_profiles')
     .select('*', { count: 'exact', head: true })
     .eq('status', 'approved')
 
   // Get paginated members (only approved)
   const { data: members } = await supabase
-    .from('user_profiles')
+    .from('member_profiles')
     .select('*')
     .eq('status', 'approved')
     .order('created_at', { ascending: false })
@@ -70,7 +70,7 @@ export default async function MembersPage({
           <>
             {/* Mobile Card View */}
             <div className="md:hidden space-y-4">
-              {(members as UserProfile[]).map((member) => (
+              {(members as MemberProfile[]).map((member) => (
                 <div key={member.id} className="bg-white shadow rounded-lg p-4">
                   <div className="flex items-start space-x-4">
                     {member.profile_picture_url ? (
@@ -166,7 +166,7 @@ export default async function MembersPage({
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {(members as UserProfile[]).map((member) => (
+                  {(members as MemberProfile[]).map((member) => (
                     <tr key={member.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         {member.profile_picture_url ? (

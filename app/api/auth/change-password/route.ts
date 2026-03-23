@@ -83,9 +83,9 @@ export async function POST(request: Request) {
         if (wasInvited) {
           // Get full profile to check status and append to Google Sheets
           const { data: profile } = await adminClient
-            .from('user_profiles')
+            .from('member_profiles')
             .select('*')
-            .eq('id', user.id)
+            .eq('user_id', user.id)
             .single()
 
           // Update to approved if still pending
@@ -129,9 +129,9 @@ export async function POST(request: Request) {
             }
 
             const { data: updatedProfile } = await adminClient
-              .from('user_profiles')
+              .from('org_memberships')
               .update(updateData)
-              .eq('id', user.id)
+              .eq('user_id', user.id)
               .select()
               .single()
 

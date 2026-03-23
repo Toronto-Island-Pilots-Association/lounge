@@ -7,6 +7,7 @@ import {
   getTrialEndDateAsync,
   type MembershipLevelKey,
 } from '@/lib/settings'
+import { getOrgByHostname } from '@/lib/org'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
@@ -71,24 +72,39 @@ export async function POST(request: Request) {
       }
     }
 
-    const host = request.headers.get('host') ?? 'localhost:3000'
+    const host = request.headers.get('host') ?? 'clublounge.local:3000'
     const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
     const baseUrl = `${protocol}://${host}`
 
     // Look up the org's Stripe Connect account (if configured)
-    const orgId = request.headers.get('x-org-id')
+    // Prefer resolving from Host (derived from the org subdomain) so checkout can't
+    // accidentally brand/connect to the wrong tenant if `x-org-id` is missing/wrong.
+    let resolvedOrgId = request.headers.get('x-org-id')
     let connectedAccountId: string | null = null
-    if (orgId) {
+    let orgName = 'TIPA'
+
+    try {
+      const hostOrg = await getOrgByHostname(host)
+      if (hostOrg?.id) {
+        resolvedOrgId = hostOrg.id
+        orgName = hostOrg.name?.trim() || orgName
+      }
+    } catch {
+      // Non-critical: if host lookup fails, fall back to x-org-id if present.
+    }
+
+    if (resolvedOrgId) {
       const { createServiceRoleClient } = await import('@/lib/supabase/server')
       const db = createServiceRoleClient()
       const { data: org } = await db
         .from('organizations')
-        .select('stripe_account_id, stripe_onboarding_complete')
-        .eq('id', orgId)
+        .select('stripe_account_id, stripe_onboarding_complete, name')
+        .eq('id', resolvedOrgId)
         .maybeSingle()
       if (org?.stripe_onboarding_complete && org?.stripe_account_id) {
         connectedAccountId = org.stripe_account_id
       }
+      orgName = org?.name?.trim() || orgName
     }
 
     // For connected accounts, customer objects are account-scoped — use email instead
@@ -101,7 +117,7 @@ export async function POST(request: Request) {
       cancel_url: `${baseUrl}/membership?subscription=cancelled`,
       metadata: {
         userId: user.id,
-        ...(orgId ? { orgId } : {}),
+        ...(resolvedOrgId ? { orgId: resolvedOrgId } : {}),
       },
       // Platform fee: 2% of the transaction
       ...(connectedAccountId ? {
@@ -130,7 +146,7 @@ export async function POST(request: Request) {
         interval: 'year',
       },
       product_data: {
-        name: `TIPA Annual Membership (${level})`,
+        name: `${orgName} Annual Membership (${level})`,
       },
     })
     sessionParams.line_items = [

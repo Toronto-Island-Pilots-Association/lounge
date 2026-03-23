@@ -22,16 +22,22 @@ export async function POST(request: Request) {
 
     const db = createServiceRoleClient()
 
-    // Verify the user is an admin of this org
-    const { data: profile } = await db
-      .from('user_profiles')
+    // Verify the user is an admin of this org.
+    // In the multi-tenancy schema, org role is stored on `org_memberships`.
+    const { data: membership, error: membershipError } = await db
+      .from('org_memberships')
       .select('role')
       .eq('user_id', user.id)
       .eq('org_id', orgId)
       .eq('role', 'admin')
       .maybeSingle()
 
-    if (!profile) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    if (membershipError) {
+      console.error('Stripe connect membership lookup error:', membershipError)
+      return NextResponse.json({ error: 'Failed to verify permissions' }, { status: 500 })
+    }
+
+    if (!membership) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     // Get the org
     const { data: org } = await db

@@ -37,6 +37,34 @@ export default function PlatformSignup() {
     const email = searchParams.get('email')
     if (email) setAccount(a => ({ ...a, email }))
   }, [searchParams])
+
+  // If the platform user is already logged in, skip the "Your account" step
+  // and jump straight to club setup.
+  useEffect(() => {
+    const loadExistingSession = async () => {
+      try {
+        const supabase = createClient()
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+
+        if (!session?.user) return
+
+        const md = (session.user.user_metadata ?? {}) as any
+        setAccount(prev => ({
+          ...prev,
+          firstName: md.first_name ?? md.firstName ?? prev.firstName,
+          lastName: md.last_name ?? md.lastName ?? prev.lastName,
+        }))
+
+        setStep(2)
+      } catch {
+        // no-op
+      }
+    }
+
+    loadExistingSession()
+  }, [])
   const [club, setClub] = useState<ClubForm>({ name: '', slug: '', customDomain: '' })
   const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null)
   const [slugError, setSlugError] = useState<string | null>(null)
@@ -77,18 +105,25 @@ export default function PlatformSignup() {
     setLoading(true)
     setError(null)
 
+    const body: any = {
+      firstName: account.firstName,
+      lastName: account.lastName || undefined,
+      orgName: club.name,
+      slug: club.slug,
+      customDomain: club.customDomain || undefined,
+    }
+
+    // If the user is not already logged in, Step 1 collects email/password for
+    // creating the auth user. When logged in, we omit them.
+    if (account.email && account.password) {
+      body.email = account.email
+      body.password = account.password
+    }
+
     const res = await fetch('/api/platform/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: account.email,
-        password: account.password,
-        firstName: account.firstName,
-        lastName: account.lastName || undefined,
-        orgName: club.name,
-        slug: club.slug,
-        customDomain: club.customDomain || undefined,
-      }),
+      body: JSON.stringify(body),
     })
 
     const data = await res.json()

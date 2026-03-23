@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { UserProfile, getMembershipLevelLabel } from '@/types/database'
+import { MemberProfile, getMembershipLevelLabel } from '@/types/database'
 import { createClient } from '@/lib/supabase/client'
 
 type OrgConfig = {
@@ -17,7 +17,7 @@ type OrgConfig = {
 
 export default function Navbar() {
   const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [profile, setProfile] = useState<MemberProfile | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [isDevEnvironment, setIsDevEnvironment] = useState(false)

@@ -165,7 +165,7 @@ export function generateICal({
 }
 
 export async function sendWelcomeEmail(email: string, name: string) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'
   
   return sendEmail({
     to: email,
@@ -535,7 +535,7 @@ export async function sendNewMemberNotificationToAdmins(
   },
   adminEmail: string
 ) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'
   const adminUrl = `${appUrl}/admin`
 
   // Helper to format membership level/class
@@ -660,7 +660,7 @@ export async function sendNewMemberNotificationToAdmins(
 }
 
 export async function sendMemberApprovalEmail(email: string, name: string | null) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'
   const dashboardUrl = `${appUrl}/dashboard`
   const introduceYourselfUrl = `${appUrl}/discussions?category=introduce_yourself`
 
@@ -722,7 +722,7 @@ export async function sendEventNotificationEmail(
     end_time?: string | null
   }
 ) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'
   const eventUrl = `${appUrl}/events`
   
   const icalContent = generateICal({
@@ -812,7 +812,7 @@ export async function sendMentionNotificationEmail(
   commentPreview: string,
 ) {
   const { mentionsToEmailHtml } = await import('@/lib/utils')
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'
   const threadUrl = `${appUrl}/discussions/${threadId}`
   const settingsUrl = `${appUrl}/settings`
 
@@ -859,7 +859,7 @@ export async function sendReplyNotificationEmail(
   reason: 'thread_author' | 'participant'
 ) {
   const { mentionsToEmailHtml } = await import('@/lib/utils')
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'
   const threadUrl = `${appUrl}/discussions/${threadId}`
   const settingsUrl = `${appUrl}/settings`
 
@@ -901,7 +901,7 @@ export async function sendReplyNotificationEmail(
 }
 
 export async function sendMembershipExpiredEmail(email: string, name: string | null) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'
   const renewUrl = `${appUrl}/membership`
 
   return sendEmail({
@@ -951,7 +951,7 @@ export async function sendDiscussionDigestEmail(
   }>
 ) {
   const { stripFormatting } = await import('@/lib/utils')
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'
   const discussionsUrl = `${appUrl}/discussions`
   
   const CATEGORY_LABELS: Record<string, string> = {

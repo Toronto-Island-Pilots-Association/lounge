@@ -1,6 +1,6 @@
 import { createClient } from './supabase/server'
 import { headers } from 'next/headers'
-import { UserProfile } from '@/types/database'
+import { MemberProfile, UserProfile } from '@/types/database'
 
 /** Read the org id injected by middleware from request headers. */
 async function getOrgId(): Promise<string | null> {
@@ -12,97 +12,118 @@ async function getOrgId(): Promise<string | null> {
   }
 }
 
+/** Fetch the flattened member profile (identity + membership) for the current user. */
+async function fetchMemberProfile(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  orgId: string | null,
+): Promise<MemberProfile | null> {
+  let query = supabase
+    .from('member_profiles')
+    .select('*')
+    .eq('user_id', userId)
+
+  if (orgId) query = query.eq('org_id', orgId)
+
+  const { data, error } = await query.maybeSingle()
+  if (error) {
+    console.error('Error fetching member profile:', error)
+    return null
+  }
+  return data as MemberProfile | null
+}
+
+/** Create missing identity + membership records for a user. */
+async function createMissingProfile(
+  userId: string,
+  orgId: string,
+  email: string,
+): Promise<MemberProfile | null> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.error('Cannot create profile: missing admin credentials')
+    return null
+  }
+
+  try {
+    const { createClient: createAdminClient } = await import('@supabase/supabase-js')
+    const adminClient = createAdminClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+
+    const { data: authUser } = await adminClient.auth.admin.getUserById(userId)
+    const metadata = authUser?.user?.user_metadata || {}
+
+    const toNull = (v: any): string | null => {
+      if (!v || (typeof v === 'string' && !v.trim())) return null
+      return typeof v === 'string' ? v.trim() : String(v)
+    }
+
+    const membershipLevel = (['Full', 'Student', 'Associate', 'Corporate', 'Honorary'] as const)
+      .includes(metadata.membership_level) ? metadata.membership_level : 'Associate'
+
+    // Upsert identity
+    await adminClient.from('user_profiles').upsert({
+      user_id: userId,
+      email: email.toLowerCase().trim(),
+      full_name: toNull(metadata.full_name),
+      first_name: toNull(metadata.first_name),
+      last_name: toNull(metadata.last_name),
+      phone: toNull(metadata.phone),
+    }, { onConflict: 'user_id' })
+
+    // Insert membership
+    const { error: membershipError } = await adminClient.from('org_memberships').insert({
+      user_id: userId,
+      org_id: orgId,
+      email: email.toLowerCase().trim(),
+      pilot_license_type: toNull(metadata.pilot_license_type),
+      aircraft_type: toNull(metadata.aircraft_type),
+      call_sign: toNull(metadata.call_sign),
+      how_often_fly_from_ytz: toNull(metadata.how_often_fly_from_ytz),
+      how_did_you_hear: toNull(metadata.how_did_you_hear),
+      role: 'member',
+      membership_level: membershipLevel,
+      status: 'pending',
+    })
+
+    if (membershipError) {
+      console.error('Failed to create org membership:', membershipError)
+      return null
+    }
+
+    // Re-fetch via the view
+    const { data } = await adminClient
+      .from('member_profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('org_id', orgId)
+      .maybeSingle()
+
+    console.log('Created missing member profile for:', userId)
+    return data as MemberProfile | null
+  } catch (error) {
+    console.error('Error creating member profile:', error)
+    return null
+  }
+}
+
 export async function getCurrentUser() {
   const supabase = await createClient()
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (!user || authError) return null
 
   const orgId = await getOrgId()
 
-  let query = supabase
-    .from('user_profiles')
-    .select('*')
-    .eq('user_id', user.id)
+  let profile = await fetchMemberProfile(supabase, user.id, orgId)
 
-  if (orgId) query = query.eq('org_id', orgId)
-
-  let { data: profile, error: profileError } = await query.maybeSingle()
-
-  if (profileError) {
-    console.error('Error fetching user profile:', profileError)
-    return null
-  }
-
-  // Profile doesn't exist — attempt to create it
   if (!profile) {
-    console.warn('User profile not found for user:', user.id, '- attempting to create')
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-    if (supabaseUrl && serviceRoleKey && orgId) {
-      try {
-        const { createClient: createAdminClient } = await import('@supabase/supabase-js')
-        const adminClient = createAdminClient(supabaseUrl, serviceRoleKey, {
-          auth: { autoRefreshToken: false, persistSession: false },
-        })
-
-        const { data: authUser } = await adminClient.auth.admin.getUserById(user.id)
-        const metadata = authUser?.user?.user_metadata || {}
-
-        const toNullIfEmpty = (value: any): string | null => {
-          if (!value || (typeof value === 'string' && !value.trim())) return null
-          return typeof value === 'string' ? value.trim() : String(value)
-        }
-
-        const membershipLevelFromMetadata = metadata.membership_level || metadata.membershipLevel
-        const membershipLevel: 'Full' | 'Student' | 'Associate' | 'Corporate' | 'Honorary' =
-          membershipLevelFromMetadata &&
-          ['Full', 'Student', 'Associate', 'Corporate', 'Honorary'].includes(membershipLevelFromMetadata)
-            ? membershipLevelFromMetadata
-            : 'Associate'
-
-        const { data: createdProfile, error: createError } = await adminClient
-          .from('user_profiles')
-          .insert({
-            user_id: user.id,
-            org_id: orgId,
-            email: (user.email || '').toLowerCase().trim(),
-            full_name: toNullIfEmpty(metadata.full_name || metadata.fullName),
-            first_name: toNullIfEmpty(metadata.first_name || metadata.firstName),
-            last_name: toNullIfEmpty(metadata.last_name || metadata.lastName),
-            phone: toNullIfEmpty(metadata.phone),
-            pilot_license_type: toNullIfEmpty(metadata.pilot_license_type || metadata.pilotLicenseType),
-            aircraft_type: toNullIfEmpty(metadata.aircraft_type || metadata.aircraftType),
-            call_sign: toNullIfEmpty(metadata.call_sign || metadata.callSign),
-            how_often_fly_from_ytz: toNullIfEmpty(metadata.how_often_fly_from_ytz || metadata.howOftenFlyFromYTZ),
-            how_did_you_hear: toNullIfEmpty(metadata.how_did_you_hear || metadata.howDidYouHear),
-            role: 'member',
-            membership_level: membershipLevel,
-            status: 'pending',
-          })
-          .select()
-          .single()
-
-        if (!createError && createdProfile) {
-          profile = createdProfile
-          console.log('Successfully created missing user profile for:', user.id)
-        } else {
-          console.error('Failed to create user profile:', createError)
-          return null
-        }
-      } catch (error) {
-        console.error('Error creating user profile:', error)
-        return null
-      }
-    } else {
-      console.error('Cannot create profile: missing admin credentials or org context')
-      return null
+    console.warn('Member profile not found for user:', user.id, '— attempting to create')
+    if (orgId) {
+      profile = await createMissingProfile(user.id, orgId, user.email ?? '')
     }
+    if (!profile) return null
   }
 
   // Block non-approved members (admins always pass)
@@ -110,43 +131,19 @@ export async function getCurrentUser() {
     return null
   }
 
-  return {
-    ...user,
-    profile: profile as UserProfile,
-  }
+  return { ...user, profile }
 }
 
 export async function getCurrentUserIncludingPending() {
   const supabase = await createClient()
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (!user || authError) return null
 
   const orgId = await getOrgId()
-
-  let query = supabase
-    .from('user_profiles')
-    .select('*')
-    .eq('user_id', user.id)
-
-  if (orgId) query = query.eq('org_id', orgId)
-
-  const { data: profile, error: profileError } = await query.maybeSingle()
-
-  if (profileError) {
-    console.error('Error fetching user profile:', profileError)
-    return null
-  }
-
+  const profile = await fetchMemberProfile(supabase, user.id, orgId)
   if (!profile) return null
 
-  return {
-    ...user,
-    profile: profile as UserProfile,
-  }
+  return { ...user, profile }
 }
 
 export async function requireAuth() {
@@ -162,7 +159,7 @@ export async function requireAuthIncludingPending() {
   return user
 }
 
-export function shouldRequireProfileCompletion(profile: UserProfile): boolean {
+export function shouldRequireProfileCompletion(profile: MemberProfile): boolean {
   if (!profile) return false
   if (profile.role === 'admin') return false
   if (profile.status !== 'pending' && profile.status !== 'approved') return false
@@ -177,7 +174,7 @@ export function shouldRequireProfileCompletion(profile: UserProfile): boolean {
   )
 }
 
-export function shouldRequirePayment(profile: UserProfile): boolean {
+export function shouldRequirePayment(profile: MemberProfile): boolean {
   if (!profile) return false
   if (profile.membership_level === 'Honorary') return false
   if (profile.status === 'rejected' || profile.status === 'expired') return false

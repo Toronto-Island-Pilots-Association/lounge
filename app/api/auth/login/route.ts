@@ -54,9 +54,9 @@ export async function POST(request: Request) {
           if (wasInvited) {
             // Get profile: we set status to 'approved' when they change password, so use that as source of truth
             const { data: profile } = await adminClient
-              .from('user_profiles')
+              .from('org_memberships')
               .select('status')
-              .eq('id', data.user.id)
+              .eq('user_id', data.user.id)
               .single()
 
             // Only require password change if still pending (have not completed first-time change)

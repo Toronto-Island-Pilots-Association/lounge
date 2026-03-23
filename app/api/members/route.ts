@@ -8,7 +8,7 @@ export async function GET() {
     const supabase = await createClient()
 
     const { data, error } = await supabase
-      .from('user_profiles')
+      .from('member_profiles')
       .select('*')
       .order('created_at', { ascending: false })
 

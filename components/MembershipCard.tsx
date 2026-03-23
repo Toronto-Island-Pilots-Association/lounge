@@ -2,11 +2,11 @@
 
 import { useState, useRef, useMemo } from 'react'
 import Image from 'next/image'
-import { UserProfile, getMembershipLevelLabel } from '@/types/database'
+import { MemberProfile, getMembershipLevelLabel } from '@/types/database'
 
 interface MembershipCardProps {
   user: {
-    profile: UserProfile
+    profile: MemberProfile
     user_metadata?: any
   }
   isPending: boolean
