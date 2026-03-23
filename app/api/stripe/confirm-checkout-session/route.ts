@@ -148,7 +148,7 @@ export async function POST(request: Request) {
       .eq('org_id', orgId)
       .eq('stripe_subscription_id', subscriptionId)
       .limit(1)
-      .single()
+      .maybeSingle()
 
     if (!existingPayment) {
       await supabase.from('payments').insert({

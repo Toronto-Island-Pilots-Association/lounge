@@ -101,9 +101,10 @@ export async function POST(request: Request) {
         })
         customerId = customer.id
         await supabase
-          .from('user_profiles')
+          .from('org_memberships')
           .update({ stripe_customer_id: customerId })
-          .eq('id', user.id)
+          .eq('user_id', user.id)
+          .eq('org_id', user.profile.org_id)
       } else {
         const updateParams: Stripe.CustomerUpdateParams = {}
         if (cardholderName) updateParams.name = cardholderName

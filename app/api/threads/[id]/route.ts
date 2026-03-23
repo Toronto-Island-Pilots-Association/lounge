@@ -31,9 +31,8 @@ export async function GET(
     // Get author info
     const { data: author } = await supabase
       .from('user_profiles')
-      .select('id, full_name, email, profile_picture_url')
-      .eq('id', data.created_by)
-      .eq('org_id', orgId)
+      .select('user_id, full_name, email, profile_picture_url')
+      .eq('user_id', data.created_by)
       .single()
 
     return NextResponse.json({ thread: { ...data, author } })
@@ -68,15 +67,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Thread not found' }, { status: 404 })
     }
 
-    // Check if user is admin or owner
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('id', user.id)
-      .eq('org_id', orgId)
-      .single()
-
-    const isAdmin = profile?.role === 'admin'
+    const isAdmin = user.profile.role === 'admin'
     const isOwner = thread.created_by === user.id
 
     if (!isAdmin && !isOwner) {

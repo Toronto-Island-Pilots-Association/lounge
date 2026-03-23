@@ -26,7 +26,6 @@ export async function GET() {
     const { data: authors } = userIds.length > 0 ? await supabase
       .from('user_profiles')
       .select('user_id, full_name, email, profile_picture_url')
-      .eq('org_id', orgId)
       .in('user_id', userIds) : { data: [] }
 
     const authorsMap = new Map(authors?.map(a => [a.user_id, a]) || [])
