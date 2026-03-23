@@ -165,7 +165,8 @@ function FeaturesTab() {
       })
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Failed')
       setDraft((await res.json()).features)
-      setSuccess(true); setTimeout(() => setSuccess(false), 3000)
+      setSuccess(true)
+      setTimeout(() => window.location.reload(), 500)
     } catch (e) { setError(e instanceof Error ? e.message : 'Failed') }
     finally { setSaving(false) }
   }

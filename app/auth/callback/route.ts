@@ -43,6 +43,11 @@ export async function GET(request: Request) {
       }
     }
 
+    // For platform routes, skip TIPA-specific profile checks and redirect directly
+    if (next.startsWith('/platform')) {
+      return NextResponse.redirect(new URL(next, requestUrl.origin))
+    }
+
     if (data.user) {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
       let adminClient = null

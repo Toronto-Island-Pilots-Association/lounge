@@ -33,6 +33,8 @@ export function getDomainType(hostname: string): DomainType {
 
   if (host === ROOT_DOMAIN || host === `www.${ROOT_DOMAIN}`) return 'marketing'
   if (host === `platform.${ROOT_DOMAIN}`) return 'platform'
+  // In local dev, bare localhost is treated as the platform
+  if (host === 'localhost' || host === '127.0.0.1') return 'platform'
   return 'org'
 }
 
@@ -78,6 +80,19 @@ export async function getOrgByHostname(hostname: string): Promise<Organization |
   }
 
   return null
+}
+
+/** Convert a display name into a URL-safe slug. */
+export function slugify(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
+
+/** Build the public URL for an org, using custom domain if set. */
+export function buildOrgUrl(org: { subdomain: string; custom_domain?: string | null }): string {
+  const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
+  const port = process.env.NODE_ENV === 'development' ? ':3000' : ''
+  if (org.custom_domain) return `${protocol}://${org.custom_domain}${port}`
+  return `${protocol}://${org.subdomain}.${ROOT_DOMAIN}${port}`
 }
 
 /** Validate a proposed org slug: lowercase alphanumeric + hyphens, not reserved. */

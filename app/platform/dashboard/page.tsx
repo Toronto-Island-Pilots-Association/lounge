@@ -1,10 +1,10 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { buildOrgUrl } from '@/lib/org'
 import SignOutButton from './SignOutButton'
 import ConnectStripeButton from './ConnectStripeButton'
-
-const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'
+import { CnameRecord } from '@/components/platform/CnameRecord'
 
 export default async function PlatformDashboard() {
   const supabase = await createClient()
@@ -66,12 +66,7 @@ export default async function PlatformDashboard() {
                 )}
                 <div className="grid gap-4">
                   {adminOrgs.map((org: any) => {
-                    const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
-                    const port = process.env.NODE_ENV === 'development' ? ':3000' : ''
-                    const url = org.custom_domain
-                      ? `${protocol}://${org.custom_domain}${port}`
-                      : `${protocol}://${org.subdomain}.${ROOT_DOMAIN}${port}`
-
+                    const url = buildOrgUrl(org)
                     const stripeStatus = org.stripe_onboarding_complete
                       ? 'connected'
                       : org.stripe_account_id
@@ -119,13 +114,8 @@ export default async function PlatformDashboard() {
                         </div>
 
                         {org.custom_domain && (
-                          <div className="pt-4 border-t space-y-2">
-                            <p className="text-xs font-medium text-gray-600">DNS setup for custom domain</p>
-                            <div className="bg-gray-50 rounded-lg px-4 py-3 font-mono text-xs space-y-1.5">
-                              <div className="flex gap-3"><span className="text-gray-400 w-10">Type</span><span>CNAME</span></div>
-                              <div className="flex gap-3"><span className="text-gray-400 w-10">Host</span><span className="break-all">{org.custom_domain}</span></div>
-                              <div className="flex gap-3"><span className="text-gray-400 w-10">Value</span><span>cname.vercel-dns.com</span></div>
-                            </div>
+                          <div className="pt-4 border-t">
+                            <CnameRecord host={org.custom_domain} label="DNS setup for custom domain" />
                           </div>
                         )}
                       </div>
@@ -142,12 +132,7 @@ export default async function PlatformDashboard() {
                 )}
                 <div className="grid gap-4">
                   {memberOrgs.map((org: any) => {
-                    const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
-                    const port = process.env.NODE_ENV === 'development' ? ':3000' : ''
-                    const url = org.custom_domain
-                      ? `${protocol}://${org.custom_domain}${port}`
-                      : `${protocol}://${org.subdomain}.${ROOT_DOMAIN}${port}`
-
+                    const url = buildOrgUrl(org)
                     return (
                       <div key={org.id} className="bg-white rounded-xl border p-6">
                         <div className="flex items-start justify-between gap-4">

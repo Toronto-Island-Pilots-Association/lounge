@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { slugify, ROOT_DOMAIN } from '@/lib/org'
+import { GoogleButton } from '@/components/platform/GoogleButton'
+import { CnameRecord } from '@/components/platform/CnameRecord'
 
 type Step = 1 | 2 | 3
 
@@ -52,7 +55,7 @@ export default function PlatformSignup() {
   }
 
   const handleNameChange = (name: string) => {
-    const autoSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    const autoSlug = slugify(name)
     setClub(c => ({ ...c, name, slug: autoSlug }))
     if (autoSlug.length >= 2) checkSlug(autoSlug)
   }
@@ -130,18 +133,7 @@ export default function PlatformSignup() {
               </a>
             </div>
 
-            {result.cname && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-700">Add this DNS record to activate your custom domain:</p>
-                <div className="bg-gray-50 border rounded-lg px-4 py-3 font-mono text-xs space-y-1.5">
-                  <div className="flex gap-2"><span className="text-gray-400 w-12">Type</span><span>CNAME</span></div>
-                  <div className="flex gap-2"><span className="text-gray-400 w-12">Host</span><span className="break-all">{result.cname.host}</span></div>
-                  <div className="flex gap-2"><span className="text-gray-400 w-12">Value</span><span>cname.vercel-dns.com</span></div>
-                  <div className="flex gap-2"><span className="text-gray-400 w-12">TTL</span><span>Auto</span></div>
-                </div>
-                <p className="text-xs text-gray-400">DNS propagation can take up to 48 hours.</p>
-              </div>
-            )}
+            {result.cname && <CnameRecord host={result.cname.host} />}
 
             <div className="flex gap-3 pt-2 border-t">
               <Link
@@ -195,6 +187,17 @@ export default function PlatformSignup() {
           {/* Step 1: Account */}
           {step === 1 && (
             <>
+              <GoogleButton
+                redirectTo="/platform/dashboard"
+                className="w-full flex items-center justify-center gap-3 border rounded-lg px-6 py-3 text-sm font-medium hover:bg-gray-50 transition-colors"
+              />
+
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span className="text-xs text-gray-400">or</span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-sm font-medium">First name <span className="text-red-500">*</span></label>
@@ -277,7 +280,7 @@ export default function PlatformSignup() {
                     placeholder="myclub"
                     className="flex-1 px-3 py-2 text-sm focus:outline-none"
                   />
-                  <span className="px-3 py-2 bg-gray-50 text-gray-500 text-sm border-l select-none">.clublounge.app</span>
+                  <span className="px-3 py-2 bg-gray-50 text-gray-500 text-sm border-l select-none">.{ROOT_DOMAIN}</span>
                 </div>
                 {club.slug.length >= 2 && (
                   <p className={`text-xs mt-1 ${slugError ? 'text-red-500' : slugAvailable === true ? 'text-green-600' : slugAvailable === false ? 'text-red-500' : 'text-gray-400'}`}>

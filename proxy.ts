@@ -48,7 +48,7 @@ export async function proxy(request: NextRequest) {
       return NextResponse.rewrite(rewriteUrl, { headers: requestHeaders })
     }
 
-    if (domainType === 'platform' && !pathname.startsWith('/platform')) {
+    if (domainType === 'platform' && !pathname.startsWith('/platform') && !pathname.startsWith('/auth')) {
       const rewriteUrl = request.nextUrl.clone()
       rewriteUrl.pathname = `/platform${pathname === '/' ? '' : pathname}`
       return NextResponse.rewrite(rewriteUrl, { headers: requestHeaders })

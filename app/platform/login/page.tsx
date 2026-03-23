@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { GoogleButton } from '@/components/platform/GoogleButton'
 
 export default function PlatformLogin() {
   const router = useRouter()
@@ -36,6 +37,14 @@ export default function PlatformLogin() {
           <Link href="/platform" className="text-sm text-gray-500 hover:text-gray-700">← ClubLounge</Link>
           <h1 className="text-2xl font-bold tracking-tight mt-2">Sign in</h1>
           <p className="text-sm text-gray-500 mt-1">Manage your club lounge.</p>
+        </div>
+
+        <GoogleButton redirectTo="/platform/dashboard" />
+
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-px bg-gray-200" />
+          <span className="text-xs text-gray-400">or</span>
+          <div className="flex-1 h-px bg-gray-200" />
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-xl border p-6 space-y-4">
