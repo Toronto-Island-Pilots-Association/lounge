@@ -15,10 +15,9 @@ export default async function PlatformDashboard() {
 
   const db = createServiceRoleClient()
   const { data: memberProfiles } = await db
-    .from('member_profiles')
+    .from('org_memberships')
     .select('org_id, role, status')
     .eq('user_id', user.id)
-    // org_memberships.status uses 'approved'/'pending'/...; keep 'active' for backward compatibility.
     .in('status', ['approved', 'active'])
 
   const membershipsForUser = (memberProfiles ?? []).filter((p: any) => p.org_id)
