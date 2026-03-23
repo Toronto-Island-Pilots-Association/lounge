@@ -77,7 +77,6 @@ async function createMissingProfile(
     const { error: membershipError } = await adminClient.from('org_memberships').insert({
       user_id: userId,
       org_id: orgId,
-      email: email.toLowerCase().trim(),
       pilot_license_type: toNull(metadata.pilot_license_type),
       aircraft_type: toNull(metadata.aircraft_type),
       call_sign: toNull(metadata.call_sign),
