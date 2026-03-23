@@ -5,9 +5,9 @@ import * as Sentry from '@sentry/nextjs'
 
 export async function POST(request: Request) {
   try {
-    const { 
-      email, 
-      password, 
+    const {
+      email,
+      password,
       fullName,
       firstName,
       lastName,
@@ -38,6 +38,8 @@ export async function POST(request: Request) {
       flightSchool,
       instructorName,
       studentNotes,
+      // Admin-configured custom fields
+      customFields,
     } = await request.json()
 
     if (!email || !password) {
@@ -262,6 +264,14 @@ export async function POST(request: Request) {
           })
         }
         
+        // Store custom field values from admin-configured form fields
+        if (profile && customFields && typeof customFields === 'object' && Object.keys(customFields).length > 0) {
+          await adminClient
+            .from('user_profiles')
+            .update({ custom_data: customFields })
+            .eq('id', profile.id)
+        }
+
         // Note: Google Sheets append happens when status changes from 'pending' to 'approved'
         // This ensures users are only added after admin approval
         

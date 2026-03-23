@@ -328,12 +328,22 @@ export async function setEnabledLevels(enabled: Record<string, boolean>): Promis
 
 // ─── Signup Fields Config ─────────────────────────────────────────────────────
 
+export type SignupFieldType =
+  | 'text' | 'textarea' | 'select' | 'checkbox_group'
+  | 'boolean' | 'number' | 'date' | 'email' | 'phone' | 'url'
+
 export type SignupField = {
   key: string
   label: string
-  group: string
+  group?: string
   enabled: boolean
   required: boolean
+  // Only set on custom (admin-created) fields:
+  isCustom?: boolean
+  type?: SignupFieldType
+  placeholder?: string
+  helpText?: string
+  options?: string[]  // for select / checkbox_group
 }
 
 const DEFAULT_SIGNUP_FIELDS: SignupField[] = [

@@ -66,6 +66,7 @@ export interface UserProfile {
   flight_school: string | null
   instructor_name: string | null
   notify_replies: boolean
+  custom_data: Record<string, unknown> | null
   created_at: string
   updated_at: string
   /** Set when the user was invited (admin or member invite); null for self-signup. */

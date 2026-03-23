@@ -46,6 +46,18 @@ function BecomeMemberForm() {
       .catch(() => { /* keep defaults */ })
     return () => { cancelled = true }
   }, [])
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string | string[]>>({})
+
+  const handleCustomFieldChange = (key: string, value: string | string[]) =>
+    setCustomFieldValues(p => ({ ...p, [key]: value }))
+
+  const handleCustomCheckboxGroupChange = (key: string, option: string, checked: boolean) => {
+    setCustomFieldValues(p => {
+      const current = Array.isArray(p[key]) ? (p[key] as string[]) : []
+      return { ...p, [key]: checked ? [...current, option] : current.filter(v => v !== option) }
+    })
+  }
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -156,6 +168,7 @@ function BecomeMemberForm() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          customFields: customFieldValues,
           email: formData.email,
           password: formData.password,
           fullName: `${formData.firstName} ${formData.lastName}`.trim(),
@@ -810,6 +823,82 @@ function BecomeMemberForm() {
             </div>
           </div>
           )}
+
+          {/* Custom fields */}
+          {signupFields?.filter(f => f.isCustom && f.enabled).map(field => (
+            <div key={field.key} className="bg-gray-50 p-6 rounded-lg">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {field.label} {field.required && <span className="text-red-500">*</span>}
+                </label>
+                {field.helpText && <p className="text-xs text-gray-500 mb-2">{field.helpText}</p>}
+
+                {(field.type === 'text' || field.type === 'email' || field.type === 'phone' || field.type === 'url' || field.type === 'number' || field.type === 'date') && (
+                  <input
+                    type={field.type === 'phone' ? 'tel' : field.type === 'url' ? 'url' : field.type ?? 'text'}
+                    required={field.required}
+                    placeholder={field.placeholder ?? ''}
+                    value={(customFieldValues[field.key] as string) ?? ''}
+                    onChange={e => handleCustomFieldChange(field.key, e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  />
+                )}
+
+                {field.type === 'textarea' && (
+                  <textarea
+                    required={field.required}
+                    placeholder={field.placeholder ?? ''}
+                    rows={4}
+                    value={(customFieldValues[field.key] as string) ?? ''}
+                    onChange={e => handleCustomFieldChange(field.key, e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  />
+                )}
+
+                {field.type === 'select' && (
+                  <select
+                    required={field.required}
+                    value={(customFieldValues[field.key] as string) ?? ''}
+                    onChange={e => handleCustomFieldChange(field.key, e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  >
+                    <option value="">Select…</option>
+                    {(field.options ?? []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                  </select>
+                )}
+
+                {field.type === 'checkbox_group' && (
+                  <div className="space-y-2">
+                    {(field.options ?? []).map(opt => (
+                      <label key={opt} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          value={opt}
+                          checked={Array.isArray(customFieldValues[field.key]) && (customFieldValues[field.key] as string[]).includes(opt)}
+                          onChange={e => handleCustomCheckboxGroupChange(field.key, opt, e.target.checked)}
+                          className="h-4 w-4 text-[#0d1e26] focus:ring-[#0d1e26] border-gray-300 rounded"
+                        />
+                        <span className="ml-2 text-sm text-gray-700">{opt}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+
+                {field.type === 'boolean' && (
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      required={field.required}
+                      checked={(customFieldValues[field.key] as string) === 'true'}
+                      onChange={e => handleCustomFieldChange(field.key, e.target.checked ? 'true' : '')}
+                      className="h-4 w-4 text-[#0d1e26] focus:ring-[#0d1e26] border-gray-300 rounded"
+                    />
+                    <span className="text-sm text-gray-700">Yes</span>
+                  </label>
+                )}
+              </div>
+            </div>
+          ))}
 
           {/* Acknowledgements */}
           <div className="bg-gray-50 p-6 rounded-lg">
