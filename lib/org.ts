@@ -1,24 +1,58 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { Organization } from '@/types/database'
 
-const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'
+export const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'
+
+/** Subdomains reserved for platform use — cannot be registered as org slugs. */
+export const RESERVED_SUBDOMAINS = new Set([
+  'platform',
+  'www',
+  'api',
+  'mail',
+  'support',
+  'help',
+  'status',
+  'billing',
+  'admin',
+  'dashboard',
+  'static',
+  'assets',
+  'cdn',
+])
+
+export type DomainType = 'marketing' | 'platform' | 'org'
+
+/**
+ * Classify a hostname into one of three domain types:
+ *   marketing → clublounge.app (root domain)
+ *   platform  → platform.clublounge.app
+ *   org       → anything else (custom domain or non-reserved subdomain)
+ */
+export function getDomainType(hostname: string): DomainType {
+  const host = hostname.split(':')[0]
+
+  if (host === ROOT_DOMAIN || host === `www.${ROOT_DOMAIN}`) return 'marketing'
+  if (host === `platform.${ROOT_DOMAIN}`) return 'platform'
+  return 'org'
+}
 
 /**
  * Resolve an organization from a hostname.
- * Checks custom_domain first, then *.clublounge.app subdomain.
- * Uses the service role client so it works in middleware (edge) and server contexts.
+ * Returns null for reserved/platform/marketing hostnames.
  */
 export async function getOrgByHostname(hostname: string): Promise<Organization | null> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) return null
 
+  const host = hostname.split(':')[0]
+
+  // Don't look up orgs for platform or marketing domains
+  if (getDomainType(host) !== 'org') return null
+
   const supabase = createSupabaseClient(url, key, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
-
-  // Strip port (e.g. localhost:3000 → localhost)
-  const host = hostname.split(':')[0]
 
   // 1. Exact custom domain match (e.g. lounge.tipa.ca)
   const { data: byDomain } = await supabase
@@ -32,6 +66,8 @@ export async function getOrgByHostname(hostname: string): Promise<Organization |
   // 2. Subdomain of ROOT_DOMAIN (e.g. tipa.clublounge.app)
   if (host.endsWith(`.${ROOT_DOMAIN}`)) {
     const subdomain = host.slice(0, -(ROOT_DOMAIN.length + 1))
+    if (RESERVED_SUBDOMAINS.has(subdomain)) return null
+
     const { data: bySub } = await supabase
       .from('organizations')
       .select('*')
@@ -42,4 +78,15 @@ export async function getOrgByHostname(hostname: string): Promise<Organization |
   }
 
   return null
+}
+
+/** Validate a proposed org slug: lowercase alphanumeric + hyphens, not reserved. */
+export function validateOrgSlug(slug: string): { valid: boolean; error?: string } {
+  if (!slug) return { valid: false, error: 'Slug is required' }
+  if (!/^[a-z0-9-]+$/.test(slug)) return { valid: false, error: 'Only lowercase letters, numbers, and hyphens allowed' }
+  if (slug.length < 2) return { valid: false, error: 'Slug must be at least 2 characters' }
+  if (slug.length > 40) return { valid: false, error: 'Slug must be 40 characters or less' }
+  if (slug.startsWith('-') || slug.endsWith('-')) return { valid: false, error: 'Slug cannot start or end with a hyphen' }
+  if (RESERVED_SUBDOMAINS.has(slug)) return { valid: false, error: `"${slug}" is reserved` }
+  return { valid: true }
 }

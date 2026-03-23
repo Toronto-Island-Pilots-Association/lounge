@@ -1,19 +1,41 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
-import { getOrgByHostname } from '@/lib/org'
+import { getOrgByHostname, getDomainType } from '@/lib/org'
 
 export async function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') ?? ''
-  const org = await getOrgByHostname(hostname)
+  const { pathname } = request.nextUrl
+
+  const domainType = getDomainType(hostname)
+
+  // --- Resolve org for tenant subdomains / custom domains ---
+  const org = domainType === 'org' ? await getOrgByHostname(hostname) : null
 
   // Build request headers for downstream (API routes, server components)
   const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-domain-type', domainType)
   if (org) {
     requestHeaders.set('x-org-id', org.id)
     requestHeaders.set('x-org-slug', org.slug)
   }
 
-  // Refresh Supabase auth session (keeps cookies fresh)
+  // --- Rewrite marketing and platform to their internal route prefixes ---
+  // clublounge.app/foo         → /marketing/foo  (app/marketing/...)
+  // platform.clublounge.app/foo → /platform/foo  (app/platform/...)
+  // [org].clublounge.app/foo   → /foo            (existing routes, unchanged)
+  if (domainType === 'marketing' && !pathname.startsWith('/marketing')) {
+    const rewriteUrl = request.nextUrl.clone()
+    rewriteUrl.pathname = `/marketing${pathname === '/' ? '' : pathname}`
+    return NextResponse.rewrite(rewriteUrl, { headers: requestHeaders })
+  }
+
+  if (domainType === 'platform' && !pathname.startsWith('/platform')) {
+    const rewriteUrl = request.nextUrl.clone()
+    rewriteUrl.pathname = `/platform${pathname === '/' ? '' : pathname}`
+    return NextResponse.rewrite(rewriteUrl, { headers: requestHeaders })
+  }
+
+  // --- Refresh Supabase auth session ---
   let response = NextResponse.next({ request: { headers: requestHeaders } })
 
   const supabase = createServerClient(
@@ -37,7 +59,8 @@ export async function middleware(request: NextRequest) {
 
   await supabase.auth.getUser()
 
-  // Propagate org headers to the response so client components can read them
+  // Propagate headers to response
+  response.headers.set('x-domain-type', domainType)
   if (org) {
     response.headers.set('x-org-id', org.id)
     response.headers.set('x-org-slug', org.slug)
@@ -48,9 +71,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all paths except static files and images.
-     */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
