@@ -383,10 +383,7 @@ export function ClubLoungeLanding({
                 <span className="cl-check">✓</span>2 admin seats
               </li>
               <li>
-                <span className="cl-check">✓</span>Bulk member import
-              </li>
-              <li>
-                <span className="cl-check">✓</span>Remove Club Lounge branding
+                <span className="cl-check">✓</span>Custom domain
               </li>
               <li>
                 <span className="cl-cross">—</span>Discussions
@@ -446,16 +443,10 @@ export function ClubLoungeLanding({
                 <span className="cl-check">✓</span>Everything in Community
               </li>
               <li>
-                <span className="cl-check">✓</span>Custom domain
-              </li>
-              <li>
-                <span className="cl-check">✓</span>Full white-label
+                <span className="cl-check">✓</span>Multiple membership tiers
               </li>
               <li>
                 <span className="cl-check">✓</span>API access + data export
-              </li>
-              <li>
-                <span className="cl-check">✓</span>Multiple membership tiers
               </li>
               <li>
                 <span className="cl-check">✓</span>SSO / custom auth
