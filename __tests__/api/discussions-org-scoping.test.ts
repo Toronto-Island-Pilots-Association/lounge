@@ -83,8 +83,9 @@ describe('Discussions org scoping', () => {
     expect(res.status).toBe(200)
 
     expect(threadsFrom.eq).toHaveBeenCalledWith('org_id', 'org-1')
-    expect(authorsFrom.eq).toHaveBeenCalledWith('org_id', 'org-1')
     expect(commentsFrom.eq).toHaveBeenCalledWith('org_id', 'org-1')
+    // user_profiles no longer has org_id (moved to org_memberships); authors are fetched by user_id
+    expect(authorsFrom.in).toHaveBeenCalledWith('user_id', expect.any(Array))
   })
 
   it('GET /api/threads/:id scopes thread detail by org_id', async () => {
@@ -184,7 +185,8 @@ describe('Discussions org scoping', () => {
     expect(res.status).toBe(200)
 
     expect(commentsFrom.eq).toHaveBeenCalledWith('org_id', 'org-1')
-    expect(authorsFrom.eq).toHaveBeenCalledWith('org_id', 'org-1')
+    // user_profiles no longer has org_id; authors are fetched by user_id
+    expect(authorsFrom.in).toHaveBeenCalledWith('user_id', expect.any(Array))
   })
 })
 
