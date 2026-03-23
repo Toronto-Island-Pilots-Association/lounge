@@ -90,6 +90,7 @@ export default function MembersPageClient() {
   const [sortDir, setSortDir] = useState<SortDirection>('desc')
   const [page, setPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'expired' | 'rejected'>('all')
   const pageSize = PAGE_SIZE
 
   const loadData = useCallback(async () => {
@@ -114,21 +115,26 @@ export default function MembersPageClient() {
     return list
   }, [members, sortKey, sortDir])
 
+  const statusFilteredMembers = useMemo(() => {
+    if (statusFilter === 'all') return sortedMembers
+    return sortedMembers.filter((m) => m.status === statusFilter)
+  }, [sortedMembers, statusFilter])
+
   const filteredMembers = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
-    if (!q) return sortedMembers
-    return sortedMembers.filter((m) => {
+    if (!q) return statusFilteredMembers
+    return statusFilteredMembers.filter((m) => {
       const name = (m.full_name || '').toLowerCase()
       const email = (m.email || '').toLowerCase()
       const memberNum = (m.member_number || '').toLowerCase()
       return name.includes(q) || email.includes(q) || memberNum.includes(q)
     })
-  }, [sortedMembers, searchQuery])
+  }, [statusFilteredMembers, searchQuery])
 
-  // Reset to first page when search changes
+  // Reset to first page when search or status filter changes
   useEffect(() => {
     setPage(1)
-  }, [searchQuery])
+  }, [searchQuery, statusFilter])
 
   const totalPages = Math.max(1, Math.ceil(filteredMembers.length / pageSize))
   const paginatedMembers = useMemo(() => {
@@ -387,6 +393,38 @@ export default function MembersPageClient() {
         </div>
       </div>
 
+      {/* Status filter tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-1 sm:space-x-4 overflow-x-auto" aria-label="Status filter">
+          {(['all', 'pending', 'approved', 'expired', 'rejected'] as const).map((tab) => {
+            const count = tab === 'all' ? members.length : members.filter((m) => m.status === tab).length
+            const pendingCount = members.filter((m) => m.status === 'pending').length
+            return (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setStatusFilter(tab)}
+                className={`
+                  whitespace-nowrap py-2.5 px-2 sm:px-3 border-b-2 font-medium text-sm capitalize flex items-center gap-1.5
+                  ${statusFilter === tab
+                    ? 'border-[#0d1e26] text-[#0d1e26]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
+                `}
+              >
+                {tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab === 'pending' && pendingCount > 0 ? (
+                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 min-w-[1.25rem]">
+                    {pendingCount}
+                  </span>
+                ) : (
+                  <span className="text-xs text-gray-400">({count})</span>
+                )}
+              </button>
+            )
+          })}
+        </nav>
+      </div>
+
       <div className="overflow-x-auto -mx-4 sm:mx-0">
         <div className="inline-block min-w-full align-middle">
           <div className="overflow-hidden border border-gray-200 sm:rounded-lg">
@@ -474,6 +512,27 @@ export default function MembersPageClient() {
                         : member.membership_expires_at
                           ? new Date(member.membership_expires_at).toLocaleDateString('en-US', { timeZone: 'UTC' })
                           : '-'}
+                    </div>
+                  )}
+                  {member.status === 'pending' && (
+                    <div className="mt-3 pt-3 border-t border-gray-100 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleApproveReject(member.id, 'approved')}
+                        className="flex-1 py-1.5 text-xs font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!confirm('Are you sure you want to reject this member?')) return
+                          handleApproveReject(member.id, 'rejected')
+                        }}
+                        className="flex-1 py-1.5 text-xs font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+                      >
+                        Reject
+                      </button>
                     </div>
                   )}
                 </div>

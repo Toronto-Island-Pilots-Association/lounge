@@ -131,6 +131,8 @@ function ClubTab() {
 
 // ─── Features Tab ─────────────────────────────────────────────────────────────
 
+type PlanFeaturesSubset = Record<keyof OrgFeatureFlags, boolean>
+
 const FEATURE_META: { key: keyof OrgFeatureFlags; label: string; description: string }[] = [
   { key: 'discussions',            label: 'Discussions (Hangar Talk)', description: 'Forum-style discussion board for members.' },
   { key: 'events',                 label: 'Events',                    description: 'Event calendar with RSVP.' },
@@ -140,11 +142,19 @@ const FEATURE_META: { key: keyof OrgFeatureFlags; label: string; description: st
   { key: 'allowMemberInvitations', label: 'Member invitations',         description: 'Approved members can invite new members.' },
 ]
 
+const PLAN_ORDER = ['hobby', 'starter', 'community', 'club_pro']
+const PLAN_LABELS: Record<string, string> = {
+  hobby: 'Hobby', starter: 'Starter', community: 'Community', club_pro: 'Club Pro',
+}
+
 function FeaturesTab() {
   const [draft, setDraft] = useState<OrgFeatureFlags>({
     discussions: true, events: true, resources: true, memberDirectory: true,
     requireMemberApproval: true, allowMemberInvitations: true,
   })
+  const [planKey, setPlanKey] = useState<string>('hobby')
+  const [planLabel, setPlanLabel] = useState<string>('Hobby')
+  const [planFeatures, setPlanFeatures] = useState<PlanFeaturesSubset | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -152,7 +162,12 @@ function FeaturesTab() {
   useEffect(() => {
     fetch('/api/admin/settings/features')
       .then(r => r.ok ? r.json() : Promise.reject())
-      .then(d => setDraft(d.features))
+      .then(d => {
+        setDraft(d.features)
+        if (d.plan) setPlanKey(d.plan)
+        if (d.planLabel) setPlanLabel(d.planLabel)
+        if (d.planFeatures) setPlanFeatures(d.planFeatures)
+      })
       .catch(() => {})
   }, [])
 
@@ -164,33 +179,68 @@ function FeaturesTab() {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(draft),
       })
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Failed')
-      setDraft((await res.json()).features)
+      const data = await res.json()
+      setDraft(data.features)
       setSuccess(true)
       setTimeout(() => window.location.reload(), 500)
     } catch (e) { setError(e instanceof Error ? e.message : 'Failed') }
     finally { setSaving(false) }
   }
 
+  // Find the lowest plan that unlocks a given feature
+  const requiredPlanLabel = (key: keyof OrgFeatureFlags): string | null => {
+    if (!planFeatures) return null
+    if (planFeatures[key]) return null  // already unlocked
+    // Walk plans in order to find the first that allows it
+    // (simplified: just show the next tier)
+    const idx = PLAN_ORDER.indexOf(planKey)
+    for (let i = idx + 1; i < PLAN_ORDER.length; i++) {
+      // We don't have full plan defs client-side, so just suggest upgrading
+      return PLAN_LABELS[PLAN_ORDER[i]] ?? 'a higher plan'
+    }
+    return 'a higher plan'
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-5 max-w-xl">
-      <SectionHeader title="Feature toggles" description="Enable or disable sections of the member portal." />
+      <div className="flex items-center justify-between">
+        <SectionHeader title="Feature toggles" description="Enable or disable sections of the member portal." />
+        <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 shrink-0 ml-4">
+          {planLabel} plan
+        </span>
+      </div>
       <Feedback error={error} success={success} />
 
       <div className="space-y-3">
-        {FEATURE_META.map(({ key, label, description }) => (
-          <label key={key} className="flex items-start gap-3 py-3 border-b border-gray-100 last:border-0 cursor-pointer">
-            <input
-              type="checkbox"
-              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#0d1e26] focus:ring-[#0d1e26]"
-              checked={draft[key]}
-              onChange={e => setDraft(p => ({ ...p, [key]: e.target.checked }))}
-            />
-            <div>
-              <div className="text-sm font-medium text-gray-900">{label}</div>
-              <div className="text-sm text-gray-500">{description}</div>
+        {FEATURE_META.map(({ key, label, description }) => {
+          const blocked = planFeatures ? !planFeatures[key] : false
+          const upgradeTo = requiredPlanLabel(key)
+          return (
+            <div
+              key={key}
+              className={`flex items-start gap-3 py-3 border-b border-gray-100 last:border-0 ${blocked ? 'opacity-60' : ''}`}
+            >
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#0d1e26] focus:ring-[#0d1e26] disabled:cursor-not-allowed"
+                checked={blocked ? false : draft[key]}
+                disabled={blocked}
+                onChange={e => !blocked && setDraft(p => ({ ...p, [key]: e.target.checked }))}
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-900">{label}</span>
+                  {blocked && upgradeTo && (
+                    <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded px-1.5 py-0.5">
+                      {upgradeTo}+
+                    </span>
+                  )}
+                </div>
+                <div className="text-sm text-gray-500">{description}</div>
+              </div>
             </div>
-          </label>
-        ))}
+          )
+        })}
       </div>
 
       <SaveButton saving={saving} />

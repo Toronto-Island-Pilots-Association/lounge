@@ -323,6 +323,41 @@ export default function MemberDetailModal({
                   </div>
                 </div>
 
+                {/* Role Management */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <h4 className="text-xs font-semibold text-gray-700 mb-2">Role</h4>
+                  <div className="flex items-center gap-3">
+                    <span className={`inline-flex px-2 py-0.5 text-xs rounded font-medium ${
+                      member.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {member.role === 'admin' ? 'Admin' : 'Member'}
+                    </span>
+                    {member.role === 'admin' ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!confirm('Remove admin role from this member?')) return
+                          onSave(member, { role: 'member' })
+                        }}
+                        className="px-3 py-1 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100"
+                      >
+                        Remove admin
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!confirm('Grant admin role to this member?')) return
+                          onSave(member, { role: 'admin' })
+                        }}
+                        className="px-3 py-1 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-md hover:bg-purple-100"
+                      >
+                        Make admin
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 {/* Address Information */}
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <h4 className="text-xs font-semibold text-gray-700 mb-2">Mailing Address</h4>

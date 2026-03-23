@@ -1,6 +1,7 @@
 import { createClient, createServiceRoleClient } from './supabase/server'
 import { headers } from 'next/headers'
 import { TIPA_ORG_ID } from '@/types/database'
+import { getPlanDef, DEFAULT_PLAN } from './plans'
 
 async function getOrgId(): Promise<string> {
   try {
@@ -11,15 +12,52 @@ async function getOrgId(): Promise<string> {
   }
 }
 
+// Legacy hardcoded levels — used as fallback for TIPA and type compat
 const MEMBERSHIP_LEVELS = ['Full', 'Student', 'Associate', 'Corporate', 'Honorary'] as const
-export type MembershipLevelKey = (typeof MEMBERSHIP_LEVELS)[number]
+export type MembershipLevelKey = string  // now open — orgs can define any level key
 
-const DEFAULT_FEES: Record<MembershipLevelKey, number> = {
-  Full: 45,
-  Student: 25,
-  Associate: 25,
-  Corporate: 125,
-  Honorary: 0,
+const DEFAULT_FEES: Record<string, number> = {
+  Full: 45, Student: 25, Associate: 25, Corporate: 125, Honorary: 0,
+}
+
+// ─── Configurable Membership Levels ──────────────────────────────────────────
+
+export type OrgMembershipLevel = {
+  key: string           // url-safe lowercase, e.g. "full", "gold", "junior"
+  label: string         // display name shown to members
+  fee: number           // annual fee (org's currency)
+  trialType: TrialType
+  trialMonths?: number  // only when trialType === 'months'
+  enabled: boolean
+}
+
+const DEFAULT_MEMBERSHIP_LEVELS: OrgMembershipLevel[] = [
+  { key: 'full',      label: 'Full Member', fee: 45,  trialType: 'sept1',  enabled: true },
+  { key: 'student',   label: 'Student',     fee: 25,  trialType: 'months', trialMonths: 12, enabled: true },
+  { key: 'associate', label: 'Associate',   fee: 25,  trialType: 'sept1',  enabled: true },
+  { key: 'corporate', label: 'Corporate',   fee: 125, trialType: 'none',   enabled: true },
+  { key: 'honorary',  label: 'Honorary',    fee: 0,   trialType: 'none',   enabled: true },
+]
+
+export async function getMembershipLevels(): Promise<OrgMembershipLevel[]> {
+  const raw = await getSetting('membership_levels_config')
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed as OrgMembershipLevel[]
+    } catch { /* fall through */ }
+  }
+  return DEFAULT_MEMBERSHIP_LEVELS
+}
+
+export async function setMembershipLevels(levels: OrgMembershipLevel[]): Promise<void> {
+  const supabase = createServiceRoleClient()
+  const orgId = await getOrgId()
+  const { error } = await supabase.from('settings').upsert(
+    { key: 'membership_levels_config', value: JSON.stringify(levels), org_id: orgId, updated_at: new Date().toISOString() },
+    { onConflict: 'key,org_id' }
+  )
+  if (error) throw new Error(`Failed to save membership levels: ${error.message}`)
 }
 
 export async function getSetting(key: string): Promise<string | null> {
@@ -37,42 +75,28 @@ export async function getSetting(key: string): Promise<string | null> {
   return data.value
 }
 
-/** Fee for a specific membership level (CAD). Admin-configurable via settings. */
-export async function getMembershipFeeForLevel(level: MembershipLevelKey): Promise<number> {
-  const key = `membership_fee_${level.toLowerCase()}`
-  const value = await getSetting(key)
-  if (value !== null && !Number.isNaN(parseFloat(value))) {
-    return parseFloat(value)
-  }
-  return DEFAULT_FEES[level]
+/** Fee for a specific membership level. Reads from levels config first, falls back to legacy per-key settings. */
+export async function getMembershipFeeForLevel(level: string): Promise<number> {
+  const levels = await getMembershipLevels()
+  const found = levels.find(l => l.key.toLowerCase() === level.toLowerCase())
+  if (found) return found.fee
+  // Legacy fallback for TIPA per-level settings keys
+  const value = await getSetting(`membership_fee_${level.toLowerCase()}`)
+  if (value !== null && !Number.isNaN(parseFloat(value))) return parseFloat(value)
+  return DEFAULT_FEES[level] ?? 0
 }
 
-/** All membership fees keyed by level. For admin UI and display. */
-export async function getAllMembershipFees(): Promise<Record<MembershipLevelKey, number>> {
-  const result = { ...DEFAULT_FEES }
-  for (const level of MEMBERSHIP_LEVELS) {
-    const key = `membership_fee_${level.toLowerCase()}`
-    const value = await getSetting(key)
-    if (value !== null && !Number.isNaN(parseFloat(value))) {
-      result[level] = parseFloat(value)
-    }
-  }
-  return result
+/** All membership fees keyed by level key. For admin UI and payment flows. */
+export async function getAllMembershipFees(): Promise<Record<string, number>> {
+  const levels = await getMembershipLevels()
+  return Object.fromEntries(levels.map(l => [l.key, l.fee]))
 }
 
-/** Set fee for one level. Key format: membership_fee_full, etc. */
-export async function setMembershipFeeForLevel(
-  level: MembershipLevelKey,
-  fee: number
-): Promise<void> {
-  const supabase = createServiceRoleClient()
-  const orgId = await getOrgId()
-  const key = `membership_fee_${level.toLowerCase()}`
-  const { error } = await supabase.from('settings').upsert(
-    { key, value: String(fee), org_id: orgId, updated_at: new Date().toISOString() },
-    { onConflict: 'key,org_id' }
-  )
-  if (error) throw new Error(`Failed to save fee for ${level}: ${error.message}`)
+/** Update fee for one level by mutating the levels config. */
+export async function setMembershipFeeForLevel(level: string, fee: number): Promise<void> {
+  const levels = await getMembershipLevels()
+  const updated = levels.map(l => l.key.toLowerCase() === level.toLowerCase() ? { ...l, fee } : l)
+  await setMembershipLevels(updated)
 }
 
 /** Single global fee (legacy). Returns Full level fee. */
@@ -85,42 +109,15 @@ export type TrialType = 'none' | 'sept1' | 'months'
 
 export type TrialConfigItem = { type: TrialType; months?: number }
 
-const DEFAULT_TRIAL_CONFIG: Record<MembershipLevelKey, TrialConfigItem> = {
-  Full: { type: 'sept1' },
-  Associate: { type: 'sept1' },
-  Student: { type: 'months', months: 12 },
-  Corporate: { type: 'none' },
-  Honorary: { type: 'none' },
-}
-
-/** Load trial config from settings (admin-editable). Falls back to DEFAULT_TRIAL_CONFIG when keys missing. */
-export async function getTrialConfig(): Promise<Record<MembershipLevelKey, TrialConfigItem>> {
-  const supabase = await createClient()
-  const orgId = await getOrgId()
-  const keys = [
-    ...MEMBERSHIP_LEVELS.map((l) => `trial_type_${l.toLowerCase()}`),
-    ...MEMBERSHIP_LEVELS.map((l) => `trial_months_${l.toLowerCase()}`),
-  ]
-  const { data: rows } = await supabase.from('settings').select('key, value').in('key', keys).eq('org_id', orgId)
-  const map = new Map<string, string>()
-  for (const r of rows ?? []) {
-    map.set(r.key, r.value)
-  }
-  const result = { ...DEFAULT_TRIAL_CONFIG } as Record<MembershipLevelKey, TrialConfigItem>
-  for (const level of MEMBERSHIP_LEVELS) {
-    const typeKey = `trial_type_${level.toLowerCase()}`
-    const typeVal = map.get(typeKey)
-    if (typeVal === 'none' || typeVal === 'sept1' || typeVal === 'months') {
-      result[level] = { type: typeVal }
-      if (typeVal === 'months') {
-        const monthsKey = `trial_months_${level.toLowerCase()}`
-        const m = map.get(monthsKey)
-        const n = m != null ? parseInt(m, 10) : NaN
-        result[level] = { type: 'months', months: Number.isNaN(n) || n < 1 ? 12 : n }
-      }
-    }
-  }
-  return result
+/** Load trial config keyed by level key. Reads from levels config (single source of truth). */
+export async function getTrialConfig(): Promise<Record<string, TrialConfigItem>> {
+  const levels = await getMembershipLevels()
+  return Object.fromEntries(
+    levels.map(l => [l.key, l.trialType === 'months'
+      ? { type: 'months' as const, months: l.trialMonths ?? 12 }
+      : { type: l.trialType }
+    ])
+  )
 }
 
 /** Compute trial end date from config. Returns null if no trial or missing created_at when type is months. */
@@ -153,25 +150,14 @@ export async function getTrialEndDateAsync(
   return computeTrialEndFromConfig(config[level], profileCreatedAt)
 }
 
-/** Save trial config for one level. Used by admin settings. */
-export async function setTrialConfigForLevel(
-  level: MembershipLevelKey,
-  item: TrialConfigItem
-): Promise<void> {
-  const supabase = createServiceRoleClient()
-  const orgId = await getOrgId()
-  const typeKey = `trial_type_${level.toLowerCase()}`
-  await supabase.from('settings').upsert(
-    { key: typeKey, value: item.type, org_id: orgId, updated_at: new Date().toISOString() },
-    { onConflict: 'key,org_id' }
+/** Update trial config for one level. Mutates the levels config. */
+export async function setTrialConfigForLevel(level: string, item: TrialConfigItem): Promise<void> {
+  const levels = await getMembershipLevels()
+  const updated = levels.map(l => l.key.toLowerCase() === level.toLowerCase()
+    ? { ...l, trialType: item.type, trialMonths: item.type === 'months' ? (item.months ?? 12) : undefined }
+    : l
   )
-  if (item.type === 'months') {
-    const monthsKey = `trial_months_${level.toLowerCase()}`
-    await supabase.from('settings').upsert(
-      { key: monthsKey, value: String(item.months ?? 12), org_id: orgId, updated_at: new Date().toISOString() },
-      { onConflict: 'key,org_id' }
-    )
-  }
+  await setMembershipLevels(updated)
 }
 
 /**
@@ -179,10 +165,32 @@ export async function setTrialConfigForLevel(
  * Use getTrialEndDateAsync on the server when admin-editable config is required.
  */
 export function getTrialEndDate(
-  level: MembershipLevelKey,
+  level: string,
   profileCreatedAt: string | null
 ): Date | null {
-  return computeTrialEndFromConfig(DEFAULT_TRIAL_CONFIG[level], profileCreatedAt)
+  const found = DEFAULT_MEMBERSHIP_LEVELS.find(l => l.key.toLowerCase() === level.toLowerCase())
+  const config: TrialConfigItem = found
+    ? { type: found.trialType, months: found.trialMonths }
+    : { type: 'none' }
+  return computeTrialEndFromConfig(config, profileCreatedAt)
+}
+
+// ─── Org Plan ────────────────────────────────────────────────────────────────
+
+/** Returns the plan key for the current org. Falls back to DEFAULT_PLAN on error. */
+export async function getOrgPlan(): Promise<string> {
+  try {
+    const supabase = await createClient()
+    const orgId = await getOrgId()
+    const { data } = await supabase
+      .from('organizations')
+      .select('plan')
+      .eq('id', orgId)
+      .maybeSingle()
+    return (data?.plan as string) || DEFAULT_PLAN
+  } catch {
+    return DEFAULT_PLAN
+  }
 }
 
 // ─── Org Feature Flags ───────────────────────────────────────────────────────
@@ -212,16 +220,22 @@ export async function getFeatureFlags(): Promise<OrgFeatureFlags> {
     'feature_discussions', 'feature_events', 'feature_resources',
     'feature_member_directory', 'require_member_approval', 'allow_member_invitations',
   ]
-  const { data: rows } = await supabase.from('settings').select('key, value').in('key', keys).eq('org_id', orgId)
+  const [{ data: rows }, plan] = await Promise.all([
+    supabase.from('settings').select('key, value').in('key', keys).eq('org_id', orgId),
+    getOrgPlan(),
+  ])
+  const planFeatures = getPlanDef(plan).features
   const map = new Map((rows ?? []).map(r => [r.key, r.value]))
-  const b = (key: string, def: boolean) => map.has(key) ? map.get(key) === 'true' : def
+  // Plan ceiling: if the plan doesn't allow a feature, it's always false regardless of org setting
+  const b = (key: string, def: boolean, planAllows: boolean) =>
+    planAllows && (map.has(key) ? map.get(key) === 'true' : def)
   return {
-    discussions:           b('feature_discussions',      DEFAULT_FEATURE_FLAGS.discussions),
-    events:                b('feature_events',           DEFAULT_FEATURE_FLAGS.events),
-    resources:             b('feature_resources',        DEFAULT_FEATURE_FLAGS.resources),
-    memberDirectory:       b('feature_member_directory', DEFAULT_FEATURE_FLAGS.memberDirectory),
-    requireMemberApproval: b('require_member_approval',  DEFAULT_FEATURE_FLAGS.requireMemberApproval),
-    allowMemberInvitations:b('allow_member_invitations', DEFAULT_FEATURE_FLAGS.allowMemberInvitations),
+    discussions:            b('feature_discussions',      DEFAULT_FEATURE_FLAGS.discussions,            planFeatures.discussions),
+    events:                 b('feature_events',           DEFAULT_FEATURE_FLAGS.events,                 planFeatures.events),
+    resources:              b('feature_resources',        DEFAULT_FEATURE_FLAGS.resources,              planFeatures.resources),
+    memberDirectory:        b('feature_member_directory', DEFAULT_FEATURE_FLAGS.memberDirectory,        planFeatures.memberDirectory),
+    requireMemberApproval:  b('require_member_approval',  DEFAULT_FEATURE_FLAGS.requireMemberApproval,  planFeatures.requireMemberApproval),
+    allowMemberInvitations: b('allow_member_invitations', DEFAULT_FEATURE_FLAGS.allowMemberInvitations, planFeatures.allowMemberInvitations),
   }
 }
 
@@ -302,28 +316,14 @@ export async function setOrgIdentity(identity: Partial<OrgIdentity>): Promise<vo
 
 // ─── Enabled Membership Levels ────────────────────────────────────────────────
 
-export async function getEnabledLevels(): Promise<Record<MembershipLevelKey, boolean>> {
-  const supabase = await createClient()
-  const orgId = await getOrgId()
-  const keys = MEMBERSHIP_LEVELS.map(l => `level_${l.toLowerCase()}_enabled`)
-  const { data: rows } = await supabase.from('settings').select('key, value').in('key', keys).eq('org_id', orgId)
-  const map = new Map((rows ?? []).map(r => [r.key, r.value]))
-  return Object.fromEntries(
-    MEMBERSHIP_LEVELS.map(l => [l, map.get(`level_${l.toLowerCase()}_enabled`) !== 'false'])
-  ) as Record<MembershipLevelKey, boolean>
+export async function getEnabledLevels(): Promise<Record<string, boolean>> {
+  const levels = await getMembershipLevels()
+  return Object.fromEntries(levels.map(l => [l.key, l.enabled]))
 }
 
-export async function setEnabledLevels(levels: Record<MembershipLevelKey, boolean>): Promise<void> {
-  const supabase = createServiceRoleClient()
-  const orgId = await getOrgId()
-  const rows = MEMBERSHIP_LEVELS.map(l => ({
-    key: `level_${l.toLowerCase()}_enabled`,
-    value: String(levels[l] ?? true),
-    org_id: orgId,
-    updated_at: new Date().toISOString(),
-  }))
-  const { error } = await supabase.from('settings').upsert(rows, { onConflict: 'key,org_id' })
-  if (error) throw new Error(`Failed to save enabled levels: ${error.message}`)
+export async function setEnabledLevels(enabled: Record<string, boolean>): Promise<void> {
+  const levels = await getMembershipLevels()
+  await setMembershipLevels(levels.map(l => ({ ...l, enabled: enabled[l.key] ?? l.enabled })))
 }
 
 // ─── Signup Fields Config ─────────────────────────────────────────────────────

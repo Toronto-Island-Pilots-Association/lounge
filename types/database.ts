@@ -11,9 +11,10 @@ export interface Organization {
 
 export const TIPA_ORG_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
 
-export type MembershipLevel = 'Full' | 'Student' | 'Associate' | 'Corporate' | 'Honorary'
+// Open string — orgs define their own levels via membership_levels_config setting.
+// The defaults (Full, Student, Associate, Corporate, Honorary) are seeded for all orgs.
+export type MembershipLevel = string
 
-// Helper function to get display name for membership level (now just returns the value)
 export function getMembershipLevelLabel(level: MembershipLevel): string {
   return level
 }

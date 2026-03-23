@@ -14,6 +14,7 @@ import {
   getSignupFieldsConfig,
   getAllMembershipFees,
 } from '@/lib/settings'
+import { getPlanDef, DEFAULT_PLAN } from '@/lib/plans'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
@@ -25,9 +26,12 @@ export async function GET() {
     const supabase = await createClient()
     const { data: org } = await supabase
       .from('organizations')
-      .select('name, slug, logo_url')
+      .select('name, slug, logo_url, plan')
       .eq('id', orgId)
       .maybeSingle()
+
+    const plan = (org?.plan as string) || DEFAULT_PLAN
+    const planDef = getPlanDef(plan)
 
     const [features, identity, levels, signupFields, fees] = await Promise.all([
       getFeatureFlags(),
@@ -39,15 +43,22 @@ export async function GET() {
 
     return NextResponse.json({
       org: {
-        name:       org?.name ?? '',
-        slug:       org?.slug ?? '',
-        logoUrl:    org?.logo_url ?? null,
+        name:        org?.name ?? '',
+        slug:        org?.slug ?? '',
+        logoUrl:     org?.logo_url ?? null,
         accentColor: identity.accentColor,
         displayName: identity.displayName,
         description: identity.description,
         contactEmail: identity.contactEmail,
         websiteUrl:  identity.websiteUrl,
         timezone:    identity.timezone,
+      },
+      plan,
+      planDef: {
+        label:        planDef.label,
+        priceMonthly: planDef.priceMonthly,
+        maxMembers:   planDef.maxMembers,
+        features:     planDef.features,
       },
       features,
       membership: { enabledLevels: levels, fees },

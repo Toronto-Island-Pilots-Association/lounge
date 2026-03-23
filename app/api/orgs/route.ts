@@ -65,6 +65,7 @@ export async function POST(request: Request) {
         slug,
         subdomain: slug,
         custom_domain: customDomain?.trim() || null,
+        plan: 'hobby',
       })
       .select()
       .single()
