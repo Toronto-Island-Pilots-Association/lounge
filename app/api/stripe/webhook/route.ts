@@ -60,9 +60,14 @@ export async function POST(request: Request) {
         const subscriptionId = session.subscription as string
         const customerId = session.customer as string
         const userId = session.metadata?.userId
+        const orgId = session.metadata?.orgId
 
         if (!userId || !subscriptionId) {
           console.error('Missing userId or subscriptionId in checkout session')
+          break
+        }
+        if (!orgId) {
+          console.error('Missing orgId in checkout session metadata')
           break
         }
 
@@ -90,6 +95,7 @@ export async function POST(request: Request) {
           .from('org_memberships')
           .select('membership_level')
           .eq('user_id', userId)
+          .eq('org_id', orgId)
           .single()
         const level = (existingProfile?.membership_level || 'Full') as MembershipLevelKey
         const fullMembershipFee = await getMembershipFeeForLevel(level)
@@ -104,12 +110,14 @@ export async function POST(request: Request) {
             membership_expires_at: membershipExpiresAt,
           })
           .eq('user_id', userId)
+          .eq('org_id', orgId)
 
         // Record payment in payments table
         await supabase
           .from('payments')
           .insert({
             user_id: userId,
+            org_id: orgId,
             payment_method: 'stripe',
             amount: amountPaid,
             currency: 'CAD',
@@ -123,7 +131,7 @@ export async function POST(request: Request) {
         Sentry.metrics.count('payment.subscription_purchased', 1, { attributes: { membership_level: level } })
 
         // Sync subscription status (will update status field based on Stripe subscription state)
-        await syncSubscriptionStatus(userId, subscriptionId)
+        await syncSubscriptionStatus(userId, subscriptionId, orgId)
 
         // Send upgrade email
         const { data: profile } = await supabase

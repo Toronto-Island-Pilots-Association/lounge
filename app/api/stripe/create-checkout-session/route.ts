@@ -1,6 +1,6 @@
 import { requireAuthIncludingPending } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
-import { getStripeInstance, isStripeEnabled } from '@/lib/stripe'
+import { getPlatformStripeInstance, getStripeInstance, isStripeEnabled } from '@/lib/stripe'
 import * as Sentry from '@sentry/nextjs'
 import {
   getMembershipFeeForLevel,
@@ -21,7 +21,6 @@ export async function POST(request: Request) {
     }
 
     const user = await requireAuthIncludingPending()
-    const stripe = getStripeInstance()
     const level = (user.profile.membership_level || 'Full') as MembershipLevelKey
     const membershipFee = await getMembershipFeeForLevel(level)
     const trialEnd = await getTrialEndDateAsync(level, user.profile.created_at ?? null)
@@ -45,32 +44,6 @@ export async function POST(request: Request) {
           country: user.profile.country?.trim() || undefined,
         }
       : undefined
-
-    // Get or create Stripe customer; set name and address so Checkout can prefill
-    let customerId = user.profile.stripe_customer_id
-
-    if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: user.profile.email,
-        name: cardholderName,
-        address: address || undefined,
-        metadata: {
-          userId: user.id,
-        },
-      })
-      customerId = customer.id
-      await supabase
-        .from('user_profiles')
-        .update({ stripe_customer_id: customerId })
-        .eq('id', user.id)
-    } else {
-      const updateParams: Stripe.CustomerUpdateParams = {}
-      if (cardholderName) updateParams.name = cardholderName
-      if (address) updateParams.address = address
-      if (Object.keys(updateParams).length > 0) {
-        await stripe.customers.update(customerId, updateParams)
-      }
-    }
 
     const host = request.headers.get('host') ?? 'clublounge.local:3000'
     const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
@@ -107,7 +80,40 @@ export async function POST(request: Request) {
       orgName = org?.name?.trim() || orgName
     }
 
+    // IMPORTANT:
+    // Express/Connect actions against `stripeAccount` must be made with the
+    // Connect platform secret key, not the default (non-platform) Stripe key.
+    const stripe = connectedAccountId ? getPlatformStripeInstance() : getStripeInstance()
+    const stripeOptions = connectedAccountId ? { stripeAccount: connectedAccountId } : undefined
+
     // For connected accounts, customer objects are account-scoped — use email instead
+    let customerId = user.profile.stripe_customer_id
+    if (!connectedAccountId) {
+      // Only create/update platform-customer when we're NOT charging a connected account.
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user.profile.email,
+          name: cardholderName,
+          address: address || undefined,
+          metadata: {
+            userId: user.id,
+          },
+        })
+        customerId = customer.id
+        await supabase
+          .from('user_profiles')
+          .update({ stripe_customer_id: customerId })
+          .eq('id', user.id)
+      } else {
+        const updateParams: Stripe.CustomerUpdateParams = {}
+        if (cardholderName) updateParams.name = cardholderName
+        if (address) updateParams.address = address
+        if (Object.keys(updateParams).length > 0) {
+          await stripe.customers.update(customerId, updateParams)
+        }
+      }
+    }
+
     const sessionCustomer = connectedAccountId ? undefined : customerId
 
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
@@ -119,12 +125,15 @@ export async function POST(request: Request) {
         userId: user.id,
         ...(resolvedOrgId ? { orgId: resolvedOrgId } : {}),
       },
-      // Platform fee: 2% of the transaction
-      ...(connectedAccountId ? {
-        payment_intent_data: {
-          application_fee_amount: Math.round(membershipFee * 100 * 0.02),
-        },
-      } : {}),
+    }
+
+    // Platform fee: 2% of the subscription invoice total.
+    // In `subscription` mode, Connect application fees must be set via
+    // `subscription_data.application_fee_percent` (not payment_intent_data).
+    if (connectedAccountId) {
+      sessionParams.subscription_data = {
+        application_fee_percent: 2,
+      }
     }
 
     if (hasTrial) {
@@ -134,11 +143,14 @@ export async function POST(request: Request) {
         trialEndUnix = new Date(Date.UTC(trialEnd.getUTCFullYear(), 8, 1, 12, 0, 0, 0))
       }
       sessionParams.subscription_data = {
+        ...(sessionParams.subscription_data ?? {}),
         trial_end: Math.floor(trialEndUnix.getTime() / 1000),
       }
     }
 
     // Always use current level's fee so level changes (e.g. Corporate → Full) charge the correct amount
+    // If we're creating checkout on a connected account, the Price must also
+    // exist in that connected account. Prices are account-scoped.
     const price = await stripe.prices.create({
       currency: 'cad',
       unit_amount: Math.round(membershipFee * 100),
@@ -148,7 +160,7 @@ export async function POST(request: Request) {
       product_data: {
         name: `${orgName} Annual Membership (${level})`,
       },
-    })
+    }, stripeOptions)
     sessionParams.line_items = [
       {
         price: price.id,
@@ -156,7 +168,6 @@ export async function POST(request: Request) {
       },
     ]
 
-    const stripeOptions = connectedAccountId ? { stripeAccount: connectedAccountId } : undefined
     const session = await stripe.checkout.sessions.create(sessionParams, stripeOptions)
 
     Sentry.metrics.count('payment.checkout_initiated', 1, { attributes: { membership_level: level } })

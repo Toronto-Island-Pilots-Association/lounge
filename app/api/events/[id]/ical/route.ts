@@ -15,6 +15,7 @@ export async function GET(
 ) {
   try {
     const user = await requireAuth()
+    const orgId = user.profile.org_id
     const { id: eventId } = await params
 
     if (!eventId) {
@@ -27,6 +28,7 @@ export async function GET(
       .from('events')
       .select('id, title, description, location, start_time, end_time')
       .eq('id', eventId)
+      .eq('org_id', orgId)
       .single()
 
     if (eventError || !event) {
@@ -37,6 +39,7 @@ export async function GET(
       .from('event_rsvps')
       .select('user_id')
       .eq('event_id', eventId)
+      .eq('org_id', orgId)
     const rsvpCount = rsvpRows?.length ?? 0
     const userRsvped = rsvpRows?.some((r) => r.user_id === user.id) ?? false
 

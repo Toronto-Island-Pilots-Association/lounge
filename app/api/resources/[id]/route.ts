@@ -37,7 +37,11 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAuth()
+    const user = await requireAuth()
+    const orgId = user.profile.org_id
+    if (!orgId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     const { id } = await params
     const supabase = await createClient()
 
@@ -45,6 +49,7 @@ export async function GET(
       .from('resources')
       .select('*')
       .eq('id', id)
+      .eq('org_id', orgId)
       .single()
 
     if (error) {
@@ -79,7 +84,11 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAdmin()
+    const user = await requireAdmin()
+    const orgId = user.profile.org_id
+    if (!orgId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     const { id } = await params
     const body = await request.json()
 
@@ -92,10 +101,14 @@ export async function PATCH(
 
     const supabase = await createClient()
 
+    // Prevent cross-tenant updates if a malicious client includes `org_id`.
+    if ('org_id' in body) delete (body as any).org_id
+
     const { data, error } = await supabase
       .from('resources')
       .update(body)
       .eq('id', id)
+      .eq('org_id', orgId)
       .select()
       .single()
 
@@ -117,7 +130,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAdmin()
+    const user = await requireAdmin()
+    const orgId = user.profile.org_id
+    if (!orgId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     const { id } = await params
     const supabase = await createClient()
 
@@ -125,6 +142,7 @@ export async function DELETE(
       .from('resources')
       .delete()
       .eq('id', id)
+      .eq('org_id', orgId)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 })

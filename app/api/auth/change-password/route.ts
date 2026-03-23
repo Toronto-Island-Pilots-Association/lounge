@@ -1,9 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { headers } from 'next/headers'
+import { TIPA_ORG_ID } from '@/types/database'
 import { appendMemberToSheet } from '@/lib/google-sheets'
 
 export async function POST(request: Request) {
   try {
+    const h = await headers()
+    const orgId = h.get('x-org-id') ?? TIPA_ORG_ID
     const { currentPassword, newPassword } = await request.json()
 
     if (!currentPassword || !newPassword) {
@@ -86,7 +90,8 @@ export async function POST(request: Request) {
             .from('member_profiles')
             .select('*')
             .eq('user_id', user.id)
-            .single()
+            .eq('org_id', orgId)
+            .maybeSingle()
 
           // Update to approved if still pending
           if (profile && profile.status === 'pending') {
@@ -132,8 +137,9 @@ export async function POST(request: Request) {
               .from('org_memberships')
               .update(updateData)
               .eq('user_id', user.id)
+              .eq('org_id', orgId)
               .select()
-              .single()
+              .maybeSingle()
 
             // Append to Google Sheets when status changes from pending to approved
             if (updatedProfile) {

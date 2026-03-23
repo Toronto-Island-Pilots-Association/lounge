@@ -14,6 +14,7 @@ jest.mock('@/lib/settings', () => ({
 }))
 
 jest.mock('@/lib/stripe', () => ({
+  getPlatformStripeInstance: jest.fn(),
   getStripeInstance: jest.fn(),
   isStripeEnabled: jest.fn(),
 }))
@@ -31,7 +32,7 @@ describe('/api/stripe/create-checkout-session', () => {
   it('uses the org name for the checkout product (and connect account when configured)', async () => {
     const { requireAuthIncludingPending } = require('@/lib/auth')
     const { getMembershipFeeForLevel, getTrialEndDateAsync } = require('@/lib/settings')
-    const { getStripeInstance, isStripeEnabled } = require('@/lib/stripe')
+    const { getPlatformStripeInstance, isStripeEnabled } = require('@/lib/stripe')
     const { createServiceRoleClient, createClient } = require('@/lib/supabase/server')
     const { getOrgByHostname } = require('@/lib/org')
 
@@ -58,6 +59,7 @@ describe('/api/stripe/create-checkout-session', () => {
       },
     } as any)
 
+    let capturedSessionParams: any = null
     const stripe = {
       customers: {
         update: jest.fn().mockResolvedValue({ id: 'cus_123' }),
@@ -68,14 +70,17 @@ describe('/api/stripe/create-checkout-session', () => {
       },
       checkout: {
         sessions: {
-          create: jest.fn().mockResolvedValue({
+          create: jest.fn().mockImplementation((params: any) => {
+            capturedSessionParams = params
+            return Promise.resolve({
             id: 'sess_1',
             url: 'https://stripe.test/checkout/sess_1',
+            })
           }),
         },
       },
     }
-    getStripeInstance.mockReturnValue(stripe)
+    getPlatformStripeInstance.mockReturnValue(stripe)
 
     createClient.mockResolvedValue({})
 
@@ -123,11 +128,20 @@ describe('/api/stripe/create-checkout-session', () => {
           name: 'Toronto Rowing Club Annual Membership (Full)',
         },
       }),
+      { stripeAccount: 'acct_rowing' },
     )
 
     expect(stripe.checkout.sessions.create).toHaveBeenCalledWith(
       expect.any(Object),
       { stripeAccount: 'acct_rowing' },
+    )
+
+    expect(capturedSessionParams).toBeTruthy()
+    expect(capturedSessionParams.payment_intent_data).toBeUndefined()
+    expect(capturedSessionParams.subscription_data).toEqual(
+      expect.objectContaining({
+        application_fee_percent: 2,
+      }),
     )
   })
 })

@@ -4,12 +4,13 @@ import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
-    await requireAuth()
+    const user = await requireAuth()
     const supabase = await createClient()
 
     const { data, error } = await supabase
       .from('member_profiles')
       .select('*')
+      .eq('org_id', user.profile.org_id)
       .order('created_at', { ascending: false })
 
     if (error) {

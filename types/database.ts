@@ -2,9 +2,14 @@ export interface Organization {
   id: string
   name: string
   slug: string
+  plan?: string
   custom_domain: string | null
   subdomain: string | null
   logo_url: string | null
+  stripe_account_id?: string | null
+  stripe_onboarding_complete?: boolean
+  stripe_customer_id?: string | null
+  stripe_subscription_id?: string | null
   created_at: string
   updated_at: string
 }

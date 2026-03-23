@@ -1,9 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { headers } from 'next/headers'
+import { TIPA_ORG_ID } from '@/types/database'
 import * as Sentry from '@sentry/nextjs'
 
 export async function POST(request: Request) {
   try {
+    const h = await headers()
+    const orgId = h.get('x-org-id') ?? TIPA_ORG_ID
     const { email, password } = await request.json()
 
     if (!email || !password) {
@@ -57,7 +61,8 @@ export async function POST(request: Request) {
               .from('org_memberships')
               .select('status')
               .eq('user_id', data.user.id)
-              .single()
+              .eq('org_id', orgId)
+              .maybeSingle()
 
             // Only require password change if still pending (have not completed first-time change)
             if (profile?.status === 'pending') {

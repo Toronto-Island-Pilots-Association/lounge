@@ -101,6 +101,7 @@ export default async function MembershipPage({
       const { data: resources } = await supabase
         .from('resources')
         .select('id, title, created_at')
+        .eq('org_id', user.profile.org_id)
         .order('created_at', { ascending: false })
         .limit(5)
 
@@ -108,6 +109,7 @@ export default async function MembershipPage({
       const { data: events } = await supabase
         .from('events')
         .select('id, title, start_time, end_time, location, description')
+        .eq('org_id', user.profile.org_id)
         .gte('start_time', now)
         .order('start_time', { ascending: true })
         .limit(5)

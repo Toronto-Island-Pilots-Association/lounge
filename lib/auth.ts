@@ -111,39 +111,50 @@ async function createMissingProfile(
 
 export async function getCurrentUser() {
   const supabase = await createClient()
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (!user || authError) return null
+  try {
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (!user || authError) return null
 
-  const orgId = await getOrgId()
+    const orgId = await getOrgId()
 
-  let profile = await fetchMemberProfile(supabase, user.id, orgId)
+    let profile = await fetchMemberProfile(supabase, user.id, orgId)
 
-  if (!profile) {
-    console.warn('Member profile not found for user:', user.id, '— attempting to create')
-    if (orgId) {
-      profile = await createMissingProfile(user.id, orgId, user.email ?? '')
+    if (!profile) {
+      console.warn('Member profile not found for user:', user.id, '— attempting to create')
+      if (orgId) {
+        profile = await createMissingProfile(user.id, orgId, user.email ?? '')
+      }
+      if (!profile) return null
     }
-    if (!profile) return null
-  }
 
-  // Block non-approved members (admins always pass)
-  if (profile.role !== 'admin' && profile.status !== 'approved') {
+    // Block non-approved members (admins always pass)
+    if (profile.role !== 'admin' && profile.status !== 'approved') {
+      return null
+    }
+
+    return { ...user, profile }
+  } catch (err) {
+    // Supabase can throw when the session cookie is corrupted (e.g. invalid UTF-8).
+    console.error('Failed to load supabase auth session:', err)
     return null
   }
-
-  return { ...user, profile }
 }
 
 export async function getCurrentUserIncludingPending() {
   const supabase = await createClient()
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (!user || authError) return null
+  try {
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (!user || authError) return null
 
-  const orgId = await getOrgId()
-  const profile = await fetchMemberProfile(supabase, user.id, orgId)
-  if (!profile) return null
+    const orgId = await getOrgId()
+    const profile = await fetchMemberProfile(supabase, user.id, orgId)
+    if (!profile) return null
 
-  return { ...user, profile }
+    return { ...user, profile }
+  } catch (err) {
+    console.error('Failed to load supabase auth session:', err)
+    return null
+  }
 }
 
 export async function requireAuth() {

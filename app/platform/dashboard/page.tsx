@@ -4,6 +4,7 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { buildOrgUrl } from '@/lib/org'
 import SignOutButton from './SignOutButton'
 import ConnectStripeButton from './ConnectStripeButton'
+import OrgPlanUpgradeControls from './OrgPlanUpgradeControls'
 import { CnameRecord } from '@/components/platform/CnameRecord'
 
 export default async function PlatformDashboard() {
@@ -129,6 +130,13 @@ export default async function PlatformDashboard() {
                             <ConnectStripeButton orgId={org.id} isPending={stripeStatus === 'pending'} />
                           )}
                         </div>
+
+                        {stripeStatus === 'connected' && (
+                          <OrgPlanUpgradeControls
+                            orgId={org.id}
+                            currentPlan={org.plan ?? 'hobby'}
+                          />
+                        )}
 
                         {org.custom_domain && (
                           <div className="pt-4 border-t">

@@ -5,13 +5,16 @@ import { DiscussionCategory } from '@/types/database'
 
 export async function GET() {
   try {
-    await requireAuth()
+    const user = await requireAuth()
+    const orgId = user.profile?.org_id
+    if (!orgId) return NextResponse.json({ error: 'Organization not found' }, { status: 400 })
     const supabase = await createClient()
 
     // Get threads
     const { data: threads, error: threadsError } = await supabase
       .from('threads')
       .select('*')
+      .eq('org_id', orgId)
       .order('created_at', { ascending: false })
 
     if (threadsError) {
@@ -23,6 +26,7 @@ export async function GET() {
     const { data: authors } = userIds.length > 0 ? await supabase
       .from('user_profiles')
       .select('user_id, full_name, email, profile_picture_url')
+      .eq('org_id', orgId)
       .in('user_id', userIds) : { data: [] }
 
     const authorsMap = new Map(authors?.map(a => [a.user_id, a]) || [])
@@ -32,6 +36,7 @@ export async function GET() {
     const { data: commentCounts } = await supabase
       .from('comments')
       .select('thread_id')
+      .eq('org_id', orgId)
       .in('thread_id', threadIds)
 
     const countsMap = new Map<string, number>()

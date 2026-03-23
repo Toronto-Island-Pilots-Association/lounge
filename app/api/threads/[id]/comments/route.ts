@@ -8,7 +8,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAuth()
+    const user = await requireAuth()
+    const orgId = user.profile?.org_id
+    if (!orgId) return NextResponse.json({ error: 'Organization not found' }, { status: 400 })
     const { id } = await params
     const supabase = await createClient()
 
@@ -16,6 +18,7 @@ export async function GET(
       .from('comments')
       .select('*')
       .eq('thread_id', id)
+      .eq('org_id', orgId)
       .order('created_at', { ascending: true })
 
     if (error) {
@@ -27,6 +30,7 @@ export async function GET(
     const { data: authors } = userIds.length > 0 ? await supabase
       .from('user_profiles')
       .select('id, full_name, email, profile_picture_url')
+      .eq('org_id', orgId)
       .in('id', userIds) : { data: [] }
 
     const authorsMap = new Map(authors?.map(a => [a.id, a]) || [])
@@ -120,6 +124,7 @@ export async function POST(
     // Send reply notifications (non-blocking)
     sendReplyNotifications({
       supabase,
+      orgId,
       threadId: id,
       threadTitle: thread.title,
       threadAuthorId: thread.created_by,
@@ -149,6 +154,7 @@ function extractMentionedUserIds(content: string): string[] {
 
 async function sendReplyNotifications({
   supabase,
+  orgId,
   threadId,
   threadTitle,
   threadAuthorId,
@@ -157,6 +163,7 @@ async function sendReplyNotifications({
   commentContent,
 }: {
   supabase: any
+  orgId: string
   threadId: string
   threadTitle: string
   threadAuthorId: string | null
@@ -180,6 +187,7 @@ async function sendReplyNotifications({
     .from('comments')
     .select('created_by')
     .eq('thread_id', threadId)
+    .eq('org_id', orgId)
     .not('created_by', 'is', null)
     .neq('created_by', commenterId)
 
@@ -197,6 +205,7 @@ async function sendReplyNotifications({
     .from('user_profiles')
     .select('id, email, full_name, notify_replies')
     .in('id', Array.from(allUserIds))
+    .eq('org_id', orgId)
     .eq('notify_replies', true)
 
   if (!profiles || profiles.length === 0) return

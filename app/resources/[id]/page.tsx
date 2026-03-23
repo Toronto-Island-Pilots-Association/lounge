@@ -64,6 +64,7 @@ export default async function ResourceDetailPage({
     .from('resources')
     .select('*')
     .eq('id', id)
+    .eq('org_id', user.profile.org_id)
     .single()
 
   if (error || !resource) {

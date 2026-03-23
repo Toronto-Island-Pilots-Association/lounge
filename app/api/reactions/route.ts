@@ -5,6 +5,8 @@ import { NextResponse } from 'next/server'
 export async function POST(request: Request) {
   try {
     const user = await requireAuth()
+    const orgId = user.profile?.org_id
+    if (!orgId) return NextResponse.json({ error: 'Organization not found' }, { status: 400 })
     const body = await request.json()
     const { thread_id, comment_id, reaction_type } = body
 
@@ -31,12 +33,36 @@ export async function POST(request: Request) {
 
     const supabase = await createClient()
 
+    // Verify the target belongs to the current org to prevent cross-tenant linking.
+    if (thread_id) {
+      const { data: eventThread, error: threadError } = await supabase
+        .from('threads')
+        .select('id')
+        .eq('id', thread_id)
+        .eq('org_id', orgId)
+        .single()
+      if (threadError || !eventThread) {
+        return NextResponse.json({ error: 'Thread not found' }, { status: 404 })
+      }
+    } else if (comment_id) {
+      const { data: eventComment, error: commentError } = await supabase
+        .from('comments')
+        .select('id')
+        .eq('id', comment_id)
+        .eq('org_id', orgId)
+        .single()
+      if (commentError || !eventComment) {
+        return NextResponse.json({ error: 'Comment not found' }, { status: 404 })
+      }
+    }
+
     // Check if user already has a reaction of this type
     const { data: existingReaction } = await supabase
       .from('reactions')
       .select('id, reaction_type')
       .eq('user_id', user.id)
       .eq(thread_id ? 'thread_id' : 'comment_id', thread_id || comment_id)
+      .eq('org_id', orgId)
       .single()
 
     if (existingReaction) {
@@ -46,6 +72,7 @@ export async function POST(request: Request) {
           .from('reactions')
           .delete()
           .eq('id', existingReaction.id)
+          .eq('org_id', orgId)
 
         if (error) {
           return NextResponse.json({ error: error.message }, { status: 400 })
@@ -58,6 +85,7 @@ export async function POST(request: Request) {
           .from('reactions')
           .update({ reaction_type })
           .eq('id', existingReaction.id)
+          .eq('org_id', orgId)
 
         if (error) {
           return NextResponse.json({ error: error.message }, { status: 400 })
@@ -74,6 +102,7 @@ export async function POST(request: Request) {
         thread_id: thread_id || null,
         comment_id: comment_id || null,
         user_id: user.id,
+        org_id: orgId,
         reaction_type,
       })
       .select()

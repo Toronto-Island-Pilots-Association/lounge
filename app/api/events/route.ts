@@ -34,11 +34,13 @@ async function getEventImageUrl(supabase: any, imageUrl: string | null): Promise
 export async function GET() {
   try {
     const user = await requireAuth()
+    const orgId = user.profile.org_id
     const supabase = await createClient()
 
     const { data, error } = await supabase
       .from('events')
       .select('*')
+      .eq('org_id', orgId)
       .order('start_time', { ascending: true })
 
     if (error) {
@@ -54,11 +56,13 @@ export async function GET() {
         ? supabase
             .from('event_rsvps')
             .select('event_id')
+            .eq('org_id', orgId)
             .in('event_id', eventIds)
         : Promise.resolve({ data: [] }),
       supabase
         .from('event_rsvps')
         .select('event_id')
+        .eq('org_id', orgId)
         .eq('user_id', user.id)
         .in('event_id', eventIds.length > 0 ? eventIds : ['00000000-0000-0000-0000-000000000000']),
     ])
@@ -96,6 +100,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const user = await requireAuth()
+    const orgId = user.profile.org_id
     
     // Check if user is admin
     if (user.profile.role !== 'admin') {
@@ -126,6 +131,7 @@ export async function POST(request: Request) {
     const { data, error } = await supabase
       .from('events')
       .insert({
+        org_id: orgId,
         title,
         description: description || null,
         location: location || null,
@@ -147,6 +153,7 @@ export async function POST(request: Request) {
         const { data: members } = await supabase
           .from('user_profiles')
           .select('email, full_name, first_name, last_name')
+          .eq('org_id', orgId)
           .eq('status', 'approved') // Only send to approved members
           .not('email', 'is', null)
 

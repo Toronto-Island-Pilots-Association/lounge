@@ -34,12 +34,17 @@ async function getResourceFileUrl(supabase: any, fileUrl: string | null): Promis
 
 export async function GET() {
   try {
-    await requireAuth()
+    const user = await requireAuth()
+    const orgId = user.profile.org_id
+    if (!orgId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     const supabase = await createClient()
 
     const { data, error } = await supabase
       .from('resources')
       .select('*')
+      .eq('org_id', orgId)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -70,7 +75,11 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    await requireAdmin()
+    const user = await requireAdmin()
+    const orgId = user.profile.org_id
+    if (!orgId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     const body = await request.json()
 
     if (body.category && !VALID_ANNOUNCEMENT_CATEGORIES.includes(body.category)) {
@@ -79,10 +88,16 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
-    const insertData = {
+    const insertData: Record<string, unknown> = {
       ...body,
+      // Force tenant scoping regardless of any incoming `org_id`.
+      org_id: orgId,
       category: body.category && VALID_ANNOUNCEMENT_CATEGORIES.includes(body.category) ? body.category : 'other',
     }
+
+    // Prevent accidental/hostile cross-org writes.
+    delete (insertData as any).org_id
+    insertData.org_id = orgId
 
     const supabase = await createClient()
 

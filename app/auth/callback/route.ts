@@ -253,6 +253,7 @@ export async function GET(request: Request) {
           const { data: admins } = await clientForAdmins
             .from('member_profiles')
             .select('email')
+            .eq('org_id', orgId)
             .eq('role', 'admin')
             .eq('status', 'approved')
 

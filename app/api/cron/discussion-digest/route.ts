@@ -88,52 +88,69 @@ export async function GET(request: Request) {
       content: thread.content,
       category: thread.category,
       created_at: thread.created_at,
+      org_id: thread.org_id,
       author: authorsMap.get(thread.created_by) || null,
       comment_count: countsMap.get(thread.id) || 0,
     }))
 
-    // Get all approved members
-    const { data: members, error: membersError } = await supabase
-      .from('user_profiles')
-      .select('email, full_name, first_name, last_name')
-      .eq('status', 'approved')
-      .not('email', 'is', null)
-
-    if (membersError) {
-      console.error('Error fetching members:', membersError)
-      return NextResponse.json(
-        { error: 'Failed to fetch members', details: membersError.message },
-        { status: 500 }
-      )
-    }
-
-    if (!members || members.length === 0) {
-      return NextResponse.json({
-        success: true,
-        message: 'No approved members found',
-        threadsSent: threadsWithData.length,
-        membersNotified: 0,
-      })
-    }
-
-    // Send emails to all members
-    const emailPromises = members.map(member => {
-      const name = member.full_name || 
-                  (member.first_name && member.last_name 
-                    ? `${member.first_name} ${member.last_name}` 
-                    : member.email?.split('@')[0] || 'Member')
-      
-      return sendDiscussionDigestEmail(
-        member.email!,
-        name,
-        threadsWithData
-      ).catch(err => {
-        console.error(`Error sending digest to ${member.email}:`, err)
-        return { success: false, error: err }
-      })
+    // Send org-scoped digests:
+    // - threads are grouped by `org_id`
+    // - members are fetched per org, so one org never receives another org's content
+    const threadsByOrg = new Map<string, typeof threadsWithData>()
+    threadsWithData.forEach(thread => {
+      const key = thread.org_id
+      if (!key) return
+      const existing = threadsByOrg.get(key) || []
+      existing.push(thread)
+      threadsByOrg.set(key, existing)
     })
 
+    const emailPromises: Promise<{ success: boolean; error?: any }>[] = []
+
+    for (const [orgId, orgThreads] of threadsByOrg.entries()) {
+      const { data: members, error: membersError } = await supabase
+        .from('user_profiles')
+        .select('email, full_name, first_name, last_name')
+        .eq('status', 'approved')
+        .not('email', 'is', null)
+        .eq('org_id', orgId)
+
+      if (membersError) {
+        console.error('Error fetching members:', membersError)
+        return NextResponse.json(
+          { error: 'Failed to fetch members', details: membersError.message },
+          { status: 500 }
+        )
+      }
+
+      if (!members || members.length === 0) continue
+
+      // Queue emails for this org
+      members.forEach(member => {
+        const name =
+          member.full_name ||
+          (member.first_name && member.last_name ? `${member.first_name} ${member.last_name}` : member.email?.split('@')[0] || 'Member')
+
+        emailPromises.push(
+          sendDiscussionDigestEmail(member.email!, name, orgThreads).catch(err => {
+            console.error(`Error sending digest to ${member.email}:`, err)
+            return { success: false, error: err }
+          })
+        )
+      })
+    }
+
     // Wait for all emails to be sent (or fail)
+    if (emailPromises.length === 0) {
+      return NextResponse.json({
+        success: true,
+        message: 'No approved members found for any org',
+        threadsSent: threadsWithData.length,
+        membersNotified: 0,
+        membersFailed: 0,
+      })
+    }
+
     const results = await Promise.allSettled(emailPromises)
     
     const successful = results.filter(r => r.status === 'fulfilled' && r.value.success).length

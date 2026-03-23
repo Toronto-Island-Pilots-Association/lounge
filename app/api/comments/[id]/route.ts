@@ -8,6 +8,8 @@ export async function DELETE(
 ) {
   try {
     const user = await requireAuth()
+    const orgId = user.profile?.org_id
+    if (!orgId) return NextResponse.json({ error: 'Organization not found' }, { status: 400 })
     const { id } = await params
     const supabase = await createClient()
 
@@ -16,6 +18,7 @@ export async function DELETE(
       .from('comments')
       .select('created_by')
       .eq('id', id)
+      .eq('org_id', orgId)
       .single()
 
     if (!comment) {
@@ -27,6 +30,7 @@ export async function DELETE(
       .from('user_profiles')
       .select('role')
       .eq('id', user.id)
+      .eq('org_id', orgId)
       .single()
 
     const isAdmin = profile?.role === 'admin'
@@ -43,6 +47,7 @@ export async function DELETE(
       .from('comments')
       .delete()
       .eq('id', id)
+      .eq('org_id', orgId)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 })
