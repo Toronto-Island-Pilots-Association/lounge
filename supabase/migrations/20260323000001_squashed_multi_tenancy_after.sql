@@ -76,11 +76,14 @@ ALTER TABLE public.user_profiles
   ADD COLUMN IF NOT EXISTS org_id  UUID REFERENCES public.organizations(id) ON DELETE CASCADE;
 
 -- Backfill: existing rows all belong to TIPA; user_id = current id (= auth.users.id)
+-- Disable triggers to avoid stale trigger functions referencing columns that may not exist yet.
+ALTER TABLE public.user_profiles DISABLE TRIGGER USER;
 UPDATE public.user_profiles
 SET
-  user_id = id,
+  user_id = COALESCE(user_id, id),
   org_id  = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
-WHERE user_id IS NULL;
+WHERE user_id IS NULL OR org_id IS NULL;
+ALTER TABLE public.user_profiles ENABLE TRIGGER USER;
 
 -- Drop the FK that tied user_profiles.id to auth.users.id
 ALTER TABLE public.user_profiles
@@ -350,13 +353,7 @@ DROP POLICY IF EXISTS "Users can update own profile" ON public.user_profiles;
 CREATE POLICY "Users can update own profile"
   ON public.user_profiles FOR UPDATE
   USING (auth.uid() = user_id)
-  WITH CHECK (
-    auth.uid() = user_id
-    AND role = (
-      SELECT role FROM public.user_profiles
-      WHERE user_id = auth.uid() AND org_id = user_profiles.org_id
-    )
-  );
+  WITH CHECK (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Admins can update all profiles" ON public.user_profiles;
 CREATE POLICY "Admins can update all profiles"
@@ -715,6 +712,7 @@ CREATE INDEX IF NOT EXISTS idx_org_memberships_status  ON public.org_memberships
 -- --------------------------------------------------------
 -- 3. updated_at trigger
 -- --------------------------------------------------------
+DROP TRIGGER IF EXISTS update_org_memberships_updated_at ON public.org_memberships;
 CREATE TRIGGER update_org_memberships_updated_at
   BEFORE UPDATE ON public.org_memberships
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
@@ -723,32 +721,41 @@ CREATE TRIGGER update_org_memberships_updated_at
 -- 4. Copy ALL existing data from user_profiles → org_memberships
 --    Data is fully preserved before any columns are dropped.
 --    This is safe for existing TIPA members and any other orgs.
+--    Skipped if columns were already migrated by a prior run.
 -- --------------------------------------------------------
-INSERT INTO public.org_memberships (
-  id, user_id, org_id,
-  role, status, membership_level, membership_class, member_number, membership_expires_at,
-  invited_at, last_reminder_sent_at, reminder_count,
-  stripe_subscription_id, stripe_customer_id, paypal_subscription_id, subscription_cancel_at_period_end,
-  statement_of_interest, interests, how_did_you_hear,
-  is_copa_member, join_copa_flight_32, copa_membership_number,
-  pilot_license_type, aircraft_type, call_sign, how_often_fly_from_ytz,
-  is_student_pilot, flight_school, instructor_name,
-  custom_data, created_at, updated_at
-)
-SELECT
-  id,
-  user_id,
-  COALESCE(org_id, 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'::uuid) as org_id,
-  role, status, membership_level, membership_class, member_number, membership_expires_at,
-  invited_at, last_reminder_sent_at, COALESCE(reminder_count, 0),
-  stripe_subscription_id, stripe_customer_id, paypal_subscription_id, COALESCE(subscription_cancel_at_period_end, FALSE),
-  statement_of_interest, interests, how_did_you_hear,
-  is_copa_member, join_copa_flight_32, copa_membership_number,
-  pilot_license_type, aircraft_type, call_sign, how_often_fly_from_ytz,
-  COALESCE(is_student_pilot, FALSE), flight_school, instructor_name,
-  custom_data, created_at, updated_at
-FROM public.user_profiles
-ON CONFLICT (user_id, org_id) DO NOTHING;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'user_profiles' AND column_name = 'role'
+  ) THEN
+    INSERT INTO public.org_memberships (
+      id, user_id, org_id,
+      role, status, membership_level, membership_class, member_number, membership_expires_at,
+      invited_at, last_reminder_sent_at, reminder_count,
+      stripe_subscription_id, stripe_customer_id, paypal_subscription_id, subscription_cancel_at_period_end,
+      statement_of_interest, interests, how_did_you_hear,
+      is_copa_member, join_copa_flight_32, copa_membership_number,
+      pilot_license_type, aircraft_type, call_sign, how_often_fly_from_ytz,
+      is_student_pilot, flight_school, instructor_name,
+      custom_data, created_at, updated_at
+    )
+    SELECT
+      id,
+      user_id,
+      COALESCE(org_id, 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'::uuid) as org_id,
+      role, status, membership_level, membership_class, member_number, membership_expires_at,
+      invited_at, last_reminder_sent_at, COALESCE(reminder_count, 0),
+      stripe_subscription_id, stripe_customer_id, paypal_subscription_id, COALESCE(subscription_cancel_at_period_end, FALSE),
+      statement_of_interest, interests, how_did_you_hear,
+      is_copa_member, join_copa_flight_32, copa_membership_number,
+      pilot_license_type, aircraft_type, call_sign, how_often_fly_from_ytz,
+      COALESCE(is_student_pilot, FALSE), flight_school, instructor_name,
+      custom_data, created_at, updated_at
+    FROM public.user_profiles
+    ON CONFLICT (user_id, org_id) DO NOTHING;
+  END IF;
+END $$;
 
 -- --------------------------------------------------------
 -- 5. Drop org_id / membership columns from user_profiles
@@ -793,20 +800,25 @@ ALTER TABLE public.user_profiles
 
 -- user_profiles now has one row per user (no org scoping)
 ALTER TABLE public.user_profiles
+  DROP CONSTRAINT IF EXISTS user_profiles_user_id_unique;
+ALTER TABLE public.user_profiles
   ADD CONSTRAINT user_profiles_user_id_unique UNIQUE (user_id);
 
 -- Recreate user_profiles RLS policies without org_id/role references
+DROP POLICY IF EXISTS "Users can update own profile" ON public.user_profiles;
 CREATE POLICY "Users can update own profile"
   ON public.user_profiles FOR UPDATE
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Admins can update all profiles" ON public.user_profiles;
 CREATE POLICY "Admins can update all profiles"
   ON public.user_profiles FOR UPDATE
   USING (
     EXISTS (SELECT 1 FROM public.org_memberships WHERE user_id = auth.uid() AND role = 'admin')
   );
 
+DROP POLICY IF EXISTS "Service role can insert profiles" ON public.user_profiles;
 CREATE POLICY "Service role can insert profiles"
   ON public.user_profiles FOR INSERT
   WITH CHECK (auth.role() = 'service_role');
@@ -871,6 +883,7 @@ JOIN public.user_profiles up ON up.user_id = om.user_id;
 ALTER TABLE public.org_memberships ENABLE ROW LEVEL SECURITY;
 
 -- Members can read memberships in their own org
+DROP POLICY IF EXISTS "Members can view org memberships" ON public.org_memberships;
 CREATE POLICY "Members can view org memberships"
   ON public.org_memberships FOR SELECT
   USING (
@@ -880,6 +893,7 @@ CREATE POLICY "Members can view org memberships"
 
 -- Users can update their own membership (non-privileged fields only —
 -- role/status/membership_level are protected by the admin policy)
+DROP POLICY IF EXISTS "Users can update own membership" ON public.org_memberships;
 CREATE POLICY "Users can update own membership"
   ON public.org_memberships FOR UPDATE
   USING (auth.uid() = user_id)
@@ -890,10 +904,12 @@ CREATE POLICY "Users can update own membership"
     AND membership_level = (SELECT membership_level FROM public.org_memberships WHERE user_id = auth.uid() AND org_id = org_memberships.org_id)
   );
 
+DROP POLICY IF EXISTS "Admins can update all memberships" ON public.org_memberships;
 CREATE POLICY "Admins can update all memberships"
   ON public.org_memberships FOR UPDATE
   USING (public.is_org_admin(auth.uid(), org_id));
 
+DROP POLICY IF EXISTS "Service role can insert memberships" ON public.org_memberships;
 CREATE POLICY "Service role can insert memberships"
   ON public.org_memberships FOR INSERT
   WITH CHECK (auth.role() = 'service_role');
@@ -941,6 +957,7 @@ $$ LANGUAGE plpgsql;
 -- 9. Update assign_member_number trigger to use org_memberships
 -- --------------------------------------------------------
 DROP TRIGGER IF EXISTS assign_member_number_trigger ON public.user_profiles;
+DROP TRIGGER IF EXISTS assign_member_number_trigger ON public.org_memberships;
 
 CREATE OR REPLACE FUNCTION public.assign_member_number_on_approval()
 RETURNS TRIGGER AS $$
