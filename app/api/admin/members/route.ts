@@ -3,7 +3,7 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import * as Sentry from '@sentry/nextjs'
 import { sendMemberApprovalEmail } from '@/lib/resend'
 import { appendMemberToSheet } from '@/lib/google-sheets'
-import { getTrialEndDateAsync, getMembershipFeeForLevel } from '@/lib/settings'
+import { getTrialConfig, getAllMembershipFees, getMembershipFeeForLevel } from '@/lib/settings'
 import type { MembershipLevelKey } from '@/lib/settings'
 import { getStripeInstance, isStripeEnabled } from '@/lib/stripe'
 import { NextResponse } from 'next/server'
@@ -22,18 +22,25 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    const membersWithTrial = await Promise.all(
-      (data ?? []).map(async (member) => {
-        const level = (member.membership_level || 'Full') as MembershipLevelKey
-        const trialEnd = await getTrialEndDateAsync(level, member.created_at ?? null)
-        const expected_fee = await getMembershipFeeForLevel(level)
-        return {
-          ...member,
-          trial_end: trialEnd ? trialEnd.toISOString() : null,
-          expected_fee,
-        }
-      })
-    )
+    // Fetch once, compute per-member inline — avoids N×2 DB round-trips
+    const [trialConfig, allFees] = await Promise.all([getTrialConfig(), getAllMembershipFees()])
+
+    const membersWithTrial = (data ?? []).map((member) => {
+      const level = (member.membership_level || 'Full') as MembershipLevelKey
+      const config = trialConfig[level]
+      let trial_end: string | null = null
+      if (config?.type === 'sept1') {
+        const now = new Date()
+        const year = now.getFullYear()
+        const sep1 = new Date(year, 8, 1)
+        trial_end = (now < sep1 ? sep1 : new Date(year + 1, 8, 1)).toISOString()
+      } else if (config?.type === 'months' && member.created_at) {
+        const end = new Date(member.created_at)
+        end.setMonth(end.getMonth() + (config.months ?? 12))
+        trial_end = end.toISOString()
+      }
+      return { ...member, trial_end, expected_fee: allFees[level] }
+    })
 
     const { data: payments } = await supabase
       .from('payments')
