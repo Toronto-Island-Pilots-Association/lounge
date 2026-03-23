@@ -52,12 +52,12 @@ export async function POST(request: Request) {
       if (authError.message.includes('already registered') || authError.message.includes('already been registered')) {
         // Existing account — look up the user and create the org for them
         isNewUser = false
-        const { data: { users } } = await supabase.auth.admin.listUsers({ perPage: 1000 })
-        const existing = users.find(u => u.email === email)
-        if (!existing) {
+        const { data: { users }, error: lookupError } = await supabase.auth.admin.listUsers({ perPage: 1000 })
+        const existingUser = users?.find(u => u.email === email)
+        if (lookupError || !existingUser) {
           return NextResponse.json({ error: 'Account lookup failed. Please try again.' }, { status: 500 })
         }
-        userId = existing.id
+        userId = existingUser.id
       } else {
         return NextResponse.json({ error: authError.message ?? 'Failed to create account' }, { status: 500 })
       }

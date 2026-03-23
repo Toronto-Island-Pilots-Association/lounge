@@ -1,4 +1,4 @@
-import { createClient } from './supabase/server'
+import { createClient, createServiceRoleClient } from './supabase/server'
 import { headers } from 'next/headers'
 import { TIPA_ORG_ID } from '@/types/database'
 
@@ -65,7 +65,7 @@ export async function setMembershipFeeForLevel(
   level: MembershipLevelKey,
   fee: number
 ): Promise<void> {
-  const supabase = await createClient()
+  const supabase = createServiceRoleClient()
   const orgId = await getOrgId()
   const key = `membership_fee_${level.toLowerCase()}`
   const { error } = await supabase.from('settings').upsert(
@@ -158,7 +158,7 @@ export async function setTrialConfigForLevel(
   level: MembershipLevelKey,
   item: TrialConfigItem
 ): Promise<void> {
-  const supabase = await createClient()
+  const supabase = createServiceRoleClient()
   const orgId = await getOrgId()
   const typeKey = `trial_type_${level.toLowerCase()}`
   await supabase.from('settings').upsert(
@@ -226,7 +226,7 @@ export async function getFeatureFlags(): Promise<OrgFeatureFlags> {
 }
 
 export async function setFeatureFlags(flags: Partial<OrgFeatureFlags>): Promise<void> {
-  const supabase = await createClient()
+  const supabase = createServiceRoleClient()
   const orgId = await getOrgId()
   const keyMap: Record<keyof OrgFeatureFlags, string> = {
     discussions:            'feature_discussions',
@@ -282,7 +282,7 @@ export async function getOrgIdentity(): Promise<OrgIdentity> {
 }
 
 export async function setOrgIdentity(identity: Partial<OrgIdentity>): Promise<void> {
-  const supabase = await createClient()
+  const supabase = createServiceRoleClient()
   const orgId = await getOrgId()
   const keyMap: Record<keyof OrgIdentity, string> = {
     description:  'club_description',
@@ -314,7 +314,7 @@ export async function getEnabledLevels(): Promise<Record<MembershipLevelKey, boo
 }
 
 export async function setEnabledLevels(levels: Record<MembershipLevelKey, boolean>): Promise<void> {
-  const supabase = await createClient()
+  const supabase = createServiceRoleClient()
   const orgId = await getOrgId()
   const rows = MEMBERSHIP_LEVELS.map(l => ({
     key: `level_${l.toLowerCase()}_enabled`,
@@ -360,7 +360,7 @@ export async function getSignupFieldsConfig(): Promise<SignupField[]> {
 }
 
 export async function setSignupFieldsConfig(fields: SignupField[]): Promise<void> {
-  const supabase = await createClient()
+  const supabase = createServiceRoleClient()
   const orgId = await getOrgId()
   const { error } = await supabase.from('settings').upsert(
     { key: 'signup_fields_config', value: JSON.stringify(fields), org_id: orgId, updated_at: new Date().toISOString() },
@@ -388,7 +388,7 @@ export async function getEmailTemplates(): Promise<EmailTemplates> {
 }
 
 export async function setEmailTemplates(templates: Partial<EmailTemplates>): Promise<void> {
-  const supabase = await createClient()
+  const supabase = createServiceRoleClient()
   const orgId = await getOrgId()
   const rows = []
   if (templates.subject !== undefined)
