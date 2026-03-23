@@ -6,11 +6,10 @@ interface Props {
 }
 
 export function GoogleButton({ redirectTo = '/platform/dashboard', className }: Props) {
-  const handleClick = async () => {
-    const next = redirectTo.startsWith('http') ? redirectTo : `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`
-    const res = await fetch(`/api/auth/oauth?provider=google&redirectTo=${encodeURIComponent(next)}`)
-    const data = await res.json()
-    if (data.url) window.location.href = data.url
+  const handleClick = () => {
+    // Navigate directly — the oauth route now redirects to Google itself
+    const callbackNext = redirectTo.startsWith('http') ? redirectTo : `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`
+    window.location.href = `/api/auth/oauth?provider=google&redirectTo=${encodeURIComponent(callbackNext)}`
   }
 
   return (

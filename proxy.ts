@@ -26,6 +26,19 @@ export async function proxy(request: NextRequest) {
     requestHeaders.set('x-org-slug', org.slug)
   }
 
+  // Catch OAuth codes that Supabase delivers to the wrong path (site URL fallback).
+  // This happens when redirectTo isn't in Supabase's allowed URL list.
+  // Forward to /auth/callback, inferring the right `next` from domain type.
+  if (request.nextUrl.searchParams.has('code') && !pathname.startsWith('/auth')) {
+    const callbackUrl = request.nextUrl.clone()
+    callbackUrl.pathname = '/auth/callback'
+    if (!callbackUrl.searchParams.has('next')) {
+      if (domainType === 'platform') callbackUrl.searchParams.set('next', '/platform/dashboard')
+      else if (domainType === 'org') callbackUrl.searchParams.set('next', '/discussions')
+    }
+    return NextResponse.redirect(callbackUrl)
+  }
+
   // Block cross-domain access: org tenants cannot reach /platform or /marketing routes
   if (domainType === 'org' && (pathname.startsWith('/platform') || pathname.startsWith('/marketing'))) {
     return new NextResponse(null, { status: 404 })
@@ -42,7 +55,7 @@ export async function proxy(request: NextRequest) {
   // [org].clublounge.app/foo    → /foo (unchanged)
   // Don't rewrite API routes — they resolve to their actual paths regardless of domain
   if (!pathname.startsWith('/api')) {
-    if (domainType === 'marketing' && !pathname.startsWith('/marketing')) {
+    if (domainType === 'marketing' && !pathname.startsWith('/marketing') && !pathname.startsWith('/auth')) {
       const rewriteUrl = request.nextUrl.clone()
       rewriteUrl.pathname = `/marketing${pathname === '/' ? '' : pathname}`
       return NextResponse.rewrite(rewriteUrl, { headers: requestHeaders })
@@ -58,6 +71,13 @@ export async function proxy(request: NextRequest) {
   // Refresh Supabase auth session
   let response = NextResponse.next({ request: { headers: requestHeaders } })
 
+  // Set cookies on the root domain so sessions are shared across all subdomains.
+  // This is essential for the centralised OAuth callback flow where the code is
+  // exchanged on platform.* and the user is then redirected to an org subdomain.
+  const cookieDomain = hostname.includes(process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app')
+    ? `.${process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'}`
+    : undefined
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -70,7 +90,7 @@ export async function proxy(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           response = NextResponse.next({ request: { headers: requestHeaders } })
           cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
+            response.cookies.set(name, value, cookieDomain ? { ...options, domain: cookieDomain } : options)
           )
         },
       },

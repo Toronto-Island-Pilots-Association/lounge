@@ -86,28 +86,17 @@ export default function LoginPage() {
     }
   }
 
-  const handleGoogleLogin = async () => {
-    setError('')
-    setLoading(true)
-
-    try {
-      const response = await fetch(`/api/auth/oauth?provider=google&redirectTo=${encodeURIComponent(`${window.location.origin}/auth/callback`)}`)
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to initiate Google login')
-      }
-
-      // Redirect to OAuth URL
-      if (data.url) {
-        window.location.href = data.url
-      } else {
-        throw new Error('No OAuth URL returned')
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to initiate Google login')
-      setLoading(false)
-    }
+  const handleGoogleLogin = () => {
+    // OAuth must be initiated from the platform domain so the PKCE code verifier
+    // is stored there — the same domain where the callback will run.
+    const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'
+    const protocol = window.location.protocol
+    const port = window.location.port ? `:${window.location.port}` : ''
+    const platformOrigin = `${protocol}//platform.${rootDomain}${port}`
+    const orgNext = `${window.location.origin}/discussions`
+    // Redirect the browser to the platform's OAuth endpoint — it will kick off
+    // Google sign-in and handle the callback entirely on the platform domain.
+    window.location.href = `${platformOrigin}/api/auth/oauth?provider=google&next=${encodeURIComponent(orgNext)}`
   }
 
   if (checkingAuth) {

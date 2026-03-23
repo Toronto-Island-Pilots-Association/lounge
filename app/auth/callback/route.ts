@@ -1,14 +1,68 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { TIPA_ORG_ID } from '@/types/database'
+import { ROOT_DOMAIN } from '@/lib/org'
+
+/** Returns true if the URL is safe to redirect to after auth. */
+function isTrustedNextUrl(next: string, requestOrigin: string): boolean {
+  try {
+    const url = new URL(next)
+    // Same origin is always fine (relative → absolute already resolved)
+    if (url.origin === requestOrigin) return true
+    // Any subdomain of ROOT_DOMAIN is ours
+    const host = url.hostname
+    if (host === ROOT_DOMAIN || host.endsWith(`.${ROOT_DOMAIN}`)) return true
+    return false
+  } catch {
+    return false
+  }
+}
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
-  const next = requestUrl.searchParams.get('next') || '/discussions'
+  const rawNext = requestUrl.searchParams.get('next') || '/discussions'
+
+  // `next` can be an absolute URL (e.g. cross-domain redirect from org login via platform callback)
+  // or a relative path. Resolve to absolute for validation, then use appropriately.
+  let resolvedNext: URL
+  try {
+    resolvedNext = new URL(rawNext, requestUrl.origin)
+  } catch {
+    resolvedNext = new URL('/discussions', requestUrl.origin)
+  }
+  const next = isTrustedNextUrl(resolvedNext.href, requestUrl.origin)
+    ? resolvedNext.href
+    : new URL('/discussions', requestUrl.origin).href
+  // Determine org context. The proxy sets x-org-id when running on an org subdomain,
+  // but when the callback is centralised on the platform domain the header won't be set.
+  // In that case, derive the org from the `next` URL's subdomain.
+  const nextUrl = new URL(next)
+  const nextHost = nextUrl.hostname.split(':')[0]
+  let orgId = request.headers.get('x-org-id') ?? null
+  if (!orgId && nextHost.endsWith(`.${ROOT_DOMAIN}`)) {
+    // next is an org subdomain URL — look up the org by subdomain
+    const subdomain = nextHost.slice(0, -(ROOT_DOMAIN.length + 1))
+    if (subdomain && subdomain !== 'platform' && subdomain !== 'www') {
+      try {
+        const { getOrgByHostname } = await import('@/lib/org')
+        const org = await getOrgByHostname(nextHost)
+        if (org) orgId = org.id
+      } catch {
+        // non-critical — fall through to default
+      }
+    }
+  }
+  orgId = orgId ?? TIPA_ORG_ID
+  const isTipa = orgId === TIPA_ORG_ID
+
+  // The origin to use for onboarding redirects (e.g. /become-a-member, /complete-profile).
+  // For cross-domain callbacks, use the org's origin; otherwise use the current request origin.
+  const orgOrigin = nextUrl.origin !== requestUrl.origin ? nextUrl.origin : requestUrl.origin
 
   if (code) {
     const supabase = await createClient()
-    
+
     // Exchange the code for a session
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
@@ -44,8 +98,9 @@ export async function GET(request: Request) {
     }
 
     // For platform routes, skip TIPA-specific profile checks and redirect directly
-    if (next.startsWith('/platform')) {
-      return NextResponse.redirect(new URL(next, requestUrl.origin))
+    const nextPath = nextUrl.pathname
+    if (nextPath.startsWith('/platform')) {
+      return NextResponse.redirect(next)
     }
 
     if (data.user) {
@@ -87,8 +142,9 @@ export async function GET(request: Request) {
             const { data: fetchedProfile, error: fetchedError } = await adminClient
               .from('user_profiles')
               .select('*')
-              .eq('id', data.user.id)
-              .single()
+              .eq('user_id', data.user.id)
+              .eq('org_id', orgId)
+              .maybeSingle()
             
             if (!fetchedError && fetchedProfile) {
               profile = fetchedProfile
@@ -107,8 +163,9 @@ export async function GET(request: Request) {
         const { data: fetchedProfile, error: fetchedError } = await supabase
           .from('user_profiles')
           .select('*')
-          .eq('id', data.user.id)
-          .single()
+          .eq('user_id', data.user.id)
+          .eq('org_id', orgId)
+          .maybeSingle()
         
         if (!fetchedError && fetchedProfile) {
           profile = fetchedProfile
@@ -125,18 +182,20 @@ export async function GET(request: Request) {
       )
       
       if (!profile && isProfileNotFound) {
-        // New user signing up via Google - redirect to complete profile page
-        // The profile will be created by the database trigger, but we need to wait a moment
-        // For now, redirect to complete-profile page where they can fill in additional info
-        return NextResponse.redirect(new URL('/complete-profile', requestUrl.origin))
+        // New Google user with no profile in this org
+        if (isTipa) {
+          // TIPA: redirect to complete profile (org-specific onboarding)
+          return NextResponse.redirect(new URL('/complete-profile', orgOrigin))
+        }
+        // Other orgs: redirect to membership application so they can join
+        return NextResponse.redirect(new URL('/become-a-member', orgOrigin))
       }
-      
-      // Check if existing profile is incomplete (missing key fields)
-      // Redirect to complete profile if needed
-      if (profile) {
+
+      // TIPA-specific: check if profile is missing aviation fields
+      if (profile && isTipa) {
         const isIncomplete = !profile.phone && !profile.pilot_license_type && !profile.aircraft_type
         if (isIncomplete) {
-          return NextResponse.redirect(new URL('/complete-profile', requestUrl.origin))
+          return NextResponse.redirect(new URL('/complete-profile', orgOrigin))
         }
       }
 
@@ -156,9 +215,8 @@ export async function GET(request: Request) {
         }
       }
 
-      // Send welcome email to new OAuth users
-      // Note: Google Sheets append happens after profile completion, not during OAuth callback
-      if (profile && isNewUser) {
+      // Send welcome email and admin notifications (TIPA only for now)
+      if (profile && isNewUser && isTipa) {
         try {
           const { sendWelcomeEmail } = await import('@/lib/resend')
           const displayName = profile.full_name || profile.first_name || profile.email || 'Member'
@@ -235,8 +293,8 @@ export async function GET(request: Request) {
       }
     }
 
-    // Redirect to the dashboard or the next URL
-    return NextResponse.redirect(new URL(next, requestUrl.origin))
+    // Redirect to the dashboard or the next URL (already absolute)
+    return NextResponse.redirect(next)
   }
 
   // If no code, redirect to login
