@@ -54,34 +54,33 @@ describe('/api/auth/change-password - Complex Flow', () => {
           updateUserById: jest.fn().mockResolvedValue({ error: null }),
         },
       },
-      from: jest.fn((table) => {
-        const queryBuilder = {
-          select: jest.fn().mockReturnThis(),
-          update: jest.fn().mockReturnThis(),
-          eq: jest.fn().mockReturnThis(),
-          limit: jest.fn().mockReturnThis(),
-          single: jest.fn(),
-        }
-        
-        if (table === 'payments') {
-          // Payments query: select('id').eq().limit(1)
-          queryBuilder.limit.mockResolvedValue({
-            data: [], // No payments
-          })
-        } else if (table === 'member_profiles') {
-          // Get current profile (status: pending)
-          queryBuilder.single.mockResolvedValue({
+      from: (() => {
+        const orgMembershipsMaybeSingle = jest.fn()
+          .mockResolvedValueOnce({
             data: { status: 'pending', id: 'user-123', email: 'invited@example.com', stripe_subscription_id: null },
           })
-        } else if (table === 'org_memberships') {
-          // Update membership fields (status: approved) and return updated row for Sheets append
-          queryBuilder.single.mockResolvedValue({
+          .mockResolvedValueOnce({
             data: { status: 'approved', id: 'user-123', email: 'invited@example.com' },
           })
-        }
-        
-        return queryBuilder
-      }),
+        return jest.fn().mockImplementation((table) => {
+          if (table === 'payments') {
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              limit: jest.fn().mockResolvedValue({ data: [] }),
+            }
+          }
+          if (table === 'org_memberships') {
+            return {
+              select: jest.fn().mockReturnThis(),
+              update: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              maybeSingle: orgMembershipsMaybeSingle,
+            }
+          }
+          return { select: jest.fn().mockReturnThis(), eq: jest.fn().mockReturnThis() }
+        })
+      })(),
     }
 
     createClient.mockResolvedValue(mockSupabase)

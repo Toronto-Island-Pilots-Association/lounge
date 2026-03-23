@@ -87,7 +87,7 @@ export async function POST(request: Request) {
         if (wasInvited) {
           // Get full profile to check status and append to Google Sheets
           const { data: profile } = await adminClient
-            .from('member_profiles')
+            .from('org_memberships')
             .select('*')
             .eq('user_id', user.id)
             .eq('org_id', orgId)
