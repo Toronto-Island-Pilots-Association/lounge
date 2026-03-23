@@ -25,15 +25,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Comment not found' }, { status: 404 })
     }
 
-    // Check if user is admin or owner
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('id', user.id)
-      .eq('org_id', orgId)
-      .single()
-
-    const isAdmin = profile?.role === 'admin'
+    const isAdmin = user.profile.role === 'admin'
     const isOwner = comment.created_by === user.id
 
     if (!isAdmin && !isOwner) {

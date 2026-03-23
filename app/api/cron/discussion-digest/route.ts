@@ -64,10 +64,10 @@ export async function GET(request: Request) {
     const userIds = [...new Set(threads.map(t => t.created_by).filter((id): id is string => id !== null))]
     const { data: authors } = userIds.length > 0 ? await supabase
       .from('user_profiles')
-      .select('id, full_name, email')
-      .in('id', userIds) : { data: [] }
+      .select('user_id, full_name, email')
+      .in('user_id', userIds) : { data: [] }
 
-    const authorsMap = new Map(authors?.map(a => [a.id, a]) || [])
+    const authorsMap = new Map(authors?.map(a => [a.user_id, a]) || [])
 
     // Get comment counts for each thread
     const threadIds = threads.map(t => t.id)

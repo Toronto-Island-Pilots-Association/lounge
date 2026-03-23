@@ -36,12 +36,13 @@ export async function POST(request: Request) {
 
     const supabase = await createClient()
     await supabase
-      .from('user_profiles')
+      .from('org_memberships')
       .update({
         membership_expires_at: cancelImmediately ? new Date().toISOString() : null,
         subscription_cancel_at_period_end: !cancelImmediately,
       })
-      .eq('id', user.id)
+      .eq('user_id', user.id)
+      .eq('org_id', user.profile.org_id)
 
     return NextResponse.json({
       message: cancelImmediately

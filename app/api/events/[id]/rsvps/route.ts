@@ -49,13 +49,12 @@ export async function GET(
     const userIds = [...new Set(list.map((r) => r.user_id))]
     const { data: profiles } = await supabase
       .from('user_profiles')
-      .select('id, full_name, first_name, last_name, email, profile_picture_url')
-      .in('id', userIds)
-      .eq('org_id', orgId)
+      .select('user_id, full_name, first_name, last_name, email, profile_picture_url')
+      .in('user_id', userIds)
 
     const profileMap = new Map(
       (profiles || []).map((p) => [
-        p.id,
+        p.user_id,
         {
           display_name:
             p.full_name?.trim() ||

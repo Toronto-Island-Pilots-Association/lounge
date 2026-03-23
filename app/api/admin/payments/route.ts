@@ -62,7 +62,7 @@ export async function GET(request: Request) {
           .select('id, email, full_name, member_number')
           .eq('user_id', payment.user_id)
           .eq('org_id', orgId)
-          .single()
+          .maybeSingle()
 
         // Get user profile for payment.recorded_by (if exists)
         let recordedByUser = null
@@ -71,7 +71,7 @@ export async function GET(request: Request) {
             .from('user_profiles')
             .select('user_id, email, full_name')
             .eq('user_id', payment.recorded_by)
-            .single()
+            .maybeSingle()
           recordedByUser = recordedByProfile
         }
 

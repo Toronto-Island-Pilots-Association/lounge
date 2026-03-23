@@ -151,10 +151,10 @@ export async function POST(request: Request) {
     if (send_notifications !== false) {
       try {
         const { data: members } = await supabase
-          .from('user_profiles')
+          .from('member_profiles')
           .select('email, full_name, first_name, last_name')
           .eq('org_id', orgId)
-          .eq('status', 'approved') // Only send to approved members
+          .eq('status', 'approved')
           .not('email', 'is', null)
 
         if (members && members.length > 0) {
