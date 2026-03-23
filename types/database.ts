@@ -1,3 +1,16 @@
+export interface Organization {
+  id: string
+  name: string
+  slug: string
+  custom_domain: string | null
+  subdomain: string | null
+  logo_url: string | null
+  created_at: string
+  updated_at: string
+}
+
+export const TIPA_ORG_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
+
 export type MembershipLevel = 'Full' | 'Student' | 'Associate' | 'Corporate' | 'Honorary'
 
 // Helper function to get display name for membership level (now just returns the value)
@@ -8,7 +21,9 @@ export type UserRole = 'member' | 'admin'
 export type UserStatus = 'pending' | 'approved' | 'rejected' | 'expired'
 
 export interface UserProfile {
-  id: string
+  id: string        // surrogate UUID (profile id)
+  user_id: string   // auth.users.id
+  org_id: string    // organizations.id
   email: string
   full_name: string | null
   first_name: string | null

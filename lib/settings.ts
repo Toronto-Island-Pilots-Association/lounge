@@ -1,4 +1,15 @@
 import { createClient } from './supabase/server'
+import { headers } from 'next/headers'
+import { TIPA_ORG_ID } from '@/types/database'
+
+async function getOrgId(): Promise<string> {
+  try {
+    const h = await headers()
+    return h.get('x-org-id') ?? TIPA_ORG_ID
+  } catch {
+    return TIPA_ORG_ID
+  }
+}
 
 const MEMBERSHIP_LEVELS = ['Full', 'Student', 'Associate', 'Corporate', 'Honorary'] as const
 export type MembershipLevelKey = (typeof MEMBERSHIP_LEVELS)[number]
@@ -13,17 +24,16 @@ const DEFAULT_FEES: Record<MembershipLevelKey, number> = {
 
 export async function getSetting(key: string): Promise<string | null> {
   const supabase = await createClient()
-  
+  const orgId = await getOrgId()
+
   const { data, error } = await supabase
     .from('settings')
     .select('value')
     .eq('key', key)
-    .single()
+    .eq('org_id', orgId)
+    .maybeSingle()
 
-  if (error || !data) {
-    return null
-  }
-
+  if (error || !data) return null
   return data.value
 }
 
@@ -56,14 +66,13 @@ export async function setMembershipFeeForLevel(
   fee: number
 ): Promise<void> {
   const supabase = await createClient()
+  const orgId = await getOrgId()
   const key = `membership_fee_${level.toLowerCase()}`
   const { error } = await supabase.from('settings').upsert(
-    { key, value: String(fee), updated_at: new Date().toISOString() },
-    { onConflict: 'key' }
+    { key, value: String(fee), org_id: orgId, updated_at: new Date().toISOString() },
+    { onConflict: 'key,org_id' }
   )
-  if (error) {
-    throw new Error(`Failed to save fee for ${level}: ${error.message}`)
-  }
+  if (error) throw new Error(`Failed to save fee for ${level}: ${error.message}`)
 }
 
 /** Single global fee (legacy). Returns Full level fee. */
@@ -87,11 +96,12 @@ const DEFAULT_TRIAL_CONFIG: Record<MembershipLevelKey, TrialConfigItem> = {
 /** Load trial config from settings (admin-editable). Falls back to DEFAULT_TRIAL_CONFIG when keys missing. */
 export async function getTrialConfig(): Promise<Record<MembershipLevelKey, TrialConfigItem>> {
   const supabase = await createClient()
+  const orgId = await getOrgId()
   const keys = [
     ...MEMBERSHIP_LEVELS.map((l) => `trial_type_${l.toLowerCase()}`),
     ...MEMBERSHIP_LEVELS.map((l) => `trial_months_${l.toLowerCase()}`),
   ]
-  const { data: rows } = await supabase.from('settings').select('key, value').in('key', keys)
+  const { data: rows } = await supabase.from('settings').select('key, value').in('key', keys).eq('org_id', orgId)
   const map = new Map<string, string>()
   for (const r of rows ?? []) {
     map.set(r.key, r.value)
@@ -149,17 +159,17 @@ export async function setTrialConfigForLevel(
   item: TrialConfigItem
 ): Promise<void> {
   const supabase = await createClient()
+  const orgId = await getOrgId()
   const typeKey = `trial_type_${level.toLowerCase()}`
-  const typeVal = item.type
   await supabase.from('settings').upsert(
-    { key: typeKey, value: typeVal, updated_at: new Date().toISOString() },
-    { onConflict: 'key' }
+    { key: typeKey, value: item.type, org_id: orgId, updated_at: new Date().toISOString() },
+    { onConflict: 'key,org_id' }
   )
   if (item.type === 'months') {
     const monthsKey = `trial_months_${level.toLowerCase()}`
     await supabase.from('settings').upsert(
-      { key: monthsKey, value: String(item.months ?? 12), updated_at: new Date().toISOString() },
-      { onConflict: 'key' }
+      { key: monthsKey, value: String(item.months ?? 12), org_id: orgId, updated_at: new Date().toISOString() },
+      { onConflict: 'key,org_id' }
     )
   }
 }
