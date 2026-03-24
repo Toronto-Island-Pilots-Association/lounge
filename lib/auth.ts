@@ -73,8 +73,9 @@ async function createMissingProfile(
       phone: toNull(metadata.phone),
     }, { onConflict: 'user_id' })
 
-    // Insert membership
-    const { error: membershipError } = await adminClient.from('org_memberships').insert({
+    // Upsert membership — if a row already exists (e.g. from an invite),
+    // leave it untouched (ignoreDuplicates). Only insert when truly missing.
+    const { error: membershipError } = await adminClient.from('org_memberships').upsert({
       user_id: userId,
       org_id: orgId,
       pilot_license_type: toNull(metadata.pilot_license_type),
@@ -85,7 +86,7 @@ async function createMissingProfile(
       role: 'member',
       membership_level: membershipLevel,
       status: 'pending',
-    })
+    }, { onConflict: 'user_id,org_id', ignoreDuplicates: true })
 
     if (membershipError) {
       console.error('Failed to create org membership:', membershipError)
@@ -186,6 +187,7 @@ export function shouldRequireProfileCompletion(profile: MemberProfile): boolean 
 
 export function shouldRequirePayment(profile: MemberProfile): boolean {
   if (!profile) return false
+  if (profile.role === 'admin') return false
   if (profile.membership_level === 'Honorary') return false
   if (profile.status === 'rejected' || profile.status === 'expired') return false
   if (profile.stripe_subscription_id) return false

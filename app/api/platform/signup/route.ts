@@ -156,9 +156,9 @@ export async function POST(request: Request) {
       console.error('Failed to create admin org_membership:', membershipError)
     }
 
-    // Register Vercel domains
+    // Wildcard *.clublounge.app covers all org subdomains automatically.
+    // Only register custom domains explicitly.
     const subdomain = `${slug}.${ROOT_DOMAIN}`
-    await addDomainToProject(subdomain)
     if (customDomain?.trim()) await addDomainToProject(customDomain.trim())
 
     const orgUrl = customDomain?.trim()
