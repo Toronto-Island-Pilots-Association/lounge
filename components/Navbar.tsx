@@ -196,15 +196,7 @@ export default function Navbar() {
                 <span className="text-lg font-bold tracking-tight text-[#0d1e26]">
                   {orgConfig.org.displayName || orgConfig.org.name}
                 </span>
-              ) : (
-                <Image
-                  src="/logo.png"
-                  alt="Logo"
-                  width={100}
-                  height={100}
-                  className="h-10 sm:h-14 w-auto object-contain"
-                />
-              )}
+              ) : null}
             </Link>
           
           {/* Desktop Navigation */}
