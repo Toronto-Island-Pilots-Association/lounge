@@ -7,7 +7,7 @@ const PORT = IS_DEV ? ':3000' : ''
 
 export default function MarketingHome() {
   const platformOrigin = `${PROTOCOL}://platform.${ROOT_DOMAIN}${PORT}`
-  const demoOrigin = `${PROTOCOL}://tipa.${ROOT_DOMAIN}${PORT}`
+  const demoOrigin = `${PROTOCOL}://demo.${ROOT_DOMAIN}${PORT}`
 
   return (
     <ClubLoungeLanding
