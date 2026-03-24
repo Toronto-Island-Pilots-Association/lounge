@@ -52,14 +52,14 @@ export default function EventsPage() {
       }
 
       const data = await response.json()
-      const profile = data.profile
+      // Guest mode: public org, no profile required
+      if (data.isGuest) return
 
+      const profile = data.profile
       if (profile && profile.status !== 'approved' && profile.role !== 'admin') {
         router.push('/pending-approval')
         return
       }
-      
-      // If rejected, stop loading and show error
       if (profile && profile.status === 'rejected') {
         setLoading(false)
         return

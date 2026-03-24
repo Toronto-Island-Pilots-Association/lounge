@@ -1,5 +1,6 @@
-import { requireAuth, requireAdmin } from '@/lib/auth'
-import { createClient } from '@/lib/supabase/server'
+import { requireAuth, requireAdmin, isOrgPublic } from '@/lib/auth'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type { ResourceCategory } from '@/types/database'
 
@@ -34,12 +35,21 @@ async function getResourceFileUrl(supabase: any, fileUrl: string | null): Promis
 
 export async function GET() {
   try {
-    const user = await requireAuth()
-    const orgId = user.profile.org_id
-    if (!orgId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    let orgId: string | null = null
+    let supabase: ReturnType<typeof createServiceRoleClient>
+
+    try {
+      const user = await requireAuth()
+      orgId = user.profile.org_id
+      if (!orgId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      supabase = await createClient() as any
+    } catch {
+      const orgPublic = await isOrgPublic()
+      if (!orgPublic) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      const h = await headers()
+      orgId = h.get('x-org-id')
+      supabase = createServiceRoleClient() as any
     }
-    const supabase = await createClient()
 
     const { data, error } = await supabase
       .from('resources')

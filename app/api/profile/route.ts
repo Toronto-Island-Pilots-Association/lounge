@@ -1,4 +1,4 @@
-import { getCurrentUserIncludingPending } from '@/lib/auth'
+import { getCurrentUserIncludingPending, isOrgPublic } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
@@ -7,6 +7,8 @@ export async function GET() {
   try {
     const user = await getCurrentUserIncludingPending()
     if (!user) {
+      const orgPublic = await isOrgPublic()
+      if (orgPublic) return NextResponse.json({ profile: null, isGuest: true })
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     // profile is already the fully joined MemberProfile from getCurrentUserIncludingPending

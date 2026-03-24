@@ -43,8 +43,8 @@ export default function ResourcesPage() {
       }
 
       const data = await response.json()
+      if (data.isGuest) return
       const profile = data.profile
-
       if (profile && profile.status !== 'approved' && profile.role !== 'admin') {
         router.push('/pending-approval')
         return

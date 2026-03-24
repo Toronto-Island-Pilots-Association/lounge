@@ -1,5 +1,6 @@
-import { requireAuth } from '@/lib/auth'
-import { createClient } from '@/lib/supabase/server'
+import { requireAuth, isOrgPublic } from '@/lib/auth'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { headers } from 'next/headers'
 import { sendEventNotificationEmail } from '@/lib/resend'
 import { NextResponse } from 'next/server'
 
@@ -30,12 +31,25 @@ async function getEventImageUrl(supabase: any, imageUrl: string | null): Promise
   }
 }
 
-// GET - Get all events (authenticated users), with rsvp_count and user_rsvped
+// GET - Get all events (authenticated or guest in public org), with rsvp_count and user_rsvped
 export async function GET() {
   try {
-    const user = await requireAuth()
-    const orgId = user.profile.org_id
-    const supabase = await createClient()
+    let orgId: string | null = null
+    let isGuest = false
+    let supabase: ReturnType<typeof createServiceRoleClient>
+
+    try {
+      const user = await requireAuth()
+      orgId = user.profile.org_id
+      supabase = await createClient() as any
+    } catch {
+      const orgPublic = await isOrgPublic()
+      if (!orgPublic) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      const h = await headers()
+      orgId = h.get('x-org-id')
+      isGuest = true
+      supabase = createServiceRoleClient() as any
+    }
 
     const { data, error } = await supabase
       .from('events')
@@ -59,12 +73,13 @@ export async function GET() {
             .eq('org_id', orgId)
             .in('event_id', eventIds)
         : Promise.resolve({ data: [] }),
-      supabase
-        .from('event_rsvps')
-        .select('event_id')
-        .eq('org_id', orgId)
-        .eq('user_id', user.id)
-        .in('event_id', eventIds.length > 0 ? eventIds : ['00000000-0000-0000-0000-000000000000']),
+      isGuest
+        ? Promise.resolve({ data: [] })
+        : supabase
+            .from('event_rsvps')
+            .select('event_id')
+            .eq('org_id', orgId)
+            .in('event_id', eventIds.length > 0 ? eventIds : ['00000000-0000-0000-0000-000000000000']),
     ])
 
     const countByEvent = new Map<string, number>()

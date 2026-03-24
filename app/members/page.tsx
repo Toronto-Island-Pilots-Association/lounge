@@ -1,9 +1,11 @@
 import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment } from '@/lib/auth'
+import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment, isOrgPublic } from '@/lib/auth'
 import { getFeatureFlags } from '@/lib/settings'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { headers } from 'next/headers'
+import GuestBanner from '@/app/components/GuestBanner'
 import { MemberProfile, getMembershipLevelLabel } from '@/types/database'
 
 const MEMBERS_PER_PAGE = 25
@@ -13,19 +15,19 @@ export default async function MembersPage({
 }: {
   searchParams: Promise<{ page?: string }>
 }) {
-  const user = await getCurrentUser()
+  const [user, orgPublic] = await Promise.all([getCurrentUser(), isOrgPublic()])
 
   if (!user) {
-    redirect('/login')
+    if (!orgPublic) redirect('/login')
+  } else {
+    if (shouldRequireProfileCompletion(user.profile)) redirect('/complete-profile')
+    if (shouldRequirePayment(user.profile)) redirect('/add-payment')
   }
 
-  if (shouldRequireProfileCompletion(user.profile)) {
-    redirect('/complete-profile')
-  }
-
-  if (shouldRequirePayment(user.profile)) {
-    redirect('/add-payment')
-  }
+  const isGuest = !user
+  const h = await headers()
+  const orgId = isGuest ? h.get('x-org-id') : user!.profile.org_id
+  const orgSlug = h.get('x-org-slug')
 
   const features = await getFeatureFlags()
   if (!features.memberDirectory) {
@@ -37,26 +39,30 @@ export default async function MembersPage({
   const from = (currentPage - 1) * MEMBERS_PER_PAGE
   const to = from + MEMBERS_PER_PAGE - 1
 
-  const supabase = await createClient()
-  
+  const supabase = isGuest ? createServiceRoleClient() : await createClient()
+
   // Get total count of approved members only
   const { count } = await supabase
     .from('member_profiles')
     .select('*', { count: 'exact', head: true })
     .eq('status', 'approved')
+    .eq('org_id', orgId ?? '')
 
   // Get paginated members (only approved)
   const { data: members } = await supabase
     .from('member_profiles')
     .select('*')
     .eq('status', 'approved')
+    .eq('org_id', orgId ?? '')
     .order('created_at', { ascending: false })
     .range(from, to)
 
   const totalPages = Math.ceil((count || 0) / MEMBERS_PER_PAGE)
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50">
+      {isGuest && <GuestBanner orgName={orgSlug ?? undefined} />}
+    <div className="py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Members Directory</h1>
@@ -341,6 +347,7 @@ export default async function MembersPage({
           </div>
         )}
       </div>
+    </div>
     </div>
   )
 }

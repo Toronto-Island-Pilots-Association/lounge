@@ -12,6 +12,25 @@ async function getOrgId(): Promise<string | null> {
   }
 }
 
+/** Check if the current org allows public (unauthenticated) read access. */
+export async function isOrgPublic(): Promise<boolean> {
+  const orgId = await getOrgId()
+  if (!orgId) return false
+  try {
+    const { createServiceRoleClient } = await import('./supabase/server')
+    const db = createServiceRoleClient()
+    const { data } = await db
+      .from('settings')
+      .select('value')
+      .eq('org_id', orgId)
+      .eq('key', 'public_access')
+      .maybeSingle()
+    return data?.value === 'true'
+  } catch {
+    return false
+  }
+}
+
 /** Fetch the flattened member profile (identity + membership) for the current user. */
 async function fetchMemberProfile(
   supabase: Awaited<ReturnType<typeof createClient>>,

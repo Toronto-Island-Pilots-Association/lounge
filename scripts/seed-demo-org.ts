@@ -163,6 +163,7 @@ async function main() {
     { key: 'feature_events',       value: 'true' },
     { key: 'feature_resources',    value: 'true' },
     { key: 'require_member_approval', value: 'true' },
+    { key: 'public_access',           value: 'true' },
   ]
   for (const s of settingsUpdates) {
     await db.from('settings').upsert({ org_id: org.id, ...s }, { onConflict: 'key,org_id' })

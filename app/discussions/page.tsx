@@ -2,8 +2,10 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Suspense } from 'react'
-import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment } from '@/lib/auth'
-import { createClient } from '@/lib/supabase/server'
+import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment, isOrgPublic } from '@/lib/auth'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { headers } from 'next/headers'
+import GuestBanner from '@/app/components/GuestBanner'
 import { Thread, DiscussionCategory, ThreadWithData, ThreadAuthor } from '@/types/database'
 import Sidebar from './Sidebar'
 import MobileFilters from './MobileFilters'
@@ -19,26 +21,23 @@ export default async function DiscussionsPage({
 }: {
   searchParams: Promise<{ sort?: string; category?: string; page?: string }>
 }) {
-  const user = await getCurrentUser()
+  const [user, orgPublic] = await Promise.all([getCurrentUser(), isOrgPublic()])
 
   if (!user) {
-    redirect('/login')
+    if (!orgPublic) redirect('/login')
+  } else {
+    if (shouldRequireProfileCompletion(user.profile)) redirect('/complete-profile')
+    if (shouldRequirePayment(user.profile)) redirect('/add-payment')
+    if (user.profile.status !== 'approved' && user.profile.role !== 'admin') redirect('/pending-approval')
   }
 
-  if (shouldRequireProfileCompletion(user.profile)) {
-    redirect('/complete-profile')
-  }
+  const isGuest = !user
+  const h = await headers()
+  const orgId = isGuest ? h.get('x-org-id') : user!.profile.org_id
+  const orgSlug = h.get('x-org-slug')
 
-  if (shouldRequirePayment(user.profile)) {
-    redirect('/add-payment')
-  }
-
-  // Redirect pending users to approval page
-  if (user.profile.status !== 'approved' && user.profile.role !== 'admin') {
-    redirect('/pending-approval')
-  }
-
-  const supabase = await createClient()
+  // Guests use service role (bypasses RLS); logged-in users use their session
+  const supabase = isGuest ? createServiceRoleClient() : await createClient()
   const params = await searchParams
   const sortBy = params?.sort || 'latest'
   const categoryParam = params?.category
@@ -52,7 +51,7 @@ export default async function DiscussionsPage({
   let query = supabase
     .from('threads')
     .select('*, comments(count)', { count: 'exact' })
-    .eq('org_id', user.profile.org_id)
+    .eq('org_id', orgId ?? '')
     .order('created_at', { ascending: false })
     .range(offset, offset + THREADS_PER_PAGE - 1)
 
@@ -141,7 +140,9 @@ export default async function DiscussionsPage({
 
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6 sm:py-8">
+    <div className="min-h-screen bg-gray-50">
+      {isGuest && <GuestBanner orgName={orgSlug ?? undefined} />}
+    <div className="py-6 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-6">
@@ -156,18 +157,20 @@ export default async function DiscussionsPage({
               </div>
               
               
-              <Link
-                href={categoryFilter 
-                  ? `/discussions/new?category=${categoryFilter}`
-                  : '/discussions/new'}
-                className="inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-[#0d1e26] text-white text-sm font-medium rounded-lg hover:bg-[#0a171c] transition-colors shadow-sm hover:shadow-md whitespace-nowrap ml-auto sm:ml-0"
-              >
-                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                <span className="hidden sm:inline">Post New</span>
-                <span className="sm:hidden">New</span>
-              </Link>
+              {!isGuest && (
+                <Link
+                  href={categoryFilter
+                    ? `/discussions/new?category=${categoryFilter}`
+                    : '/discussions/new'}
+                  className="inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-[#0d1e26] text-white text-sm font-medium rounded-lg hover:bg-[#0a171c] transition-colors shadow-sm hover:shadow-md whitespace-nowrap ml-auto sm:ml-0"
+                >
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span className="hidden sm:inline">Post New</span>
+                  <span className="sm:hidden">New</span>
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -380,6 +383,7 @@ export default async function DiscussionsPage({
           </div>
         </div>
       </div>
+    </div>
     </div>
   )
 }
