@@ -202,10 +202,15 @@ export async function getOrgPlan(): Promise<string> {
     const orgId = await getOrgId()
     const { data } = await supabase
       .from('organizations')
-      .select('plan')
+      .select('plan, trial_ends_at')
       .eq('id', orgId)
       .maybeSingle()
-    return (data?.plan as string) || DEFAULT_PLAN
+    const plan = (data?.plan as string) || DEFAULT_PLAN
+    // During active trial, treat as starter regardless of plan
+    if (plan === 'hobby' && data?.trial_ends_at && new Date(data.trial_ends_at) > new Date()) {
+      return 'starter'
+    }
+    return plan
   } catch {
     return DEFAULT_PLAN
   }

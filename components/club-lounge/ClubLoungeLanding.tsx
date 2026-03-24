@@ -328,7 +328,7 @@ export function ClubLoungeLanding({
         </h2>
         <p className="cl-section-sub">
           No per-contact fees. No surprise bills when your membership drive works. Plans from $5/month; unlimited
-          members on Starter and above.
+          members on Starter and above. <strong>14-day free trial on all plans.</strong>
         </p>
         <div className="cl-pricing-grid">
           <div className="cl-price-col">
@@ -349,10 +349,10 @@ export function ClubLoungeLanding({
                 <span className="cl-check">✓</span>Announcements
               </li>
               <li>
-                <span className="cl-cross">—</span>Dues collection via Stripe
+                <span className="cl-check">✓</span>Discussions
               </li>
               <li>
-                <span className="cl-cross">—</span>Discussions
+                <span className="cl-cross">—</span>Dues collection via Stripe
               </li>
               <li>
                 <span className="cl-cross">—</span>Digest emails
@@ -362,7 +362,7 @@ export function ClubLoungeLanding({
               </li>
             </ul>
             <NavLink href={signupHref} className="cl-price-btn" internalLinks={internalLinks}>
-              Subscribe
+              Start free trial
             </NavLink>
           </div>
           <div className="cl-price-col">
@@ -387,9 +387,6 @@ export function ClubLoungeLanding({
               </li>
               <li>
                 <span className="cl-check">✓</span>Remove ClubLounge branding
-              </li>
-              <li>
-                <span className="cl-cross">—</span>Discussions
               </li>
               <li>
                 <span className="cl-cross">—</span>Digest emails
@@ -467,7 +464,7 @@ export function ClubLoungeLanding({
           </div>
         </div>
         <p className="cl-pricing-footnote">
-          Save 2 months with annual billing. Canadian dollars. No hidden fees.
+          14-day free trial, no credit card required. Save 2 months with annual billing. Canadian dollars. No hidden fees.
         </p>
       </section>
 

@@ -22,9 +22,20 @@ export default async function PlatformDashboard() {
   const membershipsForUser = (memberProfiles ?? []).filter((p: any) => p.org_id)
   const orgIds = [...new Set(membershipsForUser.map((m: any) => m.org_id))]
 
-  const { data: orgs } = orgIds.length > 0
-    ? await db.from('organizations').select('*').in('id', orgIds)
-    : { data: [] }
+  const [orgsResult, memberCountsResult] = await Promise.all([
+    orgIds.length > 0
+      ? db.from('organizations').select('*').in('id', orgIds)
+      : Promise.resolve({ data: [] }),
+    orgIds.length > 0
+      ? db.from('org_memberships').select('org_id, role').in('org_id', orgIds).eq('status', 'approved')
+      : Promise.resolve({ data: [] }),
+  ])
+
+  const orgs = orgsResult.data
+  const memberCounts = new Map<string, number>()
+  ;(memberCountsResult.data ?? []).forEach((m: any) => {
+    if (m.role !== 'admin') memberCounts.set(m.org_id, (memberCounts.get(m.org_id) ?? 0) + 1)
+  })
 
   const orgById = new Map((orgs ?? []).map((o: any) => [o.id, o]))
   const memberships = membershipsForUser
@@ -84,15 +95,35 @@ export default async function PlatformDashboard() {
                         ? 'pending'
                         : 'not_connected'
 
+                    const trialEndsAt = org.trial_ends_at ? new Date(org.trial_ends_at) : null
+                    const trialActive = trialEndsAt && trialEndsAt > new Date()
+                    const trialDaysLeft = trialActive
+                      ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+                      : null
+
+                    const nonAdminMemberCount = memberCounts.get(org.id) ?? 0
+                    const setupSteps = [
+                      { done: true,                             label: 'Create your lounge' },
+                      { done: stripeStatus === 'connected',     label: 'Connect Stripe to collect dues' },
+                      { done: !!(org.logo_url || org.display_name), label: 'Customize your club (logo / name)' },
+                      { done: nonAdminMemberCount > 0,          label: 'Add your first member' },
+                    ]
+                    const allDone = setupSteps.every(s => s.done)
+
                     return (
                       <div key={org.id} className="bg-white rounded-xl border p-6 space-y-4">
                         <div className="flex items-start justify-between gap-4">
                           <div className="space-y-1 min-w-0">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <h2 className="font-semibold">{org.name}</h2>
                               <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 capitalize shrink-0">
                                 {(org.plan ?? 'hobby').replace('_', ' ')}
                               </span>
+                              {trialActive && (
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium shrink-0">
+                                  Trial — {trialDaysLeft}d left
+                                </span>
+                              )}
                             </div>
                             <a
                               href={url}
@@ -118,6 +149,27 @@ export default async function PlatformDashboard() {
                             </a>
                           </div>
                         </div>
+
+                        {/* Setup checklist — shown until all steps complete */}
+                        {!allDone && (
+                          <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Setup checklist</p>
+                            {setupSteps.map((step, i) => (
+                              <div key={i} className="flex items-center gap-2.5">
+                                {step.done ? (
+                                  <svg className="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                ) : (
+                                  <div className="w-4 h-4 rounded-full border-2 border-gray-300 shrink-0" />
+                                )}
+                                <span className={`text-sm ${step.done ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
+                                  {step.label}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
 
                         <div className="pt-4 border-t flex items-center justify-between">
                           <div className="flex items-center gap-2">

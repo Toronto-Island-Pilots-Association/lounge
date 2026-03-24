@@ -108,7 +108,9 @@ export async function POST(request: Request) {
       resolvedFirstName = 'Admin'
     }
 
-    // Create org
+    // Create org — 14-day free trial at Starter tier
+    const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
+
     const { data: org, error: orgError } = await supabase
       .from('organizations')
       .insert({
@@ -117,6 +119,7 @@ export async function POST(request: Request) {
         subdomain: slug,
         custom_domain: customDomain?.trim() || null,
         plan: 'hobby',
+        trial_ends_at: trialEndsAt,
       })
       .select()
       .single()

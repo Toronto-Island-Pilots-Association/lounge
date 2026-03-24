@@ -30,6 +30,7 @@ type GroupedEvents = {
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
   const [rsvpsByEvent, setRsvpsByEvent] = useState<Record<string, EventRsvp[]>>({})
   const [expandedRsvpsEventId, setExpandedRsvpsEventId] = useState<string | null>(null)
@@ -56,6 +57,7 @@ export default function EventsPage() {
       if (data.isGuest) return
 
       const profile = data.profile
+      if (profile?.role === 'admin') setIsAdmin(true)
       if (profile && profile.status !== 'approved' && profile.role !== 'admin') {
         router.push('/pending-approval')
         return
@@ -269,7 +271,7 @@ export default function EventsPage() {
       <div className="min-h-screen bg-gray-50 py-6 sm:py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">TIPA Events</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Events</h1>
           </div>
           <div className="pt-16 sm:pt-24">
             <Loading message="Loading events..." />
@@ -287,8 +289,25 @@ export default function EventsPage() {
         </div>
 
         {!events || events.length === 0 ? (
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-8 sm:p-12 text-center">
-            <p className="text-gray-600">No events scheduled.</p>
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-10 sm:p-16 text-center">
+            <svg className="w-12 h-12 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <h3 className="text-base font-semibold text-gray-900 mb-1">No events yet</h3>
+            <p className="text-sm text-gray-500 mb-6 max-w-xs mx-auto">
+              {isAdmin ? 'Create your first event and invite members to RSVP.' : 'No events have been scheduled yet. Check back soon.'}
+            </p>
+            {isAdmin && (
+              <a
+                href="/admin/events"
+                className="inline-flex items-center px-5 py-2.5 bg-[#0d1e26] text-white text-sm font-semibold rounded-lg hover:bg-[#0a171c] transition-colors"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Create first event
+              </a>
+            )}
           </div>
         ) : (
           <div className="space-y-8">
