@@ -20,20 +20,27 @@ export async function PATCH(request: Request) {
   try {
     await requireAdmin()
     const body = await request.json()
-    const validKeys: (keyof OrgFeatureFlags)[] = [
+    const boolKeys: (keyof OrgFeatureFlags)[] = [
       'discussions', 'events', 'resources', 'memberDirectory',
       'requireMemberApproval', 'allowMemberInvitations',
     ]
+    const stringKeys: (keyof OrgFeatureFlags)[] = [
+      'discussionsLabel', 'eventsLabel', 'resourcesLabel',
+    ]
+    const validKeys = [...boolKeys, ...stringKeys]
     const update: Partial<OrgFeatureFlags> = {}
-    for (const key of validKeys) {
-      if (typeof body[key] === 'boolean') update[key] = body[key]
+    for (const key of boolKeys) {
+      if (typeof body[key] === 'boolean') (update as any)[key] = body[key]
+    }
+    for (const key of stringKeys) {
+      if (typeof body[key] === 'string') (update as any)[key] = body[key].trim() || undefined
     }
 
     // Enforce plan ceiling — can't enable a feature the plan doesn't include
     const plan = await getOrgPlan()
     const planFeatures = getPlanDef(plan).features
-    for (const key of validKeys) {
-      if (update[key] === true && !planFeatures[key as keyof PlanFeatures]) {
+    for (const key of boolKeys) {
+      if ((update as any)[key] === true && !planFeatures[key as keyof PlanFeatures]) {
         const requiredPlan = getRequiredPlan(key as keyof PlanFeatures)
         const planLabel = requiredPlan ? getPlanDef(requiredPlan).label : 'a higher'
         return NextResponse.json(

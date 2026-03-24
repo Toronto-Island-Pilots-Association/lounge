@@ -122,15 +122,17 @@ function ClubTab() {
 
 // ─── Features Tab ─────────────────────────────────────────────────────────────
 
-type PlanFeaturesSubset = Record<keyof OrgFeatureFlags, boolean>
+type PlanFeaturesSubset = Partial<Record<keyof OrgFeatureFlags, boolean>>
 
-const FEATURE_META: { key: keyof OrgFeatureFlags; label: string; description: string }[] = [
-  { key: 'discussions',            label: 'Discussions (Hangar Talk)', description: 'Forum-style discussion board for members.' },
-  { key: 'events',                 label: 'Events',                    description: 'Event calendar with RSVP.' },
-  { key: 'resources',              label: 'Announcements / Resources',  description: 'Document library and announcements.' },
-  { key: 'memberDirectory',        label: 'Member directory',           description: 'Approved members can browse the member list.' },
-  { key: 'requireMemberApproval',  label: 'Require admin approval',     description: 'New signups must be approved before accessing the portal.' },
-  { key: 'allowMemberInvitations', label: 'Member invitations',         description: 'Approved members can invite new members.' },
+type FeatureMeta = { key: keyof OrgFeatureFlags; label: string; description: string; labelKey?: keyof OrgFeatureFlags; labelPlaceholder?: string }
+
+const FEATURE_META: FeatureMeta[] = [
+  { key: 'discussions',            label: 'Discussions',       description: 'Forum-style discussion board for members.',       labelKey: 'discussionsLabel', labelPlaceholder: 'Discussions' },
+  { key: 'events',                 label: 'Events',            description: 'Event calendar with RSVP.',                       labelKey: 'eventsLabel',      labelPlaceholder: 'Events' },
+  { key: 'resources',              label: 'Announcements',     description: 'Document library and announcements.',              labelKey: 'resourcesLabel',   labelPlaceholder: 'Announcements' },
+  { key: 'memberDirectory',        label: 'Member directory',  description: 'Approved members can browse the member list.' },
+  { key: 'requireMemberApproval',  label: 'Require admin approval', description: 'New signups must be approved before accessing the portal.' },
+  { key: 'allowMemberInvitations', label: 'Member invitations',     description: 'Approved members can invite new members.' },
 ]
 
 const PLAN_ORDER = ['hobby', 'starter', 'community', 'club_pro']
@@ -142,6 +144,7 @@ function FeaturesTab() {
   const [draft, setDraft] = useState<OrgFeatureFlags>({
     discussions: true, events: true, resources: true, memberDirectory: true,
     requireMemberApproval: true, allowMemberInvitations: true,
+    discussionsLabel: 'Discussions', eventsLabel: 'Events', resourcesLabel: 'Announcements',
   })
   const [planKey, setPlanKey] = useState<string>('hobby')
   const [planLabel, setPlanLabel] = useState<string>('Hobby')
@@ -200,32 +203,47 @@ function FeaturesTab() {
       <Feedback error={error} success={success} />
 
       <div className="space-y-3">
-        {FEATURE_META.map(({ key, label, description }) => {
-          const blocked = planFeatures ? !planFeatures[key] : false
-          const upgradeTo = requiredPlanLabel(key)
+        {FEATURE_META.map(({ key, label, description, labelKey, labelPlaceholder }) => {
+          const blocked = planFeatures ? !planFeatures[key as keyof typeof planFeatures] : false
+          const upgradeTo = requiredPlanLabel(key as keyof OrgFeatureFlags)
           return (
             <div
               key={key}
-              className={`flex items-start gap-3 py-3 border-b border-gray-100 last:border-0 ${blocked ? 'opacity-60' : ''}`}
+              className={`py-3 border-b border-gray-100 last:border-0 ${blocked ? 'opacity-60' : ''}`}
             >
-              <input
-                type="checkbox"
-                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#0d1e26] focus:ring-[#0d1e26] disabled:cursor-not-allowed"
-                checked={blocked ? false : draft[key]}
-                disabled={blocked}
-                onChange={e => !blocked && setDraft(p => ({ ...p, [key]: e.target.checked }))}
-              />
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-900">{label}</span>
-                  {blocked && upgradeTo && (
-                    <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded px-1.5 py-0.5">
-                      {upgradeTo}+
-                    </span>
-                  )}
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#0d1e26] focus:ring-[#0d1e26] disabled:cursor-not-allowed"
+                  checked={blocked ? false : (draft[key] as boolean)}
+                  disabled={blocked}
+                  onChange={e => !blocked && setDraft(p => ({ ...p, [key]: e.target.checked }))}
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-900">{label}</span>
+                    {blocked && upgradeTo && (
+                      <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded px-1.5 py-0.5">
+                        {upgradeTo}+
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-sm text-gray-500">{description}</div>
                 </div>
-                <div className="text-sm text-gray-500">{description}</div>
               </div>
+              {labelKey && !blocked && (draft[key] as boolean) && (
+                <div className="mt-2 ml-7">
+                  <input
+                    type="text"
+                    value={draft[labelKey] as string}
+                    onChange={e => setDraft(p => ({ ...p, [labelKey]: e.target.value }))}
+                    placeholder={labelPlaceholder}
+                    maxLength={40}
+                    className="w-48 rounded-md border border-gray-300 px-2.5 py-1 text-sm text-gray-900 focus:border-[#0d1e26] focus:ring-1 focus:ring-[#0d1e26]"
+                  />
+                  <p className="mt-0.5 text-xs text-gray-400">Nav label shown to members</p>
+                </div>
+              )}
             </div>
           )
         })}

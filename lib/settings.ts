@@ -220,6 +220,9 @@ export type OrgFeatureFlags = {
   memberDirectory: boolean
   requireMemberApproval: boolean
   allowMemberInvitations: boolean
+  discussionsLabel: string
+  eventsLabel: string
+  resourcesLabel: string
 }
 
 const DEFAULT_FEATURE_FLAGS: OrgFeatureFlags = {
@@ -229,6 +232,9 @@ const DEFAULT_FEATURE_FLAGS: OrgFeatureFlags = {
   memberDirectory: true,
   requireMemberApproval: true,
   allowMemberInvitations: true,
+  discussionsLabel: 'Discussions',
+  eventsLabel: 'Events',
+  resourcesLabel: 'Announcements',
 }
 
 export async function getFeatureFlags(): Promise<OrgFeatureFlags> {
@@ -237,6 +243,7 @@ export async function getFeatureFlags(): Promise<OrgFeatureFlags> {
   const keys = [
     'feature_discussions', 'feature_events', 'feature_resources',
     'feature_member_directory', 'require_member_approval', 'allow_member_invitations',
+    'discussions_label', 'events_label', 'resources_label',
   ]
   const [{ data: rows }, plan] = await Promise.all([
     supabase.from('settings').select('key, value').in('key', keys).eq('org_id', orgId),
@@ -247,6 +254,8 @@ export async function getFeatureFlags(): Promise<OrgFeatureFlags> {
   // Plan ceiling: if the plan doesn't allow a feature, it's always false regardless of org setting
   const b = (key: string, def: boolean, planAllows: boolean) =>
     planAllows && (map.has(key) ? map.get(key) === 'true' : def)
+  const s = (key: string, def: string) =>
+    (map.get(key) as string | undefined)?.trim() || def
   return {
     discussions:            b('feature_discussions',      DEFAULT_FEATURE_FLAGS.discussions,            planFeatures.discussions),
     events:                 b('feature_events',           DEFAULT_FEATURE_FLAGS.events,                 planFeatures.events),
@@ -254,6 +263,9 @@ export async function getFeatureFlags(): Promise<OrgFeatureFlags> {
     memberDirectory:        b('feature_member_directory', DEFAULT_FEATURE_FLAGS.memberDirectory,        planFeatures.memberDirectory),
     requireMemberApproval:  b('require_member_approval',  DEFAULT_FEATURE_FLAGS.requireMemberApproval,  planFeatures.requireMemberApproval),
     allowMemberInvitations: b('allow_member_invitations', DEFAULT_FEATURE_FLAGS.allowMemberInvitations, planFeatures.allowMemberInvitations),
+    discussionsLabel:       s('discussions_label', DEFAULT_FEATURE_FLAGS.discussionsLabel),
+    eventsLabel:            s('events_label',      DEFAULT_FEATURE_FLAGS.eventsLabel),
+    resourcesLabel:         s('resources_label',   DEFAULT_FEATURE_FLAGS.resourcesLabel),
   }
 }
 
@@ -267,6 +279,9 @@ export async function setFeatureFlags(flags: Partial<OrgFeatureFlags>): Promise<
     memberDirectory:        'feature_member_directory',
     requireMemberApproval:  'require_member_approval',
     allowMemberInvitations: 'allow_member_invitations',
+    discussionsLabel:       'discussions_label',
+    eventsLabel:            'events_label',
+    resourcesLabel:         'resources_label',
   }
   const rows = (Object.keys(flags) as (keyof OrgFeatureFlags)[])
     .filter(k => flags[k] !== undefined)
