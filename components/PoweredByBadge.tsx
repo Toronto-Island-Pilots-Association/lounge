@@ -9,22 +9,24 @@ const PROTOCOL = IS_DEV ? 'http' : 'https'
 const PORT = IS_DEV ? ':3000' : ''
 
 export default async function PoweredByBadge() {
+  let ref: string | undefined
   try {
     const h = await headers()
     const orgId = h.get('x-org-id') ?? TIPA_ORG_ID
     const supabase = await createClient()
     const { data: org } = await supabase
       .from('organizations')
-      .select('plan')
+      .select('plan, slug')
       .eq('id', orgId)
       .maybeSingle()
     const plan = (org?.plan as string) || DEFAULT_PLAN
     if (getPlanDef(plan).features.hideBranding) return null
+    ref = org?.slug ?? undefined
   } catch {
     return null
   }
 
-  const marketingUrl = `${PROTOCOL}://${ROOT_DOMAIN}${PORT}`
+  const marketingUrl = `${PROTOCOL}://${ROOT_DOMAIN}${PORT}${ref ? `?ref=${encodeURIComponent(ref)}` : ''}`
 
   return (
     <a
