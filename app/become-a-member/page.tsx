@@ -22,6 +22,8 @@ function BecomeMemberForm() {
   const [signupFields, setSignupFields] = useState<SignupField[] | null>(null)
   const [enabledLevels, setEnabledLevels] = useState<Record<MembershipLevelKey, boolean> | null>(null)
   const [orgName, setOrgName] = useState<string>('')
+  const [isTipaOrg, setIsTipaOrg] = useState(false)
+  const [orgConfigReady, setOrgConfigReady] = useState(false)
 
   // Helper: is a signup field section enabled?
   const fieldEnabled = (key: string) => {
@@ -46,8 +48,13 @@ function BecomeMemberForm() {
         if (data.signupFields)     setSignupFields(data.signupFields)
         if (data.membership?.enabledLevels) setEnabledLevels(data.membership.enabledLevels)
         if (data.org?.name)        setOrgName(data.org.displayName || data.org.name)
+        setIsTipaOrg(data.org?.isTipaOrg === true)
+        setOrgConfigReady(true)
       })
-      .catch(() => { /* keep defaults */ })
+      .catch(() => {
+        setOrgConfigReady(true)
+        setIsTipaOrg(false)
+      })
     return () => { cancelled = true }
   }, [])
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string | string[]>>({})
@@ -156,7 +163,20 @@ function BecomeMemberForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    
+    if (!orgConfigReady) {
+      setError('Please wait for the form to finish loading.')
+      return
+    }
+    if (
+      !formData.agreedToBylaws ||
+      !formData.agreedToGovernancePolicy ||
+      !formData.understandsApprovalProcess ||
+      !formData.agreedToElectronicInfo
+    ) {
+      setError('Please accept all acknowledgements')
+      return
+    }
+
     // Validate interests (only if the field is enabled)
     if (fieldEnabled('interests') && (!Array.isArray(formData.interests) || formData.interests.length === 0)) {
       setError('Please select at least one interest')
@@ -907,68 +927,90 @@ function BecomeMemberForm() {
           {/* Acknowledgements */}
           <div className="bg-gray-50 p-6 rounded-lg">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Acknowledgements</h2>
-            <div className="space-y-3">
-              <label className="flex items-start">
-                <input
-                  type="checkbox"
-                  name="agreedToBylaws"
-                  required
-                  className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]"
-                  checked={formData.agreedToBylaws}
-                  onChange={handleChange}
-                />
-                <span className="text-sm text-gray-700">
-                  I have reviewed and agree to TIPA's{' '}
-                  <Link href="https://tipa.ca/tipa-by-laws/" target="_blank" rel="noopener noreferrer" className="text-[#0d1e26] underline hover:no-underline">
-                    By-Laws
-                  </Link>{' '}
-                  <span className="text-red-500">*</span>
-                </span>
-              </label>
-              <label className="flex items-start">
-                <input
-                  type="checkbox"
-                  name="agreedToGovernancePolicy"
-                  required
-                  className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]"
-                  checked={formData.agreedToGovernancePolicy}
-                  onChange={handleChange}
-                />
-                <span className="text-sm text-gray-700">
-                  I have reviewed and agree to the{' '}
-                  <Link href="https://tipa.ca/membership-policy/" target="_blank" rel="noopener noreferrer" className="text-[#0d1e26] underline hover:no-underline">
-                    Governance & Membership Policy
-                  </Link>{' '}
-                  <span className="text-red-500">*</span>
-                </span>
-              </label>
-              <label className="flex items-start">
-                <input
-                  type="checkbox"
-                  name="understandsApprovalProcess"
-                  required
-                  className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]"
-                  checked={formData.understandsApprovalProcess}
-                  onChange={handleChange}
-                />
-                <span className="text-sm text-gray-700">
-                  I understand my application is subject to approval and does not create membership until approved <span className="text-red-500">*</span>
-                </span>
-              </label>
-              <label className="flex items-start">
-                <input
-                  type="checkbox"
-                  name="agreedToElectronicInfo"
-                  required
-                  className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]"
-                  checked={formData.agreedToElectronicInfo}
-                  onChange={handleChange}
-                />
-                <span className="text-sm text-gray-700">
-                  I agree to receive information electronically (e.g. by email) <span className="text-red-500">*</span>
-                </span>
-              </label>
-            </div>
+            {!orgConfigReady ? (
+              <p className="text-sm text-gray-500">Loading…</p>
+            ) : (
+              <div className="space-y-3">
+                <label className="flex items-start">
+                  <input
+                    type="checkbox"
+                    name="agreedToBylaws"
+                    required
+                    className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]"
+                    checked={formData.agreedToBylaws}
+                    onChange={handleChange}
+                  />
+                  <span className="text-sm text-gray-700">
+                    {isTipaOrg ? (
+                      <>
+                        I have reviewed and agree to TIPA&apos;s{' '}
+                        <Link href="https://tipa.ca/tipa-by-laws/" target="_blank" rel="noopener noreferrer" className="text-[#0d1e26] underline hover:no-underline">
+                          By-Laws
+                        </Link>{' '}
+                        <span className="text-red-500">*</span>
+                      </>
+                    ) : (
+                      <>
+                        I have reviewed and agree to this organization&apos;s governing documents (by-laws, constitution, or equivalent).{' '}
+                        <span className="text-red-500">*</span>
+                      </>
+                    )}
+                  </span>
+                </label>
+                <label className="flex items-start">
+                  <input
+                    type="checkbox"
+                    name="agreedToGovernancePolicy"
+                    required
+                    className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]"
+                    checked={formData.agreedToGovernancePolicy}
+                    onChange={handleChange}
+                  />
+                  <span className="text-sm text-gray-700">
+                    {isTipaOrg ? (
+                      <>
+                        I have reviewed and agree to the{' '}
+                        <Link href="https://tipa.ca/membership-policy/" target="_blank" rel="noopener noreferrer" className="text-[#0d1e26] underline hover:no-underline">
+                          Governance & Membership Policy
+                        </Link>{' '}
+                        <span className="text-red-500">*</span>
+                      </>
+                    ) : (
+                      <>
+                        I have reviewed and agree to this organization&apos;s membership terms and policies.{' '}
+                        <span className="text-red-500">*</span>
+                      </>
+                    )}
+                  </span>
+                </label>
+                <label className="flex items-start">
+                  <input
+                    type="checkbox"
+                    name="understandsApprovalProcess"
+                    required
+                    className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]"
+                    checked={formData.understandsApprovalProcess}
+                    onChange={handleChange}
+                  />
+                  <span className="text-sm text-gray-700">
+                    I understand my application is subject to approval and does not create membership until approved <span className="text-red-500">*</span>
+                  </span>
+                </label>
+                <label className="flex items-start">
+                  <input
+                    type="checkbox"
+                    name="agreedToElectronicInfo"
+                    required
+                    className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]"
+                    checked={formData.agreedToElectronicInfo}
+                    onChange={handleChange}
+                  />
+                  <span className="text-sm text-gray-700">
+                    I agree to receive information electronically (e.g. by email) <span className="text-red-500">*</span>
+                  </span>
+                </label>
+              </div>
+            )}
           </div>
 
           {/* Additional Information */}
@@ -976,7 +1018,7 @@ function BecomeMemberForm() {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Additional Information</h2>
             <div>
               <label htmlFor="howDidYouHear" className="block text-sm font-medium text-gray-700 mb-1">
-                How did you hear about TIPA?
+                {orgName ? `How did you hear about ${orgName}?` : 'How did you hear about us?'}
               </label>
               <select
                 id="howDidYouHear"
@@ -1004,7 +1046,7 @@ function BecomeMemberForm() {
             </Link>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !orgConfigReady}
               className="px-6 py-3 bg-[#0d1e26] text-white font-semibold rounded-lg hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0d1e26] disabled:opacity-50"
             >
               {loading ? 'Creating account...' : 'Become a Member'}

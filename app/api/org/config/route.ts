@@ -38,6 +38,8 @@ export async function GET() {
     return NextResponse.json({
       org: {
         name:         branding.name,
+        /** True only for the legacy TIPA org — used for signup copy and acknowledgement links. */
+        isTipaOrg:    orgId === TIPA_ORG_ID,
         slug:         branding.slug,
         logoUrl:      branding.logoUrl,
         /** Resolved tab icon (custom favicon, else logo) — same as HTML favicon when set */

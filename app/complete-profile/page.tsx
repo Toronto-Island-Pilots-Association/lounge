@@ -62,7 +62,31 @@ export default function CompleteProfilePage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [orgDisplayName, setOrgDisplayName] = useState('')
+  const [isTipaOrg, setIsTipaOrg] = useState(false)
+  const [orgConfigReady, setOrgConfigReady] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/org/config')
+      .then(r => (r.ok ? r.json() : Promise.reject()))
+      .then(data => {
+        if (cancelled) return
+        if (data.org?.name) setOrgDisplayName(data.org.displayName || data.org.name)
+        setIsTipaOrg(data.org?.isTipaOrg === true)
+        setOrgConfigReady(true)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setOrgConfigReady(true)
+          setIsTipaOrg(false)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -150,6 +174,11 @@ export default function CompleteProfilePage() {
     setSaving(true)
     if (!Array.isArray(formData.interests) || formData.interests.length === 0) {
       setError('Please select at least one interest')
+      setSaving(false)
+      return
+    }
+    if (!orgConfigReady) {
+      setError('Please wait for the form to finish loading.')
       setSaving(false)
       return
     }
@@ -409,7 +438,9 @@ export default function CompleteProfilePage() {
           {/* How did you hear */}
           <div className="bg-gray-50 p-6 rounded-lg">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Additional Information</h2>
-            <label htmlFor="howDidYouHear" className="block text-sm font-medium text-gray-700 mb-1">How did you hear about TIPA?</label>
+            <label htmlFor="howDidYouHear" className="block text-sm font-medium text-gray-700 mb-1">
+              {orgDisplayName ? `How did you hear about ${orgDisplayName}?` : 'How did you hear about us?'}
+            </label>
             <select id="howDidYouHear" name="howDidYouHear" className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]" value={formData.howDidYouHear} onChange={handleChange}>
               <option value="">Select...</option>
               <option value="friend">Friend/Colleague</option>
@@ -423,28 +454,62 @@ export default function CompleteProfilePage() {
           {/* Acknowledgements */}
           <div className="bg-gray-50 p-6 rounded-lg">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Acknowledgements</h2>
-            <div className="space-y-3">
-              <label className="flex items-start">
-                <input type="checkbox" name="agreedToBylaws" required className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]" checked={formData.agreedToBylaws} onChange={handleChange} />
-                <span className="text-sm text-gray-700">I have reviewed and agree to TIPA&apos;s <Link href="https://tipa.ca/tipa-by-laws/" target="_blank" rel="noopener noreferrer" className="text-[#0d1e26] underline hover:no-underline">By-Laws</Link> <span className="text-red-500">*</span></span>
-              </label>
-              <label className="flex items-start">
-                <input type="checkbox" name="agreedToGovernancePolicy" required className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]" checked={formData.agreedToGovernancePolicy} onChange={handleChange} />
-                <span className="text-sm text-gray-700">I have reviewed and agree to the <Link href="https://tipa.ca/membership-policy/" target="_blank" rel="noopener noreferrer" className="text-[#0d1e26] underline hover:no-underline">Governance &amp; Membership Policy</Link> <span className="text-red-500">*</span></span>
-              </label>
-              <label className="flex items-start">
-                <input type="checkbox" name="understandsApprovalProcess" required className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]" checked={formData.understandsApprovalProcess} onChange={handleChange} />
-                <span className="text-sm text-gray-700">I understand my application is subject to approval and does not create membership until approved <span className="text-red-500">*</span></span>
-              </label>
-              <label className="flex items-start">
-                <input type="checkbox" name="agreedToElectronicInfo" required className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]" checked={formData.agreedToElectronicInfo} onChange={handleChange} />
-                <span className="text-sm text-gray-700">I agree to receive information electronically (e.g. by email) <span className="text-red-500">*</span></span>
-              </label>
-            </div>
+            {!orgConfigReady ? (
+              <p className="text-sm text-gray-500">Loading…</p>
+            ) : (
+              <div className="space-y-3">
+                <label className="flex items-start">
+                  <input type="checkbox" name="agreedToBylaws" required className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]" checked={formData.agreedToBylaws} onChange={handleChange} />
+                  <span className="text-sm text-gray-700">
+                    {isTipaOrg ? (
+                      <>
+                        I have reviewed and agree to TIPA&apos;s{' '}
+                        <Link href="https://tipa.ca/tipa-by-laws/" target="_blank" rel="noopener noreferrer" className="text-[#0d1e26] underline hover:no-underline">
+                          By-Laws
+                        </Link>{' '}
+                        <span className="text-red-500">*</span>
+                      </>
+                    ) : (
+                      <>
+                        I have reviewed and agree to this organization&apos;s governing documents (by-laws, constitution, or equivalent).{' '}
+                        <span className="text-red-500">*</span>
+                      </>
+                    )}
+                  </span>
+                </label>
+                <label className="flex items-start">
+                  <input type="checkbox" name="agreedToGovernancePolicy" required className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]" checked={formData.agreedToGovernancePolicy} onChange={handleChange} />
+                  <span className="text-sm text-gray-700">
+                    {isTipaOrg ? (
+                      <>
+                        I have reviewed and agree to the{' '}
+                        <Link href="https://tipa.ca/membership-policy/" target="_blank" rel="noopener noreferrer" className="text-[#0d1e26] underline hover:no-underline">
+                          Governance &amp; Membership Policy
+                        </Link>{' '}
+                        <span className="text-red-500">*</span>
+                      </>
+                    ) : (
+                      <>
+                        I have reviewed and agree to this organization&apos;s membership terms and policies.{' '}
+                        <span className="text-red-500">*</span>
+                      </>
+                    )}
+                  </span>
+                </label>
+                <label className="flex items-start">
+                  <input type="checkbox" name="understandsApprovalProcess" required className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]" checked={formData.understandsApprovalProcess} onChange={handleChange} />
+                  <span className="text-sm text-gray-700">I understand my application is subject to approval and does not create membership until approved <span className="text-red-500">*</span></span>
+                </label>
+                <label className="flex items-start">
+                  <input type="checkbox" name="agreedToElectronicInfo" required className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]" checked={formData.agreedToElectronicInfo} onChange={handleChange} />
+                  <span className="text-sm text-gray-700">I agree to receive information electronically (e.g. by email) <span className="text-red-500">*</span></span>
+                </label>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end pt-4">
-            <button type="submit" disabled={saving} className="px-6 py-3 bg-[#0d1e26] text-white font-semibold rounded-lg hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0d1e26] disabled:opacity-50 disabled:cursor-not-allowed">
+            <button type="submit" disabled={saving || !orgConfigReady} className="px-6 py-3 bg-[#0d1e26] text-white font-semibold rounded-lg hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0d1e26] disabled:opacity-50 disabled:cursor-not-allowed">
               {saving ? 'Saving...' : 'Complete Profile'}
             </button>
           </div>
