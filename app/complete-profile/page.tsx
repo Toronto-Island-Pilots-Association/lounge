@@ -63,6 +63,8 @@ export default function CompleteProfilePage() {
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [orgDisplayName, setOrgDisplayName] = useState('')
+  const [bylawsUrl, setBylawsUrl] = useState<string | null>(null)
+  const [membershipPolicyUrl, setMembershipPolicyUrl] = useState<string | null>(null)
   const [orgConfigReady, setOrgConfigReady] = useState(false)
   const router = useRouter()
 
@@ -73,6 +75,8 @@ export default function CompleteProfilePage() {
       .then(data => {
         if (cancelled) return
         if (data.org?.name) setOrgDisplayName(data.org.displayName || data.org.name)
+        if (data.org?.bylawsUrl)           setBylawsUrl(data.org.bylawsUrl)
+        if (data.org?.membershipPolicyUrl) setMembershipPolicyUrl(data.org.membershipPolicyUrl)
         setOrgConfigReady(true)
       })
       .catch(() => {
@@ -456,14 +460,26 @@ export default function CompleteProfilePage() {
                 <label className="flex items-start">
                   <input type="checkbox" name="agreedToBylaws" required className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]" checked={formData.agreedToBylaws} onChange={handleChange} />
                   <span className="text-sm text-gray-700">
-                    I have reviewed and agree to this organization&apos;s governing documents (by-laws, constitution, or equivalent).{' '}
+                    {bylawsUrl ? (
+                      <>I have reviewed and agree to the{' '}
+                        <Link href={bylawsUrl} target="_blank" rel="noopener noreferrer" className="text-[#0d1e26] underline hover:no-underline">By-Laws</Link>.{' '}
+                      </>
+                    ) : (
+                      <>I have reviewed and agree to this organization&apos;s governing documents (by-laws, constitution, or equivalent).{' '}</>
+                    )}
                     <span className="text-red-500">*</span>
                   </span>
                 </label>
                 <label className="flex items-start">
                   <input type="checkbox" name="agreedToGovernancePolicy" required className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]" checked={formData.agreedToGovernancePolicy} onChange={handleChange} />
                   <span className="text-sm text-gray-700">
-                    I have reviewed and agree to this organization&apos;s membership terms and policies.{' '}
+                    {membershipPolicyUrl ? (
+                      <>I have reviewed and agree to the{' '}
+                        <Link href={membershipPolicyUrl} target="_blank" rel="noopener noreferrer" className="text-[#0d1e26] underline hover:no-underline">Governance &amp; Membership Policy</Link>.{' '}
+                      </>
+                    ) : (
+                      <>I have reviewed and agree to this organization&apos;s membership terms and policies.{' '}</>
+                    )}
                     <span className="text-red-500">*</span>
                   </span>
                 </label>

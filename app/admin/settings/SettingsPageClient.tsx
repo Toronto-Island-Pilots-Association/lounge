@@ -48,7 +48,7 @@ function SectionHeader({ title, description }: { title: string; description?: st
 
 function ClubTab() {
   const [draft, setDraft] = useState<OrgIdentity>({
-    description: '', contactEmail: '', websiteUrl: '', accentColor: '#0d1e26', displayName: '', timezone: 'America/Toronto',
+    description: '', contactEmail: '', websiteUrl: '', accentColor: '#0d1e26', displayName: '', timezone: 'America/Toronto', bylawsUrl: '', membershipPolicyUrl: '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -110,6 +110,16 @@ function ClubTab() {
         <label className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
         <input className={inputCls()} placeholder="America/Toronto" value={draft.timezone} onChange={set('timezone')} />
         <p className="text-xs text-gray-400 mt-1">Used for event display. IANA format, e.g. America/Vancouver</p>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">By-laws URL <span className="text-gray-400 font-normal">(optional)</span></label>
+        <input type="url" className={inputCls()} placeholder="https://yourclub.com/by-laws" value={draft.bylawsUrl} onChange={set('bylawsUrl')} />
+        <p className="text-xs text-gray-400 mt-1">Shown as a link on the membership application form.</p>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Membership policy URL <span className="text-gray-400 font-normal">(optional)</span></label>
+        <input type="url" className={inputCls()} placeholder="https://yourclub.com/membership-policy" value={draft.membershipPolicyUrl} onChange={set('membershipPolicyUrl')} />
+        <p className="text-xs text-gray-400 mt-1">Shown as a link on the membership application form.</p>
       </div>
 
       <SaveButton saving={saving} />

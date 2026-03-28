@@ -340,6 +340,8 @@ export type OrgIdentity = {
   accentColor: string
   displayName: string
   timezone: string
+  bylawsUrl: string
+  membershipPolicyUrl: string
 }
 
 const DEFAULT_IDENTITY: OrgIdentity = {
@@ -349,22 +351,26 @@ const DEFAULT_IDENTITY: OrgIdentity = {
   accentColor: '#0d1e26',
   displayName: '',
   timezone: 'America/Toronto',
+  bylawsUrl: '',
+  membershipPolicyUrl: '',
 }
 
 export async function getOrgIdentity(orgIdOverride?: string): Promise<OrgIdentity> {
   const supabase = await createClient()
   const orgId = await getOrgId(orgIdOverride)
-  const keys = ['club_description', 'contact_email', 'website_url', 'accent_color', 'club_display_name', 'timezone']
+  const keys = ['club_description', 'contact_email', 'website_url', 'accent_color', 'club_display_name', 'timezone', 'bylaws_url', 'membership_policy_url']
   const { data: rows } = await supabase.from('settings').select('key, value').in('key', keys).eq('org_id', orgId)
   const map = new Map((rows ?? []).map(r => [r.key, r.value]))
   const s = (key: string, def: string) => map.get(key) ?? def
   return {
-    description:  s('club_description',  DEFAULT_IDENTITY.description),
-    contactEmail: s('contact_email',     DEFAULT_IDENTITY.contactEmail),
-    websiteUrl:   s('website_url',       DEFAULT_IDENTITY.websiteUrl),
-    accentColor:  s('accent_color',      DEFAULT_IDENTITY.accentColor),
-    displayName:  s('club_display_name', DEFAULT_IDENTITY.displayName),
-    timezone:     s('timezone',          DEFAULT_IDENTITY.timezone),
+    description:         s('club_description',       DEFAULT_IDENTITY.description),
+    contactEmail:        s('contact_email',          DEFAULT_IDENTITY.contactEmail),
+    websiteUrl:          s('website_url',            DEFAULT_IDENTITY.websiteUrl),
+    accentColor:         s('accent_color',           DEFAULT_IDENTITY.accentColor),
+    displayName:         s('club_display_name',      DEFAULT_IDENTITY.displayName),
+    timezone:            s('timezone',               DEFAULT_IDENTITY.timezone),
+    bylawsUrl:           s('bylaws_url',             DEFAULT_IDENTITY.bylawsUrl),
+    membershipPolicyUrl: s('membership_policy_url',  DEFAULT_IDENTITY.membershipPolicyUrl),
   }
 }
 
@@ -372,12 +378,14 @@ export async function setOrgIdentity(identity: Partial<OrgIdentity>, orgIdOverri
   const supabase = createServiceRoleClient()
   const orgId = await getOrgId(orgIdOverride)
   const keyMap: Record<keyof OrgIdentity, string> = {
-    description:  'club_description',
-    contactEmail: 'contact_email',
-    websiteUrl:   'website_url',
-    accentColor:  'accent_color',
-    displayName:  'club_display_name',
-    timezone:     'timezone',
+    description:         'club_description',
+    contactEmail:        'contact_email',
+    websiteUrl:          'website_url',
+    accentColor:         'accent_color',
+    displayName:         'club_display_name',
+    timezone:            'timezone',
+    bylawsUrl:           'bylaws_url',
+    membershipPolicyUrl: 'membership_policy_url',
   }
   const rows = (Object.keys(identity) as (keyof OrgIdentity)[])
     .filter(k => identity[k] !== undefined)
@@ -443,6 +451,59 @@ export async function getSignupFieldsApiPayload(orgIdOverride?: string): Promise
 }> {
   const fields = await getSignupFieldsConfig(orgIdOverride)
   return { fields }
+}
+
+// ─── Discussion Categories ────────────────────────────────────────────────────
+
+export type OrgDiscussionCategory = {
+  slug: string                        // stored in threads.category
+  label: string                       // display name
+  emoji: string                       // icon shown in UI
+  type: 'discussion' | 'classified'   // classified = for-sale / listing style
+  enabled: boolean
+}
+
+const DEFAULT_DISCUSSION_CATEGORIES: OrgDiscussionCategory[] = [
+  { slug: 'introduce_yourself', label: 'Introduce Yourself', emoji: '👋', type: 'discussion',  enabled: true },
+  { slug: 'general_aviation',   label: 'General',            emoji: '🌐', type: 'discussion',  enabled: true },
+  { slug: 'other',              label: 'Other',              emoji: '📋', type: 'discussion',  enabled: true },
+  { slug: 'gear_for_sale',      label: 'For Sale',           emoji: '🛒', type: 'classified',  enabled: true },
+  { slug: 'wanted',             label: 'Wanted',             emoji: '🔍', type: 'classified',  enabled: true },
+]
+
+function parseDiscussionCategories(raw: string): OrgDiscussionCategory[] | null {
+  try {
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed) || parsed.length === 0) return null
+    for (const c of parsed) {
+      if (typeof c.slug !== 'string' || !c.slug) return null
+      if (typeof c.label !== 'string') return null
+      if (c.type !== 'discussion' && c.type !== 'classified') return null
+      if (typeof c.enabled !== 'boolean') return null
+    }
+    return parsed as OrgDiscussionCategory[]
+  } catch {
+    return null
+  }
+}
+
+export async function getDiscussionCategories(orgIdOverride?: string): Promise<OrgDiscussionCategory[]> {
+  const raw = await getSetting('discussion_categories_config', orgIdOverride)
+  if (raw) {
+    const parsed = parseDiscussionCategories(raw)
+    if (parsed) return parsed
+  }
+  return DEFAULT_DISCUSSION_CATEGORIES
+}
+
+export async function setDiscussionCategories(categories: OrgDiscussionCategory[], orgIdOverride?: string): Promise<void> {
+  const supabase = createServiceRoleClient()
+  const orgId = await getOrgId(orgIdOverride)
+  const { error } = await supabase.from('settings').upsert(
+    { key: 'discussion_categories_config', value: JSON.stringify(categories), org_id: orgId, updated_at: new Date().toISOString() },
+    { onConflict: 'key,org_id' }
+  )
+  if (error) throw new Error(`Failed to save discussion categories: ${error.message}`)
 }
 
 // ─── Email Templates ──────────────────────────────────────────────────────────

@@ -21,6 +21,8 @@ function BecomeMemberForm() {
   const [signupFields, setSignupFields] = useState<SignupField[] | null>(null)
   const [enabledLevels, setEnabledLevels] = useState<Record<MembershipLevelKey, boolean> | null>(null)
   const [orgName, setOrgName] = useState<string>('')
+  const [bylawsUrl, setBylawsUrl] = useState<string | null>(null)
+  const [membershipPolicyUrl, setMembershipPolicyUrl] = useState<string | null>(null)
   const [orgConfigReady, setOrgConfigReady] = useState(false)
 
   // Helper: is a signup field section enabled?
@@ -43,6 +45,8 @@ function BecomeMemberForm() {
         if (data.signupFields)     setSignupFields(data.signupFields)
         if (data.membership?.enabledLevels) setEnabledLevels(data.membership.enabledLevels)
         if (data.org?.name)        setOrgName(data.org.displayName || data.org.name)
+        if (data.org?.bylawsUrl)           setBylawsUrl(data.org.bylawsUrl)
+        if (data.org?.membershipPolicyUrl) setMembershipPolicyUrl(data.org.membershipPolicyUrl)
         setOrgConfigReady(true)
       })
       .catch(() => {
@@ -934,7 +938,13 @@ function BecomeMemberForm() {
                     onChange={handleChange}
                   />
                   <span className="text-sm text-gray-700">
-                    I have reviewed and agree to this organization&apos;s governing documents (by-laws, constitution, or equivalent).{' '}
+                    {bylawsUrl ? (
+                      <>I have reviewed and agree to the{' '}
+                        <Link href={bylawsUrl} target="_blank" rel="noopener noreferrer" className="text-[#0d1e26] underline hover:no-underline">By-Laws</Link>.{' '}
+                      </>
+                    ) : (
+                      <>I have reviewed and agree to this organization&apos;s governing documents (by-laws, constitution, or equivalent).{' '}</>
+                    )}
                     <span className="text-red-500">*</span>
                   </span>
                 </label>
@@ -948,7 +958,13 @@ function BecomeMemberForm() {
                     onChange={handleChange}
                   />
                   <span className="text-sm text-gray-700">
-                    I have reviewed and agree to this organization&apos;s membership terms and policies.{' '}
+                    {membershipPolicyUrl ? (
+                      <>I have reviewed and agree to the{' '}
+                        <Link href={membershipPolicyUrl} target="_blank" rel="noopener noreferrer" className="text-[#0d1e26] underline hover:no-underline">Governance &amp; Membership Policy</Link>.{' '}
+                      </>
+                    ) : (
+                      <>I have reviewed and agree to this organization&apos;s membership terms and policies.{' '}</>
+                    )}
                     <span className="text-red-500">*</span>
                   </span>
                 </label>

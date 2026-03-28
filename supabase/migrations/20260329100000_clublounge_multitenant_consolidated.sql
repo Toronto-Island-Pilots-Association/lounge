@@ -712,6 +712,12 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- this adds any missing keys)
 SELECT public.create_default_org_settings('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11');
 
+-- Seed TIPA-specific settings (by-laws links required on membership form)
+INSERT INTO public.settings (key, value, org_id, updated_at) VALUES
+  ('bylaws_url',           'https://tipa.ca/tipa-by-laws/',     'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', now()),
+  ('membership_policy_url','https://tipa.ca/membership-policy/', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', now())
+ON CONFLICT (key, org_id) DO NOTHING;
+
 -- ============================================================
 -- END: 20250322000000_add_multi_tenancy.sql
 -- ============================================================
