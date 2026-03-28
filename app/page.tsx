@@ -1,7 +1,9 @@
 import { redirect } from 'next/navigation'
+import { isOrgPublic } from '@/lib/auth'
 
-// For all org subdomains: unauthenticated visitors land on login.
-// The login page redirects authenticated users to /discussions.
-export default function Home() {
-  redirect('/login')
+// Public orgs: send guests straight to /discussions.
+// Private orgs: require login first.
+export default async function Home() {
+  const orgPublic = await isOrgPublic()
+  redirect(orgPublic ? '/discussions' : '/login')
 }
