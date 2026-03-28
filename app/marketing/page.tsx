@@ -6,13 +6,12 @@ const PROTOCOL = IS_DEV ? 'http' : 'https'
 const PORT = IS_DEV ? ':3000' : ''
 
 export default function MarketingHome() {
-  const platformOrigin = `${PROTOCOL}://platform.${ROOT_DOMAIN}${PORT}`
   const demoOrigin = `${PROTOCOL}://demo.${ROOT_DOMAIN}${PORT}`
 
   return (
     <ClubLoungeLanding
       rootDomain={ROOT_DOMAIN}
-      signupHref={`${platformOrigin}/signup`}
+      signupHref="/platform/signup"
       demoHref={demoOrigin}
       internalLinks={false}
     />

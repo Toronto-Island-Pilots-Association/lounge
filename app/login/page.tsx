@@ -87,15 +87,13 @@ export default function LoginPage() {
   }
 
   const handleGoogleLogin = () => {
-    // OAuth must be initiated from the platform domain so the PKCE code verifier
-    // is stored there — the same domain where the callback will run.
+    // OAuth is initiated from the root domain (clublounge.app) so the PKCE verifier
+    // cookie and the /auth/callback handler live on the same domain.
     const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'
     const protocol = window.location.protocol
     const port = window.location.port ? `:${window.location.port}` : ''
-    const platformOrigin = `${protocol}//platform.${rootDomain}${port}`
+    const platformOrigin = `${protocol}//${rootDomain}${port}`
     const orgNext = `${window.location.origin}/discussions`
-    // Redirect the browser to the platform's OAuth endpoint — it will kick off
-    // Google sign-in and handle the callback entirely on the platform domain.
     window.location.href = `${platformOrigin}/api/auth/oauth?provider=google&next=${encodeURIComponent(orgNext)}`
   }
 

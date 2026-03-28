@@ -8,8 +8,8 @@ import AnalyticsPageClient from './AnalyticsPageClient'
 const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'
 const platformBase =
   process.env.NODE_ENV === 'development'
-    ? `http://platform.${ROOT_DOMAIN}:3000`
-    : `https://platform.${ROOT_DOMAIN}`
+    ? `http://${ROOT_DOMAIN}:3000`
+    : `https://${ROOT_DOMAIN}`
 
 export default async function AnalyticsPage() {
   let user

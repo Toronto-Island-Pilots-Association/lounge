@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     }
 
     // Build return and refresh URLs
-    const host = request.headers.get('host') ?? `platform.${process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'}`
+    const host = request.headers.get('host') ?? (process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app')
     const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
     const base = `${protocol}://${host}`
 

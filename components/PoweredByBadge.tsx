@@ -24,7 +24,7 @@ export default async function PoweredByBadge() {
     return null
   }
 
-  const marketingUrl = `${PROTOCOL}://platform.${ROOT_DOMAIN}${PORT}`
+  const marketingUrl = `${PROTOCOL}://${ROOT_DOMAIN}${PORT}`
 
   return (
     <a

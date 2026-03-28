@@ -391,7 +391,7 @@ export default function Navbar() {
                       )}
                       {profile?.role === 'admin' && (
                         <a
-                          href={`${process.env.NODE_ENV === 'development' ? 'http' : 'https'}://platform.${process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'}${process.env.NODE_ENV === 'development' ? ':3000' : ''}/platform/dashboard`}
+                          href={`${process.env.NODE_ENV === 'development' ? 'http' : 'https'}://${process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'}${process.env.NODE_ENV === 'development' ? ':3000' : ''}/platform/dashboard`}
                           onClick={() => setUserMenuOpen(false)}
                           className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         >
@@ -603,7 +603,7 @@ export default function Navbar() {
                   )}
                 {profile?.role === 'admin' && (
                   <a
-                    href={`${process.env.NODE_ENV === 'development' ? 'http' : 'https'}://platform.${process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'}${process.env.NODE_ENV === 'development' ? ':3000' : ''}/platform/dashboard`}
+                    href={`${process.env.NODE_ENV === 'development' ? 'http' : 'https'}://${process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'}${process.env.NODE_ENV === 'development' ? ':3000' : ''}/platform/dashboard`}
                     onClick={handleLinkClick}
                     className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
                   >
