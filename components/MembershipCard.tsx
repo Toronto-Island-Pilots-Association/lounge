@@ -19,9 +19,23 @@ interface MembershipCardProps {
   validThruDate?: string | null
   /** When true, show "-" instead of member number (trial members don't get a number yet). */
   isOnTrial?: boolean
+  /** Multi-tenant / demo: override TIPA header on the card */
+  clubBrand?: { shortName: string; tagline: string }
 }
 
-export default function MembershipCard({ user, isPending, isRejected, isPaid, isExpired, membershipLevelDisplay, validThruDate, isOnTrial = false }: MembershipCardProps) {
+export default function MembershipCard({
+  user,
+  isPending,
+  isRejected,
+  isPaid,
+  isExpired,
+  membershipLevelDisplay,
+  validThruDate,
+  isOnTrial = false,
+  clubBrand,
+}: MembershipCardProps) {
+  const brandShort = clubBrand?.shortName ?? 'TIPA'
+  const brandTagline = clubBrand?.tagline ?? 'Toronto Island Pilots Association'
   const [tilt, setTilt] = useState({ x: 0, y: 0 })
   const [glarePosition, setGlarePosition] = useState({ x: 50, y: 50 })
   const cardRef = useRef<HTMLDivElement>(null)
@@ -97,8 +111,8 @@ export default function MembershipCard({ user, isPending, isRejected, isPaid, is
           {/* Top Section */}
           <div className="flex items-start justify-between gap-[clamp(0.5rem,2vw,0.75rem)] min-w-0 flex-shrink-0">
             <div className="min-w-0 flex-1 pr-2">
-              <div className="text-[clamp(0.875rem,2vw,0.75rem)] uppercase tracking-widest text-white/70 mb-1">TIPA</div>
-              <div className="text-[clamp(0.75rem,1.5vw,0.625rem)] uppercase tracking-wide text-white/60 break-words leading-tight">Toronto Island Pilots Association</div>
+              <div className="text-[clamp(0.875rem,2vw,0.75rem)] uppercase tracking-widest text-white/70 mb-1">{brandShort}</div>
+              <div className="text-[clamp(0.75rem,1.5vw,0.625rem)] uppercase tracking-wide text-white/60 break-words leading-tight">{brandTagline}</div>
             </div>
             {/* Logo in Chip Area */}
             <div className="relative flex-shrink-0">
@@ -112,7 +126,7 @@ export default function MembershipCard({ user, isPending, isRejected, isPaid, is
                 <div className="relative w-full h-full">
                   <Image
                     src="/logo.png"
-                    alt="TIPA Logo"
+                    alt="Club logo"
                     fill
                     className="object-contain"
                   />

@@ -107,6 +107,20 @@ const MEMBERS = [
   { first: 'Onyx',     last: 'Evans',     email: 'onyx.evans@icloud.com',             role: 'member', status: 'pending',  level: 'Full',      monthsAgo: 0,  paid: false },
   { first: 'Cypress',  last: 'Edwards',   email: 'cypress.e@gmail.com',               role: 'member', status: 'pending',  level: 'Associate', monthsAgo: 0,  paid: false },
 
+  // Extra demo directory volume (approved, varied levels)
+  { first: 'Mika',     last: 'Okonkwo',   email: 'mika.okonkwo@gmail.com',            role: 'member', status: 'approved', level: 'Full',      monthsAgo: 15, paid: true  },
+  { first: 'Sofia',    last: 'Vasquez',   email: 'sofia.v@outlook.com',               role: 'member', status: 'approved', level: 'Full',      monthsAgo: 14, paid: true  },
+  { first: 'Owen',     last: 'MacLeod',   email: 'owen.macleod@gmail.com',            role: 'member', status: 'approved', level: 'Corporate', monthsAgo: 20, paid: true  },
+  { first: 'Priya',    last: 'Shah',      email: 'priya.shah@yahoo.com',              role: 'member', status: 'approved', level: 'Associate', monthsAgo: 8,  paid: true  },
+  { first: 'Theo',     last: 'Bouchard',  email: 'theo.bouchard@gmail.com',           role: 'member', status: 'approved', level: 'Student',   monthsAgo: 3,  paid: true  },
+  { first: 'Yuki',     last: 'Tanaka',    email: 'yuki.tanaka@icloud.com',            role: 'member', status: 'approved', level: 'Full',      monthsAgo: 11, paid: true  },
+  { first: 'Diego',    last: 'Fernandez', email: 'diego.f@gmail.com',                 role: 'member', status: 'approved', level: 'Full',      monthsAgo: 9,  paid: true  },
+  { first: 'Amara',    last: 'Diallo',    email: 'amara.diallo@outlook.com',          role: 'member', status: 'approved', level: 'Associate', monthsAgo: 7,  paid: true  },
+  { first: 'Felix',    last: 'Novak',     email: 'felix.novak@gmail.com',             role: 'member', status: 'approved', level: 'Full',      monthsAgo: 6,  paid: true  },
+  { first: 'Nora',     last: 'Lindqvist', email: 'nora.lindqvist@hotmail.com',        role: 'member', status: 'approved', level: 'Full',      monthsAgo: 5,  paid: true  },
+  { first: 'Kai',      last: 'Nakamura',  email: 'kai.nakamura@gmail.com',            role: 'member', status: 'approved', level: 'Corporate', monthsAgo: 17, paid: true  },
+  { first: 'Elena',    last: 'Popov',     email: 'elena.popov@yahoo.com',             role: 'member', status: 'approved', level: 'Full',      monthsAgo: 4,  paid: true  },
+
   // Honorary
   { first: 'Pat',      last: 'Founders',  email: 'pat.founders@gmail.com',            role: 'member', status: 'approved', level: 'Honorary',  monthsAgo: 36, paid: false },
 ]
