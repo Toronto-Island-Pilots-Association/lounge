@@ -19,7 +19,7 @@ export async function proxy(request: NextRequest) {
   const isMarketingAuthExempt =
     marketingRewriteExemptPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`))
 
-  // In local dev, allow ?__domain=platform|marketing|tipa (or any org slug) to simulate domains
+  // In local dev, allow ?__domain=marketing|tipa (or any org slug) to simulate domains
   const devDomainOverride = process.env.NODE_ENV === 'development'
     ? request.nextUrl.searchParams.get('__domain')
     : null
@@ -43,27 +43,10 @@ export async function proxy(request: NextRequest) {
   // This happens when redirectTo isn't in Supabase's allowed URL list.
   // Forward to /auth/callback, inferring the right `next` from domain type.
   if (request.nextUrl.searchParams.has('code') && !pathname.startsWith('/auth')) {
-    const code = request.nextUrl.searchParams.get('code')!
-    const state = request.nextUrl.searchParams.get('state')
-
-    if (domainType === 'marketing') {
-      // The PKCE verifier lives on the platform domain (where signInWithOAuth ran).
-      // Forward the code there so the exchange can succeed.
-      const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'
-      const proto = process.env.NODE_ENV === 'development' ? 'http' : 'https'
-      const port = process.env.NODE_ENV === 'development' ? ':3000' : ''
-      const platformCallback = new URL(`${proto}://platform.${rootDomain}${port}/auth/callback`)
-      platformCallback.searchParams.set('code', code)
-      platformCallback.searchParams.set('next', '/platform/dashboard')
-      if (state) platformCallback.searchParams.set('state', state)
-      return NextResponse.redirect(platformCallback)
-    }
-
     const callbackUrl = request.nextUrl.clone()
     callbackUrl.pathname = '/auth/callback'
     if (!callbackUrl.searchParams.has('next')) {
-      if (domainType === 'platform') callbackUrl.searchParams.set('next', '/platform/dashboard')
-      else if (domainType === 'org') callbackUrl.searchParams.set('next', '/discussions')
+      if (domainType === 'org') callbackUrl.searchParams.set('next', '/discussions')
     }
     return NextResponse.redirect(callbackUrl)
   }
@@ -73,31 +56,22 @@ export async function proxy(request: NextRequest) {
     return new NextResponse(null, { status: 404 })
   }
 
-  // Block marketing domain from reaching /platform routes
-  if (domainType === 'marketing' && pathname.startsWith('/platform')) {
-    return new NextResponse(null, { status: 404 })
-  }
-
-  // Rewrite marketing and platform to their internal route prefixes
+  // Rewrite marketing domain to internal /marketing/* prefix.
+  // /platform/* and /auth/* paths are served directly without rewriting.
   // clublounge.app/foo          → /marketing/foo
-  // platform.clublounge.app/foo → /platform/foo
-  // [org].clublounge.app/foo    → /foo (unchanged)
+  // clublounge.app/platform/foo → /platform/foo (no rewrite)
+  // [org].clublounge.app/foo    → /foo (no rewrite)
   // Don't rewrite API routes — they resolve to their actual paths regardless of domain
   if (!pathname.startsWith('/api')) {
     if (
       domainType === 'marketing' &&
       !pathname.startsWith('/marketing') &&
+      !pathname.startsWith('/platform') &&
       !pathname.startsWith('/auth') &&
       !isMarketingAuthExempt
     ) {
       const rewriteUrl = request.nextUrl.clone()
       rewriteUrl.pathname = `/marketing${pathname === '/' ? '' : pathname}`
-      return NextResponse.rewrite(rewriteUrl, { headers: requestHeaders })
-    }
-
-    if (domainType === 'platform' && !pathname.startsWith('/platform') && !pathname.startsWith('/auth')) {
-      const rewriteUrl = request.nextUrl.clone()
-      rewriteUrl.pathname = `/platform${pathname === '/' ? '' : pathname}`
       return NextResponse.rewrite(rewriteUrl, { headers: requestHeaders })
     }
   }
@@ -106,8 +80,6 @@ export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request: { headers: requestHeaders } })
 
   // Set cookies on the root domain so sessions are shared across all subdomains.
-  // This is essential for the centralised OAuth callback flow where the code is
-  // exchanged on platform.* and the user is then redirected to an org subdomain.
   const cookieDomain = hostname.includes(process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app')
     ? `.${process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'}`
     : undefined

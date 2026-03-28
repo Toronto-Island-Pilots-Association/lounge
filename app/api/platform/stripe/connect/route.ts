@@ -8,7 +8,7 @@ import { getPlatformStripeInstance } from '@/lib/stripe'
  * and returns an account link URL for onboarding.
  */
 export async function POST(request: Request) {
-  if (request.headers.get('x-domain-type') !== 'platform') {
+  if (request.headers.get('x-domain-type') !== 'marketing') {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 

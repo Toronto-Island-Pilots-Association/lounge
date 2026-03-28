@@ -8,10 +8,10 @@ import { NextResponse } from 'next/server'
  * Creates a new organization.
  * Body: { name, slug, adminEmail, adminPassword?, customDomain? }
  *
- * Called from platform.clublounge.app/create.
+ * Called from clublounge.app/platform/create.
  */
 export async function POST(request: Request) {
-  if (request.headers.get('x-domain-type') !== 'platform') {
+  if (request.headers.get('x-domain-type') !== 'marketing') {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
@@ -111,7 +111,7 @@ export async function POST(request: Request) {
  * Check if a slug is available.
  */
 export async function GET(request: Request) {
-  if (request.headers.get('x-domain-type') !== 'platform') {
+  if (request.headers.get('x-domain-type') !== 'marketing') {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 

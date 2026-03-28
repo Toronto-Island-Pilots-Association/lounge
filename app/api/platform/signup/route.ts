@@ -4,7 +4,7 @@ import { validateOrgSlug, ROOT_DOMAIN } from '@/lib/org'
 import { addDomainToProject } from '@/lib/vercel'
 
 export async function POST(request: Request) {
-  if (request.headers.get('x-domain-type') !== 'platform') {
+  if (request.headers.get('x-domain-type') !== 'marketing') {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 

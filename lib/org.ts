@@ -20,21 +20,19 @@ export const RESERVED_SUBDOMAINS = new Set([
   'cdn',
 ])
 
-export type DomainType = 'marketing' | 'platform' | 'org'
+export type DomainType = 'marketing' | 'org'
 
 /**
- * Classify a hostname into one of three domain types:
- *   marketing → clublounge.app (root domain)
- *   platform  → platform.clublounge.app
+ * Classify a hostname into one of two domain types:
+ *   marketing → clublounge.app (root domain, serves marketing + platform routes at /platform/*)
  *   org       → anything else (custom domain or non-reserved subdomain)
  */
 export function getDomainType(hostname: string): DomainType {
   const host = hostname.split(':')[0]
 
   if (host === ROOT_DOMAIN || host === `www.${ROOT_DOMAIN}`) return 'marketing'
-  if (host === `platform.${ROOT_DOMAIN}`) return 'platform'
-  // In local dev, bare localhost is treated as the platform
-  if (host === 'localhost' || host === '127.0.0.1') return 'platform'
+  // In local dev, bare localhost is treated as the marketing/platform domain
+  if (host === 'localhost' || host === '127.0.0.1') return 'marketing'
   return 'org'
 }
 
