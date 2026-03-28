@@ -39,6 +39,11 @@ export async function POST(request: Request) {
     if (!orgId) {
       return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
     }
+
+    const { createServiceRoleClient } = await import('@/lib/supabase/server')
+    const db = createServiceRoleClient()
+    const { data: org } = await db.from('organizations').select('name').eq('id', orgId).maybeSingle()
+    const orgName = org?.name ?? 'Your Club'
     const {
       email,
       firstName,
@@ -214,7 +219,8 @@ export async function POST(request: Request) {
       normalizedEmail,
       fullName || normalizedEmail,
       isExistingUser ? null : tempPassword,
-      appUrl
+      appUrl,
+      orgName,
     )
 
     return NextResponse.json({
