@@ -20,15 +20,10 @@ export type SignupField = {
 }
 
 export const DEFAULT_SIGNUP_FIELDS: SignupField[] = [
-  { key: 'phone', label: 'Phone', group: 'contact', enabled: true, required: false },
-  { key: 'address', label: 'Mailing Address', group: 'address', enabled: true, required: false },
-  { key: 'membership_class', label: 'Membership Class', group: 'membership', enabled: true, required: true },
-  { key: 'aviation_info', label: 'Aviation Information', group: 'aviation', enabled: true, required: false },
-  { key: 'fly_frequency', label: 'How Often Fly From YTZ', group: 'aviation', enabled: false, required: false },
-  { key: 'student_pilot', label: 'Student Pilot Info', group: 'student', enabled: true, required: false },
-  { key: 'copa_membership', label: 'COPA Membership', group: 'copa', enabled: false, required: false },
+  { key: 'phone',               label: 'Phone',               group: 'contact',     enabled: true,  required: false },
+  { key: 'address',             label: 'Mailing Address',     group: 'address',     enabled: true,  required: false },
   { key: 'statement_of_interest', label: 'Statement of Interest', group: 'application', enabled: true, required: false },
-  { key: 'interests', label: 'Interests', group: 'application', enabled: true, required: false },
-  { key: 'how_did_you_hear', label: 'How Did You Hear', group: 'application', enabled: true, required: false },
+  { key: 'interests',           label: 'Interests',           group: 'application', enabled: true,  required: false },
+  { key: 'how_did_you_hear',    label: 'How Did You Hear',    group: 'application', enabled: true,  required: false },
 ]
 
