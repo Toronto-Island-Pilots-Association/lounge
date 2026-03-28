@@ -47,6 +47,29 @@ const FEATURES = [
   },
 ] as const
 
+const FAQS = [
+  {
+    q: 'How much does Club Lounge cost?',
+    a: 'Plans start at $5/month for small clubs (up to 20 members). Starter is $49/month for unlimited members with dues collection. Community is $99/month and adds digest emails and an analytics dashboard. All plans include a 14-day free trial — no credit card required.',
+  },
+  {
+    q: 'Can I migrate from Wild Apricot?',
+    a: 'Yes. We offer free member data migration from Wild Apricot, typically completed within 48 hours of signing up.',
+  },
+  {
+    q: "Do members get a URL that's actually ours?",
+    a: 'Every club gets its own subdomain (yourclub.clublounge.app). Starter plan and above support a fully custom domain like lounge.yourclub.com — your DNS, your brand.',
+  },
+  {
+    q: 'How does dues collection work?',
+    a: 'Club Lounge uses Stripe Connect. Set your annual or monthly dues amount and members pay directly. Automatic renewals, instant payment records, and a real-time view of who has paid — all from your admin dashboard. Available on Starter and above.',
+  },
+  {
+    q: 'What types of clubs use Club Lounge?',
+    a: 'Flying clubs, yacht clubs, cycling clubs, golf clubs, rowing clubs, photography societies, professional association chapters, and alumni associations. Any club that needs a private community home.',
+  },
+] as const
+
 const VERTICALS = [
   {
     icon: '✈️',
@@ -140,6 +163,9 @@ export function ClubLoungeLanding({
           </li>
           <li>
             <a href="#verticals">Who it&apos;s for</a>
+          </li>
+          <li>
+            <a href="#faq">FAQ</a>
           </li>
           <li>
             <NavLink href={loginHref} internalLinks={internalLinks}>
@@ -513,6 +539,21 @@ export function ClubLoungeLanding({
             </div>
           ))}
         </div>
+      </section>
+
+      <section id="faq" className="cl-faq-section">
+        <div className="cl-section-eyebrow">FAQ</div>
+        <h2 className="cl-section-title">
+          Common questions
+        </h2>
+        <dl className="cl-faq-list">
+          {FAQS.map(({ q, a }) => (
+            <div key={q} className="cl-faq-item">
+              <dt className="cl-faq-q">{q}</dt>
+              <dd className="cl-faq-a">{a}</dd>
+            </div>
+          ))}
+        </dl>
       </section>
 
       <section className="cl-cta-section">

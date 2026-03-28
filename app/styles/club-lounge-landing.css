@@ -946,6 +946,50 @@
   font-weight: 400;
 }
 
+/* ── FAQ ───────────────────────────────────────────────── */
+
+.club-lounge-landing .cl-faq-section {
+  max-width: 720px;
+  margin-inline: auto;
+}
+
+.club-lounge-landing .cl-faq-list {
+  margin-top: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--cl-border);
+  border-radius: var(--cl-radius);
+  overflow: hidden;
+}
+
+.club-lounge-landing .cl-faq-item {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--cl-border);
+  background: var(--cl-surface);
+}
+
+.club-lounge-landing .cl-faq-item:last-child {
+  border-bottom: none;
+}
+
+.club-lounge-landing .cl-faq-q {
+  font-family: var(--font-cl-display), 'Space Grotesk', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--cl-ink);
+  margin-bottom: 0.5rem;
+}
+
+.club-lounge-landing .cl-faq-a {
+  font-size: 0.9375rem;
+  color: var(--cl-muted);
+  line-height: 1.65;
+  margin: 0;
+}
+
+/* ── CTA ───────────────────────────────────────────────── */
+
 .club-lounge-landing .cl-cta-section {
   text-align: center;
   background: radial-gradient(ellipse 80% 100% at 50% 100%, var(--cl-accent-dim), transparent 60%);

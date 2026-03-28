@@ -2,6 +2,9 @@ import type { Metadata } from 'next'
 import { IBM_Plex_Sans, Space_Grotesk } from 'next/font/google'
 import '@/app/styles/club-lounge-landing.css'
 
+const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'
+const BASE_URL = `https://${ROOT_DOMAIN}`
+
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
@@ -14,10 +17,43 @@ const ibmPlex = IBM_Plex_Sans({
   variable: '--font-cl-body',
 })
 
+const TITLE = 'Club Lounge — Private Community Software for Clubs & Associations'
+const DESCRIPTION =
+  'Give your members a private home — directory, discussions, events, and Stripe-powered dues. Your own URL, 14-day free trial, from $5/month. Used by flying clubs, yacht clubs, cycling clubs, and more.'
+
 export const metadata: Metadata = {
-  title: 'Club Lounge — The private lounge for every club',
-  description:
-    'Give your members a private home — directory, discussions, events, and dues in one place. Your club, your URL.',
+  metadataBase: new URL(BASE_URL),
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: {
+    canonical: BASE_URL,
+  },
+  openGraph: {
+    type: 'website',
+    url: BASE_URL,
+    siteName: 'Club Lounge',
+    title: TITLE,
+    description: DESCRIPTION,
+    images: [
+      {
+        url: '/marketing/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'Club Lounge — Private community software for clubs',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: TITLE,
+    description: DESCRIPTION,
+    images: ['/marketing/opengraph-image'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, 'max-image-preview': 'large' },
+  },
 }
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
