@@ -1,11 +1,15 @@
+import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
-import { buildOrgUrl } from '@/lib/org'
+import { buildOrgUrl, ROOT_DOMAIN } from '@/lib/org'
 import SignOutButton from './SignOutButton'
-import ConnectStripeButton from './ConnectStripeButton'
-import OrgPlanUpgradeControls from './OrgPlanUpgradeControls'
-import { CnameRecord } from '@/components/platform/CnameRecord'
+
+function loungeAddressLabel(org: { subdomain: string; custom_domain?: string | null }) {
+  const isDev = process.env.NODE_ENV === 'development'
+  if (!isDev && org.custom_domain) return org.custom_domain
+  return `${org.subdomain}.${ROOT_DOMAIN}`
+}
 
 export default async function PlatformDashboard() {
   const supabase = await createClient()
@@ -19,248 +23,189 @@ export default async function PlatformDashboard() {
     .select('org_id, role, status')
     .eq('user_id', user.id)
 
-  const membershipsForUser = (memberProfiles ?? []).filter((p: any) => p.org_id)
-  const orgIds = [...new Set(membershipsForUser.map((m: any) => m.org_id))]
+  const membershipsForUser = (memberProfiles ?? []).filter((p: { org_id: string | null }) => p.org_id)
+  const orgIds = [...new Set(membershipsForUser.map((m: { org_id: string }) => m.org_id))]
 
-  const [orgsResult, memberCountsResult] = await Promise.all([
+  const orgsResult =
     orgIds.length > 0
-      ? db.from('organizations').select('*').in('id', orgIds)
-      : Promise.resolve({ data: [] }),
-    orgIds.length > 0
-      ? db.from('org_memberships').select('org_id, role').in('org_id', orgIds).eq('status', 'approved')
-      : Promise.resolve({ data: [] }),
-  ])
+      ? await db.from('organizations').select('*').in('id', orgIds)
+      : { data: [] }
 
   const orgs = orgsResult.data
-  const memberCounts = new Map<string, number>()
-  ;(memberCountsResult.data ?? []).forEach((m: any) => {
-    if (m.role !== 'admin') memberCounts.set(m.org_id, (memberCounts.get(m.org_id) ?? 0) + 1)
-  })
-
-  const orgById = new Map((orgs ?? []).map((o: any) => [o.id, o]))
+  const orgById = new Map((orgs ?? []).map((o: { id: string }) => [o.id, o]))
   const memberships = membershipsForUser
-    .map((m: any) => {
+    .map((m: { org_id: string; role: string }) => {
       const org = orgById.get(m.org_id)
       return org ? { org, role: m.role as string } : null
     })
-    .filter(Boolean) as { org: any; role: string }[]
+    .filter(Boolean) as { org: Record<string, unknown> & { id: string; name: string; subdomain: string; logo_url?: string | null; custom_domain?: string | null; plan?: string | null; trial_ends_at?: string | null }; role: string }[]
 
   const adminOrgs = memberships.filter(m => m.role === 'admin').map(m => m.org)
   const memberOrgs = memberships.filter(m => m.role !== 'admin').map(m => ({ ...m.org, memberRole: m.role }))
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b px-8 py-4 flex items-center justify-between">
-        <Link href="/platform" className="font-bold tracking-tight">ClubLounge</Link>
+      <nav className="bg-white border-b px-6 sm:px-8 py-4 flex items-center justify-between">
+        <Link href="/platform" className="font-bold tracking-tight text-gray-900">
+          ClubLounge
+        </Link>
         <SignOutButton />
       </nav>
 
-      <div className="max-w-4xl mx-auto px-8 py-12 space-y-8">
-        <div className="flex items-center justify-between">
+      <div className="max-w-3xl mx-auto px-6 sm:px-8 py-10 space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Your lounges</h1>
-            <p className="text-sm text-gray-500 mt-0.5">Manage your club spaces.</p>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">Your lounges</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Pick a lounge to open settings in the sidebar, or visit the live site.
+            </p>
           </div>
           <Link
             href="/platform/signup"
-            className="bg-black text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-800 transition-colors"
+            className="shrink-0 bg-gray-900 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-800 transition-colors text-center"
           >
             + New lounge
           </Link>
         </div>
 
         {memberships.length === 0 ? (
-          <div className="bg-white rounded-xl border p-12 text-center space-y-4">
+          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center space-y-4">
             <p className="text-gray-500">You don&apos;t have any lounges yet.</p>
             <Link
               href="/platform/signup"
-              className="inline-block bg-black text-white rounded-lg px-6 py-2.5 text-sm font-medium hover:bg-gray-800 transition-colors"
+              className="inline-block bg-gray-900 text-white rounded-lg px-6 py-2.5 text-sm font-medium hover:bg-gray-800 transition-colors"
             >
               Create your first lounge
             </Link>
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-10">
             {adminOrgs.length > 0 && (
-              <div className="space-y-4">
-                {adminOrgs.length > 0 && memberOrgs.length > 0 && (
-                  <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wide">Admin</h2>
+              <section className="space-y-4">
+                {memberOrgs.length > 0 && (
+                  <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">You administer</h2>
                 )}
-                <div className="grid gap-4">
-                  {adminOrgs.map((org: any) => {
+                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {adminOrgs.map(org => {
                     const url = buildOrgUrl(org)
-                    const stripeStatus = org.stripe_onboarding_complete
-                      ? 'connected'
-                      : org.stripe_account_id
-                        ? 'pending'
-                        : 'not_connected'
-
-                    const trialEndsAt = org.trial_ends_at ? new Date(org.trial_ends_at) : null
+                    const address = loungeAddressLabel(org)
+                    const trialEndsAt = org.trial_ends_at ? new Date(org.trial_ends_at as string) : null
                     const trialActive = trialEndsAt && trialEndsAt > new Date()
-                    const trialDaysLeft = trialActive
-                      ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
-                      : null
-
-                    const nonAdminMemberCount = memberCounts.get(org.id) ?? 0
-                    const setupSteps = [
-                      { done: true,                                  label: 'Create your lounge',              href: null },
-                      { done: stripeStatus === 'connected',          label: 'Connect Stripe to collect dues',  href: `/platform/dashboard/${org.id}/billing` },
-                      { done: !!(org.logo_url || org.display_name),  label: 'Customize your club',             href: `${url}/admin/settings` },
-                      { done: nonAdminMemberCount > 0,               label: 'Add your first member',           href: `${url}/admin/members` },
-                    ]
-                    const allDone = setupSteps.every(s => s.done)
+                    const plan = (org.plan ?? 'hobby') as string
+                    const initial = (org.name || '?').slice(0, 1).toUpperCase()
+                    const logo = org.logo_url as string | null | undefined
 
                     return (
-                      <div key={org.id} className="bg-white rounded-xl border p-6 space-y-4">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="space-y-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h2 className="font-semibold">{org.name}</h2>
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 capitalize shrink-0">
-                                {(org.plan ?? 'hobby').replace('_', ' ')}
+                      <li
+                        key={org.id}
+                        className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col gap-4 shadow-sm hover:border-gray-300 transition-colors"
+                      >
+                        <div className="flex gap-3 min-w-0">
+                          <div className="relative h-11 w-11 shrink-0 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center text-sm font-semibold text-gray-500">
+                            {logo ? (
+                              <Image
+                                src={logo}
+                                alt=""
+                                width={44}
+                                height={44}
+                                className="object-cover w-full h-full"
+                              />
+                            ) : (
+                              initial
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-gray-900 truncate">{org.name}</p>
+                            <p className="text-xs text-gray-500 truncate font-mono">{address}</p>
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-gray-100 text-gray-600 capitalize">
+                                {plan.replace('_', ' ')}
                               </span>
                               {trialActive && (
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium shrink-0">
-                                  Trial — {trialDaysLeft}d left
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800">
+                                  Trial
                                 </span>
                               )}
                             </div>
-                            <a
-                              href={url}
-                              target="_blank"
-                              className="text-sm text-blue-600 hover:underline font-mono truncate block"
-                            >
-                              {url}
-                            </a>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <Link
-                              href={`/platform/dashboard/${org.id}/billing`}
-                              className="border rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
-                            >
-                              Billing
-                            </Link>
-                            <a
-                              href={url}
-                              target="_blank"
-                              className="border rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
-                            >
-                              Open
-                            </a>
                           </div>
                         </div>
-
-                        {/* Setup checklist — shown until all steps complete */}
-                        {!allDone && (
-                          <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Setup checklist</p>
-                            {setupSteps.map((step, i) => {
-                              const inner = (
-                                <>
-                                  {step.done ? (
-                                    <svg className="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                  ) : (
-                                    <div className="w-4 h-4 rounded-full border-2 border-gray-300 shrink-0" />
-                                  )}
-                                  <span className={`text-sm ${step.done ? 'text-gray-400 line-through' : 'text-gray-700 group-hover:underline'}`}>
-                                    {step.label}
-                                  </span>
-                                  {!step.done && (
-                                    <svg className="w-3.5 h-3.5 text-gray-400 ml-auto shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                    </svg>
-                                  )}
-                                </>
-                              )
-                              return !step.done && step.href ? (
-                                <a key={i} href={step.href} target="_blank" className="group flex items-center gap-2.5 rounded-md hover:bg-gray-100 -mx-1 px-1 py-0.5 transition-colors">
-                                  {inner}
-                                </a>
-                              ) : (
-                                <div key={i} className="flex items-center gap-2.5">
-                                  {inner}
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-
-                        <div className="pt-4 border-t flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${
-                              stripeStatus === 'connected' ? 'bg-green-500' :
-                              stripeStatus === 'pending' ? 'bg-yellow-400' :
-                              'bg-gray-300'
-                            }`} />
-                            <span className="text-sm text-gray-600">
-                              {stripeStatus === 'connected' && 'Stripe connected — accepting payments'}
-                              {stripeStatus === 'pending' && 'Stripe onboarding incomplete'}
-                              {stripeStatus === 'not_connected' && 'Stripe not connected'}
-                            </span>
-                          </div>
-                          {stripeStatus !== 'connected' && (
-                            <ConnectStripeButton orgId={org.id} isPending={stripeStatus === 'pending'} />
-                          )}
-                        </div>
-
-                        {stripeStatus === 'connected' && (
-                          <OrgPlanUpgradeControls
-                            orgId={org.id}
-                            currentPlan={org.plan ?? 'hobby'}
-                          />
-                        )}
-
-                        {org.custom_domain && (
-                          <div className="pt-4 border-t">
-                            <CnameRecord host={org.custom_domain} label="DNS setup for custom domain" />
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {memberOrgs.length > 0 && (
-              <div className="space-y-4">
-                {adminOrgs.length > 0 && memberOrgs.length > 0 && (
-                  <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wide">Member</h2>
-                )}
-                <div className="grid gap-4">
-                  {memberOrgs.map((org: any) => {
-                    const url = buildOrgUrl(org)
-                    return (
-                      <div key={org.id} className="bg-white rounded-xl border p-6">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="space-y-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <h2 className="font-semibold">{org.name}</h2>
-                              <span className="text-xs bg-gray-100 text-gray-500 rounded px-1.5 py-0.5 capitalize">{org.memberRole}</span>
-                            </div>
-                            <a
-                              href={url}
-                              target="_blank"
-                              className="text-sm text-blue-600 hover:underline font-mono truncate block"
-                            >
-                              {url}
-                            </a>
-                          </div>
+                        <div className="flex flex-wrap gap-2 pt-1 border-t border-gray-100">
+                          <Link
+                            href={`/platform/dashboard/${org.id}/settings/general`}
+                            className="inline-flex items-center justify-center rounded-lg bg-gray-900 text-white px-3 py-1.5 text-xs font-medium hover:bg-gray-800 transition-colors"
+                          >
+                            Settings
+                          </Link>
                           <a
                             href={url}
                             target="_blank"
-                            className="shrink-0 border rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                           >
-                            Open
+                            Open lounge
                           </a>
                         </div>
-                      </div>
+                      </li>
                     )
                   })}
-                </div>
-              </div>
+                </ul>
+              </section>
+            )}
+
+            {memberOrgs.length > 0 && (
+              <section className="space-y-4">
+                {adminOrgs.length > 0 && (
+                  <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Member</h2>
+                )}
+                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {memberOrgs.map(org => {
+                    const url = buildOrgUrl(org)
+                    const address = loungeAddressLabel(org)
+                    const initial = (org.name || '?').slice(0, 1).toUpperCase()
+                    const logo = org.logo_url as string | null | undefined
+
+                    return (
+                      <li
+                        key={org.id}
+                        className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col gap-4 shadow-sm hover:border-gray-300 transition-colors"
+                      >
+                        <div className="flex gap-3 min-w-0">
+                          <div className="relative h-11 w-11 shrink-0 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center text-sm font-semibold text-gray-500">
+                            {logo ? (
+                              <Image
+                                src={logo}
+                                alt=""
+                                width={44}
+                                height={44}
+                                className="object-cover w-full h-full"
+                              />
+                            ) : (
+                              initial
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-gray-900 truncate">{org.name}</p>
+                            <p className="text-xs text-gray-500 truncate font-mono">{address}</p>
+                            <span className="inline-block text-[10px] px-1.5 py-0.5 rounded-md bg-gray-100 text-gray-600 capitalize mt-2">
+                              {org.memberRole}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="pt-1 border-t border-gray-100">
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            Open lounge
+                          </a>
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </section>
             )}
           </div>
         )}
