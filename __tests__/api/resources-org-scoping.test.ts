@@ -8,10 +8,16 @@ import {
 jest.mock('@/lib/auth', () => ({
   requireAuth: jest.fn(),
   requireAdmin: jest.fn(),
+  isOrgPublic: jest.fn().mockResolvedValue(false),
 }))
 
 jest.mock('@/lib/supabase/server', () => ({
   createClient: jest.fn(),
+  createServiceRoleClient: jest.fn(),
+}))
+
+jest.mock('@/lib/settings', () => ({
+  getFeatureFlags: jest.fn().mockResolvedValue({ resources: true }),
 }))
 
 describe('Resources org scoping', () => {
