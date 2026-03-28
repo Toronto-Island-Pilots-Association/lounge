@@ -1,21 +1,8 @@
 import type { Metadata } from 'next'
-import { IBM_Plex_Sans, Space_Grotesk } from 'next/font/google'
 import '@/app/styles/club-lounge-landing.css'
 
 const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'
 const BASE_URL = `https://${ROOT_DOMAIN}`
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-cl-display',
-})
-
-const ibmPlex = IBM_Plex_Sans({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '600'],
-  variable: '--font-cl-body',
-})
 
 const TITLE = 'Club Lounge — Private Community Software for Clubs & Associations'
 const DESCRIPTION =
@@ -57,5 +44,5 @@ export const metadata: Metadata = {
 }
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
-  return <div className={`${spaceGrotesk.variable} ${ibmPlex.variable}`}>{children}</div>
+  return <>{children}</>
 }

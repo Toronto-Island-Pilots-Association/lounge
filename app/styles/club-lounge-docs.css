@@ -1,7 +1,7 @@
 /* Club Lounge docs — light, readable, scoped to .cl-docs-root */
 
 .cl-docs-root {
-  font-family: var(--font-cl-body, 'IBM Plex Sans', system-ui, sans-serif);
+  font-family: var(--font-inter-tight, system-ui, sans-serif);
   background: #f8f9fa;
   color: #111827;
   min-height: 100vh;
@@ -26,7 +26,7 @@
 }
 
 .cl-docs-logo {
-  font-family: var(--font-cl-display, 'Space Grotesk', sans-serif);
+  font-family: var(--font-inter-tight, system-ui, sans-serif);
   font-size: 1.125rem;
   font-weight: 700;
   color: #0d1e26;
@@ -153,7 +153,7 @@
 /* ── Index page ─────────────────────────────────────────── */
 
 .cl-docs-index-title {
-  font-family: var(--font-cl-display, 'Space Grotesk', sans-serif);
+  font-family: var(--font-inter-tight, system-ui, sans-serif);
   font-size: 2rem;
   font-weight: 700;
   color: #0d1e26;
@@ -174,7 +174,7 @@
 }
 
 .cl-docs-index-cat {
-  font-family: var(--font-cl-display, 'Space Grotesk', sans-serif);
+  font-family: var(--font-inter-tight, system-ui, sans-serif);
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -239,7 +239,7 @@
 }
 
 .cl-docs-article-title {
-  font-family: var(--font-cl-display, 'Space Grotesk', sans-serif);
+  font-family: var(--font-inter-tight, system-ui, sans-serif);
   font-size: 1.875rem;
   font-weight: 700;
   color: #0d1e26;
@@ -264,7 +264,7 @@
 }
 
 .cl-docs-section-heading {
-  font-family: var(--font-cl-display, 'Space Grotesk', sans-serif);
+  font-family: var(--font-inter-tight, system-ui, sans-serif);
   font-size: 1.125rem;
   font-weight: 600;
   color: #111827;

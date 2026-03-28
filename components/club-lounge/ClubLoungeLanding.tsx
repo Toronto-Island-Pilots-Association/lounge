@@ -246,8 +246,8 @@ export function ClubLoungeLanding({
               <div className="cl-mock-post">
                 <div className="cl-mock-post-head">
                   <svg className="cl-mock-mini-av" viewBox="0 0 20 20" aria-hidden>
-                    <circle cx="10" cy="10" r="10" fill="#2cdbb0" />
-                    <text x="10" y="14" textAnchor="middle" fill="#050607" fontSize="9" fontWeight="bold">
+                    <circle cx="10" cy="10" r="10" fill="#6366f1" />
+                    <text x="10" y="14" textAnchor="middle" fill="#fff" fontSize="9" fontWeight="bold">
                       SL
                     </text>
                   </svg>
@@ -261,8 +261,8 @@ export function ClubLoungeLanding({
               <div className="cl-mock-post">
                 <div className="cl-mock-post-head">
                   <svg className="cl-mock-mini-av" viewBox="0 0 20 20" aria-hidden>
-                    <circle cx="10" cy="10" r="10" fill="#ffb84d" />
-                    <text x="10" y="14" textAnchor="middle" fill="#050607" fontSize="9" fontWeight="bold">
+                    <circle cx="10" cy="10" r="10" fill="#f59e0b" />
+                    <text x="10" y="14" textAnchor="middle" fill="#fff" fontSize="9" fontWeight="bold">
                       MK
                     </text>
                   </svg>
