@@ -19,7 +19,7 @@ import {
 } from '@/lib/settings'
 import { clubShortFromDisplayName } from '@/lib/org'
 import { createClient } from '@/lib/supabase/server'
-import { Resource, Event, TIPA_ORG_ID, getMembershipLevelLabel } from '@/types/database'
+import { Resource, Event, getMembershipLevelLabel } from '@/types/database'
 import { Suspense } from 'react'
 import MembershipCard from '@/components/MembershipCard'
 import SubscriptionSection from '@/components/SubscriptionSection'
@@ -245,7 +245,6 @@ export default async function MembershipPage({
                       validThruDate={validThruDate}
                       isOnTrial={showTrial}
                       clubBrand={clubBrandForCard}
-                      preferTipaMarkWhenNoLogo={user.profile.org_id === TIPA_ORG_ID}
                     />
                   )}
 

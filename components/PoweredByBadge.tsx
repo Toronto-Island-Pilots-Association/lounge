@@ -1,5 +1,4 @@
 import { headers } from 'next/headers'
-import { TIPA_ORG_ID } from '@/types/database'
 import { createClient } from '@/lib/supabase/server'
 import { getPlanDef, DEFAULT_PLAN } from '@/lib/plans'
 
@@ -12,7 +11,8 @@ export default async function PoweredByBadge() {
   let ref: string | undefined
   try {
     const h = await headers()
-    const orgId = h.get('x-org-id') ?? TIPA_ORG_ID
+    const orgId = h.get('x-org-id')
+    if (!orgId) return null
     const supabase = await createClient()
     const { data: org } = await supabase
       .from('organizations')

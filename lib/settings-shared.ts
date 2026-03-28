@@ -1,5 +1,3 @@
-import { TIPA_ORG_ID } from '@/types/database'
-
 /** Open string — orgs can define any level key */
 export type MembershipLevelKey = string
 
@@ -34,30 +32,3 @@ export const DEFAULT_SIGNUP_FIELDS: SignupField[] = [
   { key: 'how_did_you_hear', label: 'How Did You Hear', group: 'application', enabled: true, required: false },
 ]
 
-/** Built-in signup sections only rendered for TIPA; other orgs use custom fields instead. */
-const TIPA_ONLY_SIGNUP_FIELD_KEYS = new Set([
-  'aviation_info',
-  'fly_frequency',
-  'student_pilot',
-  'copa_membership',
-  'interests',
-])
-
-export function signupFieldIsTipaOnlyBuiltIn(key: string): boolean {
-  return TIPA_ONLY_SIGNUP_FIELD_KEYS.has(key)
-}
-
-export function isTipaOrgId(orgId: string): boolean {
-  return orgId === TIPA_ORG_ID
-}
-
-/** Force TIPA-only built-in sections off for non-TIPA orgs (read + save). */
-export function gateTipaOnlySignupFields(fields: SignupField[], orgId: string): SignupField[] {
-  if (orgId === TIPA_ORG_ID) return fields
-  return fields.map(f => {
-    if (f.isCustom !== true && signupFieldIsTipaOnlyBuiltIn(f.key)) {
-      return { ...f, enabled: false, required: false }
-    }
-    return f
-  })
-}

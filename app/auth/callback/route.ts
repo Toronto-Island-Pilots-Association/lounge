@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import { TIPA_ORG_ID } from '@/types/database'
 import { ROOT_DOMAIN, getDomainType } from '@/lib/org'
 
 /** Returns true if the URL is safe to redirect to after auth. */
@@ -76,9 +75,6 @@ export async function GET(request: Request) {
       }
     }
   }
-  orgId = orgId ?? TIPA_ORG_ID
-  const isTipa = orgId === TIPA_ORG_ID
-
   // The origin to use for onboarding redirects (e.g. /become-a-member, /complete-profile).
   // For cross-domain callbacks, use the org's origin; otherwise use the current request origin.
   const orgOrigin = nextUrl.origin !== requestOrigin ? nextUrl.origin : requestOrigin
@@ -122,13 +118,13 @@ export async function GET(request: Request) {
       }
     }
 
-    // For platform routes, skip TIPA-specific profile checks and redirect directly
+    // For platform routes, skip org profile checks and redirect directly
     const nextPath = nextUrl.pathname
     if (nextPath.startsWith('/platform')) {
       return NextResponse.redirect(next)
     }
 
-    if (data.user) {
+    if (data.user && orgId) {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
       let adminClient = null
       
@@ -207,21 +203,8 @@ export async function GET(request: Request) {
       )
       
       if (!profile && isProfileNotFound) {
-        // New Google user with no profile in this org
-        if (isTipa) {
-          // TIPA: redirect to complete profile (org-specific onboarding)
-          return NextResponse.redirect(new URL('/complete-profile', orgOrigin))
-        }
-        // Other orgs: redirect to membership application so they can join
+        // New Google user with no profile in this org — redirect to membership application
         return NextResponse.redirect(new URL('/become-a-member', orgOrigin))
-      }
-
-      // TIPA-specific: check if profile is missing aviation fields
-      if (profile && isTipa) {
-        const isIncomplete = !profile.phone && !profile.pilot_license_type && !profile.aircraft_type
-        if (isIncomplete) {
-          return NextResponse.redirect(new URL('/complete-profile', orgOrigin))
-        }
       }
 
       // Track if this is a new user (profile was just created by trigger)
@@ -240,8 +223,8 @@ export async function GET(request: Request) {
         }
       }
 
-      // Send welcome email and admin notifications (TIPA only for now)
-      if (profile && isNewUser && isTipa) {
+      // Send welcome email and admin notifications for new org members
+      if (profile && isNewUser) {
         try {
           const { sendWelcomeEmail } = await import('@/lib/resend')
           const displayName = profile.full_name || profile.first_name || profile.email || 'Member'

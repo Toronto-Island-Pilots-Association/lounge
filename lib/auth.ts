@@ -1,6 +1,6 @@
 import { createClient } from './supabase/server'
 import { headers } from 'next/headers'
-import { MemberProfile, TIPA_ORG_ID, UserProfile } from '@/types/database'
+import { MemberProfile, UserProfile } from '@/types/database'
 import { isStripeEnabled } from '@/lib/stripe'
 
 /** Read the org id injected by middleware from request headers. */
@@ -34,7 +34,6 @@ export async function isOrgStripeConnected(): Promise<boolean> {
     if (data.stripe_account_id) {
       return data.stripe_charges_enabled === true
     }
-    if (orgId === TIPA_ORG_ID) return true
     return false
   } catch {
     return false

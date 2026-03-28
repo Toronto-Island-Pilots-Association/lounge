@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import type { OrgFeatureFlags, OrgIdentity } from '@/lib/settings'
 import type { SignupField, SignupFieldType } from '@/lib/settings-shared'
-import { signupFieldIsTipaOnlyBuiltIn } from '@/lib/settings-shared'
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 const TABS = ['Club', 'Features', 'Signup', 'Emails'] as const
@@ -370,7 +369,6 @@ function CustomFieldEditor({
 
 function SignupTab() {
   const [fields, setFields] = useState<SignupField[]>([])
-  const [isTipaOrg, setIsTipaOrg] = useState<boolean | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -384,15 +382,12 @@ function SignupTab() {
       .then(r => r.ok ? r.json() : Promise.reject())
       .then(d => {
         setFields(d.fields)
-        setIsTipaOrg(typeof d.isTipaOrg === 'boolean' ? d.isTipaOrg : null)
       })
       .catch(() => {})
   }, [])
 
   const systemFields = fields.filter(f => !f.isCustom)
-  const builtInRows = systemFields.filter(
-    f => isTipaOrg === true || !signupFieldIsTipaOnlyBuiltIn(f.key)
-  )
+  const builtInRows = systemFields
   const customFields = fields.filter(f => f.isCustom)
 
   const toggle = (key: string, prop: 'enabled' | 'required') =>
@@ -408,8 +403,6 @@ function SignupTab() {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error((data as { error?: string }).error || 'Failed')
       setFields((data as { fields: SignupField[] }).fields)
-      const tipa = (data as { isTipaOrg?: boolean }).isTipaOrg
-      if (typeof tipa === 'boolean') setIsTipaOrg(tipa)
       setSuccess(true); setTimeout(() => setSuccess(false), 3000)
     } catch (e) { setError(e instanceof Error ? e.message : 'Failed') }
     finally { setSaving(false) }
@@ -451,11 +444,7 @@ function SignupTab() {
       <div className="space-y-3">
         <SectionHeader
           title="Built-in sections"
-          description={
-            isTipaOrg === true
-              ? 'Show or hide the preset sections on the signup form.'
-              : 'Standard sections for every club. Aviation and TIPA-specific options are hidden — use custom fields for your org.'
-          }
+          description="Show or hide the preset sections on the signup form."
         />
         <div className="rounded-md border border-gray-200 divide-y divide-gray-100">
           <div className="grid grid-cols-[1fr_80px_80px] gap-2 px-4 py-2 bg-gray-50 text-xs font-medium text-gray-500 uppercase tracking-wide">

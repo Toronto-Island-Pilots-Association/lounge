@@ -7,7 +7,6 @@ import Loading from '@/components/Loading'
 import PasswordInput from '@/components/PasswordInput'
 import { COUNTRIES, getStatesProvinces } from './constants'
 import type { MembershipLevelKey, SignupField } from '@/lib/settings-shared'
-import { signupFieldIsTipaOnlyBuiltIn } from '@/lib/settings-shared'
 
 const DEFAULT_FEES: Record<MembershipLevelKey, number> = {
   Full: 45,
@@ -22,15 +21,11 @@ function BecomeMemberForm() {
   const [signupFields, setSignupFields] = useState<SignupField[] | null>(null)
   const [enabledLevels, setEnabledLevels] = useState<Record<MembershipLevelKey, boolean> | null>(null)
   const [orgName, setOrgName] = useState<string>('')
-  const [isTipaOrg, setIsTipaOrg] = useState(false)
   const [orgConfigReady, setOrgConfigReady] = useState(false)
 
   // Helper: is a signup field section enabled?
   const fieldEnabled = (key: string) => {
-    if (!signupFields) {
-      // Avoid flashing TIPA-only blocks on other orgs before config loads
-      return signupFieldIsTipaOnlyBuiltIn(key) ? false : true
-    }
+    if (!signupFields) return false
     return signupFields.find(f => f.key === key)?.enabled ?? false
   }
   const fieldRequired = (key: string) => {
@@ -48,12 +43,10 @@ function BecomeMemberForm() {
         if (data.signupFields)     setSignupFields(data.signupFields)
         if (data.membership?.enabledLevels) setEnabledLevels(data.membership.enabledLevels)
         if (data.org?.name)        setOrgName(data.org.displayName || data.org.name)
-        setIsTipaOrg(data.org?.isTipaOrg === true)
         setOrgConfigReady(true)
       })
       .catch(() => {
         setOrgConfigReady(true)
-        setIsTipaOrg(false)
       })
     return () => { cancelled = true }
   }, [])
@@ -941,20 +934,8 @@ function BecomeMemberForm() {
                     onChange={handleChange}
                   />
                   <span className="text-sm text-gray-700">
-                    {isTipaOrg ? (
-                      <>
-                        I have reviewed and agree to TIPA&apos;s{' '}
-                        <Link href="https://tipa.ca/tipa-by-laws/" target="_blank" rel="noopener noreferrer" className="text-[#0d1e26] underline hover:no-underline">
-                          By-Laws
-                        </Link>{' '}
-                        <span className="text-red-500">*</span>
-                      </>
-                    ) : (
-                      <>
-                        I have reviewed and agree to this organization&apos;s governing documents (by-laws, constitution, or equivalent).{' '}
-                        <span className="text-red-500">*</span>
-                      </>
-                    )}
+                    I have reviewed and agree to this organization&apos;s governing documents (by-laws, constitution, or equivalent).{' '}
+                    <span className="text-red-500">*</span>
                   </span>
                 </label>
                 <label className="flex items-start">
@@ -967,20 +948,8 @@ function BecomeMemberForm() {
                     onChange={handleChange}
                   />
                   <span className="text-sm text-gray-700">
-                    {isTipaOrg ? (
-                      <>
-                        I have reviewed and agree to the{' '}
-                        <Link href="https://tipa.ca/membership-policy/" target="_blank" rel="noopener noreferrer" className="text-[#0d1e26] underline hover:no-underline">
-                          Governance & Membership Policy
-                        </Link>{' '}
-                        <span className="text-red-500">*</span>
-                      </>
-                    ) : (
-                      <>
-                        I have reviewed and agree to this organization&apos;s membership terms and policies.{' '}
-                        <span className="text-red-500">*</span>
-                      </>
-                    )}
+                    I have reviewed and agree to this organization&apos;s membership terms and policies.{' '}
+                    <span className="text-red-500">*</span>
                   </span>
                 </label>
                 <label className="flex items-start">
