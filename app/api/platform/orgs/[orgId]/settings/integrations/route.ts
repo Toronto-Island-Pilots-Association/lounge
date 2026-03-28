@@ -68,8 +68,8 @@ export async function POST(
     await db.from('organizations').update({ stripe_account_id: accountId }).eq('id', orgId)
   }
 
-  const return_url = `${baseUrl}/platform/dashboard/${orgId}/integrations?stripe=return`
-  const refresh_url = `${baseUrl}/platform/dashboard/${orgId}/integrations?stripe=refresh`
+  const return_url = `${baseUrl}/platform/dashboard/${orgId}/settings/integrations?stripe=return`
+  const refresh_url = `${baseUrl}/platform/dashboard/${orgId}/settings/integrations?stripe=refresh`
 
   const accountLink = await stripe.accountLinks.create({
     account: accountId,

@@ -12,6 +12,10 @@ jest.mock('@/lib/supabase/server', () => ({
   createServiceRoleClient: jest.fn(),
 }))
 
+jest.mock('@/lib/platform-stripe-onboarding', () => ({
+  syncOrgStripeByConnectedAccountId: jest.fn().mockResolvedValue(undefined),
+}))
+
 describe('/api/platform/stripe/webhook', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -69,6 +73,33 @@ describe('/api/platform/stripe/webhook', () => {
       stripe_subscription_id: subscriptionId,
       plan: planKey,
     })
+  })
+
+  it('syncs Connect capabilities on account.updated', async () => {
+    const { getPlatformStripeInstance } = require('@/lib/stripe')
+    const { syncOrgStripeByConnectedAccountId } = require('@/lib/platform-stripe-onboarding')
+
+    const stripe = {
+      webhooks: {
+        constructEvent: jest.fn().mockReturnValue({
+          type: 'account.updated',
+          data: {
+            object: { id: 'acct_test_1' },
+          },
+        }),
+      },
+    }
+    getPlatformStripeInstance.mockReturnValue(stripe)
+
+    const request = new Request('http://example.com/api/platform/stripe/webhook', {
+      method: 'POST',
+      headers: { 'stripe-signature': 'sig_test' },
+      body: 'raw-body',
+    })
+
+    const res = await POST(request as any)
+    expect(res.status).toBe(200)
+    expect(syncOrgStripeByConnectedAccountId).toHaveBeenCalledWith('acct_test_1')
   })
 })
 

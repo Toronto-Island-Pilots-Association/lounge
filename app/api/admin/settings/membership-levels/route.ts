@@ -1,29 +1,8 @@
 import { requireAdmin } from '@/lib/auth'
-import { getMembershipLevels, getOrgPlan, setMembershipLevels, type OrgMembershipLevel } from '@/lib/settings'
+import { parseMembershipLevelsBody } from '@/lib/membership-levels-body'
+import { getMembershipLevels, getOrgPlan, setMembershipLevels } from '@/lib/settings'
 import { getPlanDef } from '@/lib/plans'
 import { NextResponse } from 'next/server'
-
-const TRIAL_TYPES = ['none', 'months'] as const
-
-function validateLevels(body: unknown): OrgMembershipLevel[] | null {
-  if (!Array.isArray(body) || body.length === 0) return null
-  const levels: OrgMembershipLevel[] = []
-  for (const item of body) {
-    if (typeof item !== 'object' || item === null) return null
-    const { key, label, fee, trialType, trialMonths, enabled } = item as Record<string, unknown>
-    if (typeof key !== 'string' || !key) return null
-    if (typeof label !== 'string') return null
-    if (typeof fee !== 'number' || fee < 0) return null
-    if (!TRIAL_TYPES.includes(trialType as typeof TRIAL_TYPES[number])) return null
-    if (typeof enabled !== 'boolean') return null
-    const level: OrgMembershipLevel = { key, label, fee, trialType: trialType as OrgMembershipLevel['trialType'], enabled }
-    if (trialType === 'months') {
-      level.trialMonths = typeof trialMonths === 'number' && trialMonths >= 1 ? trialMonths : 12
-    }
-    levels.push(level)
-  }
-  return levels
-}
 
 export async function GET() {
   try {
@@ -42,7 +21,7 @@ export async function PUT(request: Request) {
   try {
     await requireAdmin()
     const body = await request.json()
-    const levels = validateLevels(body)
+    const levels = parseMembershipLevelsBody(body)
     if (!levels) {
       return NextResponse.json({ error: 'Invalid body: expected array of membership levels' }, { status: 400 })
     }

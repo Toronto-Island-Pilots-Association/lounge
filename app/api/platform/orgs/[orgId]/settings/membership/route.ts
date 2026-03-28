@@ -1,5 +1,7 @@
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
-import { getMembershipLevels, setMembershipLevels, type OrgMembershipLevel } from '@/lib/settings'
+import { parseMembershipLevelsBody } from '@/lib/membership-levels-body'
+import { getMembershipLevels, getOrgPlan, setMembershipLevels } from '@/lib/settings'
+import { getPlanDef } from '@/lib/plans'
 import { NextResponse } from 'next/server'
 
 async function verifyAdmin(orgId: string) {
@@ -24,8 +26,9 @@ export async function GET(
   const { orgId } = await params
   const user = await verifyAdmin(orgId)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const levels = await getMembershipLevels(orgId)
-  return NextResponse.json({ levels })
+  const [levels, plan] = await Promise.all([getMembershipLevels(orgId), getOrgPlan(orgId)])
+  const memberTrialsEnabled = getPlanDef(plan).features.memberTrials
+  return NextResponse.json({ levels, memberTrialsEnabled })
 }
 
 export async function PUT(
@@ -35,10 +38,12 @@ export async function PUT(
   const { orgId } = await params
   const user = await verifyAdmin(orgId)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const body = await request.json() as OrgMembershipLevel[]
-  if (!Array.isArray(body) || body.length === 0)
-    return NextResponse.json({ error: 'Invalid levels' }, { status: 400 })
-  await setMembershipLevels(body, orgId)
-  const levels = await getMembershipLevels(orgId)
-  return NextResponse.json({ levels })
+  const body = await request.json()
+  const levels = parseMembershipLevelsBody(body)
+  if (!levels) {
+    return NextResponse.json({ error: 'Invalid body: expected array of membership levels' }, { status: 400 })
+  }
+  await setMembershipLevels(levels, orgId)
+  const updated = await getMembershipLevels(orgId)
+  return NextResponse.json({ levels: updated })
 }

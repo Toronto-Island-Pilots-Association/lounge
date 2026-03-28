@@ -10,8 +10,8 @@ type NavItem =
 type NavGroup = { label: string; items: NavItem[] }
 
 /**
- * Membership, signup, and email templates are edited on the lounge hostname — those APIs
- * resolve org from `x-org-id` (subdomain). Platform dashboard links there with `?tab=`.
+ * Signup form and email templates are edited on the lounge hostname (APIs use `x-org-id`).
+ * General, membership, features, and integrations are under `/settings/*` on the platform host.
  */
 export default function PlatformSideNav({
   orgId,
@@ -28,18 +28,16 @@ export default function PlatformSideNav({
       label: 'Configure',
       items: [
         { label: 'General', href: `${base}/settings/general` },
-        { label: 'Membership', href: `${loungeAdminSettingsUrl}?tab=Membership`, external: true },
+        { label: 'Membership', href: `${base}/settings/membership` },
         { label: 'Features', href: `${base}/settings/features` },
+        { label: 'Integrations', href: `${base}/settings/integrations` },
         { label: 'Signup form', href: `${loungeAdminSettingsUrl}?tab=Signup`, external: true },
         { label: 'Emails', href: `${loungeAdminSettingsUrl}?tab=Emails`, external: true },
       ],
     },
     {
       label: 'Business',
-      items: [
-        { label: 'Billing & plan', href: `${base}/billing` },
-        { label: 'Integrations', href: `${base}/integrations` },
-      ],
+      items: [{ label: 'Billing & plan', href: `${base}/billing` }],
     },
   ]
 
