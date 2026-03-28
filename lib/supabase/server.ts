@@ -28,7 +28,12 @@ export async function createClient() {
   return createServerClient(url, anonKey, {
     cookies: {
       getAll() {
-        return cookieStore.getAll()
+        try {
+          return cookieStore.getAll()
+        } catch {
+          // Corrupted or non-UTF-8 cookie value — treat as no session
+          return []
+        }
       },
       setAll(cookiesToSet) {
         try {
