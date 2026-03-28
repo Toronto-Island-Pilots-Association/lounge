@@ -1,4 +1,5 @@
 import { DiscussionCategory, TIPA_ORG_ID } from '@/types/database'
+import type { OrgDiscussionCategory } from '@/lib/settings'
 
 // ─── Per-org category config ──────────────────────────────────────────────────
 
@@ -48,6 +49,30 @@ export const DEFAULT_CATEGORY_CONFIG: OrgCategoryConfig = {
 export function getCategoryConfig(orgId: string | null): OrgCategoryConfig {
   if (orgId === TIPA_ORG_ID) return TIPA_CATEGORY_CONFIG
   return DEFAULT_CATEGORY_CONFIG
+}
+
+/**
+ * Build an OrgCategoryConfig from the org's stored discussion categories.
+ * Used when categories are fetched from the DB rather than hardcoded.
+ */
+export function categoryConfigFromDb(dbCategories: OrgDiscussionCategory[]): OrgCategoryConfig {
+  const enabled = dbCategories.filter(c => c.enabled)
+  const discussionCategories = enabled
+    .filter(c => c.type === 'discussion')
+    .map(c => c.slug as DiscussionCategory)
+  const classifiedCategories = enabled
+    .filter(c => c.type === 'classified')
+    .map(c => c.slug as DiscussionCategory)
+
+  const categoryLabels = Object.fromEntries(
+    dbCategories.map(c => [c.slug, c.label])
+  ) as Record<DiscussionCategory, string>
+
+  const categoryDescriptions = Object.fromEntries(
+    dbCategories.map(c => [c.slug, CATEGORY_DESCRIPTIONS[c.slug as DiscussionCategory] ?? ''])
+  ) as Record<DiscussionCategory, string>
+
+  return { discussionCategories, classifiedCategories, categoryLabels, categoryDescriptions }
 }
 
 // ─── TIPA-specific config (defined after the label maps below) ────────────────

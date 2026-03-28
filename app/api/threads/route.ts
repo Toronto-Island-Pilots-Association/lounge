@@ -1,8 +1,7 @@
 import { requireAuth } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
-import { getFeatureFlags } from '@/lib/settings'
+import { getFeatureFlags, getDiscussionCategories } from '@/lib/settings'
 import { NextResponse } from 'next/server'
-import { DiscussionCategory } from '@/types/database'
 
 export async function GET() {
   try {
@@ -86,11 +85,10 @@ export async function POST(request: Request) {
       )
     }
 
-    // Validate category
-    // Import ALL_CATEGORIES from constants (but we can't import from app directory in API routes)
-    // So we keep it here but it should match ALL_CATEGORIES in app/discussions/constants.ts
-    const validCategories: DiscussionCategory[] = ['introduce_yourself', 'aircraft_shares', 'instructor_availability', 'gear_for_sale', 'flying_at_ytz', 'general_aviation', 'training_safety_proficiency', 'wanted', 'building_a_better_tipa', 'other']
-    const threadCategory = category && validCategories.includes(category) ? category : 'other'
+    // Validate category against this org's configured categories
+    const orgCategories = await getDiscussionCategories(orgId)
+    const validSlugs = orgCategories.filter(c => c.enabled).map(c => c.slug)
+    const threadCategory = category && validSlugs.includes(category) ? category : 'other'
 
     // Validate image_urls (should be an array of strings, max 5)
     const imageUrls = Array.isArray(image_urls) 

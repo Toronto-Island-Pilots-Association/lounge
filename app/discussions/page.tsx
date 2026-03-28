@@ -9,8 +9,8 @@ import { Thread, DiscussionCategory, ThreadWithData, ThreadAuthor } from '@/type
 import Sidebar from './Sidebar'
 import MobileFilters from './MobileFilters'
 import ThreadContentPreview from './ThreadContentPreview'
-import { getCategoryConfig } from './constants'
-import { getFeatureFlags } from '@/lib/settings'
+import { categoryConfigFromDb } from './constants'
+import { getFeatureFlags, getDiscussionCategories } from '@/lib/settings'
 import { CategoryIconLarge } from './CategoryIcons'
 import { formatRelativeDate } from './utils'
 
@@ -35,10 +35,11 @@ export default async function DiscussionsPage({
   const h = await headers()
   const orgId = isGuest ? h.get('x-org-id') : user!.profile.org_id
 
-  const [featureFlags, categoryConfig] = await Promise.all([
+  const [featureFlags, dbCategories] = await Promise.all([
     getFeatureFlags(),
-    Promise.resolve(getCategoryConfig(orgId)),
+    getDiscussionCategories(orgId ?? undefined),
   ])
+  const categoryConfig = categoryConfigFromDb(dbCategories)
 
   // Guests use service role (bypasses RLS); logged-in users use their session
   const supabase = isGuest ? createServiceRoleClient() : await createClient()

@@ -13,7 +13,8 @@ import DeleteCommentButton from './DeleteCommentButton'
 import ThreadImages from '@/components/ThreadImages'
 import ContentWithLinkPreviews from '@/components/ContentWithLinkPreviews'
 import Sidebar from '../Sidebar'
-import { getCategoryConfig } from '../constants'
+import { categoryConfigFromDb } from '../constants'
+import { getDiscussionCategories } from '@/lib/settings'
 import { formatDetailDate } from '../utils'
 import MarkThreadNotificationsRead from './MarkThreadNotificationsRead'
 
@@ -31,9 +32,11 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
   const isGuest = !user
   const h = await headers()
   const orgId = isGuest ? h.get('x-org-id') : user!.profile.org_id
-  const categoryConfig = getCategoryConfig(orgId)
-
-  const { id } = await params
+  const [{ id }, dbCategories] = await Promise.all([
+    params,
+    getDiscussionCategories(orgId ?? undefined),
+  ])
+  const categoryConfig = categoryConfigFromDb(dbCategories)
   const supabase = isGuest ? createServiceRoleClient() : await createClient()
 
   // Get thread — scoped to this org so users can't read other orgs' threads by ID

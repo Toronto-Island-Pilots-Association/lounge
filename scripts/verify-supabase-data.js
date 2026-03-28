@@ -39,7 +39,7 @@ async function main() {
     .maybeSingle()
 
   if (demoErr) fail(`organizations demo: ${demoErr.message}`)
-  if (!demoOrg) fail('No organization with slug "demo" (run migration seed_demo_org or create org)')
+  if (!demoOrg) fail('No organization with slug "demo" (run supabase db reset, or npm run db:seed-demo-org)')
   ok(`demo org exists: ${demoOrg.name} (${demoOrg.id})`)
 
   const { data: pub, error: pubErr } = await db
@@ -109,12 +109,12 @@ async function main() {
     .eq('org_id', demoOrg.id)
 
   if ((demoThreads ?? 0) < 1) {
-    console.warn('WARN: demo org has no threads — run: npx tsx --env-file=.env scripts/seed-demo-org.ts for rich demo data')
+    console.warn('WARN: demo org has no threads — run: npm run db:seed-demo-org')
   } else {
     ok(`demo org has ${demoThreads} thread(s)`)
   }
   if ((demoMembers ?? 0) < 5) {
-    console.warn('WARN: demo org has few memberships — consider seed-demo-org.ts')
+    console.warn('WARN: demo org has few memberships — run npm run db:seed-demo-org')
   } else {
     ok(`demo org has ${demoMembers} membership row(s)`)
   }

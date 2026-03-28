@@ -45,9 +45,10 @@ max_client_conn = 100
 [db.seed]
 # If enabled, seeds the database after migrations during a db reset.
 enabled = true
+# Bootstrap only (org + public_access). Full demo: npm run db:seed-demo-org (supabase/seeds/README.md).
 # Specifies an ordered list of seed files to load during db reset.
 # Supports glob patterns relative to supabase directory: './seeds/*.sql'
-sql_paths = ['./seed.sql']
+sql_paths = ['./seeds/demo_org.sql']
 
 [realtime]
 enabled = true

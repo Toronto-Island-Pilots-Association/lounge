@@ -2,14 +2,16 @@ import { Suspense } from 'react'
 import { headers } from 'next/headers'
 import Sidebar from '../Sidebar'
 import NewDiscussionForm from './NewDiscussionForm'
-import { getCategoryConfig } from '../constants'
+import { categoryConfigFromDb } from '../constants'
+import { getDiscussionCategories } from '@/lib/settings'
 
 export const dynamic = 'force-dynamic'
 
 export default async function NewDiscussionPage() {
   const h = await headers()
   const orgId = h.get('x-org-id')
-  const categoryConfig = getCategoryConfig(orgId)
+  const dbCategories = await getDiscussionCategories(orgId ?? undefined)
+  const categoryConfig = categoryConfigFromDb(dbCategories)
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">

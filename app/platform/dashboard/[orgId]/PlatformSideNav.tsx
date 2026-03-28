@@ -30,6 +30,7 @@ export default function PlatformSideNav({
         { label: 'General', href: `${base}/settings/general` },
         { label: 'Membership', href: `${base}/settings/membership` },
         { label: 'Features', href: `${base}/settings/features` },
+        { label: 'Discussions', href: `${base}/settings/discussions` },
         { label: 'Integrations', href: `${base}/settings/integrations` },
         { label: 'Signup form', href: `${loungeAdminSettingsUrl}?tab=Signup`, external: true },
         { label: 'Emails', href: `${loungeAdminSettingsUrl}?tab=Emails`, external: true },

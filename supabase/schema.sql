@@ -2,18 +2,14 @@
 -- ClubLounge / TIPA — database schema reference (public)
 -- =============================================================================
 --
--- CANONICAL SOURCE: apply files in supabase/migrations/ in timestamp order.
+-- CANONICAL SOURCE: supabase/migrations/20260329100000_clublounge_multitenant_consolidated.sql
 --   supabase db push          (linked remote)
---   supabase db reset         (local, reapplies all migrations)
+--   supabase db reset         (local: migrations + seeds/demo_org.sql bootstrap; full demo: npm run db:seed-demo-org)
 --
--- This file is NOT a full greenfield bootstrap script. The multi-tenant layout
--- is defined incrementally in migrations (notably 20260323000001_squashed_*).
--- Use this file for: quick human-readable inventory, SQL Editor patches, and
--- idempotent ADD COLUMN / GRANT snippets below.
+-- This file is NOT a full greenfield bootstrap script. Use it for: human-readable
+-- inventory, SQL Editor patches, and idempotent snippets below (legacy DBs only).
 --
--- Last reviewed: 2026-03-28 (includes organizations.favicon_url, trial_ends_at,
--- platform Stripe billing columns on organizations, org_memberships, composite
--- settings PK, member_profiles view).
+-- Last reviewed: 2026-03-29 (consolidated migration; demo seed in supabase/seeds/demo_org.sql).
 --
 -- -----------------------------------------------------------------------------
 -- Core tables (final shape — conceptual)
@@ -23,6 +19,7 @@
 --   id uuid PK, name, slug UNIQUE, custom_domain UNIQUE, subdomain UNIQUE,
 --   logo_url, created_at, updated_at,
 --   stripe_account_id, stripe_onboarding_complete,
+--   stripe_charges_enabled, stripe_payouts_enabled,
 --   plan text NOT NULL DEFAULT 'hobby',
 --   stripe_customer_id, stripe_subscription_id  -- platform billing (plan tiers)
 --   trial_ends_at                               -- org-level SaaS trial end
@@ -64,25 +61,26 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- =============================================================================
--- Idempotent column adds (migrations after squashed multi-tenancy)
--- Safe to run on a database that already has the squashed migration applied.
+-- Idempotent snippets (optional patches on DBs missing newer columns)
+-- New projects: use consolidated migration only.
 -- =============================================================================
 
--- 20260323000002_add_org_stripe_billing_fields.sql
 ALTER TABLE public.organizations
   ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT,
   ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT;
 
--- 20260323000005_org_trial_period.sql
 ALTER TABLE public.organizations
   ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMPTZ;
 
--- 20260328000007_org_favicon_url.sql
 ALTER TABLE public.organizations
   ADD COLUMN IF NOT EXISTS favicon_url TEXT;
 
+ALTER TABLE public.organizations
+  ADD COLUMN IF NOT EXISTS stripe_charges_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS stripe_payouts_enabled BOOLEAN NOT NULL DEFAULT FALSE;
+
 -- =============================================================================
--- PostgREST / API role grants (20260323000003_grant_table_permissions.sql)
+-- PostgREST / API role grants
 -- =============================================================================
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.organizations TO anon, authenticated, service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.org_memberships TO anon, authenticated, service_role;

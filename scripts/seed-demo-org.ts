@@ -1,12 +1,15 @@
 /**
- * Seed script: creates the demo org at demo.clublounge.app
- * with realistic fake data for use on the landing page.
+ * Full demo tenant seed for demo.clublounge.app (slug `demo`).
  *
- * Run against clublounge-dev:
- *   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... npx tsx scripts/seed-demo-org.ts
+ * Includes: org, default settings RPC, auth users, profiles, memberships,
+ * threads, comments, reactions, events + RSVPs, resources, payments.
  *
- * Or with .env.local:
- *   npx tsx --env-file=.env.local scripts/seed-demo-org.ts
+ * Complements SQL bootstrap `supabase/seeds/demo_org.sql` (org + public_access only).
+ * This script deletes any existing `slug = demo` org first, then rebuilds everything.
+ *
+ *   npm run db:seed-demo-org
+ *
+ * Or: npx tsx --env-file=.env.local scripts/seed-demo-org.ts
  */
 
 import { createClient } from '@supabase/supabase-js'
