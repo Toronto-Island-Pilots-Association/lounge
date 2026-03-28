@@ -1,6 +1,7 @@
 import { requireAuth } from '@/lib/auth'
 import { sendInvitationWithPasswordEmail } from '@/lib/resend'
 import { createClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/settings'
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 
@@ -31,11 +32,15 @@ export async function POST(request: Request) {
   try {
     // Allow any authenticated member to invite
     const user = await requireAuth()
+    const flags = await getFeatureFlags()
+    if (!flags.allowMemberInvitations) {
+      return NextResponse.json({ error: 'Member invitations require Starter plan or higher' }, { status: 403 })
+    }
     const orgId = user.profile?.org_id
     if (!orgId) {
       return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
     }
-    
+
     // Only allow approved members to invite (not pending/rejected/expired)
     if (user.profile.status !== 'approved' && user.profile.role !== 'admin') {
       return NextResponse.json(

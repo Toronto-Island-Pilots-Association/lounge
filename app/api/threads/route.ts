@@ -1,11 +1,16 @@
 import { requireAuth } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/settings'
 import { NextResponse } from 'next/server'
 import { DiscussionCategory } from '@/types/database'
 
 export async function GET() {
   try {
     const user = await requireAuth()
+    const flags = await getFeatureFlags()
+    if (!flags.discussions) {
+      return NextResponse.json({ error: 'Discussions are not enabled for this organization' }, { status: 403 })
+    }
     const orgId = user.profile?.org_id
     if (!orgId) return NextResponse.json({ error: 'Organization not found' }, { status: 400 })
     const supabase = await createClient()
@@ -62,6 +67,10 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const user = await requireAuth()
+    const flags = await getFeatureFlags()
+    if (!flags.discussions) {
+      return NextResponse.json({ error: 'Discussions are not enabled for this organization' }, { status: 403 })
+    }
     const body = await request.json()
     const { title, content, category, image_urls } = body
 

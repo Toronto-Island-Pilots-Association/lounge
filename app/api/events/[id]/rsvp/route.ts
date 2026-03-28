@@ -1,5 +1,6 @@
 import { requireAuth } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/settings'
 import { NextResponse } from 'next/server'
 
 // POST - RSVP to an event (authenticated, approved members only)
@@ -9,6 +10,10 @@ export async function POST(
 ) {
   try {
     const user = await requireAuth()
+    const flags = await getFeatureFlags()
+    if (!flags.events) {
+      return NextResponse.json({ error: 'Events are not enabled for this organization' }, { status: 403 })
+    }
     const orgId = user.profile.org_id
     const { id: eventId } = await params
 

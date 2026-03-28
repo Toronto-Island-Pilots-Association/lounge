@@ -1,5 +1,6 @@
 import { requireAuth, requireAdmin, isOrgPublic } from '@/lib/auth'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/settings'
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type { ResourceCategory } from '@/types/database'
@@ -51,6 +52,11 @@ export async function GET() {
       supabase = createServiceRoleClient() as any
     }
 
+    const flags = await getFeatureFlags()
+    if (!flags.resources) {
+      return NextResponse.json({ error: 'Announcements are not enabled for this organization' }, { status: 403 })
+    }
+
     const { data, error } = await supabase
       .from('resources')
       .select('*')
@@ -86,6 +92,10 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const user = await requireAdmin()
+    const flags = await getFeatureFlags()
+    if (!flags.resources) {
+      return NextResponse.json({ error: 'Announcements are not enabled for this organization' }, { status: 403 })
+    }
     const orgId = user.profile.org_id
     if (!orgId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

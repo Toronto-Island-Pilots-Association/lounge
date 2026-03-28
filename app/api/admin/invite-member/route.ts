@@ -1,6 +1,7 @@
 import { requireAdmin } from '@/lib/auth'
 import { sendInvitationWithPasswordEmail } from '@/lib/resend'
 import { createClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/settings'
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 
@@ -30,6 +31,10 @@ function generateTempPassword(): string {
 export async function POST(request: Request) {
   try {
     await requireAdmin()
+    const flags = await getFeatureFlags()
+    if (!flags.allowMemberInvitations) {
+      return NextResponse.json({ error: 'Member invitations require Starter plan or higher' }, { status: 403 })
+    }
     const orgId = request.headers.get('x-org-id')
     if (!orgId) {
       return NextResponse.json({ error: 'Missing org context' }, { status: 400 })

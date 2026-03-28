@@ -1,5 +1,6 @@
 import { requireAuth, isOrgPublic } from '@/lib/auth'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/settings'
 import { headers } from 'next/headers'
 import { sendEventNotificationEmail } from '@/lib/resend'
 import { NextResponse } from 'next/server'
@@ -49,6 +50,11 @@ export async function GET() {
       orgId = h.get('x-org-id')
       isGuest = true
       supabase = createServiceRoleClient() as any
+    }
+
+    const flags = await getFeatureFlags()
+    if (!flags.events) {
+      return NextResponse.json({ error: 'Events are not enabled for this organization' }, { status: 403 })
     }
 
     const { data, error } = await supabase
@@ -115,8 +121,12 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const user = await requireAuth()
+    const flags = await getFeatureFlags()
+    if (!flags.events) {
+      return NextResponse.json({ error: 'Events are not enabled for this organization' }, { status: 403 })
+    }
     const orgId = user.profile.org_id
-    
+
     // Check if user is admin
     if (user.profile.role !== 'admin') {
       return NextResponse.json(

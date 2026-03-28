@@ -4,6 +4,7 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { PLANS, PLAN_KEYS, type PlanKey } from '@/lib/plans'
 import ConnectStripeButton from '../../ConnectStripeButton'
 import PlanSelector from './PlanSelector'
+import DeleteOrgButton from './DeleteOrgButton'
 
 const FEATURE_ROWS: { label: string; key: keyof (typeof PLANS)[PlanKey]['features'] }[] = [
   { label: 'Member directory', key: 'memberDirectory' },
@@ -208,6 +209,21 @@ export default async function BillingPage({
                 Stripe dues collection requires the <strong>Starter</strong> plan or higher.
               </div>
             )}
+          </div>
+        </div>
+        {/* Danger zone */}
+        <div className="space-y-4">
+          <h2 className="text-sm font-semibold text-red-600 uppercase tracking-wide">Danger zone</h2>
+          <div className="bg-white rounded-xl border border-red-200 p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-gray-900">Delete this organization</p>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  Permanently remove this lounge and all its data. This cannot be undone.
+                </p>
+              </div>
+              <DeleteOrgButton orgId={orgId} orgName={org.name} />
+            </div>
           </div>
         </div>
       </div>

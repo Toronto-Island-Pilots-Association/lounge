@@ -1,5 +1,6 @@
 import { requireAuth } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/settings'
 import { NextResponse } from 'next/server'
 import { sendReplyNotificationEmail, sendMentionNotificationEmail } from '@/lib/resend'
 
@@ -9,6 +10,10 @@ export async function GET(
 ) {
   try {
     const user = await requireAuth()
+    const flags = await getFeatureFlags()
+    if (!flags.discussions) {
+      return NextResponse.json({ error: 'Discussions are not enabled for this organization' }, { status: 403 })
+    }
     const orgId = user.profile?.org_id
     if (!orgId) return NextResponse.json({ error: 'Organization not found' }, { status: 400 })
     const { id } = await params
@@ -55,6 +60,10 @@ export async function POST(
 ) {
   try {
     const user = await requireAuth()
+    const flags = await getFeatureFlags()
+    if (!flags.discussions) {
+      return NextResponse.json({ error: 'Discussions are not enabled for this organization' }, { status: 403 })
+    }
     const { id } = await params
     const body = await request.json()
     const { content, image_urls } = body

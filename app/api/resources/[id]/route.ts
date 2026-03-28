@@ -1,5 +1,6 @@
 import { requireAuth, requireAdmin } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/settings'
 import { NextResponse } from 'next/server'
 import type { ResourceCategory } from '@/types/database'
 
@@ -38,6 +39,10 @@ export async function GET(
 ) {
   try {
     const user = await requireAuth()
+    const flags = await getFeatureFlags()
+    if (!flags.resources) {
+      return NextResponse.json({ error: 'Announcements are not enabled for this organization' }, { status: 403 })
+    }
     const orgId = user.profile.org_id
     if (!orgId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -85,6 +90,10 @@ export async function PATCH(
 ) {
   try {
     const user = await requireAdmin()
+    const flags = await getFeatureFlags()
+    if (!flags.resources) {
+      return NextResponse.json({ error: 'Announcements are not enabled for this organization' }, { status: 403 })
+    }
     const orgId = user.profile.org_id
     if (!orgId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -131,6 +140,10 @@ export async function DELETE(
 ) {
   try {
     const user = await requireAdmin()
+    const flags = await getFeatureFlags()
+    if (!flags.resources) {
+      return NextResponse.json({ error: 'Announcements are not enabled for this organization' }, { status: 403 })
+    }
     const orgId = user.profile.org_id
     if (!orgId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

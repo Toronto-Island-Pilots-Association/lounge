@@ -1,5 +1,6 @@
 import { requireAuth } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/settings'
 import { NextResponse } from 'next/server'
 
 // PATCH - Update event (admin only)
@@ -9,9 +10,13 @@ export async function PATCH(
 ) {
   try {
     const user = await requireAuth()
+    const flags = await getFeatureFlags()
+    if (!flags.events) {
+      return NextResponse.json({ error: 'Events are not enabled for this organization' }, { status: 403 })
+    }
     const orgId = user.profile.org_id
     const { id } = await params
-    
+
     // Check if user is admin
     if (user.profile.role !== 'admin') {
       return NextResponse.json(
@@ -90,9 +95,13 @@ export async function DELETE(
 ) {
   try {
     const user = await requireAuth()
+    const flags = await getFeatureFlags()
+    if (!flags.events) {
+      return NextResponse.json({ error: 'Events are not enabled for this organization' }, { status: 403 })
+    }
     const orgId = user.profile.org_id
     const { id } = await params
-    
+
     // Check if user is admin
     if (user.profile.role !== 'admin') {
       return NextResponse.json(

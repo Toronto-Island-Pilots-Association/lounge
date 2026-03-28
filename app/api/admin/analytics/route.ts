@@ -1,5 +1,7 @@
 import { requireAdmin } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
+import { getOrgPlan } from '@/lib/settings'
+import { getPlanDef } from '@/lib/plans'
 import { NextResponse } from 'next/server'
 
 export interface AnalyticsPayload {
@@ -29,6 +31,10 @@ export interface AnalyticsPayload {
 export async function GET(request: Request) {
   try {
     await requireAdmin()
+    const plan = await getOrgPlan()
+    if (!getPlanDef(plan).features.analytics) {
+      return NextResponse.json({ error: 'Analytics requires Community plan or higher' }, { status: 403 })
+    }
     const supabase = await createClient()
     const orgId = request.headers.get('x-org-id')
     if (!orgId) {
