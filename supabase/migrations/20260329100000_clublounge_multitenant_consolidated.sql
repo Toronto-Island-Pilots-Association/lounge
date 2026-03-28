@@ -374,15 +374,16 @@ END $$;
 -- --------------------------------------------------------
 -- 2. Seed TIPA as the founding organization
 -- --------------------------------------------------------
-INSERT INTO public.organizations (id, name, slug, custom_domain, subdomain)
+INSERT INTO public.organizations (id, name, slug, custom_domain, subdomain, stripe_charges_enabled)
 VALUES (
   'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
   'Toronto Island Pilots Association',
   'tipa',
   'lounge.tipa.ca',
-  'tipa'
+  'tipa',
+  true  -- TIPA uses direct Stripe (no Connect account); this flag enables payment UI
 )
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET stripe_charges_enabled = true;
 
 -- --------------------------------------------------------
 -- 3. user_profiles: add user_id + org_id, rework PK

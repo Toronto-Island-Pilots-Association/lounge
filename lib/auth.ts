@@ -31,10 +31,9 @@ export async function isOrgStripeConnected(): Promise<boolean> {
       .eq('id', orgId)
       .maybeSingle()
     if (!data) return false
-    if (data.stripe_account_id) {
-      return data.stripe_charges_enabled === true
-    }
-    return false
+    // Connect orgs: account id + charges enabled
+    // Direct Stripe orgs (e.g. TIPA legacy): no account id, but charges_enabled = true signals Stripe is live
+    return data.stripe_charges_enabled === true
   } catch {
     return false
   }
