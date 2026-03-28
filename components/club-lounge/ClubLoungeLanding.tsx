@@ -595,6 +595,9 @@ export function ClubLoungeLanding({
             </NavLink>
           </li>
           <li>
+            <a href="/docs">Docs</a>
+          </li>
+          <li>
             <a href={mailto}>Contact</a>
           </li>
         </ul>
