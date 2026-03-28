@@ -1,4 +1,57 @@
-import { DiscussionCategory } from '@/types/database'
+import { DiscussionCategory, TIPA_ORG_ID } from '@/types/database'
+
+// ─── Per-org category config ──────────────────────────────────────────────────
+
+export type OrgCategoryConfig = {
+  discussionCategories: DiscussionCategory[]
+  classifiedCategories: DiscussionCategory[]
+  categoryLabels: Record<DiscussionCategory, string>
+  categoryDescriptions: Record<DiscussionCategory, string>
+}
+
+// Generic labels/descriptions for non-TIPA orgs (reuse existing DB enum keys)
+const GENERIC_LABELS: Record<DiscussionCategory, string> = {
+  introduce_yourself: 'Introduce Yourself',
+  general_aviation: 'General',
+  other: 'Other',
+  // classifieds
+  gear_for_sale: 'For Sale',
+  wanted: 'Wanted',
+  // unused in generic config but must satisfy the full record type
+  aircraft_shares: 'Aircraft Shares',
+  instructor_availability: 'Instructor Availability',
+  flying_at_ytz: 'Flying at YTZ',
+  training_safety_proficiency: 'Training & Safety',
+  building_a_better_tipa: 'Feedback',
+}
+
+const GENERIC_DESCRIPTIONS: Record<DiscussionCategory, string> = {
+  introduce_yourself: 'Say hello to the community — share a bit about yourself and what brings you here.',
+  general_aviation: 'General discussion for the community — questions, ideas, and anything on your mind.',
+  other: 'Discussions that don\'t fit anywhere else.',
+  gear_for_sale: 'Buy, sell, or trade equipment and other items.',
+  wanted: 'Post what you\'re looking for.',
+  aircraft_shares: '',
+  instructor_availability: '',
+  flying_at_ytz: '',
+  training_safety_proficiency: '',
+  building_a_better_tipa: '',
+}
+
+export const DEFAULT_CATEGORY_CONFIG: OrgCategoryConfig = {
+  discussionCategories: ['introduce_yourself', 'general_aviation', 'other'],
+  classifiedCategories: ['gear_for_sale', 'wanted'],
+  categoryLabels: GENERIC_LABELS,
+  categoryDescriptions: GENERIC_DESCRIPTIONS,
+}
+
+export function getCategoryConfig(orgId: string | null): OrgCategoryConfig {
+  if (orgId === TIPA_ORG_ID) return TIPA_CATEGORY_CONFIG
+  return DEFAULT_CATEGORY_CONFIG
+}
+
+// ─── TIPA-specific config (defined after the label maps below) ────────────────
+// (exported as TIPA_CATEGORY_CONFIG at the bottom of this file)
 
 export const CATEGORY_LABELS: Record<DiscussionCategory, string> = {
   introduce_yourself: 'Introduce Yourself',
@@ -92,4 +145,12 @@ export const CATEGORY_PLACEHOLDERS: Record<DiscussionCategory, string> = {
   wanted: 'Describe what you\'re looking for: aircraft access, instruction, gear, or other aviation-related needs...',
   building_a_better_tipa: 'Share ideas, feedback, or suggestions for improving TIPA...',
   other: 'Describe your discussion...',
+}
+
+// TIPA-specific config (uses all categories with original TIPA labels/descriptions)
+export const TIPA_CATEGORY_CONFIG: OrgCategoryConfig = {
+  discussionCategories: DISCUSSION_CATEGORIES,
+  classifiedCategories: CLASSIFIED_CATEGORIES,
+  categoryLabels: CATEGORY_LABELS,
+  categoryDescriptions: CATEGORY_DESCRIPTIONS,
 }

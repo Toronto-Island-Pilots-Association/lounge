@@ -3,10 +3,10 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import { DiscussionCategory } from '@/types/database'
-import { CATEGORY_LABELS, DISCUSSION_CATEGORIES, CLASSIFIED_CATEGORIES } from './constants'
+import { OrgCategoryConfig } from './constants'
 import CategoryIcon from './CategoryIcons'
 
-export default function MobileFilters() {
+export default function MobileFilters({ categoryConfig }: { categoryConfig: OrgCategoryConfig }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const currentSort = searchParams.get('sort') || 'latest'
@@ -87,9 +87,9 @@ export default function MobileFilters() {
             </span>
           )}
           <span className="truncate">
-            {category === 'all' 
-              ? 'All Categories' 
-              : CATEGORY_LABELS[category]}
+            {category === 'all'
+              ? 'All Categories'
+              : categoryConfig.categoryLabels[category as DiscussionCategory]}
           </span>
         </div>
         <svg className={`w-4 h-4 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -122,7 +122,7 @@ export default function MobileFilters() {
             <div className="bg-white rounded-lg border border-gray-200 p-3">
               <h3 className="text-xs font-semibold text-gray-900 mb-2 uppercase tracking-wide">Discussions</h3>
               <div className="space-y-1">
-                {DISCUSSION_CATEGORIES.map((cat) => (
+                {categoryConfig.discussionCategories.map((cat) => (
                   <button
                     key={cat}
                     onClick={() => handleCategoryChange(cat)}
@@ -135,7 +135,7 @@ export default function MobileFilters() {
                     <span className="text-base flex-shrink-0">
                       <CategoryIcon category={cat} className="w-4 h-4" />
                     </span>
-                    <span className="truncate">{CATEGORY_LABELS[cat]}</span>
+                    <span className="truncate">{categoryConfig.categoryLabels[cat]}</span>
                   </button>
                 ))}
               </div>
@@ -145,7 +145,7 @@ export default function MobileFilters() {
             <div className="bg-white rounded-lg border border-gray-200 p-3">
               <h3 className="text-xs font-semibold text-gray-900 mb-2 uppercase tracking-wide">Classifieds</h3>
               <div className="space-y-1">
-                {CLASSIFIED_CATEGORIES.map((cat) => (
+                {categoryConfig.classifiedCategories.map((cat) => (
                   <button
                     key={cat}
                     onClick={() => handleCategoryChange(cat)}
@@ -158,7 +158,7 @@ export default function MobileFilters() {
                     <span className="text-base flex-shrink-0">
                       <CategoryIcon category={cat} className="w-4 h-4" />
                     </span>
-                    <span className="truncate">{CATEGORY_LABELS[cat]}</span>
+                    <span className="truncate">{categoryConfig.categoryLabels[cat]}</span>
                   </button>
                 ))}
               </div>

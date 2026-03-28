@@ -14,7 +14,7 @@ import DeleteCommentButton from './DeleteCommentButton'
 import ThreadImages from '@/components/ThreadImages'
 import ContentWithLinkPreviews from '@/components/ContentWithLinkPreviews'
 import Sidebar from '../Sidebar'
-import { CATEGORY_LABELS } from '../constants'
+import { getCategoryConfig } from '../constants'
 import { formatDetailDate } from '../utils'
 import MarkThreadNotificationsRead from './MarkThreadNotificationsRead'
 
@@ -33,6 +33,7 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
   const h = await headers()
   const orgSlug = h.get('x-org-slug')
   const orgId = isGuest ? h.get('x-org-id') : user!.profile.org_id
+  const categoryConfig = getCategoryConfig(orgId)
 
   const { id } = await params
   const supabase = isGuest ? createServiceRoleClient() : await createClient()
@@ -172,7 +173,7 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
           {/* Sidebar - Hidden on Mobile */}
           <div className="hidden lg:block lg:col-span-1">
-            <Sidebar currentCategory={thread.category as DiscussionCategory} currentSort="latest" />
+            <Sidebar currentCategory={thread.category as DiscussionCategory} currentSort="latest" categoryConfig={categoryConfig} />
           </div>
 
           {/* Main Content */}

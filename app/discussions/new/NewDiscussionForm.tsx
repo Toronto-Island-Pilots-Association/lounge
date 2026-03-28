@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { DiscussionCategory } from '@/types/database'
 import MentionInput from '@/components/MentionInput'
 import ThreadImageUpload from '@/components/ThreadImageUpload'
-import { CATEGORY_LABELS, CATEGORY_DESCRIPTIONS, ALL_CATEGORIES, CATEGORY_PLACEHOLDERS, CATEGORY_TITLE_PLACEHOLDERS } from '../constants'
+import { CATEGORY_PLACEHOLDERS, CATEGORY_TITLE_PLACEHOLDERS, OrgCategoryConfig } from '../constants'
 
 const MAX_THREAD_IMAGES = 5
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
@@ -44,7 +44,7 @@ interface ClassifiedFields {
   hangarLocation?: string
 }
 
-function NewDiscussionFormContent() {
+function NewDiscussionFormContent({ categoryConfig }: { categoryConfig: OrgCategoryConfig }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [title, setTitle] = useState('')
@@ -101,7 +101,8 @@ function NewDiscussionFormContent() {
   useEffect(() => {
     const categoryParam = searchParams.get('category')
     if (categoryParam) {
-      if (ALL_CATEGORIES.includes(categoryParam as DiscussionCategory)) {
+      const allOrgCategories = [...categoryConfig.discussionCategories, ...categoryConfig.classifiedCategories]
+      if (allOrgCategories.includes(categoryParam as DiscussionCategory)) {
         setCategory(categoryParam as DiscussionCategory)
       }
     }
@@ -220,15 +221,15 @@ function NewDiscussionFormContent() {
           required
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-transparent"
         >
-          {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+          {[...categoryConfig.discussionCategories, ...categoryConfig.classifiedCategories].map((value) => (
             <option key={value} value={value}>
-              {label}
+              {categoryConfig.categoryLabels[value]}
             </option>
           ))}
         </select>
-        {CATEGORY_DESCRIPTIONS[category] && CATEGORY_DESCRIPTIONS[category] !== CATEGORY_LABELS[category] && (
+        {categoryConfig.categoryDescriptions[category] && categoryConfig.categoryDescriptions[category] !== categoryConfig.categoryLabels[category] && (
           <p className="mt-2 text-sm text-gray-600">
-            {CATEGORY_DESCRIPTIONS[category]}
+            {categoryConfig.categoryDescriptions[category]}
           </p>
         )}
       </div>
@@ -790,7 +791,7 @@ function NewDiscussionFormContent() {
   )
 }
 
-export default function NewDiscussionForm() {
+export default function NewDiscussionForm({ categoryConfig }: { categoryConfig: OrgCategoryConfig }) {
   return (
     <Suspense fallback={
       <div className="bg-white shadow rounded-lg p-6">
@@ -802,7 +803,7 @@ export default function NewDiscussionForm() {
         </div>
       </div>
     }>
-      <NewDiscussionFormContent />
+      <NewDiscussionFormContent categoryConfig={categoryConfig} />
     </Suspense>
   )
 }
