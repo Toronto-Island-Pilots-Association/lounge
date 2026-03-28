@@ -32,10 +32,10 @@ export const DEFAULT_SIGNUP_FIELDS: SignupField[] = [
   { key: 'membership_class',    label: 'Membership Class',    group: 'membership',  enabled: true,  required: true },
 ]
 
-/** Legacy built-in keys removed from config — dropped on read so they do not appear as system rows. */
-export const LEGACY_SIGNUP_FIELD_KEYS = new Set([
-  'aviation_info',
-  'fly_frequency',
-  'student_pilot',
-  'copa_membership',
-])
+/**
+ * Keys that were old built-in defaults (pre-multi-tenancy) and should not be
+ * auto-injected for new orgs. They are still allowed as explicitly-stored custom
+ * fields (e.g. TIPA stores them in their signup_fields_config).
+ * Kept as an empty set — list retained for reference only.
+ */
+export const LEGACY_SIGNUP_FIELD_KEYS = new Set<string>([])
