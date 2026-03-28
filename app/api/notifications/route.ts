@@ -74,13 +74,13 @@ export async function GET(request: Request) {
           .eq('org_id', orgId)
         : { data: [] },
       actorIds.length > 0
-        ? supabase.from('user_profiles').select('id, full_name, profile_picture_url').in('id', actorIds)
+        ? supabase.from('member_profiles').select('user_id, full_name, profile_picture_url').in('user_id', actorIds)
           .eq('org_id', orgId)
         : { data: [] },
     ])
 
     const threadMap = new Map((threadsRes.data || []).map((t) => [t.id, t]))
-    const actorMap = new Map((actorsRes.data || []).map((a) => [a.id, a]))
+    const actorMap = new Map((actorsRes.data || []).map((a) => [a.user_id, { id: a.user_id, full_name: a.full_name, profile_picture_url: a.profile_picture_url }]))
 
     const items: NotificationItem[] = (notifications || []).map((n) => ({
       id: n.id,

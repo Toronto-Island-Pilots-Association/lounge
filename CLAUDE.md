@@ -43,6 +43,9 @@ MemberProfile = OrgMembership & Omit<UserProfile, 'id' | 'created_at' | 'updated
 - `createClient()` — respects RLS, uses user session
 - `createServiceRoleClient()` — bypasses RLS, use only when necessary (guest reads, admin ops)
 
+### Next.js routing
+- Middleware lives in `proxy.ts` only — Next.js 16 does not allow `middleware.ts` alongside `proxy.ts`. Never create or restore `middleware.ts`.
+
 ---
 
 ## Environments
