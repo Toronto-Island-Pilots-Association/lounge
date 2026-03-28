@@ -11,7 +11,7 @@ export default async function MarketingHome() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (user) redirect('/platform/dashboard')
-  const demoOrigin = `${PROTOCOL}://demo.${ROOT_DOMAIN}${PORT}`
+  const demoOrigin = `${PROTOCOL}://demo.${ROOT_DOMAIN}${PORT}/discussions`
 
   return (
     <ClubLoungeLanding

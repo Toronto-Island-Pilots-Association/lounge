@@ -3,7 +3,8 @@ import { headers } from 'next/headers'
 import { TIPA_ORG_ID } from '@/types/database'
 import { getPlanDef, DEFAULT_PLAN } from './plans'
 
-async function getOrgId(): Promise<string> {
+async function getOrgId(override?: string): Promise<string> {
+  if (override) return override
   try {
     const h = await headers()
     return h.get('x-org-id') ?? TIPA_ORG_ID
@@ -39,8 +40,8 @@ const DEFAULT_MEMBERSHIP_LEVELS: OrgMembershipLevel[] = [
   { key: 'honorary',  label: 'Honorary',    fee: 0,   trialType: 'none',   enabled: true },
 ]
 
-export async function getMembershipLevels(): Promise<OrgMembershipLevel[]> {
-  const raw = await getSetting('membership_levels_config')
+export async function getMembershipLevels(orgId?: string): Promise<OrgMembershipLevel[]> {
+  const raw = await getSetting('membership_levels_config', orgId)
   if (raw) {
     try {
       const parsed = JSON.parse(raw)
@@ -50,9 +51,9 @@ export async function getMembershipLevels(): Promise<OrgMembershipLevel[]> {
   return DEFAULT_MEMBERSHIP_LEVELS
 }
 
-export async function setMembershipLevels(levels: OrgMembershipLevel[]): Promise<void> {
+export async function setMembershipLevels(levels: OrgMembershipLevel[], orgIdOverride?: string): Promise<void> {
   const supabase = createServiceRoleClient()
-  const orgId = await getOrgId()
+  const orgId = await getOrgId(orgIdOverride)
   const { error } = await supabase.from('settings').upsert(
     { key: 'membership_levels_config', value: JSON.stringify(levels), org_id: orgId, updated_at: new Date().toISOString() },
     { onConflict: 'key,org_id' }
@@ -60,9 +61,9 @@ export async function setMembershipLevels(levels: OrgMembershipLevel[]): Promise
   if (error) throw new Error(`Failed to save membership levels: ${error.message}`)
 }
 
-export async function getSetting(key: string): Promise<string | null> {
+export async function getSetting(key: string, orgIdOverride?: string): Promise<string | null> {
   const supabase = await createClient()
-  const orgId = await getOrgId()
+  const orgId = await getOrgId(orgIdOverride)
 
   const { data, error } = await supabase
     .from('settings')
@@ -196,10 +197,10 @@ export function getTrialEndDate(
 // ─── Org Plan ────────────────────────────────────────────────────────────────
 
 /** Returns the plan key for the current org. Falls back to DEFAULT_PLAN on error. */
-export async function getOrgPlan(): Promise<string> {
+export async function getOrgPlan(orgIdOverride?: string): Promise<string> {
   try {
     const supabase = await createClient()
-    const orgId = await getOrgId()
+    const orgId = await getOrgId(orgIdOverride)
     const { data } = await supabase
       .from('organizations')
       .select('plan, trial_ends_at')
@@ -242,9 +243,9 @@ const DEFAULT_FEATURE_FLAGS: OrgFeatureFlags = {
   resourcesLabel: 'Announcements',
 }
 
-export async function getFeatureFlags(): Promise<OrgFeatureFlags> {
+export async function getFeatureFlags(orgIdOverride?: string): Promise<OrgFeatureFlags> {
   const supabase = await createClient()
-  const orgId = await getOrgId()
+  const orgId = await getOrgId(orgIdOverride)
   const keys = [
     'feature_discussions', 'feature_events', 'feature_resources',
     'feature_member_directory', 'require_member_approval', 'allow_member_invitations',
@@ -252,7 +253,7 @@ export async function getFeatureFlags(): Promise<OrgFeatureFlags> {
   ]
   const [{ data: rows }, plan] = await Promise.all([
     supabase.from('settings').select('key, value').in('key', keys).eq('org_id', orgId),
-    getOrgPlan(),
+    getOrgPlan(orgIdOverride),
   ])
   const planFeatures = getPlanDef(plan).features
   const map = new Map((rows ?? []).map(r => [r.key, r.value]))
@@ -274,9 +275,9 @@ export async function getFeatureFlags(): Promise<OrgFeatureFlags> {
   }
 }
 
-export async function setFeatureFlags(flags: Partial<OrgFeatureFlags>): Promise<void> {
+export async function setFeatureFlags(flags: Partial<OrgFeatureFlags>, orgIdOverride?: string): Promise<void> {
   const supabase = createServiceRoleClient()
-  const orgId = await getOrgId()
+  const orgId = await getOrgId(orgIdOverride)
   const keyMap: Record<keyof OrgFeatureFlags, string> = {
     discussions:            'feature_discussions',
     events:                 'feature_events',
@@ -316,9 +317,9 @@ const DEFAULT_IDENTITY: OrgIdentity = {
   timezone: 'America/Toronto',
 }
 
-export async function getOrgIdentity(): Promise<OrgIdentity> {
+export async function getOrgIdentity(orgIdOverride?: string): Promise<OrgIdentity> {
   const supabase = await createClient()
-  const orgId = await getOrgId()
+  const orgId = await getOrgId(orgIdOverride)
   const keys = ['club_description', 'contact_email', 'website_url', 'accent_color', 'club_display_name', 'timezone']
   const { data: rows } = await supabase.from('settings').select('key, value').in('key', keys).eq('org_id', orgId)
   const map = new Map((rows ?? []).map(r => [r.key, r.value]))
@@ -333,9 +334,9 @@ export async function getOrgIdentity(): Promise<OrgIdentity> {
   }
 }
 
-export async function setOrgIdentity(identity: Partial<OrgIdentity>): Promise<void> {
+export async function setOrgIdentity(identity: Partial<OrgIdentity>, orgIdOverride?: string): Promise<void> {
   const supabase = createServiceRoleClient()
-  const orgId = await getOrgId()
+  const orgId = await getOrgId(orgIdOverride)
   const keyMap: Record<keyof OrgIdentity, string> = {
     description:  'club_description',
     contactEmail: 'contact_email',
@@ -397,8 +398,8 @@ const DEFAULT_SIGNUP_FIELDS: SignupField[] = [
   { key: 'how_did_you_hear',     label: 'How Did You Hear',         group: 'application', enabled: true,  required: false },
 ]
 
-export async function getSignupFieldsConfig(): Promise<SignupField[]> {
-  const raw = await getSetting('signup_fields_config')
+export async function getSignupFieldsConfig(orgIdOverride?: string): Promise<SignupField[]> {
+  const raw = await getSetting('signup_fields_config', orgIdOverride)
   if (!raw) return DEFAULT_SIGNUP_FIELDS
   try {
     const parsed = JSON.parse(raw)
@@ -407,9 +408,9 @@ export async function getSignupFieldsConfig(): Promise<SignupField[]> {
   return DEFAULT_SIGNUP_FIELDS
 }
 
-export async function setSignupFieldsConfig(fields: SignupField[]): Promise<void> {
+export async function setSignupFieldsConfig(fields: SignupField[], orgIdOverride?: string): Promise<void> {
   const supabase = createServiceRoleClient()
-  const orgId = await getOrgId()
+  const orgId = await getOrgId(orgIdOverride)
   const { error } = await supabase.from('settings').upsert(
     { key: 'signup_fields_config', value: JSON.stringify(fields), org_id: orgId, updated_at: new Date().toISOString() },
     { onConflict: 'key,org_id' }
@@ -421,9 +422,9 @@ export async function setSignupFieldsConfig(fields: SignupField[]): Promise<void
 
 export type EmailTemplates = { subject: string; body: string }
 
-export async function getEmailTemplates(): Promise<EmailTemplates> {
+export async function getEmailTemplates(orgIdOverride?: string): Promise<EmailTemplates> {
   const supabase = await createClient()
-  const orgId = await getOrgId()
+  const orgId = await getOrgId(orgIdOverride)
   const { data: rows } = await supabase
     .from('settings').select('key, value')
     .in('key', ['welcome_email_subject', 'welcome_email_body'])
@@ -435,9 +436,9 @@ export async function getEmailTemplates(): Promise<EmailTemplates> {
   }
 }
 
-export async function setEmailTemplates(templates: Partial<EmailTemplates>): Promise<void> {
+export async function setEmailTemplates(templates: Partial<EmailTemplates>, orgIdOverride?: string): Promise<void> {
   const supabase = createServiceRoleClient()
-  const orgId = await getOrgId()
+  const orgId = await getOrgId(orgIdOverride)
   const rows = []
   if (templates.subject !== undefined)
     rows.push({ key: 'welcome_email_subject', value: templates.subject, org_id: orgId, updated_at: new Date().toISOString() })

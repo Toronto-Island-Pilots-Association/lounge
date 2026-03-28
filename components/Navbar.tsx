@@ -19,6 +19,8 @@ type OrgConfig = {
 export default function Navbar() {
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<MemberProfile | null>(null)
+  /** Public org, not logged in — can browse discussions, events, announcements, etc. */
+  const [isGuest, setIsGuest] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [isDevEnvironment, setIsDevEnvironment] = useState(false)
@@ -48,6 +50,15 @@ export default function Navbar() {
         const response = await fetch('/api/profile')
         if (response.ok) {
           const data = await response.json()
+          if (data.isGuest) {
+            setIsGuest(true)
+            setProfile(null)
+            setUser(null)
+            setPendingCount(0)
+            setNotificationCount(0)
+            return
+          }
+          setIsGuest(false)
           setProfile(data.profile)
           setUser({ id: data.profile.id, email: data.profile.email })
 
@@ -62,6 +73,7 @@ export default function Navbar() {
             setNotificationCount(0)
           }
         } else {
+          setIsGuest(false)
           setProfile(null)
           setUser(null)
           setPendingCount(0)
@@ -69,6 +81,7 @@ export default function Navbar() {
         }
       } catch (error) {
         console.error('Error loading user data:', error)
+        setIsGuest(false)
         setProfile(null)
         setUser(null)
         setPendingCount(0)
@@ -88,12 +101,7 @@ export default function Navbar() {
     const supabase = createClient()
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_IN') loadUserData(true)
-      if (event === 'SIGNED_OUT') {
-        setProfile(null)
-        setUser(null)
-        setPendingCount(0)
-        setNotificationCount(0)
-      }
+      if (event === 'SIGNED_OUT') loadUserData(false)
     })
 
     return () => {
@@ -169,6 +177,9 @@ export default function Navbar() {
     setUserMenuOpen(false)
   }
 
+  const showMemberBrowse =
+    isGuest || (!!profile && (profile.status === 'approved' || profile.role === 'admin'))
+
   return (
     <>
       {/* Dev Environment Banner */}
@@ -202,56 +213,56 @@ export default function Navbar() {
           
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-4">
+            {showMemberBrowse && (
+              <>
+                {(orgConfig?.features.discussions ?? true) && (
+                  <Link
+                    href="/discussions"
+                    className="flex items-center gap-1.5 text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    {orgConfig?.features.discussionsLabel ?? 'Discussions'}
+                  </Link>
+                )}
+                {(orgConfig?.features.events ?? true) && (
+                  <Link
+                    href="/events"
+                    className="flex items-center gap-1.5 text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    {orgConfig?.features.eventsLabel ?? 'Events'}
+                  </Link>
+                )}
+                {(orgConfig?.features.resources ?? true) && (
+                  <Link
+                    href="/resources"
+                    className="flex items-center gap-1.5 text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    {orgConfig?.features.resourcesLabel ?? 'Announcements'}
+                  </Link>
+                )}
+                {(orgConfig?.features.memberDirectory ?? true) && (
+                  <Link
+                    href="/members"
+                    className="flex items-center gap-1.5 text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Members
+                  </Link>
+                )}
+              </>
+            )}
             {user ? (
               <>
-                {profile && (profile.status === 'approved' || profile.role === 'admin') && (
-                  <>
-                    {(orgConfig?.features.discussions ?? true) && (
-                      <Link
-                        href="/discussions"
-                        className="flex items-center gap-1.5 text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                        </svg>
-                        {orgConfig?.features.discussionsLabel ?? 'Discussions'}
-                      </Link>
-                    )}
-                    {(orgConfig?.features.events ?? true) && (
-                      <Link
-                        href="/events"
-                        className="flex items-center gap-1.5 text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        Events
-                      </Link>
-                    )}
-                    {(orgConfig?.features.resources ?? true) && (
-                      <Link
-                        href="/resources"
-                        className="flex items-center gap-1.5 text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        Announcements
-                      </Link>
-                    )}
-                    {(orgConfig?.features.memberDirectory ?? true) && (
-                      <Link
-                        href="/members"
-                        className="flex items-center gap-1.5 text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        Members
-                      </Link>
-                    )}
-                  </>
-                )}
                 <Link
                   href="/membership"
                   className="flex items-center gap-1.5 text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
@@ -432,8 +443,8 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Mobile menu button - only show for logged-in users */}
-          {user ? (
+          {/* Mobile menu: logged-in members and public-org guests (browse + account actions) */}
+          {user || isGuest ? (
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden p-2 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#0d1e26]"
@@ -468,48 +479,65 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Mobile Navigation Menu - only show for logged-in users */}
-        {mobileMenuOpen && user && (
+        {/* Mobile Navigation Menu */}
+        {mobileMenuOpen && (user || isGuest) && (
           <div className="md:hidden border-t border-gray-200 py-4 max-h-[calc(100vh-4rem)] overflow-y-auto">
             <div className="space-y-1">
-                {profile && (profile.status === 'approved' || profile.role === 'admin') && (
-                  <>
-                    {(orgConfig?.features.discussions ?? true) && (
-                      <Link
-                        href="/discussions"
-                        onClick={handleLinkClick}
-                        className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                        </svg>
-                        {orgConfig?.features.discussionsLabel ?? 'Discussions'}
-                      </Link>
-                    )}
-                    {(orgConfig?.features.events ?? true) && (
-                      <Link
-                        href="/events"
-                        onClick={handleLinkClick}
-                        className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        Events
-                      </Link>
-                    )}
-                    {(orgConfig?.features.resources ?? true) && (
-                      <Link
-                        href="/resources"
-                        onClick={handleLinkClick}
-                        className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        Announcements
-                      </Link>
-                    )}
+              {showMemberBrowse && (
+                <>
+                  {(orgConfig?.features.discussions ?? true) && (
+                    <Link
+                      href="/discussions"
+                      onClick={handleLinkClick}
+                      className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                      {orgConfig?.features.discussionsLabel ?? 'Discussions'}
+                    </Link>
+                  )}
+                  {(orgConfig?.features.events ?? true) && (
+                    <Link
+                      href="/events"
+                      onClick={handleLinkClick}
+                      className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      {orgConfig?.features.eventsLabel ?? 'Events'}
+                    </Link>
+                  )}
+                  {(orgConfig?.features.resources ?? true) && (
+                    <Link
+                      href="/resources"
+                      onClick={handleLinkClick}
+                      className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      {orgConfig?.features.resourcesLabel ?? 'Announcements'}
+                    </Link>
+                  )}
+                  {(orgConfig?.features.memberDirectory ?? true) && (
+                    <Link
+                      href="/members"
+                      onClick={handleLinkClick}
+                      className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      Members
+                    </Link>
+                  )}
+                </>
+              )}
+              {user && (
+                <>
+                  {profile && (profile.status === 'approved' || profile.role === 'admin') && (
                     <Link
                       href="/notifications"
                       onClick={handleLinkClick}
@@ -525,71 +553,58 @@ export default function Navbar() {
                         </span>
                       )}
                     </Link>
-                    {(orgConfig?.features.memberDirectory ?? true) && (
-                      <Link
-                        href="/members"
-                        onClick={handleLinkClick}
-                        className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        Members
-                      </Link>
-                    )}
-                  </>
-                )}
-                <Link
-                  href="/membership"
-                  onClick={handleLinkClick}
-                  className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                  </svg>
-                  Membership
-                </Link>
-                <Link
-                  href="/settings"
-                  onClick={handleLinkClick}
-                  className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
-                >
+                  )}
+                  <Link
+                    href="/membership"
+                    onClick={handleLinkClick}
+                    className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                    Membership
+                  </Link>
+                  <Link
+                    href="/settings"
+                    onClick={handleLinkClick}
+                    className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                  >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                     Settings
                   </Link>
-                {profile && (profile.status === 'approved' || profile.role === 'admin') && (orgConfig?.features.allowMemberInvitations ?? true) && (
-                  <Link
-                    href="/invite"
+                  {profile && (profile.status === 'approved' || profile.role === 'admin') && (orgConfig?.features.allowMemberInvitations ?? true) && (
+                    <Link
+                      href="/invite"
+                      onClick={handleLinkClick}
+                      className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                      </svg>
+                      Help Grow {orgConfig?.org.displayName || orgConfig?.org.name || 'Us'}
+                    </Link>
+                  )}
+                  <a
+                    href="https://forms.gle/NfuYpL2JLhcE56Bp7"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     onClick={handleLinkClick}
                     className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                    </svg>
-                    Help Grow {orgConfig?.org.displayName || orgConfig?.org.name || 'Us'}
-                  </Link>
-                )}
-                <a
-                  href="https://forms.gle/NfuYpL2JLhcE56Bp7"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={handleLinkClick}
-                  className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
-                >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                     </svg>
                     Feedback
                   </a>
-                {profile?.role === 'admin' && (
-                  <Link
-                    href="/admin"
-                    onClick={handleLinkClick}
-                    className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors relative"
-                  >
+                  {profile?.role === 'admin' && (
+                    <Link
+                      href="/admin"
+                      onClick={handleLinkClick}
+                      className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors relative"
+                    >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                       </svg>
@@ -601,28 +616,48 @@ export default function Navbar() {
                       )}
                     </Link>
                   )}
-                {profile?.role === 'admin' && (
-                  <a
-                    href={`${process.env.NODE_ENV === 'development' ? 'http' : 'https'}://${process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'}${process.env.NODE_ENV === 'development' ? ':3000' : ''}/platform/dashboard`}
-                    onClick={handleLinkClick}
+                  {profile?.role === 'admin' && (
+                    <a
+                      href={`${process.env.NODE_ENV === 'development' ? 'http' : 'https'}://${process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'}${process.env.NODE_ENV === 'development' ? ':3000' : ''}/platform/dashboard`}
+                      onClick={handleLinkClick}
+                      className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                      </svg>
+                      Platform
+                    </a>
+                  )}
+                  <button
+                    onClick={handleLogout}
                     className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                    </svg>
-                    Platform
-                  </a>
-                )}
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
-                >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                     </svg>
-                  Logout
-                </button>
-              </div>
+                    Logout
+                  </button>
+                </>
+              )}
+              {isGuest && (
+                <div className="pt-2 mt-2 border-t border-gray-200 space-y-1">
+                  <Link
+                    href="/become-a-member"
+                    onClick={handleLinkClick}
+                    className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                  >
+                    Become a Member
+                  </Link>
+                  <Link
+                    href="/login"
+                    onClick={handleLinkClick}
+                    className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                  >
+                    Login
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

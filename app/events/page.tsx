@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import Image from 'next/image'
 import { Event, EventRsvp } from '@/types/database'
 import Loading from '@/components/Loading'
@@ -36,6 +37,7 @@ export default function EventsPage() {
   const [expandedRsvpsEventId, setExpandedRsvpsEventId] = useState<string | null>(null)
   const [rsvpLoadingEventId, setRsvpLoadingEventId] = useState<string | null>(null)
   const [calendarLoadingEventId, setCalendarLoadingEventId] = useState<string | null>(null)
+  const [isGuest, setIsGuest] = useState(false)
   const router = useRouter()
   const isMobile = !useMediaQuery('(min-width: 768px)')
 
@@ -53,8 +55,11 @@ export default function EventsPage() {
       }
 
       const data = await response.json()
-      // Guest mode: public org, no profile required
-      if (data.isGuest) return
+      if (data.isGuest) {
+        setIsGuest(true)
+        return
+      }
+      setIsGuest(false)
 
       const profile = data.profile
       if (profile?.role === 'admin') setIsAdmin(true)
@@ -237,7 +242,7 @@ export default function EventsPage() {
   const handleAddToCalendar = async (event: Event) => {
     setCalendarLoadingEventId(event.id)
     try {
-      if (!event.user_rsvped) {
+      if (!isGuest && !event.user_rsvped) {
         const rsvpRes = await fetch(`/api/events/${event.id}/rsvp`, { method: 'POST' })
         if (rsvpRes.ok) {
           await loadEvents()
@@ -271,7 +276,7 @@ export default function EventsPage() {
       <div className="min-h-screen bg-gray-50 py-6 sm:py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Events</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">TIPA Events</h1>
           </div>
           <div className="pt-16 sm:pt-24">
             <Loading message="Loading events..." />
@@ -385,35 +390,44 @@ export default function EventsPage() {
                                       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                                         {!group.isPast && (
                                           <>
-                                            <button
-                                              type="button"
-                                              disabled={rsvpLoadingEventId === event.id}
-                                              onClick={() =>
-                                                handleToggleRsvp(event.id, !!event.user_rsvped)
-                                              }
-                                              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors disabled:opacity-60 ${
-                                                event.user_rsvped
-                                                  ? 'bg-[#0d1e26]/10 text-[#0d1e26] border border-[#0d1e26]/20 hover:bg-[#0d1e26]/15'
-                                                  : 'bg-[#0d1e26] text-white hover:bg-[#0a171c] shadow-sm'
-                                              }`}
-                                              title={event.user_rsvped ? 'Click to cancel' : 'RSVP to this event'}
-                                            >
-                                              {rsvpLoadingEventId === event.id ? (
-                                                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden>
-                                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12s5.373 12 12 12v-4a8 8 0 01-8-8z" />
-                                                </svg>
-                                              ) : event.user_rsvped ? (
-                                                <>
-                                                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                            {isGuest ? (
+                                              <p className="text-sm text-gray-600">
+                                                <Link href="/login" className="font-medium text-[#0d1e26] underline-offset-2 hover:underline">
+                                                  Sign in
+                                                </Link>{' '}
+                                                to RSVP and see who&apos;s attending.
+                                              </p>
+                                            ) : (
+                                              <button
+                                                type="button"
+                                                disabled={rsvpLoadingEventId === event.id}
+                                                onClick={() =>
+                                                  handleToggleRsvp(event.id, !!event.user_rsvped)
+                                                }
+                                                className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors disabled:opacity-60 ${
+                                                  event.user_rsvped
+                                                    ? 'bg-[#0d1e26]/10 text-[#0d1e26] border border-[#0d1e26]/20 hover:bg-[#0d1e26]/15'
+                                                    : 'bg-[#0d1e26] text-white hover:bg-[#0a171c] shadow-sm'
+                                                }`}
+                                                title={event.user_rsvped ? 'Click to cancel' : 'RSVP to this event'}
+                                              >
+                                                {rsvpLoadingEventId === event.id ? (
+                                                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden>
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12s5.373 12 12 12v-4a8 8 0 01-8-8z" />
                                                   </svg>
-                                                  You&apos;re going
-                                                </>
-                                              ) : (
-                                                'RSVP'
-                                              )}
-                                            </button>
+                                                ) : event.user_rsvped ? (
+                                                  <>
+                                                    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                    You&apos;re going
+                                                  </>
+                                                ) : (
+                                                  'RSVP'
+                                                )}
+                                              </button>
+                                            )}
                                             <button
                                               type="button"
                                               disabled={calendarLoadingEventId === event.id}
@@ -436,29 +450,37 @@ export default function EventsPage() {
                                             </button>
                                           </>
                                         )}
-                                        {/* Attendance: dropdown list */}
                                         {(event.rsvp_count ?? 0) > 0 ? (
-                                          <div className="relative">
-                                            <button
-                                              type="button"
-                                              onClick={() => handleToggleRsvpsList(event.id)}
-                                              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors"
-                                              aria-expanded={expandedRsvpsEventId === event.id}
-                                              aria-haspopup="true"
-                                            >
+                                          isGuest ? (
+                                            <span className="text-sm text-gray-600">
                                               <span className="font-medium text-[#0d1e26]">
-                                                {event.rsvp_count} {event.rsvp_count === 1 ? 'person' : 'people'} attending
-                                              </span>
-                                              <svg
-                                                className={`w-4 h-4 text-gray-400 transition-transform ${expandedRsvpsEventId === event.id ? 'rotate-180' : ''}`}
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
+                                                {event.rsvp_count} {event.rsvp_count === 1 ? 'person' : 'people'}
+                                              </span>{' '}
+                                              attending
+                                            </span>
+                                          ) : (
+                                            <div className="relative">
+                                              <button
+                                                type="button"
+                                                onClick={() => handleToggleRsvpsList(event.id)}
+                                                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors"
+                                                aria-expanded={expandedRsvpsEventId === event.id}
+                                                aria-haspopup="true"
                                               >
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                              </svg>
-                                            </button>
-                                          </div>
+                                                <span className="font-medium text-[#0d1e26]">
+                                                  {event.rsvp_count} {event.rsvp_count === 1 ? 'person' : 'people'} attending
+                                                </span>
+                                                <svg
+                                                  className={`w-4 h-4 text-gray-400 transition-transform ${expandedRsvpsEventId === event.id ? 'rotate-180' : ''}`}
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  viewBox="0 0 24 24"
+                                                >
+                                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                              </button>
+                                            </div>
+                                          )
                                         ) : !group.isPast ? (
                                           <span className="text-sm text-gray-500">No one has RSVPed yet</span>
                                         ) : null}
