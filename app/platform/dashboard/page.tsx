@@ -103,10 +103,10 @@ export default async function PlatformDashboard() {
 
                     const nonAdminMemberCount = memberCounts.get(org.id) ?? 0
                     const setupSteps = [
-                      { done: true,                             label: 'Create your lounge' },
-                      { done: stripeStatus === 'connected',     label: 'Connect Stripe to collect dues' },
-                      { done: !!(org.logo_url || org.display_name), label: 'Customize your club (logo / name)' },
-                      { done: nonAdminMemberCount > 0,          label: 'Add your first member' },
+                      { done: true,                                  label: 'Create your lounge',              href: null },
+                      { done: stripeStatus === 'connected',          label: 'Connect Stripe to collect dues',  href: `/platform/dashboard/${org.id}/billing` },
+                      { done: !!(org.logo_url || org.display_name),  label: 'Customize your club',             href: `${url}/admin/settings` },
+                      { done: nonAdminMemberCount > 0,               label: 'Add your first member',           href: `${url}/admin/members` },
                     ]
                     const allDone = setupSteps.every(s => s.done)
 
@@ -154,20 +154,36 @@ export default async function PlatformDashboard() {
                         {!allDone && (
                           <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Setup checklist</p>
-                            {setupSteps.map((step, i) => (
-                              <div key={i} className="flex items-center gap-2.5">
-                                {step.done ? (
-                                  <svg className="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                                  </svg>
-                                ) : (
-                                  <div className="w-4 h-4 rounded-full border-2 border-gray-300 shrink-0" />
-                                )}
-                                <span className={`text-sm ${step.done ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
-                                  {step.label}
-                                </span>
-                              </div>
-                            ))}
+                            {setupSteps.map((step, i) => {
+                              const inner = (
+                                <>
+                                  {step.done ? (
+                                    <svg className="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  ) : (
+                                    <div className="w-4 h-4 rounded-full border-2 border-gray-300 shrink-0" />
+                                  )}
+                                  <span className={`text-sm ${step.done ? 'text-gray-400 line-through' : 'text-gray-700 group-hover:underline'}`}>
+                                    {step.label}
+                                  </span>
+                                  {!step.done && (
+                                    <svg className="w-3.5 h-3.5 text-gray-400 ml-auto shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    </svg>
+                                  )}
+                                </>
+                              )
+                              return !step.done && step.href ? (
+                                <a key={i} href={step.href} target="_blank" className="group flex items-center gap-2.5 rounded-md hover:bg-gray-100 -mx-1 px-1 py-0.5 transition-colors">
+                                  {inner}
+                                </a>
+                              ) : (
+                                <div key={i} className="flex items-center gap-2.5">
+                                  {inner}
+                                </div>
+                              )
+                            })}
                           </div>
                         )}
 

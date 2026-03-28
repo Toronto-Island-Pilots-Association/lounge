@@ -170,20 +170,19 @@ export default function PlatformSignup() {
 
             {result.cname && <CnameRecord host={result.cname.host} />}
 
-            <div className="flex gap-3 pt-2 border-t">
+            <div className="flex flex-col gap-2 pt-2 border-t">
+              <a
+                href={`${result.orgUrl}/admin`}
+                className="w-full text-center bg-black text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-gray-800 transition-colors"
+              >
+                Set up your lounge →
+              </a>
               <Link
                 href="/platform/dashboard"
-                className="flex-1 text-center bg-black text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-gray-800 transition-colors"
+                className="w-full text-center border rounded-lg px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
               >
                 Go to dashboard
               </Link>
-              <a
-                href={result.orgUrl}
-                target="_blank"
-                className="flex-1 text-center border rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-gray-50 transition-colors"
-              >
-                Open lounge
-              </a>
             </div>
           </div>
         </div>
