@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies, headers } from 'next/headers'
+import { sanitizeAuthCookies } from '@/lib/supabase/sanitize-auth-cookies'
 
 export async function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -29,7 +30,7 @@ export async function createClient() {
     cookies: {
       getAll() {
         try {
-          return cookieStore.getAll()
+          return sanitizeAuthCookies(cookieStore.getAll())
         } catch {
           // Corrupted or non-UTF-8 cookie value — treat as no session
           return []

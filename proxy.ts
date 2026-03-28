@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { getOrgByHostname, getDomainType } from '@/lib/org'
+import { sanitizeAuthCookies } from '@/lib/supabase/sanitize-auth-cookies'
 
 export async function proxy(request: NextRequest) {
   const hostname = request.headers.get('host') ?? ''
@@ -110,7 +111,7 @@ export async function proxy(request: NextRequest) {
       cookies: {
         getAll() {
           try {
-            return request.cookies.getAll()
+            return sanitizeAuthCookies(request.cookies.getAll())
           } catch {
             // Corrupted or non-UTF-8 cookie value — treat as no session
             return []
@@ -127,7 +128,11 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  await supabase.auth.getUser()
+  try {
+    await supabase.auth.getUser()
+  } catch (err) {
+    console.error('[proxy] supabase.auth.getUser failed (session cookies may be corrupt):', err)
+  }
 
   response.headers.set('x-domain-type', domainType)
   if (org) {
