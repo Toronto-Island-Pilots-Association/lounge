@@ -359,20 +359,12 @@ export async function sendInvitationEmail(
 export async function sendInvitationWithPasswordEmail(
   email: string,
   name: string,
-  tempPassword: string,
+  tempPassword: string | null,
   appUrl: string
 ) {
   const loginUrl = `${appUrl}/login`
-  
-  return sendEmail({
-    to: email,
-    subject: 'Your TIPA Account Has Been Created',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h1 style="color: #1f2937; margin-bottom: 20px;">Welcome to TIPA, ${name}!</h1>
-        <p style="color: #374151; line-height: 1.6;">
-          Your account has been created for the Toronto Island Pilots Association. We're excited to have you as part of our community!
-        </p>
+
+  const passwordSection = tempPassword ? `
         <div style="background-color: #f0f9ff; border-left: 4px solid #0d1e26; padding: 16px; margin: 20px 0; border-radius: 4px;">
           <p style="color: #374151; line-height: 1.6; margin: 0 0 12px 0;">
             <strong>Your temporary password:</strong>
@@ -391,7 +383,21 @@ export async function sendInvitationWithPasswordEmail(
           <li><strong>Email:</strong> ${email}</li>
           <li><strong>Password:</strong> The temporary password shown above</li>
           <li><strong>Or:</strong> Sign in with Google (if your email matches)</li>
-        </ul>
+        </ul>` : `
+        <p style="color: #374151; line-height: 1.6;">
+          You already have a ClubLounge account — just sign in with your existing email and password (or Google) to access your new membership.
+        </p>`
+
+  return sendEmail({
+    to: email,
+    subject: 'Your TIPA Account Has Been Created',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #1f2937; margin-bottom: 20px;">Welcome to TIPA, ${name}!</h1>
+        <p style="color: #374151; line-height: 1.6;">
+          Your account has been created for the Toronto Island Pilots Association. We're excited to have you as part of our community!
+        </p>
+        ${passwordSection}
         <div style="margin: 30px 0; text-align: center;">
           <a href="${loginUrl}" 
              style="display: inline-block; background-color: #0d1e26; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
