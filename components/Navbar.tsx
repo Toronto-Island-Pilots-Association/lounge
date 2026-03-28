@@ -21,6 +21,7 @@ type OrgConfig = {
     displayName: string
     logoUrl: string | null
     siteIconUrl?: string | null
+    feedbackUrl?: string | null
   }
   features: {
     discussions: boolean; events: boolean; resources: boolean
@@ -423,18 +424,20 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
                           Help Grow {orgConfig?.org.displayName || orgConfig?.org.name || 'Us'}
                         </Link>
                       )}
-                      <a
-                        href="https://forms.gle/NfuYpL2JLhcE56Bp7"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                        </svg>
-                        Feedback
-                      </a>
+                      {orgConfig?.org.feedbackUrl && (
+                        <a
+                          href={orgConfig.org.feedbackUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                          </svg>
+                          Feedback
+                        </a>
+                      )}
                       {profile?.role === 'admin' && (
                         <Link
                           href="/admin"
@@ -706,18 +709,20 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
                       Help Grow {orgConfig?.org.displayName || orgConfig?.org.name || 'Us'}
                     </Link>
                   )}
-                  <a
-                    href="https://forms.gle/NfuYpL2JLhcE56Bp7"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={handleLinkClick}
-                    className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                    </svg>
-                    Feedback
-                  </a>
+                  {orgConfig?.org.feedbackUrl && (
+                    <a
+                      href={orgConfig.org.feedbackUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={handleLinkClick}
+                      className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                      </svg>
+                      Feedback
+                    </a>
+                  )}
                   {profile?.role === 'admin' && (
                     <Link
                       href="/admin"

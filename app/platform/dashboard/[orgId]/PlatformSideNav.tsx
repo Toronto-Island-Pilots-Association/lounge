@@ -15,10 +15,8 @@ type NavGroup = { label: string; items: NavItem[] }
  */
 export default function PlatformSideNav({
   orgId,
-  loungeAdminSettingsUrl,
 }: {
   orgId: string
-  loungeAdminSettingsUrl: string
 }) {
   const pathname = usePathname()
   const base = `/platform/dashboard/${orgId}`
@@ -31,9 +29,8 @@ export default function PlatformSideNav({
         { label: 'Membership', href: `${base}/settings/membership` },
         { label: 'Features', href: `${base}/settings/features` },
         { label: 'Discussions', href: `${base}/settings/discussions` },
+        { label: 'Signup form', href: `${base}/settings/signup` },
         { label: 'Integrations', href: `${base}/settings/integrations` },
-        { label: 'Signup form', href: `${loungeAdminSettingsUrl}?tab=Signup`, external: true },
-        { label: 'Emails', href: `${loungeAdminSettingsUrl}?tab=Emails`, external: true },
       ],
     },
     {

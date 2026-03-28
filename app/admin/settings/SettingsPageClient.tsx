@@ -48,7 +48,7 @@ function SectionHeader({ title, description }: { title: string; description?: st
 
 function ClubTab() {
   const [draft, setDraft] = useState<OrgIdentity>({
-    description: '', contactEmail: '', websiteUrl: '', accentColor: '#0d1e26', displayName: '', timezone: 'America/Toronto', bylawsUrl: '', membershipPolicyUrl: '',
+    description: '', contactEmail: '', websiteUrl: '', accentColor: '#0d1e26', displayName: '', timezone: 'America/Toronto', bylawsUrl: '', membershipPolicyUrl: '', feedbackUrl: '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)

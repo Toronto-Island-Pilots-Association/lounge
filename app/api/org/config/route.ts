@@ -50,6 +50,7 @@ export async function GET() {
         timezone:            identity.timezone,
         bylawsUrl:           identity.bylawsUrl || null,
         membershipPolicyUrl: identity.membershipPolicyUrl || null,
+        feedbackUrl:         identity.feedbackUrl || null,
       },
       plan,
       planDef: {

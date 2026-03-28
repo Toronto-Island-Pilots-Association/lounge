@@ -266,6 +266,35 @@ export default function GeneralForm({
         </div>
       </div>
 
+      <div className="space-y-4 pt-2 border-t border-gray-100">
+        <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 pt-2">Membership form links</p>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            By-laws URL <span className="text-gray-400 font-normal">(optional)</span>
+          </label>
+          <input type="url" className={inputCls()} placeholder="https://yourclub.com/by-laws" value={draft.bylawsUrl} onChange={set('bylawsUrl')} />
+          <p className="text-xs text-gray-400 mt-1">Shown as a link on the membership application form.</p>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            Membership policy URL <span className="text-gray-400 font-normal">(optional)</span>
+          </label>
+          <input type="url" className={inputCls()} placeholder="https://yourclub.com/membership-policy" value={draft.membershipPolicyUrl} onChange={set('membershipPolicyUrl')} />
+          <p className="text-xs text-gray-400 mt-1">Shown as a link on the membership application form.</p>
+        </div>
+      </div>
+
+      <div className="space-y-4 pt-2 border-t border-gray-100">
+        <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 pt-2">Member portal</p>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            Feedback URL <span className="text-gray-400 font-normal">(optional)</span>
+          </label>
+          <input type="url" className={inputCls()} placeholder="https://forms.gle/…" value={draft.feedbackUrl} onChange={set('feedbackUrl')} />
+          <p className="text-xs text-gray-400 mt-1">If set, a "Feedback" link appears in the member portal nav menu.</p>
+        </div>
+      </div>
+
       <div className="pt-2">
         <button
           type="submit"

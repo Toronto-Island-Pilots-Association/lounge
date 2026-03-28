@@ -342,6 +342,7 @@ export type OrgIdentity = {
   timezone: string
   bylawsUrl: string
   membershipPolicyUrl: string
+  feedbackUrl: string
 }
 
 const DEFAULT_IDENTITY: OrgIdentity = {
@@ -353,12 +354,13 @@ const DEFAULT_IDENTITY: OrgIdentity = {
   timezone: 'America/Toronto',
   bylawsUrl: '',
   membershipPolicyUrl: '',
+  feedbackUrl: '',
 }
 
 export async function getOrgIdentity(orgIdOverride?: string): Promise<OrgIdentity> {
   const supabase = await createClient()
   const orgId = await getOrgId(orgIdOverride)
-  const keys = ['club_description', 'contact_email', 'website_url', 'accent_color', 'club_display_name', 'timezone', 'bylaws_url', 'membership_policy_url']
+  const keys = ['club_description', 'contact_email', 'website_url', 'accent_color', 'club_display_name', 'timezone', 'bylaws_url', 'membership_policy_url', 'feedback_url']
   const { data: rows } = await supabase.from('settings').select('key, value').in('key', keys).eq('org_id', orgId)
   const map = new Map((rows ?? []).map(r => [r.key, r.value]))
   const s = (key: string, def: string) => map.get(key) ?? def
@@ -371,6 +373,7 @@ export async function getOrgIdentity(orgIdOverride?: string): Promise<OrgIdentit
     timezone:            s('timezone',               DEFAULT_IDENTITY.timezone),
     bylawsUrl:           s('bylaws_url',             DEFAULT_IDENTITY.bylawsUrl),
     membershipPolicyUrl: s('membership_policy_url',  DEFAULT_IDENTITY.membershipPolicyUrl),
+    feedbackUrl:         s('feedback_url',           DEFAULT_IDENTITY.feedbackUrl),
   }
 }
 
@@ -386,6 +389,7 @@ export async function setOrgIdentity(identity: Partial<OrgIdentity>, orgIdOverri
     timezone:            'timezone',
     bylawsUrl:           'bylaws_url',
     membershipPolicyUrl: 'membership_policy_url',
+    feedbackUrl:         'feedback_url',
   }
   const rows = (Object.keys(identity) as (keyof OrgIdentity)[])
     .filter(k => identity[k] !== undefined)
