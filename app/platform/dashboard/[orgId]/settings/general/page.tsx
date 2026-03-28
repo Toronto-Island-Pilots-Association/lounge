@@ -23,7 +23,7 @@ export default async function GeneralSettingsPage({
     .maybeSingle()
 
   return (
-    <div className="px-8 py-10">
+    <div className="px-4 py-6 md:px-8 md:py-10">
       <div className="max-w-2xl">
         <div className="mb-8">
           <h1 className="text-xl font-semibold text-gray-900">General</h1>

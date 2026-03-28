@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { buildOrgUrl } from '@/lib/org'
 import PlatformSideNav from './PlatformSideNav'
+import PlatformMobileHeader from './PlatformMobileHeader'
 
 export default async function OrgAdminLayout({
   children,
@@ -43,8 +44,8 @@ export default async function OrgAdminLayout({
 
   return (
     <div className="min-h-screen flex bg-gray-50">
-      {/* Sidebar */}
-      <aside className="w-56 fixed inset-y-0 left-0 bg-white border-r border-gray-200 flex flex-col z-10">
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex w-56 fixed inset-y-0 left-0 bg-white border-r border-gray-200 flex-col z-10">
         {/* Header */}
         <div className="px-4 py-4 border-b border-gray-100">
           <Link
@@ -90,8 +91,17 @@ export default async function OrgAdminLayout({
         </div>
       </aside>
 
+      {/* Mobile header + drawer */}
+      <PlatformMobileHeader
+        orgId={orgId}
+        orgName={org.name}
+        planLabel={planLabel}
+        trialActive={!!trialActive}
+        orgUrl={orgUrl}
+      />
+
       {/* Content */}
-      <div className="ml-56 flex-1 min-h-screen">
+      <div className="md:ml-56 flex-1 min-h-screen flex flex-col">
         {children}
       </div>
     </div>
