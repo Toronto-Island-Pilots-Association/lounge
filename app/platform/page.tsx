@@ -6,7 +6,7 @@ const PROTOCOL = IS_DEV ? 'http' : 'https'
 const PORT = IS_DEV ? ':3000' : ''
 
 export default function PlatformHome() {
-  const demoOrigin = `${PROTOCOL}://tipa.${ROOT_DOMAIN}${PORT}`
+  const demoOrigin = `${PROTOCOL}://demo.${ROOT_DOMAIN}${PORT}`
 
   return (
     <ClubLoungeLanding
