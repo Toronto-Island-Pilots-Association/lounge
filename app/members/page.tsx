@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment, isOrgPublic } from '@/lib/auth'
+import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment, isOrgPublic, isOrgStripeConnected } from '@/lib/auth'
 import { getFeatureFlags } from '@/lib/settings'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
@@ -15,13 +15,13 @@ export default async function MembersPage({
 }: {
   searchParams: Promise<{ page?: string }>
 }) {
-  const [user, orgPublic] = await Promise.all([getCurrentUser(), isOrgPublic()])
+  const [user, orgPublic, orgStripeConnected] = await Promise.all([getCurrentUser(), isOrgPublic(), isOrgStripeConnected()])
 
   if (!user) {
     if (!orgPublic) redirect('/login')
   } else {
     if (shouldRequireProfileCompletion(user.profile)) redirect('/complete-profile')
-    if (shouldRequirePayment(user.profile)) redirect('/add-payment')
+    if (shouldRequirePayment(user.profile) && orgStripeConnected) redirect('/add-payment')
   }
 
   const isGuest = !user

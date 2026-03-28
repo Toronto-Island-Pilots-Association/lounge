@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Suspense } from 'react'
-import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment, isOrgPublic } from '@/lib/auth'
+import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment, isOrgPublic, isOrgStripeConnected } from '@/lib/auth'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
 import GuestBanner from '@/app/components/GuestBanner'
@@ -22,13 +22,13 @@ export default async function DiscussionsPage({
 }: {
   searchParams: Promise<{ sort?: string; category?: string; page?: string }>
 }) {
-  const [user, orgPublic] = await Promise.all([getCurrentUser(), isOrgPublic()])
+  const [user, orgPublic, orgStripeConnected] = await Promise.all([getCurrentUser(), isOrgPublic(), isOrgStripeConnected()])
 
   if (!user) {
     if (!orgPublic) redirect('/login')
   } else {
     if (shouldRequireProfileCompletion(user.profile)) redirect('/complete-profile')
-    if (shouldRequirePayment(user.profile)) redirect('/add-payment')
+    if (shouldRequirePayment(user.profile) && orgStripeConnected) redirect('/add-payment')
     if (user.profile.status !== 'approved' && user.profile.role !== 'admin') redirect('/pending-approval')
   }
 

@@ -1,7 +1,7 @@
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment } from '@/lib/auth'
+import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment, isOrgStripeConnected } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { Resource } from '@/types/database'
 
@@ -37,7 +37,7 @@ export default async function ResourceDetailPage({
 }: {
   params: Promise<{ id: string }>
 }) {
-  const user = await getCurrentUser()
+  const [user, orgStripeConnected] = await Promise.all([getCurrentUser(), isOrgStripeConnected()])
 
   if (!user) {
     redirect('/login')
@@ -47,7 +47,7 @@ export default async function ResourceDetailPage({
     redirect('/complete-profile')
   }
 
-  if (shouldRequirePayment(user.profile)) {
+  if (shouldRequirePayment(user.profile) && orgStripeConnected) {
     redirect('/add-payment')
   }
 

@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment } from '@/lib/auth'
+import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment, isOrgStripeConnected } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { DiscussionCategory } from '@/types/database'
 import EditDiscussionForm from '../EditDiscussionForm'
@@ -10,10 +10,10 @@ export default async function EditThreadPage({
 }: {
   params: Promise<{ id: string }>
 }) {
-  const user = await getCurrentUser()
+  const [user, orgStripeConnected] = await Promise.all([getCurrentUser(), isOrgStripeConnected()])
   if (!user) redirect('/login')
   if (shouldRequireProfileCompletion(user.profile)) redirect('/complete-profile')
-  if (shouldRequirePayment(user.profile)) redirect('/add-payment')
+  if (shouldRequirePayment(user.profile) && orgStripeConnected) redirect('/add-payment')
   if (user.profile.status !== 'approved' && user.profile.role !== 'admin') {
     redirect('/pending-approval')
   }

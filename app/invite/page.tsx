@@ -1,9 +1,9 @@
 import { redirect } from 'next/navigation'
-import { getCurrentUserIncludingPending, shouldRequireProfileCompletion, shouldRequirePayment } from '@/lib/auth'
+import { getCurrentUserIncludingPending, shouldRequireProfileCompletion, shouldRequirePayment, isOrgStripeConnected } from '@/lib/auth'
 import InviteMemberForm from './InviteMemberForm'
 
 export default async function InvitePage() {
-  const user = await getCurrentUserIncludingPending()
+  const [user, orgStripeConnected] = await Promise.all([getCurrentUserIncludingPending(), isOrgStripeConnected()])
 
   if (!user) {
     redirect('/login')
@@ -13,7 +13,7 @@ export default async function InvitePage() {
     redirect('/complete-profile')
   }
 
-  if (shouldRequirePayment(user.profile)) {
+  if (shouldRequirePayment(user.profile) && orgStripeConnected) {
     redirect('/add-payment')
   }
 

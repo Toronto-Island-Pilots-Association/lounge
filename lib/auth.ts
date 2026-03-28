@@ -12,6 +12,24 @@ async function getOrgId(): Promise<string | null> {
   }
 }
 
+/** Check if the current org has completed Stripe Connect onboarding. */
+export async function isOrgStripeConnected(): Promise<boolean> {
+  const orgId = await getOrgId()
+  if (!orgId) return false
+  try {
+    const { createServiceRoleClient } = await import('./supabase/server')
+    const db = createServiceRoleClient()
+    const { data } = await db
+      .from('organizations')
+      .select('stripe_onboarding_complete')
+      .eq('id', orgId)
+      .maybeSingle()
+    return data?.stripe_onboarding_complete === true
+  } catch {
+    return false
+  }
+}
+
 /** Check if the current org allows public (unauthenticated) read access. */
 export async function isOrgPublic(): Promise<boolean> {
   const orgId = await getOrgId()

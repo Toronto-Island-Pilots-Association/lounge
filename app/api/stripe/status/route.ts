@@ -1,8 +1,11 @@
 import { isStripeEnabled } from '@/lib/stripe'
+import { isOrgStripeConnected } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
-  return NextResponse.json({
-    enabled: isStripeEnabled(),
-  })
+  if (!isStripeEnabled()) {
+    return NextResponse.json({ enabled: false })
+  }
+  const orgConnected = await isOrgStripeConnected()
+  return NextResponse.json({ enabled: orgConnected })
 }
