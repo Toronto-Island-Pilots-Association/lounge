@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
-import { TIPA_ORG_ID } from '@/types/database'
 import { appendMemberToSheet } from '@/lib/google-sheets'
 import {
   getTrialConfig,
@@ -13,7 +12,8 @@ import type { MembershipLevelKey } from '@/lib/settings'
 export async function POST(request: Request) {
   try {
     const h = await headers()
-    const orgId = h.get('x-org-id') ?? TIPA_ORG_ID
+    const orgId = h.get('x-org-id')
+    if (!orgId) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     const { currentPassword, newPassword } = await request.json()
 
     if (!currentPassword || !newPassword) {

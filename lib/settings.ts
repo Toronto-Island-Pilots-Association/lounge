@@ -1,6 +1,5 @@
 import { createClient, createServiceRoleClient } from './supabase/server'
 import { headers } from 'next/headers'
-import { TIPA_ORG_ID } from '@/types/database'
 import { getPlanDef, DEFAULT_PLAN } from './plans'
 import {
   DEFAULT_SIGNUP_FIELDS,
@@ -13,13 +12,13 @@ import {
 export type { MembershipLevelKey, SignupField, SignupFieldType } from './settings-shared'
 export { signupFieldIsTipaOnlyBuiltIn, isTipaOrgId, gateTipaOnlySignupFields } from './settings-shared'
 
-async function getOrgId(override?: string): Promise<string> {
+async function getOrgId(override?: string): Promise<string | null> {
   if (override) return override
   try {
     const h = await headers()
-    return h.get('x-org-id') ?? TIPA_ORG_ID
+    return h.get('x-org-id')
   } catch {
-    return TIPA_ORG_ID
+    return null
   }
 }
 

@@ -1,13 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
-import { TIPA_ORG_ID } from '@/types/database'
 import * as Sentry from '@sentry/nextjs'
 
 export async function POST(request: Request) {
   try {
     const h = await headers()
-    const orgId = h.get('x-org-id') ?? TIPA_ORG_ID
+    const orgId = h.get('x-org-id')
+    if (!orgId) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     const { email, password } = await request.json()
 
     if (!email || !password) {

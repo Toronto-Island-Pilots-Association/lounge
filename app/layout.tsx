@@ -9,7 +9,6 @@ import PoweredByBadge from "@/components/PoweredByBadge";
 import GuestBanner, {
   shouldShowOrgGuestBanner,
 } from "@/app/components/GuestBanner";
-import { TIPA_ORG_ID } from "@/types/database";
 import { fetchPublicOrgBranding, iconMimeTypeForUrl } from "@/lib/org-public-branding";
 
 const interTight = Inter_Tight({
@@ -23,7 +22,8 @@ export async function generateMetadata(): Promise<Metadata> {
   if (domainType !== "org") {
     return { icons: { icon: "/favicon.ico" } };
   }
-  const orgId = h.get("x-org-id") ?? TIPA_ORG_ID;
+  const orgId = h.get("x-org-id");
+  if (!orgId) return { icons: { icon: "/favicon.ico" } };
   const b = await fetchPublicOrgBranding(orgId);
   const title = b.displayName || b.name || "ClubLounge";
   const siteIcon = b.siteIconUrl;

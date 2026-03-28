@@ -5,7 +5,6 @@
  * No auth required (this info is safe to expose publicly).
  */
 import { headers } from 'next/headers'
-import { TIPA_ORG_ID } from '@/types/database'
 import { fetchPublicOrgBranding } from '@/lib/org-public-branding'
 import {
   getFeatureFlags,
@@ -20,7 +19,8 @@ import { NextResponse } from 'next/server'
 export async function GET() {
   try {
     const h = await headers()
-    const orgId = h.get('x-org-id') ?? TIPA_ORG_ID
+    const orgId = h.get('x-org-id')
+    if (!orgId) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     const branding = await fetchPublicOrgBranding(orgId)
 
@@ -38,8 +38,6 @@ export async function GET() {
     return NextResponse.json({
       org: {
         name:         branding.name,
-        /** True only for the legacy TIPA org — used for signup copy and acknowledgement links. */
-        isTipaOrg:    orgId === TIPA_ORG_ID,
         slug:         branding.slug,
         logoUrl:      branding.logoUrl,
         /** Resolved tab icon (custom favicon, else logo) — same as HTML favicon when set */

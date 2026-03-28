@@ -2,7 +2,6 @@ import { createClient } from '@/lib/supabase/server'
 import { sendWelcomeEmail, sendNewMemberNotificationToAdmins } from '@/lib/resend'
 import { NextResponse } from 'next/server'
 import * as Sentry from '@sentry/nextjs'
-import { TIPA_ORG_ID } from '@/types/database'
 
 export async function POST(request: Request) {
   try {
@@ -50,8 +49,10 @@ export async function POST(request: Request) {
       )
     }
 
+    const orgId = request.headers.get('x-org-id')
+    if (!orgId) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
     const supabase = await createClient()
-    const orgId = request.headers.get('x-org-id') ?? TIPA_ORG_ID
 
     // Normalize email to lowercase and trim
     const normalizedEmail = email.toLowerCase().trim()
