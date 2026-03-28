@@ -6,6 +6,9 @@ import { headers } from "next/headers";
 import "./globals.css";
 import NavbarWrapper from "@/components/NavbarWrapper";
 import PoweredByBadge from "@/components/PoweredByBadge";
+import GuestBanner, {
+  shouldShowOrgGuestBanner,
+} from "@/app/components/GuestBanner";
 
 const interTight = Inter_Tight({
   variable: "--font-inter-tight",
@@ -28,13 +31,23 @@ export default async function RootLayout({
   const headersList = await headers();
   const domainType = headersList.get("x-domain-type") ?? "org";
   const isOrg = domainType === "org";
+  const guestPreviewBar = isOrg && (await shouldShowOrgGuestBanner());
+
+  const orgBodyPad = guestPreviewBar
+    ? "pt-36 sm:pt-40 md:pt-0"
+    : "pt-16 sm:pt-20 md:pt-0";
 
   return (
     <html lang="en">
       <body
-        className={`${interTight.variable} antialiased ${isOrg ? "pt-16 sm:pt-20 md:pt-0" : ""}`}
+        className={`${interTight.variable} antialiased ${isOrg ? orgBodyPad : ""}`}
       >
-        {isOrg && <NavbarWrapper />}
+        {isOrg && guestPreviewBar && (
+          <div className="fixed top-0 left-0 right-0 z-[70] md:static">
+            <GuestBanner />
+          </div>
+        )}
+        {isOrg && <NavbarWrapper guestPreviewBar={guestPreviewBar} />}
         {children}
         {isOrg && <PoweredByBadge />}
         <SpeedInsights />

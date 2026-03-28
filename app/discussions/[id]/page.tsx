@@ -5,7 +5,6 @@ import { Suspense } from 'react'
 import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment, isOrgPublic, isOrgStripeConnected } from '@/lib/auth'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
-import GuestBanner from '@/app/components/GuestBanner'
 import { Thread, Comment, DiscussionCategory } from '@/types/database'
 import CommentForm from './CommentForm'
 import ReactionButton from './ReactionButton'
@@ -31,7 +30,6 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
 
   const isGuest = !user
   const h = await headers()
-  const orgSlug = h.get('x-org-slug')
   const orgId = isGuest ? h.get('x-org-id') : user!.profile.org_id
   const categoryConfig = getCategoryConfig(orgId)
 
@@ -153,7 +151,6 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {isGuest && <GuestBanner orgName={orgSlug ?? undefined} />}
       {!isGuest && <MarkThreadNotificationsRead threadId={id} />}
     <div className="py-4 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

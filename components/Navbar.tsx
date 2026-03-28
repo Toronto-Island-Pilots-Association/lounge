@@ -6,9 +6,10 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { MemberProfile, getMembershipLevelLabel } from '@/types/database'
 import { createClient } from '@/lib/supabase/client'
+import { getPlatformSignupAbsoluteUrl, isClubLoungeDemoOrgSlug } from '@/lib/org'
 
 type OrgConfig = {
-  org: { name: string; displayName: string; logoUrl: string | null }
+  org: { name: string; slug?: string; displayName: string; logoUrl: string | null }
   features: {
     discussions: boolean; events: boolean; resources: boolean
     memberDirectory: boolean; allowMemberInvitations: boolean
@@ -16,7 +17,7 @@ type OrgConfig = {
   }
 }
 
-export default function Navbar() {
+export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: boolean }) {
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<MemberProfile | null>(null)
   /** Public org, not logged in — can browse discussions, events, announcements, etc. */
@@ -180,15 +181,32 @@ export default function Navbar() {
   const showMemberBrowse =
     isGuest || (!!profile && (profile.status === 'approved' || profile.role === 'admin'))
 
+  const isDemoLoungeGuest =
+    isGuest && isClubLoungeDemoOrgSlug(orgConfig?.org.slug ?? undefined)
+
+  const devBannerMobileTop = guestPreviewBar ? 'top-[52px]' : 'top-0'
+  const navMobileTop =
+    guestPreviewBar && isDevEnvironment
+      ? 'top-[80px]'
+      : guestPreviewBar
+        ? 'top-[52px]'
+        : isDevEnvironment
+          ? 'top-[28px]'
+          : 'top-0'
+
   return (
     <>
       {/* Dev Environment Banner */}
       {isDevEnvironment && (
-        <div className="bg-yellow-400 text-yellow-900 text-center py-1.5 px-4 text-xs font-semibold fixed top-0 left-0 right-0 z-[60] md:relative md:z-auto">
+        <div
+          className={`bg-yellow-400 text-yellow-900 text-center py-1.5 px-4 text-xs font-semibold fixed left-0 right-0 z-[60] md:relative md:top-0 md:z-auto ${devBannerMobileTop} md:top-0`}
+        >
           🚧 DEVELOPMENT ENVIRONMENT 🚧
         </div>
       )}
-      <nav className={`bg-white border-b border-gray-200 md:relative fixed left-0 right-0 z-50 md:z-auto ${isDevEnvironment ? 'top-[28px] md:top-0' : 'top-0'}`}>
+      <nav
+        className={`bg-white border-b border-gray-200 fixed left-0 right-0 z-50 md:relative md:top-0 md:z-auto ${navMobileTop} md:top-0`}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 sm:h-20">
             <Link 
@@ -438,12 +456,22 @@ export default function Navbar() {
               </>
             ) : (
               <>
-                <Link
-                  href="/become-a-member"
-                  className="text-gray-700 hover:text-gray-900 px-4 py-2 rounded-md text-sm font-medium transition-colors"
-                >
-                  Become a Member
-                </Link>
+                {isDemoLoungeGuest ? (
+                  <a
+                    href={getPlatformSignupAbsoluteUrl()}
+                    rel="noopener noreferrer"
+                    className="text-gray-700 hover:text-gray-900 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                  >
+                    Create your club
+                  </a>
+                ) : (
+                  <Link
+                    href="/become-a-member"
+                    className="text-gray-700 hover:text-gray-900 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                  >
+                    Become a Member
+                  </Link>
+                )}
                 <Link
                   href="/login"
                   className="text-gray-700 hover:text-gray-900 px-4 py-2 rounded-md text-sm font-medium transition-colors"
@@ -664,13 +692,24 @@ export default function Navbar() {
               )}
               {isGuest && (
                 <div className="pt-2 mt-2 border-t border-gray-200 space-y-1">
-                  <Link
-                    href="/become-a-member"
-                    onClick={handleLinkClick}
-                    className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
-                  >
-                    Become a Member
-                  </Link>
+                  {isDemoLoungeGuest ? (
+                    <a
+                      href={getPlatformSignupAbsoluteUrl()}
+                      rel="noopener noreferrer"
+                      onClick={handleLinkClick}
+                      className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                    >
+                      Create your club
+                    </a>
+                  ) : (
+                    <Link
+                      href="/become-a-member"
+                      onClick={handleLinkClick}
+                      className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                    >
+                      Become a Member
+                    </Link>
+                  )}
                   <Link
                     href="/login"
                     onClick={handleLinkClick}

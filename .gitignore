@@ -43,6 +43,9 @@ next-env.d.ts
 # Sentry Config File
 .env.sentry-build-plugin
 
+# Supabase CLI cache (local)
+supabase/.temp/
+
 # Database dumps
 *.dump
 /dump_*.sql

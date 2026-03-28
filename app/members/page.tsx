@@ -5,7 +5,6 @@ import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment, i
 import { getFeatureFlags } from '@/lib/settings'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
-import GuestBanner from '@/app/components/GuestBanner'
 import { MemberProfile, getMembershipLevelLabel } from '@/types/database'
 
 const MEMBERS_PER_PAGE = 25
@@ -27,7 +26,6 @@ export default async function MembersPage({
   const isGuest = !user
   const h = await headers()
   const orgId = isGuest ? h.get('x-org-id') : user!.profile.org_id
-  const orgSlug = h.get('x-org-slug')
 
   const features = await getFeatureFlags()
   if (!features.memberDirectory) {
@@ -61,7 +59,6 @@ export default async function MembersPage({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {isGuest && <GuestBanner orgName={orgSlug ?? undefined} />}
     <div className="py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">

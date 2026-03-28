@@ -5,7 +5,6 @@ import { Suspense } from 'react'
 import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment, isOrgPublic, isOrgStripeConnected } from '@/lib/auth'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
-import GuestBanner from '@/app/components/GuestBanner'
 import { Thread, DiscussionCategory, ThreadWithData, ThreadAuthor } from '@/types/database'
 import Sidebar from './Sidebar'
 import MobileFilters from './MobileFilters'
@@ -35,7 +34,6 @@ export default async function DiscussionsPage({
   const isGuest = !user
   const h = await headers()
   const orgId = isGuest ? h.get('x-org-id') : user!.profile.org_id
-  const orgSlug = h.get('x-org-slug')
 
   const [featureFlags, categoryConfig] = await Promise.all([
     getFeatureFlags(),
@@ -147,7 +145,6 @@ export default async function DiscussionsPage({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {isGuest && <GuestBanner orgName={orgSlug ?? undefined} />}
     <div className="py-6 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}

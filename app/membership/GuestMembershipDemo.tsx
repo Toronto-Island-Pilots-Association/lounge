@@ -1,9 +1,7 @@
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getOrgIdentity, getFeatureFlags } from '@/lib/settings'
-import GuestBanner from '@/app/components/GuestBanner'
 import MembershipCard from '@/components/MembershipCard'
 import MembershipActivitySidebar, {
   type MembershipSidebarThread,
@@ -77,7 +75,6 @@ function buildDemoMemberProfile(orgId: string): MemberProfile {
 export default async function GuestMembershipDemo() {
   const h = await headers()
   const orgId = h.get('x-org-id')
-  const orgSlug = h.get('x-org-slug')
   if (!orgId) redirect('/login')
 
   const [identity, flags] = await Promise.all([getOrgIdentity(), getFeatureFlags()])
@@ -137,18 +134,7 @@ export default async function GuestMembershipDemo() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
-      <GuestBanner orgName={orgSlug ?? undefined} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950">
-          <strong>Sample membership.</strong> Preview of the digital membership card members see.{' '}
-          <Link
-            href="/login"
-            className="font-medium text-[#0d1e26] underline underline-offset-2 hover:no-underline"
-          >
-            Sign in
-          </Link>{' '}
-          for your own status, payments, and renewals.
-        </div>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 order-2 lg:order-1">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">Membership</h1>

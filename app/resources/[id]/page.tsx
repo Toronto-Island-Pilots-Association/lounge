@@ -10,7 +10,6 @@ import {
 } from '@/lib/auth'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
-import GuestBanner from '@/app/components/GuestBanner'
 import { Resource } from '@/types/database'
 
 // Helper function to get signed URL for resource file/image
@@ -64,7 +63,6 @@ export default async function ResourceDetailPage({
   const isGuest = !user
   const h = await headers()
   const orgId = isGuest ? h.get('x-org-id') : user!.profile.org_id
-  const orgSlug = h.get('x-org-slug')
 
   const { id } = await params
   const supabase = isGuest ? createServiceRoleClient() : await createClient()
@@ -95,7 +93,6 @@ export default async function ResourceDetailPage({
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      {isGuest && <GuestBanner orgName={orgSlug ?? undefined} />}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Back button */}
         <Link

@@ -3,6 +3,30 @@ import { Organization } from '@/types/database'
 
 export const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'
 
+/**
+ * Public sales demo org (`demo.${ROOT_DOMAIN}`). Guests here should be sent to
+ * platform signup, not `/become-a-member` (which joins this demo club).
+ */
+export const CLUBLOUNGE_DEMO_ORG_SLUG = 'demo'
+
+/**
+ * Absolute URL to create a new organization on ClubLounge.
+ * Org subdomains cannot serve `/platform/*` (404) — always use this for cross-domain links.
+ */
+export function getPlatformSignupAbsoluteUrl(): string {
+  const custom = process.env.NEXT_PUBLIC_PLATFORM_SIGNUP_URL?.replace(/\/$/, '')
+  if (custom) return custom
+  if (process.env.NODE_ENV === 'development') {
+    const base = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/$/, '')
+    return `${base}/platform/signup`
+  }
+  return `https://www.${ROOT_DOMAIN}/platform/signup`
+}
+
+export function isClubLoungeDemoOrgSlug(slug: string | null | undefined): boolean {
+  return slug === CLUBLOUNGE_DEMO_ORG_SLUG
+}
+
 /** Subdomains reserved for platform use — cannot be registered as org slugs. */
 export const RESERVED_SUBDOMAINS = new Set([
   'platform',

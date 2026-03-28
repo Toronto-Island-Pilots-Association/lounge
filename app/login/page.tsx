@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Loading from '@/components/Loading'
 import PasswordInput from '@/components/PasswordInput'
+import { getPlatformSignupAbsoluteUrl, isClubLoungeDemoOrgSlug } from '@/lib/org'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -13,6 +14,7 @@ export default function LoginPage() {
   const [successMessage, setSuccessMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [checkingAuth, setCheckingAuth] = useState(true)
+  const [isDemoLounge, setIsDemoLounge] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -22,9 +24,20 @@ export default function LoginPage() {
 
     const checkAuth = async () => {
       try {
-        const response = await fetch('/api/auth/session')
-        const data = await response.json()
-        
+        const [sessionRes, configRes] = await Promise.all([
+          fetch('/api/auth/session'),
+          fetch('/api/org/config'),
+        ])
+        const data = await sessionRes.json()
+        try {
+          const cfg = await configRes.json()
+          if (cfg?.org?.slug && isClubLoungeDemoOrgSlug(cfg.org.slug)) {
+            setIsDemoLounge(true)
+          }
+        } catch {
+          /* ignore */
+        }
+
         if (data.authenticated) {
           window.location.href = safeRedirect
         } else {
@@ -110,10 +123,26 @@ export default function LoginPage() {
               Sign in to your account
             </h2>
             <p className="mt-2 text-sm text-gray-600">
-              Or{' '}
-              <Link href="/become-a-member" className="font-medium text-[#0d1e26] hover:text-[#416e82]">
-                become a member
-              </Link>
+              {isDemoLounge ? (
+                <>
+                  New to ClubLounge?{' '}
+                  <a
+                    href={getPlatformSignupAbsoluteUrl()}
+                    rel="noopener noreferrer"
+                    className="font-medium text-[#0d1e26] hover:text-[#416e82]"
+                  >
+                    Create your own club
+                  </a>
+                  <span className="text-gray-500"> — this site is a demo.</span>
+                </>
+              ) : (
+                <>
+                  Or{' '}
+                  <Link href="/become-a-member" className="font-medium text-[#0d1e26] hover:text-[#416e82]">
+                    become a member
+                  </Link>
+                </>
+              )}
             </p>
           </div>
           <form className="space-y-6" onSubmit={handleSubmit}>

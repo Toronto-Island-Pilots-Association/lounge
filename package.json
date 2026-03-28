@@ -14,6 +14,8 @@
     "test:ci": "jest --ci --coverage --maxWorkers=2",
     "db:seed": "node scripts/seed-dev.js",
     "db:sync": "node scripts/seed-dev.js",
+    "db:sync-members": "SEED_NUM_USERS=0 node scripts/seed-dev.js",
+    "db:verify": "node scripts/verify-supabase-data.js",
     "postinstall": "node -e \"const fs=require('fs'); const p='node_modules/fb-watchman'; try { fs.readFileSync(p+'/package.json'); } catch(e) { const cp=require('child_process'); cp.execSync('rm -rf '+p); cp.execSync('cp -r stubs/fb-watchman '+p); }\""
   },
   "dependencies": {
