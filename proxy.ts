@@ -46,7 +46,12 @@ export async function proxy(request: NextRequest) {
     const callbackUrl = request.nextUrl.clone()
     callbackUrl.pathname = '/auth/callback'
     if (!callbackUrl.searchParams.has('next')) {
-      if (domainType === 'org') callbackUrl.searchParams.set('next', '/discussions')
+      if (domainType === 'org') {
+        callbackUrl.searchParams.set('next', '/discussions')
+      } else if (domainType === 'marketing') {
+        // www / apex — /discussions does not exist here (org-only route)
+        callbackUrl.searchParams.set('next', '/platform/dashboard')
+      }
     }
     return NextResponse.redirect(callbackUrl)
   }

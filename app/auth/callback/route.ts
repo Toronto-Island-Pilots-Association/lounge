@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { TIPA_ORG_ID } from '@/types/database'
-import { ROOT_DOMAIN } from '@/lib/org'
+import { ROOT_DOMAIN, getDomainType } from '@/lib/org'
 
 /** Returns true if the URL is safe to redirect to after auth. */
 function isTrustedNextUrl(next: string, requestOrigin: string): boolean {
@@ -33,11 +33,18 @@ function getRequestOrigin(request: Request): string {
   return u.origin
 }
 
+/** Org subdomains use /discussions; marketing (www / apex / localhost) has no tenant — use platform home. */
+function defaultPostAuthPath(request: Request): string {
+  const host = new URL(getRequestOrigin(request)).hostname
+  return getDomainType(host) === 'marketing' ? '/platform/dashboard' : '/discussions'
+}
+
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const requestOrigin = getRequestOrigin(request)
   const code = requestUrl.searchParams.get('code')
-  const rawNext = requestUrl.searchParams.get('next') || '/discussions'
+  const fallbackPath = defaultPostAuthPath(request)
+  const rawNext = requestUrl.searchParams.get('next') || fallbackPath
 
   // `next` can be an absolute URL (e.g. cross-domain redirect from org login via platform callback)
   // or a relative path. Resolve to absolute for validation, then use appropriately.
@@ -45,11 +52,11 @@ export async function GET(request: Request) {
   try {
     resolvedNext = new URL(rawNext, requestOrigin)
   } catch {
-    resolvedNext = new URL('/discussions', requestOrigin)
+    resolvedNext = new URL(fallbackPath, requestOrigin)
   }
   const next = isTrustedNextUrl(resolvedNext.href, requestOrigin)
     ? resolvedNext.href
-    : new URL('/discussions', requestOrigin).href
+    : new URL(fallbackPath, requestOrigin).href
   // Determine org context. The proxy sets x-org-id when running on an org subdomain,
   // but when the callback is centralised on the platform domain the header won't be set.
   // In that case, derive the org from the `next` URL's subdomain.
