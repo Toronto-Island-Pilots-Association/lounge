@@ -35,7 +35,7 @@ export default async function EditThreadPage({
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Discussion Not Found</h2>
             <Link
               href="/discussions"
-              className="inline-block px-6 py-2 bg-[#0d1e26] text-white font-semibold rounded-lg"
+              className="inline-block px-6 py-2 bg-[var(--color-primary)] text-white font-semibold rounded-lg"
             >
               Back to Hangar Talk
             </Link>
@@ -56,7 +56,7 @@ export default async function EditThreadPage({
         <div className="mb-4 sm:mb-6">
           <Link
             href={`/discussions/${id}`}
-            className="text-[#0d1e26] hover:text-[#0a171c] text-sm font-medium inline-flex items-center gap-1"
+            className="text-[var(--color-primary)] hover:text-[#0a171c] text-sm font-medium inline-flex items-center gap-1"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />

@@ -134,7 +134,7 @@ export default async function BillingPage({
                     <th
                       key={planKey}
                       className={`text-center px-3 py-3 font-semibold ${
-                        planKey === currentPlan ? 'text-[#0d1e26]' : 'text-gray-500'
+                        planKey === currentPlan ? 'text-[var(--color-primary)]' : 'text-gray-500'
                       }`}
                     >
                       {PLANS[planKey].label}
@@ -149,7 +149,7 @@ export default async function BillingPage({
                 <tr className="border-b bg-gray-50/50">
                   <td className="px-4 py-2.5 text-gray-600">Price / month</td>
                   {PLAN_KEYS.map((planKey) => (
-                    <td key={planKey} className={`text-center px-3 py-2.5 font-medium ${planKey === currentPlan ? 'text-[#0d1e26]' : 'text-gray-700'}`}>
+                    <td key={planKey} className={`text-center px-3 py-2.5 font-medium ${planKey === currentPlan ? 'text-[var(--color-primary)]' : 'text-gray-700'}`}>
                       ${PLANS[planKey].priceMonthly}
                     </td>
                   ))}
@@ -157,7 +157,7 @@ export default async function BillingPage({
                 <tr className="border-b">
                   <td className="px-4 py-2.5 text-gray-600">Members</td>
                   {PLAN_KEYS.map((planKey) => (
-                    <td key={planKey} className={`text-center px-3 py-2.5 ${planKey === currentPlan ? 'text-[#0d1e26] font-medium' : 'text-gray-500'}`}>
+                    <td key={planKey} className={`text-center px-3 py-2.5 ${planKey === currentPlan ? 'text-[var(--color-primary)] font-medium' : 'text-gray-500'}`}>
                       {PLANS[planKey].maxMembers ?? '∞'}
                     </td>
                   ))}
@@ -170,7 +170,7 @@ export default async function BillingPage({
                       return (
                         <td key={planKey} className="text-center px-3 py-2.5">
                           {included ? (
-                            <span className={`text-base ${planKey === currentPlan ? 'text-[#0d1e26]' : 'text-green-600'}`}>✓</span>
+                            <span className={`text-base ${planKey === currentPlan ? 'text-[var(--color-primary)]' : 'text-green-600'}`}>✓</span>
                           ) : (
                             <span className="text-gray-200">–</span>
                           )}

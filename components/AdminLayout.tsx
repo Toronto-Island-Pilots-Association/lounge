@@ -37,7 +37,7 @@ function NavLink({
       href={href}
       className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
         isActive
-          ? 'bg-[#0d1e26] text-white font-medium'
+          ? 'bg-[var(--color-primary)] text-white font-medium'
           : 'text-gray-700 hover:bg-gray-100'
       }`}
     >
@@ -68,7 +68,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 href={href}
                 className={`flex-shrink-0 rounded-md px-2.5 py-1.5 text-sm font-medium flex items-center justify-center whitespace-nowrap transition-colors ${
                   isActive(href)
-                    ? 'bg-[#0d1e26] text-white'
+                    ? 'bg-[var(--color-primary)] text-white'
                     : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >

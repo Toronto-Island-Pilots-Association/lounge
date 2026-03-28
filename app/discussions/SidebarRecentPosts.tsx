@@ -45,7 +45,7 @@ export default async function SidebarRecentPosts() {
                 {getCategoryIcon(thread.category)}
               </span>
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-900 group-hover:text-[#0d1e26] line-clamp-2 font-medium transition-colors">
+                <p className="text-sm text-gray-900 group-hover:text-[var(--color-primary)] line-clamp-2 font-medium transition-colors">
                   {thread.title}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">

@@ -84,7 +84,7 @@ export default function NotificationsClient() {
           <p className="text-gray-600 mb-4">No notifications yet.</p>
           <Link
             href="/discussions"
-            className="mt-4 inline-block text-[#0d1e26] font-medium hover:underline"
+            className="mt-4 inline-block text-[var(--color-primary)] font-medium hover:underline"
           >
             Go to Hangar Talk
           </Link>
@@ -133,7 +133,7 @@ export default function NotificationsClient() {
               <p className="text-xs text-gray-500 mt-0.5">{formatNotificationTime(n.created_at)}</p>
             </div>
             {isUnread && (
-              <span className="flex-shrink-0 w-2 h-2 rounded-full bg-[#0d1e26] mt-4" aria-hidden />
+              <span className="flex-shrink-0 w-2 h-2 rounded-full bg-[var(--color-primary)] mt-4" aria-hidden />
             )}
           </button>
         )

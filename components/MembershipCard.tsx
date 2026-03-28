@@ -93,7 +93,7 @@ export default function MembershipCard({
     <div className="relative w-full">
       <div
         ref={cardRef}
-        className="relative bg-gradient-to-br from-[#0d1e26] via-[#0a171c] to-[#0d1e26] rounded-2xl overflow-hidden transition-all duration-300 ease-out sm:min-w-[380px] border-0"
+        className="relative bg-gradient-to-br from-[var(--color-primary)] via-[#0a171c] to-[var(--color-primary)] rounded-2xl overflow-hidden transition-all duration-300 ease-out sm:min-w-[380px] border-0"
         style={{
           aspectRatio: '1.586 / 1',
           transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale3d(1.02, 1.02, 1.02)`,

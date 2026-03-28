@@ -189,7 +189,7 @@ export default function MemberDetailModal({
                   py-3 px-1 border-b-2 font-medium text-sm capitalize
                   ${
                     activeTab === tab
-                      ? 'border-[#0d1e26] text-[#0d1e26]'
+                      ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }
                 `}
@@ -527,7 +527,7 @@ export default function MemberDetailModal({
                           type="text"
                           value={formData.full_name}
                           onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                         />
                       </div>
                       <div>
@@ -536,7 +536,7 @@ export default function MemberDetailModal({
                           type="email"
                           value={formData.email}
                           onChange={(e) => setFormData({ ...formData, email: e.target.value.trim() })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                           placeholder="member@example.com"
                         />
                         <p className="mt-1 text-xs text-gray-500">Admin can change email. Auth and profile will be updated.</p>
@@ -547,7 +547,7 @@ export default function MemberDetailModal({
                           type="text"
                           value={formData.first_name}
                           onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                         />
                       </div>
                       <div>
@@ -556,7 +556,7 @@ export default function MemberDetailModal({
                           type="text"
                           value={formData.last_name}
                           onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                         />
                       </div>
                       <div>
@@ -565,7 +565,7 @@ export default function MemberDetailModal({
                           type="tel"
                           value={formData.phone}
                           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                           placeholder="(555) 123-4567"
                         />
                       </div>
@@ -581,7 +581,7 @@ export default function MemberDetailModal({
                         type="text"
                         value={formData.street}
                         onChange={(e) => setFormData({ ...formData, street: e.target.value })}
-                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                         placeholder="123 Main Street"
                       />
                     </div>
@@ -592,7 +592,7 @@ export default function MemberDetailModal({
                           type="text"
                           value={formData.city}
                           onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                         />
                       </div>
                       <div>
@@ -600,7 +600,7 @@ export default function MemberDetailModal({
                         <select
                           value={formData.country}
                           onChange={(e) => setFormData({ ...formData, country: e.target.value, province_state: '' })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer"
                         >
                           <option value="">Select Country</option>
                           {COUNTRIES.map((country) => (
@@ -617,7 +617,7 @@ export default function MemberDetailModal({
                         <select
                           value={formData.province_state}
                           onChange={(e) => setFormData({ ...formData, province_state: e.target.value })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer"
                           disabled={!formData.country}
                         >
                           <option value="">Select Province/State</option>
@@ -634,7 +634,7 @@ export default function MemberDetailModal({
                           type="text"
                           value={formData.postal_zip_code}
                           onChange={(e) => setFormData({ ...formData, postal_zip_code: e.target.value })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                         />
                       </div>
                     </div>
@@ -649,7 +649,7 @@ export default function MemberDetailModal({
                         <select
                           value={formData.status}
                           onChange={(e) => setFormData({ ...formData, status: e.target.value as MemberProfile['status'] })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer"
                         >
                           <option value="pending">Pending</option>
                           <option value="approved">Approved</option>
@@ -662,7 +662,7 @@ export default function MemberDetailModal({
                         <select
                           value={formData.role}
                           onChange={(e) => setFormData({ ...formData, role: e.target.value as 'member' | 'admin' })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer"
                         >
                           <option value="member">Member</option>
                           <option value="admin">Admin</option>
@@ -673,7 +673,7 @@ export default function MemberDetailModal({
                         <select
                           value={formData.membership_level}
                           onChange={(e) => setFormData({ ...formData, membership_level: e.target.value as MembershipLevel })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer"
                         >
                           <option value="Full">Full</option>
                           <option value="Student">Student</option>
@@ -688,7 +688,7 @@ export default function MemberDetailModal({
                           type="date"
                           value={formData.membership_expires_at}
                           onChange={(e) => setFormData({ ...formData, membership_expires_at: e.target.value })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer"
                           style={{ position: 'relative', zIndex: 1 }}
                         />
                       </div>
@@ -701,7 +701,7 @@ export default function MemberDetailModal({
                             type="text"
                             value={formData.flight_school}
                             onChange={(e) => setFormData({ ...formData, flight_school: e.target.value })}
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                             placeholder="e.g., Island Air, Freelance…"
                           />
                         </div>
@@ -711,7 +711,7 @@ export default function MemberDetailModal({
                             type="text"
                             value={formData.instructor_name}
                             onChange={(e) => setFormData({ ...formData, instructor_name: e.target.value })}
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                             placeholder="e.g., Jane Smith"
                           />
                         </div>
@@ -732,7 +732,7 @@ export default function MemberDetailModal({
                             value="yes"
                             checked={formData.is_copa_member === 'yes'}
                             onChange={(e) => setFormData({ ...formData, is_copa_member: e.target.value })}
-                            className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
+                            className="mr-2 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                           />
                           <span className="text-sm text-gray-700">Yes</span>
                         </label>
@@ -743,7 +743,7 @@ export default function MemberDetailModal({
                             value="no"
                             checked={formData.is_copa_member === 'no'}
                             onChange={(e) => setFormData({ ...formData, is_copa_member: e.target.value, join_copa_flight_32: '', copa_membership_number: '' })}
-                            className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
+                            className="mr-2 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                           />
                           <span className="text-sm text-gray-700">No</span>
                         </label>
@@ -761,7 +761,7 @@ export default function MemberDetailModal({
                                 value="yes"
                                 checked={formData.join_copa_flight_32 === 'yes'}
                                 onChange={(e) => setFormData({ ...formData, join_copa_flight_32: e.target.value })}
-                                className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
+                                className="mr-2 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                               />
                               <span className="text-sm text-gray-700">Yes</span>
                             </label>
@@ -772,7 +772,7 @@ export default function MemberDetailModal({
                                 value="no"
                                 checked={formData.join_copa_flight_32 === 'no'}
                                 onChange={(e) => setFormData({ ...formData, join_copa_flight_32: e.target.value, copa_membership_number: '' })}
-                                className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
+                                className="mr-2 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                               />
                               <span className="text-sm text-gray-700">No</span>
                             </label>
@@ -785,7 +785,7 @@ export default function MemberDetailModal({
                               type="text"
                               value={formData.copa_membership_number}
                               onChange={(e) => setFormData({ ...formData, copa_membership_number: e.target.value })}
-                              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                               placeholder="Enter COPA membership number"
                             />
                           </div>
@@ -803,7 +803,7 @@ export default function MemberDetailModal({
                         <select
                           value={formData.pilot_license_type}
                           onChange={(e) => setFormData({ ...formData, pilot_license_type: e.target.value })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer"
                         >
                           <option value="">Select...</option>
                           <option value="student">Student Pilot</option>
@@ -820,7 +820,7 @@ export default function MemberDetailModal({
                           value={formData.aircraft_type}
                           onChange={(e) => setFormData({ ...formData, aircraft_type: e.target.value })}
                           placeholder="e.g., Cessna 172, Piper Cherokee"
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                         />
                       </div>
                       <div>
@@ -830,7 +830,7 @@ export default function MemberDetailModal({
                           value={formData.call_sign}
                           onChange={(e) => setFormData({ ...formData, call_sign: e.target.value })}
                           placeholder="e.g., C-GABC"
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                         />
                       </div>
                       <div>
@@ -838,7 +838,7 @@ export default function MemberDetailModal({
                         <select
                           value={formData.how_often_fly_from_ytz}
                           onChange={(e) => setFormData({ ...formData, how_often_fly_from_ytz: e.target.value })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer"
                         >
                           <option value="">Select...</option>
                           <option value="daily">Daily</option>
@@ -855,7 +855,7 @@ export default function MemberDetailModal({
                   <div className="pt-4 border-t border-gray-200">
                     <button
                       onClick={() => onSave(member, formData)}
-                      className="px-4 py-2 bg-[#0d1e26] text-white rounded-md hover:bg-[#0a171c] text-sm font-medium transition-colors"
+                      className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-md hover:bg-[#0a171c] text-sm font-medium transition-colors"
                     >
                       Save Changes
                     </button>
@@ -870,7 +870,7 @@ export default function MemberDetailModal({
             <div className="space-y-6">
               {loadingActivity ? (
                 <div className="text-center py-8">
-                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-[#0d1e26]"></div>
+                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-[var(--color-primary)]"></div>
                   <p className="mt-2 text-sm text-gray-500">Loading activity...</p>
                 </div>
               ) : activityData ? (
@@ -1169,7 +1169,7 @@ export default function MemberDetailModal({
                             paymentMethod: e.target.value as 'cash' | 'paypal' | 'wire',
                           })
                         }
-                        className="w-full px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                        className="w-full px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer"
                       >
                         <option value="cash">Cash</option>
                         <option value="paypal">PayPal</option>
@@ -1199,7 +1199,7 @@ export default function MemberDetailModal({
                             ? '45'
                             : ''
                         }
-                        className="w-full px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                        className="w-full px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                       />
                       <p className="mt-1 text-xs text-gray-500">
                         {member.membership_level === 'Corporate'
@@ -1226,7 +1226,7 @@ export default function MemberDetailModal({
                         onFocus={(e) => e.stopPropagation()}
                         onClick={(e) => e.stopPropagation()}
                         onMouseDown={(e) => e.stopPropagation()}
-                        className="w-full px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                        className="w-full px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer"
                         style={{ position: 'relative', pointerEvents: 'auto', WebkitAppearance: 'none' }}
                       />
                       <p className="mt-1 text-xs text-gray-500">
@@ -1247,7 +1247,7 @@ export default function MemberDetailModal({
                           })
                         }
                         rows={2}
-                        className="w-full px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                        className="w-full px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                         placeholder="Payment reference, receipt number, etc."
                       />
                     </div>
@@ -1264,7 +1264,7 @@ export default function MemberDetailModal({
                               clearStripeSubscription: e.target.checked,
                             })
                           }
-                          className="h-4 w-4 text-[#0d1e26] focus:ring-[#0d1e26] border-gray-300 rounded"
+                          className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] border-gray-300 rounded"
                         />
                         <label htmlFor="clearStripe" className="ml-2 text-xs text-gray-700">
                           Clear Stripe subscription (recommended for cash/PayPal/wire payments)
@@ -1337,7 +1337,7 @@ export default function MemberDetailModal({
               {/* Payment History */}
               {loadingActivity ? (
                 <div className="text-center py-8">
-                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-[#0d1e26]"></div>
+                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-[var(--color-primary)]"></div>
                   <p className="mt-2 text-sm text-gray-500">Loading payments...</p>
                 </div>
               ) : activityData ? (
@@ -1438,7 +1438,7 @@ export default function MemberDetailModal({
                 } as Partial<MemberProfile>)
                 onClose()
               }}
-              className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c]"
+              className="px-4 py-2 text-sm font-medium text-white bg-[var(--color-primary)] rounded-md hover:bg-[#0a171c]"
             >
               Save
             </button>

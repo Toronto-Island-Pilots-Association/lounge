@@ -38,7 +38,7 @@ export default function ThreadSort() {
           onClick={() => handleSortChange('latest')}
           className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
             sortBy === 'latest'
-              ? 'bg-white text-[#0d1e26] shadow-sm'
+              ? 'bg-white text-[var(--color-primary)] shadow-sm'
               : 'text-gray-600 hover:text-gray-900'
           }`}
         >
@@ -48,7 +48,7 @@ export default function ThreadSort() {
           onClick={() => handleSortChange('hot')}
           className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
             sortBy === 'hot'
-              ? 'bg-white text-[#0d1e26] shadow-sm'
+              ? 'bg-white text-[var(--color-primary)] shadow-sm'
               : 'text-gray-600 hover:text-gray-900'
           }`}
         >

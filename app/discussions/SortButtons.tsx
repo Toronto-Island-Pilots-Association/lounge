@@ -41,7 +41,7 @@ export default function SortButtons({ currentCategory, currentSort }: SortButton
           onClick={() => handleSortChange('latest')}
           className={`group flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-all duration-200 w-full cursor-pointer ${
             isLatestActive
-              ? 'bg-[#0d1e26] text-white font-medium'
+              ? 'bg-[var(--color-primary)] text-white font-medium'
               : 'text-gray-700 hover:bg-gray-100'
           }`}
         >
@@ -56,7 +56,7 @@ export default function SortButtons({ currentCategory, currentSort }: SortButton
           onClick={() => handleSortChange('hot')}
           className={`group flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-all duration-200 w-full cursor-pointer ${
             isPopularActive
-              ? 'bg-[#0d1e26] text-white font-medium'
+              ? 'bg-[var(--color-primary)] text-white font-medium'
               : 'text-gray-700 hover:bg-gray-100'
           }`}
         >

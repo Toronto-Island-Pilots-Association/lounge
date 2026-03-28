@@ -154,6 +154,14 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
     }
   }
 
+  // Inject org accent color as CSS variable so the whole app themes correctly
+  useEffect(() => {
+    const color = orgConfig?.org.accentColor
+    if (color) {
+      document.documentElement.style.setProperty('--color-primary', color)
+    }
+  }, [orgConfig?.org.accentColor])
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -247,7 +255,7 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
                   priority
                 />
               ) : orgConfig ? (
-                <span className="text-lg font-bold tracking-tight text-[#0d1e26] truncate">
+                <span className="text-lg font-bold tracking-tight text-[var(--color-primary)] truncate">
                   {navBrandLabel}
                 </span>
               ) : null}
@@ -337,7 +345,7 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                         </svg>
                         {notificationCount > 0 && (
-                          <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[14px] h-[14px] px-0.5 bg-[#0d1e26] text-white text-[9px] font-bold rounded-full leading-none">
+                          <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[14px] h-[14px] px-0.5 bg-[var(--color-primary)] text-white text-[9px] font-bold rounded-full leading-none">
                             {notificationCount > 99 ? '99+' : notificationCount}
                           </span>
                         )}
@@ -348,7 +356,7 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
                 <div className="relative ml-0.5 pl-3 border-l border-gray-200 self-stretch flex items-center" data-user-menu>
                   <button
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className="flex items-center space-x-2 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:ring-offset-2 rounded-md p-1"
+                    className="flex items-center space-x-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 rounded-md p-1"
                     aria-label="User menu"
                     aria-expanded={userMenuOpen}
                   >
@@ -485,7 +493,7 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
                 <button
                   type="button"
                   onClick={() => setGuestDemoMenuOpen(!guestDemoMenuOpen)}
-                  className="flex items-center space-x-2 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:ring-offset-2 rounded-md p-1"
+                  className="flex items-center space-x-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 rounded-md p-1"
                   aria-label="Demo preview menu"
                   aria-expanded={guestDemoMenuOpen}
                 >
@@ -557,7 +565,7 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
           {user || isGuest ? (
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#0d1e26]"
+              className="md:hidden p-2 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--color-primary)]"
               aria-label="Toggle menu"
               aria-expanded={mobileMenuOpen}
             >
@@ -670,7 +678,7 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
                       </svg>
                       Notifications
                       {notificationCount > 0 && (
-                        <span className="ml-auto flex items-center justify-center min-w-[20px] h-[20px] px-1.5 bg-[#0d1e26] text-white text-xs font-bold rounded-full">
+                        <span className="ml-auto flex items-center justify-center min-w-[20px] h-[20px] px-1.5 bg-[var(--color-primary)] text-white text-xs font-bold rounded-full">
                           {notificationCount > 99 ? '99+' : notificationCount}
                         </span>
                       )}

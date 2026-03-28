@@ -56,7 +56,7 @@ export default function MembershipActivitySidebar({
                     <Link
                       key={event.id}
                       href="/events"
-                      className="block text-sm text-[#0d1e26] hover:text-[#0a171c] hover:bg-gray-50 rounded-md p-2 -mx-2 transition-colors border-b border-gray-200 last:border-b-0"
+                      className="block text-sm text-[var(--color-primary)] hover:text-[#0a171c] hover:bg-gray-50 rounded-md p-2 -mx-2 transition-colors border-b border-gray-200 last:border-b-0"
                     >
                       <div className="font-medium">{event.title}</div>
                       <div className="text-xs text-gray-500 mt-1 space-y-0.5">
@@ -89,7 +89,7 @@ export default function MembershipActivitySidebar({
               </div>
               <Link
                 href="/events"
-                className="mt-4 block text-sm font-medium text-[#0d1e26] hover:text-[#0a171c] flex items-center gap-1"
+                className="mt-4 block text-sm font-medium text-[var(--color-primary)] hover:text-[#0a171c] flex items-center gap-1"
               >
                 See More
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -102,7 +102,7 @@ export default function MembershipActivitySidebar({
               <p className="text-sm text-gray-500 mb-4">No upcoming events scheduled.</p>
               <Link
                 href="/events"
-                className="block text-sm font-medium text-[#0d1e26] hover:text-[#0a171c] flex items-center gap-1"
+                className="block text-sm font-medium text-[var(--color-primary)] hover:text-[#0a171c] flex items-center gap-1"
               >
                 View All Events
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -128,7 +128,7 @@ export default function MembershipActivitySidebar({
                 <Link
                   key={resource.id}
                   href={`/resources/${resource.id}`}
-                  className="block text-sm text-[#0d1e26] hover:text-[#0a171c] hover:underline py-2 border-b border-gray-200 last:border-b-0"
+                  className="block text-sm text-[var(--color-primary)] hover:text-[#0a171c] hover:underline py-2 border-b border-gray-200 last:border-b-0"
                 >
                   {resource.title}
                 </Link>
@@ -136,7 +136,7 @@ export default function MembershipActivitySidebar({
             </div>
             <Link
               href="/resources"
-              className="mt-4 block text-sm font-medium text-[#0d1e26] hover:text-[#0a171c] flex items-center gap-1"
+              className="mt-4 block text-sm font-medium text-[var(--color-primary)] hover:text-[#0a171c] flex items-center gap-1"
             >
               See More
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -174,7 +174,7 @@ export default function MembershipActivitySidebar({
                   <Link
                     key={thread.id}
                     href={`/discussions/${thread.id}`}
-                    className="block text-sm text-[#0d1e26] hover:text-[#0a171c] hover:underline py-2 border-b border-gray-200 last:border-b-0"
+                    className="block text-sm text-[var(--color-primary)] hover:text-[#0a171c] hover:underline py-2 border-b border-gray-200 last:border-b-0"
                   >
                     <div className="font-medium line-clamp-1">{thread.title}</div>
                     <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
@@ -195,7 +195,7 @@ export default function MembershipActivitySidebar({
             </div>
             <Link
               href="/discussions"
-              className="mt-4 block text-sm font-medium text-[#0d1e26] hover:text-[#0a171c] flex items-center gap-1"
+              className="mt-4 block text-sm font-medium text-[var(--color-primary)] hover:text-[#0a171c] flex items-center gap-1"
             >
               See More
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

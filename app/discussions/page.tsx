@@ -166,7 +166,7 @@ export default async function DiscussionsPage({
                   href={categoryFilter
                     ? `/discussions/new?category=${categoryFilter}`
                     : '/discussions/new'}
-                  className="inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-[#0d1e26] text-white text-sm font-medium rounded-lg hover:bg-[#0a171c] transition-colors shadow-sm hover:shadow-md whitespace-nowrap ml-auto sm:ml-0"
+                  className="inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-[var(--color-primary)] text-white text-sm font-medium rounded-lg hover:bg-[#0a171c] transition-colors shadow-sm hover:shadow-md whitespace-nowrap ml-auto sm:ml-0"
                 >
                   <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -220,7 +220,7 @@ export default async function DiscussionsPage({
               <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-8 sm:p-12 text-center">
                 <div className="max-w-md mx-auto">
                   {categoryFilter ? (
-                    <div className="mb-4 text-[#0d1e26] flex justify-center">
+                    <div className="mb-4 text-[var(--color-primary)] flex justify-center">
                       <CategoryIconLarge category={categoryFilter} />
                     </div>
                   ) : (
@@ -242,7 +242,7 @@ export default async function DiscussionsPage({
                     href={categoryFilter 
                       ? `/discussions/new?category=${categoryFilter}`
                       : '/discussions/new'}
-                    className="inline-flex items-center px-5 py-2.5 bg-[#0d1e26] text-white text-sm font-semibold rounded-lg hover:bg-[#0a171c] transition-colors shadow-sm hover:shadow-md"
+                    className="inline-flex items-center px-5 py-2.5 bg-[var(--color-primary)] text-white text-sm font-semibold rounded-lg hover:bg-[#0a171c] transition-colors shadow-sm hover:shadow-md"
                   >
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -306,7 +306,7 @@ export default async function DiscussionsPage({
                             <h3 className="text-base font-bold text-gray-900 line-clamp-2 leading-snug">
                               {thread.title}
                             </h3>
-                            <span className="px-1.5 py-0.5 text-xs font-medium bg-[#0d1e26]/10 text-[#0d1e26] rounded flex-shrink-0">
+                            <span className="px-1.5 py-0.5 text-xs font-medium bg-[var(--color-primary)]/10 text-[var(--color-primary)] rounded flex-shrink-0">
                               {categoryConfig.categoryLabels[thread.category]}
                             </span>
                           </div>
@@ -321,10 +321,10 @@ export default async function DiscussionsPage({
                         <div className="hidden md:flex md:flex-col md:gap-2">
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex flex-wrap items-baseline gap-2 min-w-0">
-                              <h3 className="text-base font-semibold text-gray-900 hover:text-[#0d1e26] line-clamp-2 leading-snug">
+                              <h3 className="text-base font-semibold text-gray-900 hover:text-[var(--color-primary)] line-clamp-2 leading-snug">
                                 {thread.title}
                               </h3>
-                              <span className="px-1.5 py-0.5 text-xs font-medium bg-[#0d1e26]/10 text-[#0d1e26] rounded flex-shrink-0">
+                              <span className="px-1.5 py-0.5 text-xs font-medium bg-[var(--color-primary)]/10 text-[var(--color-primary)] rounded flex-shrink-0">
                                 {categoryConfig.categoryLabels[thread.category]}
                               </span>
                             </div>

@@ -128,7 +128,7 @@ export default function ResourcesPageClient() {
             setEditingResource(null)
             setShowResourceForm(true)
           }}
-          className="bg-[#0d1e26] text-white px-4 py-2 rounded-md hover:bg-[#0a171c] text-sm w-full sm:w-auto"
+          className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-md hover:bg-[#0a171c] text-sm w-full sm:w-auto"
         >
           Add Announcement
         </button>
@@ -177,14 +177,14 @@ export default function ResourcesPageClient() {
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <Link
                           href={`/resources/${resource.id}`}
-                          className="text-[#0d1e26] hover:text-[#0a171c] text-sm font-medium"
+                          className="text-[var(--color-primary)] hover:text-[#0a171c] text-sm font-medium"
                         >
                           View
                         </Link>
                         <span className="text-gray-300">|</span>
                         <button
                           onClick={() => setEditingResource(resource)}
-                          className="text-[#0d1e26] hover:text-[#0a171c] text-sm font-medium"
+                          className="text-[var(--color-primary)] hover:text-[#0a171c] text-sm font-medium"
                         >
                           Edit
                         </button>
@@ -333,7 +333,7 @@ function ResourceFormModal({
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
               required
             />
           </div>
@@ -344,7 +344,7 @@ function ResourceFormModal({
             <select
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value as Resource['category'] })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
               required
             >
               <option value="tipa_newsletters">TIPA Newsletters</option>
@@ -368,7 +368,7 @@ function ResourceFormModal({
                     setIsExternalLink(false)
                     setFormData({ ...formData, url: '' })
                   }}
-                  className="text-[#0d1e26] focus:ring-[#0d1e26]"
+                  className="text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                 />
                 <span className="text-sm text-gray-700">Content</span>
               </label>
@@ -378,7 +378,7 @@ function ResourceFormModal({
                   name="resourceType"
                   checked={isExternalLink}
                   onChange={() => setIsExternalLink(true)}
-                  className="text-[#0d1e26] focus:ring-[#0d1e26]"
+                  className="text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                 />
                 <span className="text-sm text-gray-700">External Link</span>
               </label>
@@ -394,7 +394,7 @@ function ResourceFormModal({
                 value={formData.url}
                 onChange={(e) => setFormData({ ...formData, url: e.target.value })}
                 placeholder="https://example.com"
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                 required={isExternalLink}
               />
               <p className="mt-1 text-xs text-gray-500">This resource will open the external link when clicked</p>
@@ -460,7 +460,7 @@ function ResourceFormModal({
                 }
                 onClose()
               }}
-              className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c]"
+              className="px-4 py-2 text-sm font-medium text-white bg-[var(--color-primary)] rounded-md hover:bg-[#0a171c]"
             >
               {resource ? 'Update' : 'Create'}
             </button>

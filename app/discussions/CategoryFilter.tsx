@@ -36,7 +36,7 @@ export default function CategoryFilter({ currentCategory }: { currentCategory?: 
             onClick={() => handleCategoryChange(category)}
             className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 whitespace-nowrap ${
               selectedCategory === category
-                ? 'bg-white text-[#0d1e26] shadow-sm'
+                ? 'bg-white text-[var(--color-primary)] shadow-sm'
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
             }`}
           >

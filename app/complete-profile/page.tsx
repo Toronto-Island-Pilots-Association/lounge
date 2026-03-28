@@ -297,18 +297,18 @@ export default function CompleteProfilePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">First Name <span className="text-red-500">*</span></label>
-                <input id="firstName" name="firstName" type="text" required className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]" value={formData.firstName} onChange={handleChange} />
+                <input id="firstName" name="firstName" type="text" required className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]" value={formData.firstName} onChange={handleChange} />
               </div>
               <div>
                 <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">Last Name <span className="text-red-500">*</span></label>
-                <input id="lastName" name="lastName" type="text" required className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]" value={formData.lastName} onChange={handleChange} />
+                <input id="lastName" name="lastName" type="text" required className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]" value={formData.lastName} onChange={handleChange} />
               </div>
               {fieldEnabled('phone') && (
                 <div className="md:col-span-2">
                   <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
                     Phone Number {fieldRequired('phone') && <span className="text-red-500">*</span>}
                   </label>
-                  <input id="phone" name="phone" type="tel" required={fieldRequired('phone')} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]" placeholder="(555) 123-4567" value={formData.phone} onChange={handleChange} />
+                  <input id="phone" name="phone" type="tel" required={fieldRequired('phone')} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]" placeholder="(555) 123-4567" value={formData.phone} onChange={handleChange} />
                 </div>
               )}
             </div>
@@ -318,16 +318,16 @@ export default function CompleteProfilePage() {
                 <div className="grid grid-cols-1 gap-4">
                   <div>
                     <label htmlFor="street" className="block text-sm font-medium text-gray-700 mb-1">Street <span className="text-red-500">*</span></label>
-                    <input id="street" name="street" type="text" required className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]" value={formData.street} onChange={handleChange} />
+                    <input id="street" name="street" type="text" required className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]" value={formData.street} onChange={handleChange} />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">City <span className="text-red-500">*</span></label>
-                      <input id="city" name="city" type="text" required className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]" value={formData.city} onChange={handleChange} />
+                      <input id="city" name="city" type="text" required className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]" value={formData.city} onChange={handleChange} />
                     </div>
                     <div>
                       <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">Country <span className="text-red-500">*</span></label>
-                      <select id="country" name="country" required className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]" value={formData.country} onChange={e => { handleChange(e); setFormData(prev => ({ ...prev, country: e.target.value, provinceState: '' })) }}>
+                      <select id="country" name="country" required className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]" value={formData.country} onChange={e => { handleChange(e); setFormData(prev => ({ ...prev, country: e.target.value, provinceState: '' })) }}>
                         {COUNTRIES.map(c => (
                           <option key={c.value} value={c.value}>{c.label}</option>
                         ))}
@@ -337,7 +337,7 @@ export default function CompleteProfilePage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="provinceState" className="block text-sm font-medium text-gray-700 mb-1">Province / State <span className="text-red-500">*</span></label>
-                      <select id="provinceState" name="provinceState" required className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]" value={formData.provinceState} onChange={handleChange}>
+                      <select id="provinceState" name="provinceState" required className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]" value={formData.provinceState} onChange={handleChange}>
                         {getStatesProvinces(formData.country).map(opt => (
                           <option key={opt.value} value={opt.value}>{opt.label}</option>
                         ))}
@@ -345,7 +345,7 @@ export default function CompleteProfilePage() {
                     </div>
                     <div>
                       <label htmlFor="postalZipCode" className="block text-sm font-medium text-gray-700 mb-1">Postal / ZIP Code <span className="text-red-500">*</span></label>
-                      <input id="postalZipCode" name="postalZipCode" type="text" required className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]" value={formData.postalZipCode} onChange={handleChange} />
+                      <input id="postalZipCode" name="postalZipCode" type="text" required className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]" value={formData.postalZipCode} onChange={handleChange} />
                     </div>
                   </div>
                 </div>
@@ -367,7 +367,7 @@ export default function CompleteProfilePage() {
                 Briefly describe your interest in joining.
                 {fieldRequired('statement_of_interest') && <span className="text-red-500"> *</span>}
               </label>
-              <textarea id="statementOfInterest" name="statementOfInterest" rows={4} required={fieldRequired('statement_of_interest')} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]" value={formData.statementOfInterest} onChange={handleChange} />
+              <textarea id="statementOfInterest" name="statementOfInterest" rows={4} required={fieldRequired('statement_of_interest')} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]" value={formData.statementOfInterest} onChange={handleChange} />
             </div>
           )}
 
@@ -381,7 +381,7 @@ export default function CompleteProfilePage() {
               <div className="space-y-2">
                 {INTEREST_OPTIONS.map(interest => (
                   <label key={interest.value} className="flex items-center">
-                    <input type="checkbox" name="interests" value={interest.value} checked={formData.interests.includes(interest.value)} onChange={e => handleInterestChange(interest.value, e.target.checked)} className="h-4 w-4 text-[#0d1e26] focus:ring-[#0d1e26] border-gray-300 rounded" />
+                    <input type="checkbox" name="interests" value={interest.value} checked={formData.interests.includes(interest.value)} onChange={e => handleInterestChange(interest.value, e.target.checked)} className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] border-gray-300 rounded" />
                     <span className="ml-2 text-sm text-gray-700">{interest.label}</span>
                   </label>
                 ))}
@@ -397,7 +397,7 @@ export default function CompleteProfilePage() {
                 {orgDisplayName ? `How did you hear about ${orgDisplayName}?` : 'How did you hear about us?'}
                 {fieldRequired('how_did_you_hear') && <span className="text-red-500"> *</span>}
               </label>
-              <select id="howDidYouHear" name="howDidYouHear" required={fieldRequired('how_did_you_hear')} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]" value={formData.howDidYouHear} onChange={handleChange}>
+              <select id="howDidYouHear" name="howDidYouHear" required={fieldRequired('how_did_you_hear')} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]" value={formData.howDidYouHear} onChange={handleChange}>
                 <option value="">Select...</option>
                 <option value="friend">Friend/Colleague</option>
                 <option value="social-media">Social Media</option>
@@ -423,7 +423,7 @@ export default function CompleteProfilePage() {
                     placeholder={field.placeholder ?? ''}
                     value={(customFieldValues[field.key] as string) ?? ''}
                     onChange={e => handleCustomFieldChange(field.key, e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   />
                 )}
 
@@ -434,7 +434,7 @@ export default function CompleteProfilePage() {
                     rows={4}
                     value={(customFieldValues[field.key] as string) ?? ''}
                     onChange={e => handleCustomFieldChange(field.key, e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   />
                 )}
 
@@ -443,7 +443,7 @@ export default function CompleteProfilePage() {
                     required={field.required}
                     value={(customFieldValues[field.key] as string) ?? ''}
                     onChange={e => handleCustomFieldChange(field.key, e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   >
                     <option value="">Select…</option>
                     {(field.options ?? []).map(opt => (
@@ -461,7 +461,7 @@ export default function CompleteProfilePage() {
                           value={opt}
                           checked={Array.isArray(customFieldValues[field.key]) && (customFieldValues[field.key] as string[]).includes(opt)}
                           onChange={e => handleCustomCheckboxGroupChange(field.key, opt, e.target.checked)}
-                          className="h-4 w-4 text-[#0d1e26] focus:ring-[#0d1e26] border-gray-300 rounded"
+                          className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] border-gray-300 rounded"
                         />
                         <span className="ml-2 text-sm text-gray-700">{opt}</span>
                       </label>
@@ -476,7 +476,7 @@ export default function CompleteProfilePage() {
                       required={field.required}
                       checked={(customFieldValues[field.key] as string) === 'true'}
                       onChange={e => handleCustomFieldChange(field.key, e.target.checked ? 'true' : '')}
-                      className="h-4 w-4 text-[#0d1e26] focus:ring-[#0d1e26] border-gray-300 rounded"
+                      className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] border-gray-300 rounded"
                     />
                     <span className="text-sm text-gray-700">Yes</span>
                   </label>
@@ -492,12 +492,12 @@ export default function CompleteProfilePage() {
             ) : (
               <div className="space-y-3">
                 <label className="flex items-start">
-                  <input type="checkbox" name="agreedToBylaws" required className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]" checked={formData.agreedToBylaws} onChange={handleChange} />
+                  <input type="checkbox" name="agreedToBylaws" required className="mt-1 mr-3 text-[var(--color-primary)] focus:ring-[var(--color-primary)]" checked={formData.agreedToBylaws} onChange={handleChange} />
                   <span className="text-sm text-gray-700">
                     {bylawsUrl ? (
                       <>
                         I have reviewed and agree to the{' '}
-                        <Link href={bylawsUrl} target="_blank" rel="noopener noreferrer" className="text-[#0d1e26] underline hover:no-underline">By-Laws</Link>.{' '}
+                        <Link href={bylawsUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline hover:no-underline">By-Laws</Link>.{' '}
                       </>
                     ) : (
                       <>I have reviewed and agree to this organization&apos;s governing documents (by-laws, constitution, or equivalent).{' '}</>
@@ -506,12 +506,12 @@ export default function CompleteProfilePage() {
                   </span>
                 </label>
                 <label className="flex items-start">
-                  <input type="checkbox" name="agreedToGovernancePolicy" required className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]" checked={formData.agreedToGovernancePolicy} onChange={handleChange} />
+                  <input type="checkbox" name="agreedToGovernancePolicy" required className="mt-1 mr-3 text-[var(--color-primary)] focus:ring-[var(--color-primary)]" checked={formData.agreedToGovernancePolicy} onChange={handleChange} />
                   <span className="text-sm text-gray-700">
                     {membershipPolicyUrl ? (
                       <>
                         I have reviewed and agree to the{' '}
-                        <Link href={membershipPolicyUrl} target="_blank" rel="noopener noreferrer" className="text-[#0d1e26] underline hover:no-underline">Governance &amp; Membership Policy</Link>.{' '}
+                        <Link href={membershipPolicyUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline hover:no-underline">Governance &amp; Membership Policy</Link>.{' '}
                       </>
                     ) : (
                       <>I have reviewed and agree to this organization&apos;s membership terms and policies.{' '}</>
@@ -520,11 +520,11 @@ export default function CompleteProfilePage() {
                   </span>
                 </label>
                 <label className="flex items-start">
-                  <input type="checkbox" name="understandsApprovalProcess" required className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]" checked={formData.understandsApprovalProcess} onChange={handleChange} />
+                  <input type="checkbox" name="understandsApprovalProcess" required className="mt-1 mr-3 text-[var(--color-primary)] focus:ring-[var(--color-primary)]" checked={formData.understandsApprovalProcess} onChange={handleChange} />
                   <span className="text-sm text-gray-700">I understand my application is subject to approval and does not create membership until approved <span className="text-red-500">*</span></span>
                 </label>
                 <label className="flex items-start">
-                  <input type="checkbox" name="agreedToElectronicInfo" required className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]" checked={formData.agreedToElectronicInfo} onChange={handleChange} />
+                  <input type="checkbox" name="agreedToElectronicInfo" required className="mt-1 mr-3 text-[var(--color-primary)] focus:ring-[var(--color-primary)]" checked={formData.agreedToElectronicInfo} onChange={handleChange} />
                   <span className="text-sm text-gray-700">I agree to receive information electronically (e.g. by email) <span className="text-red-500">*</span></span>
                 </label>
               </div>
@@ -532,7 +532,7 @@ export default function CompleteProfilePage() {
           </div>
 
           <div className="flex justify-end pt-4">
-            <button type="submit" disabled={saving || !orgConfigReady} className="px-6 py-3 bg-[#0d1e26] text-white font-semibold rounded-lg hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0d1e26] disabled:opacity-50 disabled:cursor-not-allowed">
+            <button type="submit" disabled={saving || !orgConfigReady} className="px-6 py-3 bg-[var(--color-primary)] text-white font-semibold rounded-lg hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed">
               {saving ? 'Saving...' : 'Complete Profile'}
             </button>
           </div>

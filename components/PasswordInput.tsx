@@ -32,7 +32,7 @@ const PasswordInput = ({
       <button
         type="button"
         onClick={handleToggle}
-        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:ring-offset-0"
+        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-0"
         aria-label={showPassword ? 'Hide password' : 'Show password'}
       >
         {showPassword ? (

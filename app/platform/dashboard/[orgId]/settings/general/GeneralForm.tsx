@@ -255,7 +255,7 @@ export default function GeneralForm({
               className="flex-1 rounded-md border border-gray-200 px-3 py-2 text-sm font-mono text-gray-900 focus:border-gray-400 focus:outline-none"
               value={draft.accentColor}
               onChange={set('accentColor')}
-              placeholder="#0d1e26"
+              placeholder="var(--color-primary)"
             />
           </div>
         </div>

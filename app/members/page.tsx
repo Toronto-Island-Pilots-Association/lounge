@@ -110,7 +110,7 @@ export default async function MembersPage({
                             {member.full_name || `${member.first_name || ''} ${member.last_name || ''}`.trim() || 'N/A'}
                           </div>
                           {member.role === 'admin' && (
-                            <div className="text-xs text-[#0d1e26] mt-0.5">Admin</div>
+                            <div className="text-xs text-[var(--color-primary)] mt-0.5">Admin</div>
                           )}
                         </div>
                         <span className={`ml-2 px-2 py-1 text-xs rounded-full flex-shrink-0 ${
@@ -205,7 +205,7 @@ export default async function MembersPage({
                           {member.full_name || `${member.first_name || ''} ${member.last_name || ''}`.trim() || 'N/A'}
                         </div>
                         {member.role === 'admin' && (
-                          <div className="text-xs text-[#0d1e26] mt-1">Admin</div>
+                          <div className="text-xs text-[var(--color-primary)] mt-1">Admin</div>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -303,7 +303,7 @@ export default async function MembersPage({
                           href={`/members?page=${page}`}
                           className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
                             page === currentPage
-                              ? 'z-10 bg-[#0d1e26] text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0d1e26]'
+                              ? 'z-10 bg-[var(--color-primary)] text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]'
                               : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0'
                           }`}
                         >

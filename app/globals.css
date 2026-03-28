@@ -17,7 +17,7 @@
   --color-primary-300: #8da8b4;
   --color-primary-400: #678b9b;
   --color-primary-500: #416e82;
-  --color-primary-600: #0d1e26;
+  --color-primary-600: var(--color-primary);
   --color-primary-700: #0a171c;
   --color-primary-800: #071012;
   --color-primary-900: #040808;
@@ -139,7 +139,7 @@ select option {
 }
 
 .ProseMirror a {
-  color: #0d1e26;
+  color: var(--color-primary);
   text-decoration: underline;
 }
 
@@ -187,7 +187,7 @@ select option {
 }
 
 .prose a {
-  color: #0d1e26;
+  color: var(--color-primary);
   text-decoration: underline;
 }
 

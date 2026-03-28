@@ -36,7 +36,7 @@ function CategorySection({
             prefetch={true}
             className={`group flex flex-col px-3 py-1.5 rounded-md text-sm transition-all duration-200 ${
               isActive
-                ? 'bg-[#0d1e26] text-white font-medium'
+                ? 'bg-[var(--color-primary)] text-white font-medium'
                 : 'text-gray-700 hover:bg-gray-100'
             }`}
           >

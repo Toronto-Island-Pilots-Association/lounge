@@ -309,7 +309,7 @@ export default function SettingsPage() {
                     id="phone"
                     value={formData.phone}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                     placeholder="(555) 123-4567"
                   />
                 </div>
@@ -324,7 +324,7 @@ export default function SettingsPage() {
                     id="first_name"
                     value={formData.first_name}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   />
                 </div>
 
@@ -338,7 +338,7 @@ export default function SettingsPage() {
                     id="last_name"
                     value={formData.last_name}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   />
                 </div>
               </div>
@@ -362,7 +362,7 @@ export default function SettingsPage() {
                   id="street"
                   value={formData.street}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   placeholder="123 Main Street"
                 />
               </div>
@@ -377,7 +377,7 @@ export default function SettingsPage() {
                     id="city"
                     value={formData.city}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   />
                 </div>
                 <div>
@@ -397,7 +397,7 @@ export default function SettingsPage() {
                         province_state: '',
                       }))
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   >
                     {COUNTRIES.map((country) => (
                       <option key={country.value} value={country.value}>
@@ -417,7 +417,7 @@ export default function SettingsPage() {
                     id="province_state"
                     value={formData.province_state}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   >
                     {getStatesProvinces(formData.country).map((option) => (
                       <option key={option.value} value={option.value}>
@@ -436,7 +436,7 @@ export default function SettingsPage() {
                     id="postal_zip_code"
                     value={formData.postal_zip_code}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   />
                 </div>
               </div>
@@ -461,7 +461,7 @@ export default function SettingsPage() {
                       type="radio"
                       name="is_copa_member"
                       value="yes"
-                      className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
+                      className="mr-2 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                       checked={formData.is_copa_member === 'yes'}
                       onChange={handleChange}
                     />
@@ -472,7 +472,7 @@ export default function SettingsPage() {
                       type="radio"
                       name="is_copa_member"
                       value="no"
-                      className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
+                      className="mr-2 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                       checked={formData.is_copa_member === 'no'}
                       onChange={handleChange}
                     />
@@ -493,7 +493,7 @@ export default function SettingsPage() {
                           type="radio"
                           name="join_copa_flight_32"
                           value="yes"
-                          className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
+                          className="mr-2 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                           checked={formData.join_copa_flight_32 === 'yes'}
                           onChange={handleChange}
                         />
@@ -504,7 +504,7 @@ export default function SettingsPage() {
                           type="radio"
                           name="join_copa_flight_32"
                           value="no"
-                          className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
+                          className="mr-2 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                           checked={formData.join_copa_flight_32 === 'no'}
                           onChange={handleChange}
                         />
@@ -524,7 +524,7 @@ export default function SettingsPage() {
                         id="copa_membership_number"
                         value={formData.copa_membership_number}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                         placeholder="Enter your COPA membership number"
                       />
                     </div>
@@ -546,7 +546,7 @@ export default function SettingsPage() {
                   type="checkbox"
                   checked={formData.notify_replies}
                   onChange={(e) => setFormData(prev => ({ ...prev, notify_replies: e.target.checked }))}
-                  className="h-4 w-4 mt-0.5 text-[#0d1e26] focus:ring-[#0d1e26] border-gray-300 rounded"
+                  className="h-4 w-4 mt-0.5 text-[var(--color-primary)] focus:ring-[var(--color-primary)] border-gray-300 rounded"
                 />
                 <div>
                   <span className="text-sm font-medium text-gray-900">Reply notifications</span>
@@ -586,7 +586,7 @@ export default function SettingsPage() {
                       value={interest.value}
                       checked={Array.isArray(formData.interests) && formData.interests.includes(interest.value)}
                       onChange={(e) => handleInterestChange(interest.value, e.target.checked)}
-                      className="h-4 w-4 text-[#0d1e26] focus:ring-[#0d1e26] border-gray-300 rounded"
+                      className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] border-gray-300 rounded"
                     />
                     <span className="ml-2 text-sm text-gray-700">{interest.label}</span>
                   </label>
@@ -612,7 +612,7 @@ export default function SettingsPage() {
                     id="pilot_license_type"
                     value={formData.pilot_license_type}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   >
                     <option value="">Select...</option>
                     <option value="student">Student Pilot</option>
@@ -634,7 +634,7 @@ export default function SettingsPage() {
                     value={formData.aircraft_type}
                     onChange={handleChange}
                     placeholder="e.g., Cessna 172, Piper Cherokee"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   />
                 </div>
 
@@ -649,7 +649,7 @@ export default function SettingsPage() {
                     value={formData.call_sign}
                     onChange={handleChange}
                     placeholder="e.g., C-GABC"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   />
                 </div>
 
@@ -662,7 +662,7 @@ export default function SettingsPage() {
                     id="how_often_fly_from_ytz"
                     value={formData.how_often_fly_from_ytz}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   >
                     <option value="">Select...</option>
                     <option value="daily">Daily</option>
@@ -690,7 +690,7 @@ export default function SettingsPage() {
                         value={formData.flight_school}
                         onChange={handleChange}
                         placeholder="e.g., Island Air, Freelance"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                       />
                     </div>
                     <div>
@@ -704,7 +704,7 @@ export default function SettingsPage() {
                         value={formData.instructor_name}
                         onChange={handleChange}
                         placeholder="e.g., Jane Smith"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                       />
                     </div>
                   </div>
@@ -730,7 +730,7 @@ export default function SettingsPage() {
                 </div>
                 <Link
                   href="/change-password"
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#0d1e26] hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0d1e26] transition-colors"
+                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[var(--color-primary)] hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-primary)] transition-colors"
                 >
                   Change Password
                 </Link>
@@ -743,14 +743,14 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={() => router.back()}
-              className="px-6 py-2.5 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0d1e26] transition-colors"
+              className="px-6 py-2.5 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-primary)] transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="px-6 py-2.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#0d1e26] hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0d1e26] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-6 py-2.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[var(--color-primary)] hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {saving ? (
                 <span className="flex items-center">

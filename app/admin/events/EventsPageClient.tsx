@@ -131,7 +131,7 @@ export default function EventsPageClient() {
             setEditingEvent(null)
             setShowEventForm(true)
           }}
-          className="bg-[#0d1e26] text-white px-4 py-2 rounded-md hover:bg-[#0a171c] text-sm w-full sm:w-auto"
+          className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-md hover:bg-[#0a171c] text-sm w-full sm:w-auto"
         >
           Create Event
         </button>
@@ -141,7 +141,7 @@ export default function EventsPageClient() {
           const startDate = new Date(event.start_time)
           const endDate = event.end_time ? new Date(event.end_time) : null
           return (
-            <div key={event.id} className="bg-gray-50 rounded-lg p-3 sm:p-4 border-l-4 border-[#0d1e26]">
+            <div key={event.id} className="bg-gray-50 rounded-lg p-3 sm:p-4 border-l-4 border-[var(--color-primary)]">
               <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
                 <div className="flex-1 min-w-0 flex flex-col sm:flex-row gap-3 sm:gap-4">
                   {/* Always render image container to maintain consistent layout */}
@@ -211,7 +211,7 @@ export default function EventsPageClient() {
                 <div className="flex flex-col sm:flex-row gap-2 sm:space-x-2 shrink-0 w-full sm:w-auto">
                   <button
                     onClick={() => setEditingEvent(event)}
-                    className="text-[#0d1e26] hover:text-[#0a171c] text-sm px-3 py-2 sm:px-0 sm:py-0 border border-[#0d1e26] sm:border-0 rounded-md sm:rounded-none hover:bg-[#0d1e26] hover:text-white sm:hover:bg-transparent sm:hover:text-[#0a171c] transition-colors"
+                    className="text-[var(--color-primary)] hover:text-[#0a171c] text-sm px-3 py-2 sm:px-0 sm:py-0 border border-[var(--color-primary)] sm:border-0 rounded-md sm:rounded-none hover:bg-[var(--color-primary)] hover:text-white sm:hover:bg-transparent sm:hover:text-[#0a171c] transition-colors"
                   >
                     Edit
                   </button>
@@ -403,7 +403,7 @@ function EventFormModal({
             id="send-notifications"
             checked={formData.send_notifications}
             onChange={(e) => setFormData({ ...formData, send_notifications: e.target.checked })}
-            className="w-4 h-4 text-[#0d1e26] border-gray-300 rounded focus:ring-[#0d1e26]"
+            className="w-4 h-4 text-[var(--color-primary)] border-gray-300 rounded focus:ring-[var(--color-primary)]"
           />
           <label htmlFor="send-notifications" className="text-sm text-gray-700 cursor-pointer">
             Send email notifications to members
@@ -432,7 +432,7 @@ function EventFormModal({
             <button
               type="submit"
               form="event-form"
-              className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c]"
+              className="px-4 py-2 text-sm font-medium text-white bg-[var(--color-primary)] rounded-md hover:bg-[#0a171c]"
             >
               {event ? 'Update Event' : 'Create Event'}
             </button>
@@ -453,7 +453,7 @@ function EventFormModal({
           <button
             type="submit"
             form="event-form"
-            className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c]"
+            className="px-4 py-2 text-sm font-medium text-white bg-[var(--color-primary)] rounded-md hover:bg-[#0a171c]"
           >
             {event ? 'Update Event' : 'Create Event'}
           </button>

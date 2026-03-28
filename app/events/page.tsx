@@ -305,7 +305,7 @@ export default function EventsPage() {
             {isAdmin && (
               <a
                 href="/admin/events"
-                className="inline-flex items-center px-5 py-2.5 bg-[#0d1e26] text-white text-sm font-semibold rounded-lg hover:bg-[#0a171c] transition-colors"
+                className="inline-flex items-center px-5 py-2.5 bg-[var(--color-primary)] text-white text-sm font-semibold rounded-lg hover:bg-[#0a171c] transition-colors"
               >
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -392,7 +392,7 @@ export default function EventsPage() {
                                           <>
                                             {isGuest ? (
                                               <p className="text-sm text-gray-600">
-                                                <Link href="/login" className="font-medium text-[#0d1e26] underline-offset-2 hover:underline">
+                                                <Link href="/login" className="font-medium text-[var(--color-primary)] underline-offset-2 hover:underline">
                                                   Sign in
                                                 </Link>{' '}
                                                 to RSVP and see who&apos;s attending.
@@ -406,8 +406,8 @@ export default function EventsPage() {
                                                 }
                                                 className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors disabled:opacity-60 ${
                                                   event.user_rsvped
-                                                    ? 'bg-[#0d1e26]/10 text-[#0d1e26] border border-[#0d1e26]/20 hover:bg-[#0d1e26]/15'
-                                                    : 'bg-[#0d1e26] text-white hover:bg-[#0a171c] shadow-sm'
+                                                    ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/20 hover:bg-[var(--color-primary)]/15'
+                                                    : 'bg-[var(--color-primary)] text-white hover:bg-[#0a171c] shadow-sm'
                                                 }`}
                                                 title={event.user_rsvped ? 'Click to cancel' : 'RSVP to this event'}
                                               >
@@ -453,7 +453,7 @@ export default function EventsPage() {
                                         {(event.rsvp_count ?? 0) > 0 ? (
                                           isGuest ? (
                                             <span className="text-sm text-gray-600">
-                                              <span className="font-medium text-[#0d1e26]">
+                                              <span className="font-medium text-[var(--color-primary)]">
                                                 {event.rsvp_count} {event.rsvp_count === 1 ? 'person' : 'people'}
                                               </span>{' '}
                                               attending
@@ -467,7 +467,7 @@ export default function EventsPage() {
                                                 aria-expanded={expandedRsvpsEventId === event.id}
                                                 aria-haspopup="true"
                                               >
-                                                <span className="font-medium text-[#0d1e26]">
+                                                <span className="font-medium text-[var(--color-primary)]">
                                                   {event.rsvp_count} {event.rsvp_count === 1 ? 'person' : 'people'} attending
                                                 </span>
                                                 <svg
@@ -536,7 +536,7 @@ export default function EventsPage() {
                           />
                         ) : (
                           <span
-                            className="flex items-center justify-center w-10 h-10 rounded-full bg-[#0d1e26]/10 text-[#0d1e26] text-sm font-semibold shrink-0"
+                            className="flex items-center justify-center w-10 h-10 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-sm font-semibold shrink-0"
                             aria-hidden
                           >
                             {(r.display_name || 'M').charAt(0).toUpperCase()}
@@ -590,7 +590,7 @@ export default function EventsPage() {
                           />
                         ) : (
                           <span
-                            className="flex items-center justify-center w-10 h-10 rounded-full bg-[#0d1e26]/10 text-[#0d1e26] text-sm font-semibold shrink-0"
+                            className="flex items-center justify-center w-10 h-10 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-sm font-semibold shrink-0"
                             aria-hidden
                           >
                             {(r.display_name || 'M').charAt(0).toUpperCase()}

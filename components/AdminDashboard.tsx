@@ -386,7 +386,7 @@ export default function AdminDashboard() {
                 onClick={() => handleSetActiveTab('members')}
                 className={`py-3 px-4 sm:py-4 sm:px-6 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'members'
-                    ? 'border-[#0d1e26] text-[#0d1e26]'
+                    ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -396,7 +396,7 @@ export default function AdminDashboard() {
                 onClick={() => setActiveTab('resources')}
                 className={`py-3 px-4 sm:py-4 sm:px-6 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'resources'
-                    ? 'border-[#0d1e26] text-[#0d1e26]'
+                    ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -406,7 +406,7 @@ export default function AdminDashboard() {
                 onClick={() => handleSetActiveTab('events')}
                 className={`py-3 px-4 sm:py-4 sm:px-6 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'events'
-                    ? 'border-[#0d1e26] text-[#0d1e26]'
+                    ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -416,7 +416,7 @@ export default function AdminDashboard() {
                 onClick={() => setActiveTab('settings')}
                 className={`py-3 px-4 sm:py-4 sm:px-6 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'settings'
-                    ? 'border-[#0d1e26] text-[#0d1e26]'
+                    ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -466,13 +466,13 @@ export default function AdminDashboard() {
                   </button>
                   <button
                     onClick={() => setShowInviteForm(true)}
-                    className="bg-[#0d1e26] text-white px-4 py-2 rounded-md hover:bg-[#0a171c] text-sm"
+                    className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-md hover:bg-[#0a171c] text-sm"
                   >
                     Invite Member
                   </button>
                   <button
                     onClick={() => setShowBulkInviteForm(true)}
-                    className="bg-[#0d1e26] text-white px-4 py-2 rounded-md hover:bg-[#0a171c] text-sm"
+                    className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-md hover:bg-[#0a171c] text-sm"
                   >
                     Bulk Invite (CSV)
                   </button>
@@ -498,7 +498,7 @@ export default function AdminDashboard() {
                               </div>
                               <button
                                 onClick={() => setEditingMember(member)}
-                                className="ml-2 text-[#0d1e26] hover:text-[#0a171c] text-sm shrink-0"
+                                className="ml-2 text-[var(--color-primary)] hover:text-[#0a171c] text-sm shrink-0"
                               >
                                 Edit
                               </button>
@@ -659,7 +659,7 @@ export default function AdminDashboard() {
                                 )}
                                 <button
                                   onClick={() => setEditingMember(member)}
-                                  className="text-[#0d1e26] hover:text-[#0a171c]"
+                                  className="text-[var(--color-primary)] hover:text-[#0a171c]"
                                 >
                                   Edit
                                 </button>
@@ -710,7 +710,7 @@ export default function AdminDashboard() {
                       setEditingResource(null)
                       setShowResourceForm(true)
                     }}
-                    className="bg-[#0d1e26] text-white px-4 py-2 rounded-md hover:bg-[#0a171c] text-sm w-full sm:w-auto"
+                    className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-md hover:bg-[#0a171c] text-sm w-full sm:w-auto"
                   >
                     Add Resource
                   </button>
@@ -723,7 +723,7 @@ export default function AdminDashboard() {
                         <div className="flex space-x-2">
                           <button
                             onClick={() => setEditingResource(resource)}
-                            className="text-[#0d1e26] hover:text-[#0a171c] text-sm"
+                            className="text-[var(--color-primary)] hover:text-[#0a171c] text-sm"
                           >
                             Edit
                           </button>
@@ -778,7 +778,7 @@ export default function AdminDashboard() {
                       setEditingEvent(null)
                       setShowEventForm(true)
                     }}
-                    className="bg-[#0d1e26] text-white px-4 py-2 rounded-md hover:bg-[#0a171c] text-sm w-full sm:w-auto"
+                    className="bg-[var(--color-primary)] text-white px-4 py-2 rounded-md hover:bg-[#0a171c] text-sm w-full sm:w-auto"
                   >
                     Create Event
                   </button>
@@ -788,7 +788,7 @@ export default function AdminDashboard() {
                     const startDate = new Date(event.start_time)
                     const endDate = event.end_time ? new Date(event.end_time) : null
                     return (
-                      <div key={event.id} className="bg-gray-50 rounded-lg p-4 border-l-4 border-[#0d1e26]">
+                      <div key={event.id} className="bg-gray-50 rounded-lg p-4 border-l-4 border-[var(--color-primary)]">
                         <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
                           <div className="flex-1 min-w-0">
                             <h3 className="font-semibold text-gray-900 text-base sm:text-lg">{event.title}</h3>
@@ -822,7 +822,7 @@ export default function AdminDashboard() {
                           <div className="flex space-x-2 shrink-0">
                             <button
                               onClick={() => setEditingEvent(event)}
-                              className="text-[#0d1e26] hover:text-[#0a171c] text-sm"
+                              className="text-[var(--color-primary)] hover:text-[#0a171c] text-sm"
                             >
                               Edit
                             </button>
@@ -952,7 +952,7 @@ function MemberEditModal({
               type="text"
               value={formData.full_name}
               onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
             />
           </div>
           <div>
@@ -960,7 +960,7 @@ function MemberEditModal({
             <select
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value as MemberProfile['status'] })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
             >
               <option value="pending">Pending</option>
               <option value="approved">Approved</option>
@@ -973,7 +973,7 @@ function MemberEditModal({
             <select
               value={formData.role}
               onChange={(e) => setFormData({ ...formData, role: e.target.value as 'member' | 'admin' })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
             >
               <option value="member">Member</option>
               <option value="admin">Admin</option>
@@ -984,7 +984,7 @@ function MemberEditModal({
             <select
               value={formData.membership_level}
               onChange={(e) => setFormData({ ...formData, membership_level: e.target.value as MembershipLevel })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
             >
               <option value="Full">Full</option>
               <option value="Student">Student</option>
@@ -1006,7 +1006,7 @@ function MemberEditModal({
                 onSave(member, formData)
                 onClose()
               }}
-              className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c]"
+              className="px-4 py-2 text-sm font-medium text-white bg-[var(--color-primary)] rounded-md hover:bg-[#0a171c]"
             >
               Save
             </button>
@@ -1053,7 +1053,7 @@ function ResourceFormModal({
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
               required
             />
           </div>
@@ -1099,7 +1099,7 @@ function ResourceFormModal({
                 }
                 onClose()
               }}
-              className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c]"
+              className="px-4 py-2 text-sm font-medium text-white bg-[var(--color-primary)] rounded-md hover:bg-[#0a171c]"
             >
               {resource ? 'Update' : 'Create'}
             </button>
@@ -1148,7 +1148,7 @@ function InviteMemberModal({
                 required
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                 placeholder="member@example.com"
               />
             </div>
@@ -1160,7 +1160,7 @@ function InviteMemberModal({
                 type="text"
                 value={formData.firstName}
                 onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                 placeholder="John"
               />
             </div>
@@ -1172,7 +1172,7 @@ function InviteMemberModal({
                 type="text"
                 value={formData.lastName}
                 onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                 placeholder="Doe"
               />
             </div>
@@ -1198,7 +1198,7 @@ function InviteMemberModal({
                 })
                 onClose()
               }}
-              className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c]"
+              className="px-4 py-2 text-sm font-medium text-white bg-[var(--color-primary)] rounded-md hover:bg-[#0a171c]"
             >
               Create Account & Send Invitation
             </button>
@@ -1284,7 +1284,7 @@ jane@example.com,Jane,Smith`}
               type="file"
               accept=".csv,text/csv"
               onChange={handleFileChange}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
             />
             {file && (
               <p className="mt-2 text-sm text-gray-600">
@@ -1306,7 +1306,7 @@ jane@example.com,Jane,Smith`}
             <button
               onClick={handleSubmit}
               disabled={!file || uploading}
-              className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 text-sm font-medium text-white bg-[var(--color-primary)] rounded-md hover:bg-[#0a171c] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {uploading ? 'Processing...' : 'Upload & Process'}
             </button>
@@ -1387,7 +1387,7 @@ function EventFormModal({
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                 required
               />
             </div>
@@ -1396,7 +1396,7 @@ function EventFormModal({
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                 rows={3}
               />
             </div>
@@ -1406,7 +1406,7 @@ function EventFormModal({
                 type="text"
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
               />
             </div>
             <div>
@@ -1449,7 +1449,7 @@ function EventFormModal({
               </DrawerClose>
               <button
                 type="submit"
-                className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c]"
+                className="px-4 py-2 text-sm font-medium text-white bg-[var(--color-primary)] rounded-md hover:bg-[#0a171c]"
               >
                 {event ? 'Update Event' : 'Create Event'}
               </button>

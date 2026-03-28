@@ -11,7 +11,7 @@ type Tab = typeof TABS[number]
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
 function inputCls() {
-  return 'w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-[#0d1e26] focus:ring-1 focus:ring-[#0d1e26]'
+  return 'w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]'
 }
 
 function SaveButton({ saving, label = 'Save changes' }: { saving: boolean; label?: string }) {
@@ -19,7 +19,7 @@ function SaveButton({ saving, label = 'Save changes' }: { saving: boolean; label
     <button
       type="submit"
       disabled={saving}
-      className="px-4 py-2 bg-[#0d1e26] text-white text-sm font-medium rounded-md hover:bg-[#0a171c] disabled:opacity-50 disabled:cursor-not-allowed"
+      className="px-4 py-2 bg-[var(--color-primary)] text-white text-sm font-medium rounded-md hover:bg-[#0a171c] disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {saving ? 'Saving…' : label}
     </button>
@@ -48,7 +48,7 @@ function SectionHeader({ title, description }: { title: string; description?: st
 
 function ClubTab() {
   const [draft, setDraft] = useState<OrgIdentity>({
-    description: '', contactEmail: '', websiteUrl: '', accentColor: '#0d1e26', displayName: '', timezone: 'America/Toronto', bylawsUrl: '', membershipPolicyUrl: '', feedbackUrl: '',
+    description: '', contactEmail: '', websiteUrl: '', accentColor: 'var(--color-primary)', displayName: '', timezone: 'America/Toronto', bylawsUrl: '', membershipPolicyUrl: '', feedbackUrl: '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -103,7 +103,7 @@ function ClubTab() {
         <label className="block text-sm font-medium text-gray-700 mb-1">Accent colour</label>
         <div className="flex items-center gap-3">
           <input type="color" className="h-9 w-14 cursor-pointer rounded border border-gray-300 p-0.5" value={draft.accentColor} onChange={set('accentColor')} />
-          <input className="w-32 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-mono text-gray-900 focus:border-[#0d1e26] focus:ring-1 focus:ring-[#0d1e26]" value={draft.accentColor} onChange={set('accentColor')} placeholder="#0d1e26" />
+          <input className="w-32 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-mono text-gray-900 focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]" value={draft.accentColor} onChange={set('accentColor')} placeholder="var(--color-primary)" />
         </div>
       </div>
       <div>
@@ -221,7 +221,7 @@ function FeaturesTab() {
               <div className="flex items-start gap-3">
                 <input
                   type="checkbox"
-                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#0d1e26] focus:ring-[#0d1e26] disabled:cursor-not-allowed"
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)] disabled:cursor-not-allowed"
                   checked={blocked ? false : (draft[key] as boolean)}
                   disabled={blocked}
                   onChange={e => !blocked && setDraft(p => ({ ...p, [key]: e.target.checked }))}
@@ -246,7 +246,7 @@ function FeaturesTab() {
                     onChange={e => setDraft(p => ({ ...p, [labelKey]: e.target.value }))}
                     placeholder={labelPlaceholder}
                     maxLength={40}
-                    className="w-48 rounded-md border border-gray-300 px-2.5 py-1 text-sm text-gray-900 focus:border-[#0d1e26] focus:ring-1 focus:ring-[#0d1e26]"
+                    className="w-48 rounded-md border border-gray-300 px-2.5 py-1 text-sm text-gray-900 focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]"
                   />
                   <p className="mt-0.5 text-xs text-gray-400">Nav label shown to members</p>
                 </div>
@@ -320,9 +320,9 @@ function CustomFieldEditor({
   onSave: () => void
   onCancel: () => void
 }) {
-  const ic = 'w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-[#0d1e26] focus:ring-1 focus:ring-[#0d1e26]'
+  const ic = 'w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]'
   return (
-    <div className="rounded-md border border-[#0d1e26]/20 bg-gray-50 p-4 space-y-3">
+    <div className="rounded-md border border-[var(--color-primary)]/20 bg-gray-50 p-4 space-y-3">
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">Label <span className="text-red-500">*</span></label>
@@ -359,13 +359,13 @@ function CustomFieldEditor({
         </div>
       )}
       <label className="flex items-center gap-2 cursor-pointer">
-        <input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-[#0d1e26] focus:ring-[#0d1e26]"
+        <input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
           checked={draft.required} onChange={e => onChange({ required: e.target.checked })} />
         <span className="text-sm text-gray-700">Required</span>
       </label>
       <div className="flex gap-2 pt-1">
         <button type="button" onClick={onSave}
-          className="px-3 py-1.5 bg-[#0d1e26] text-white text-sm rounded-md hover:bg-[#0a171c]">
+          className="px-3 py-1.5 bg-[var(--color-primary)] text-white text-sm rounded-md hover:bg-[#0a171c]">
           Save field
         </button>
         <button type="button" onClick={onCancel}
@@ -468,12 +468,12 @@ function SignupTab() {
               <div className="flex justify-center">
                 <input type="checkbox" checked={f.enabled}
                   onChange={() => toggle(f.key, 'enabled')}
-                  className="h-4 w-4 rounded border-gray-300 text-[#0d1e26] focus:ring-[#0d1e26]" />
+                  className="h-4 w-4 rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]" />
               </div>
               <div className="flex justify-center">
                 <input type="checkbox" checked={f.required} disabled={!f.enabled}
                   onChange={() => toggle(f.key, 'required')}
-                  className="h-4 w-4 rounded border-gray-300 text-[#0d1e26] focus:ring-[#0d1e26] disabled:opacity-40" />
+                  className="h-4 w-4 rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)] disabled:opacity-40" />
               </div>
             </div>
           ))}
@@ -517,12 +517,12 @@ function SignupTab() {
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       <label className="flex items-center gap-1 text-xs text-gray-500 cursor-pointer">
-                        <input type="checkbox" className="h-3.5 w-3.5 rounded border-gray-300 text-[#0d1e26]"
+                        <input type="checkbox" className="h-3.5 w-3.5 rounded border-gray-300 text-[var(--color-primary)]"
                           checked={f.enabled} onChange={() => toggle(f.key, 'enabled')} />
                         Show
                       </label>
                       <button type="button" onClick={() => startEdit(f)}
-                        className="ml-2 text-xs text-[#0d1e26] hover:underline">Edit</button>
+                        className="ml-2 text-xs text-[var(--color-primary)] hover:underline">Edit</button>
                       <button type="button" onClick={() => deleteCustom(f.key)}
                         className="text-xs text-red-400 hover:text-red-600 ml-1">×</button>
                     </div>
@@ -542,7 +542,7 @@ function SignupTab() {
           />
         ) : (
           <button type="button" onClick={() => setAddingNew(true)}
-            className="text-sm text-[#0d1e26] font-medium hover:underline">
+            className="text-sm text-[var(--color-primary)] font-medium hover:underline">
             + Add custom field
           </button>
         )}
@@ -631,7 +631,7 @@ export default function SettingsPageClient() {
               onClick={() => setTab(t)}
               className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                 tab === t
-                  ? 'border-[#0d1e26] text-[#0d1e26]'
+                  ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >

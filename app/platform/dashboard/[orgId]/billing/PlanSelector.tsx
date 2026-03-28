@@ -54,7 +54,7 @@ export default function PlanSelector({
               key={planKey}
               className={`rounded-xl border-2 p-5 flex flex-col gap-4 transition-all ${
                 isCurrent
-                  ? 'border-[#0d1e26] bg-[#0d1e26] text-white'
+                  ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white'
                   : 'border-gray-200 bg-white text-gray-900 hover:border-gray-300'
               }`}
             >
@@ -64,7 +64,7 @@ export default function PlanSelector({
                     {planKey.replace('_', ' ')}
                   </span>
                   {isCurrent && (
-                    <span className="text-xs bg-white text-[#0d1e26] font-semibold px-2 py-0.5 rounded-full">
+                    <span className="text-xs bg-white text-[var(--color-primary)] font-semibold px-2 py-0.5 rounded-full">
                       Current
                     </span>
                   )}
@@ -85,7 +85,7 @@ export default function PlanSelector({
                   onClick={() => handleSelect(planKey)}
                   className={`w-full py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                     isUpgrade
-                      ? 'bg-[#0d1e26] text-white hover:bg-[#0a171c]'
+                      ? 'bg-[var(--color-primary)] text-white hover:bg-[#0a171c]'
                       : isDowngrade
                       ? 'border border-gray-300 text-gray-700 hover:bg-gray-50'
                       : ''

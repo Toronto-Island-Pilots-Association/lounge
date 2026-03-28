@@ -56,7 +56,7 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
             <p className="text-gray-600 mb-6">The discussion you're looking for doesn't exist.</p>
             <Link
               href="/discussions"
-              className="inline-block px-6 py-2 bg-[#0d1e26] text-white font-semibold rounded-lg hover:bg-[#0a171c] transition-colors"
+              className="inline-block px-6 py-2 bg-[var(--color-primary)] text-white font-semibold rounded-lg hover:bg-[#0a171c] transition-colors"
             >
               Back to Hangar Talk
             </Link>
@@ -160,7 +160,7 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
         <div className="mb-4 sm:mb-6">
           <Link
             href="/discussions"
-            className="text-[#0d1e26] hover:text-[#0a171c] text-sm font-medium inline-flex items-center gap-1"
+            className="text-[var(--color-primary)] hover:text-[#0a171c] text-sm font-medium inline-flex items-center gap-1"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -185,7 +185,7 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
               {!isGuest && thread.created_by === user!.id && thread.created_by !== null ? (
                 <Link
                   href={`/discussions/${id}/edit`}
-                  className="text-sm text-gray-600 hover:text-[#0d1e26] font-medium"
+                  className="text-sm text-gray-600 hover:text-[var(--color-primary)] font-medium"
                 >
                   Edit
                 </Link>

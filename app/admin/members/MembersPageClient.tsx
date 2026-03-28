@@ -326,7 +326,7 @@ export default function MembersPageClient() {
             placeholder="Search by name, email, or member #"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] text-sm"
+            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] text-sm"
             aria-label="Search members"
           />
         </div>
@@ -377,14 +377,14 @@ export default function MembersPageClient() {
         </button>
         <button
           onClick={() => setShowInviteForm(true)}
-          className="bg-[#0d1e26] text-white px-2 py-1.5 sm:px-4 sm:py-2 rounded-md hover:bg-[#0a171c] text-xs sm:text-sm"
+          className="bg-[var(--color-primary)] text-white px-2 py-1.5 sm:px-4 sm:py-2 rounded-md hover:bg-[#0a171c] text-xs sm:text-sm"
         >
           <span className="hidden sm:inline">Invite Member</span>
           <span className="sm:hidden">Invite</span>
         </button>
         <button
           onClick={() => setShowBulkInviteForm(true)}
-          className="bg-[#0d1e26] text-white px-2 py-1.5 sm:px-4 sm:py-2 rounded-md hover:bg-[#0a171c] text-xs sm:text-sm"
+          className="bg-[var(--color-primary)] text-white px-2 py-1.5 sm:px-4 sm:py-2 rounded-md hover:bg-[#0a171c] text-xs sm:text-sm"
         >
           <span className="hidden sm:inline">Bulk Invite (CSV)</span>
           <span className="sm:hidden">Bulk</span>
@@ -406,7 +406,7 @@ export default function MembersPageClient() {
                 className={`
                   whitespace-nowrap py-2.5 px-2 sm:px-3 border-b-2 font-medium text-sm capitalize flex items-center gap-1.5
                   ${statusFilter === tab
-                    ? 'border-[#0d1e26] text-[#0d1e26]'
+                    ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
                 `}
               >
@@ -437,7 +437,7 @@ export default function MembersPageClient() {
                         <button
                           type="button"
                           onClick={() => setEditingMember(member)}
-                          className="font-medium text-gray-900 truncate hover:text-[#0d1e26] hover:underline cursor-pointer text-left"
+                          className="font-medium text-gray-900 truncate hover:text-[var(--color-primary)] hover:underline cursor-pointer text-left"
                         >
                           {member.full_name || '-'}
                         </button>
@@ -457,7 +457,7 @@ export default function MembersPageClient() {
                     </div>
                     <button
                       onClick={() => setEditingMember(member)}
-                      className="ml-2 text-[#0d1e26] hover:text-[#0a171c] text-sm shrink-0"
+                      className="ml-2 text-[var(--color-primary)] hover:text-[#0a171c] text-sm shrink-0"
                     >
                       Edit
                     </button>
@@ -592,7 +592,7 @@ export default function MembersPageClient() {
                         <button
                           type="button"
                           onClick={() => setEditingMember(member)}
-                          className="truncate min-w-0 text-left font-medium text-gray-900 hover:text-[#0d1e26] hover:underline cursor-pointer"
+                          className="truncate min-w-0 text-left font-medium text-gray-900 hover:text-[var(--color-primary)] hover:underline cursor-pointer"
                         >
                           {member.full_name || '-'}
                         </button>
@@ -687,7 +687,7 @@ export default function MembersPageClient() {
                       )}
                       <button
                         onClick={() => setEditingMember(member)}
-                        className="text-[#0d1e26] hover:text-[#0a171c]"
+                        className="text-[var(--color-primary)] hover:text-[#0a171c]"
                       >
                         Edit
                       </button>
@@ -794,7 +794,7 @@ function InviteMemberModal({
                 required
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                 placeholder="member@example.com"
               />
             </div>
@@ -804,7 +804,7 @@ function InviteMemberModal({
                 type="text"
                 value={formData.firstName}
                 onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                 placeholder="John"
               />
             </div>
@@ -814,7 +814,7 @@ function InviteMemberModal({
                 type="text"
                 value={formData.lastName}
                 onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                 placeholder="Doe"
               />
             </div>
@@ -823,7 +823,7 @@ function InviteMemberModal({
               <select
                 value={formData.membership_level}
                 onChange={(e) => setFormData({ ...formData, membership_level: e.target.value as 'Full' | 'Student' | 'Associate' | 'Corporate' | 'Honorary' })}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer"
               >
                 <option value="Full">Full</option>
                 <option value="Student">Student</option>
@@ -855,7 +855,7 @@ function InviteMemberModal({
                 })
                 onClose()
               }}
-              className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c]"
+              className="px-4 py-2 text-sm font-medium text-white bg-[var(--color-primary)] rounded-md hover:bg-[#0a171c]"
             >
               Create Account & Send Invitation
             </button>
@@ -940,7 +940,7 @@ jane@example.com,Jane,Smith`}
               type="file"
               accept=".csv,text/csv"
               onChange={handleFileChange}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
             />
             {file && (
               <p className="mt-2 text-sm text-gray-600">
@@ -953,7 +953,7 @@ jane@example.com,Jane,Smith`}
             <select
               value={membership_level}
               onChange={(e) => setMembershipLevel(e.target.value as 'Full' | 'Student' | 'Associate' | 'Corporate' | 'Honorary')}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer"
             >
               <option value="Full">Full</option>
               <option value="Student">Student</option>
@@ -977,7 +977,7 @@ jane@example.com,Jane,Smith`}
             <button
               onClick={handleSubmit}
               disabled={!file || uploading}
-              className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 text-sm font-medium text-white bg-[var(--color-primary)] rounded-md hover:bg-[#0a171c] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {uploading ? 'Processing...' : 'Upload & Process'}
             </button>

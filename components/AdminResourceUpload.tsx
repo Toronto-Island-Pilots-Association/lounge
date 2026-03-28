@@ -219,7 +219,7 @@ export default function AdminResourceUpload({
         onDragLeave={handleDragLeave}
         className={`
           border-2 border-dashed rounded-lg p-6 transition-colors
-          ${isDragging ? 'border-[#0d1e26] bg-[#0d1e26]/5' : 'border-gray-300 bg-gray-50'}
+          ${isDragging ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'border-gray-300 bg-gray-50'}
           ${isUploading ? 'opacity-50 cursor-wait' : 'cursor-pointer hover:border-gray-400 hover:bg-gray-100'}
         `}
         onClick={() => !isUploading && fileInputRef.current?.click()}
@@ -249,7 +249,7 @@ export default function AdminResourceUpload({
             />
           </svg>
           <div className="mt-4 flex text-sm leading-6 text-gray-600">
-            <span className="relative cursor-pointer rounded-md font-semibold text-[#0d1e26] focus-within:outline-none focus-within:ring-2 focus-within:ring-[#0d1e26] focus-within:ring-offset-2">
+            <span className="relative cursor-pointer rounded-md font-semibold text-[var(--color-primary)] focus-within:outline-none focus-within:ring-2 focus-within:ring-[var(--color-primary)] focus-within:ring-offset-2">
               {isUploading ? 'Uploading...' : 'Click to upload'}
             </span>
             <p className="pl-1">or drag and drop</p>

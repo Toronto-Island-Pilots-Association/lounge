@@ -270,7 +270,7 @@ function BecomeMemberForm() {
         {!success && (
           <p className="text-center text-sm text-gray-600 mb-6">
             Already have an account?{' '}
-            <Link href="/login" className="font-medium text-[#0d1e26] hover:text-[#416e82]">
+            <Link href="/login" className="font-medium text-[var(--color-primary)] hover:text-[#416e82]">
               Sign in
             </Link>
           </p>
@@ -295,7 +295,7 @@ function BecomeMemberForm() {
             <div className="mt-6">
               <Link
                 href="/login?redirectTo=%2Fadd-payment"
-                className="inline-block px-6 py-3 bg-[#0d1e26] text-white font-semibold rounded-lg hover:bg-[#0a171c] transition-colors"
+                className="inline-block px-6 py-3 bg-[var(--color-primary)] text-white font-semibold rounded-lg hover:bg-[#0a171c] transition-colors"
               >
                 Log in
               </Link>
@@ -323,7 +323,7 @@ function BecomeMemberForm() {
                   type="text"
                   required
                   autoComplete="given-name"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   value={formData.firstName}
                   onChange={handleChange}
                 />
@@ -338,7 +338,7 @@ function BecomeMemberForm() {
                   type="text"
                   required
                   autoComplete="family-name"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   value={formData.lastName}
                   onChange={handleChange}
                 />
@@ -353,7 +353,7 @@ function BecomeMemberForm() {
                   type="email"
                   required
                   autoComplete="email"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   value={formData.email}
                   onChange={handleChange}
                 />
@@ -369,7 +369,7 @@ function BecomeMemberForm() {
                     type="tel"
                     autoComplete="tel"
                     required={fieldRequired('phone')}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                     value={formData.phone}
                     onChange={handleChange}
                   />
@@ -391,7 +391,7 @@ function BecomeMemberForm() {
                     type="text"
                     required
                     autoComplete="street-address"
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                     value={formData.street}
                     onChange={handleChange}
                   />
@@ -407,7 +407,7 @@ function BecomeMemberForm() {
                       type="text"
                       required
                       autoComplete="address-level2"
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                       value={formData.city}
                       onChange={handleChange}
                     />
@@ -421,7 +421,7 @@ function BecomeMemberForm() {
                       name="country"
                       required
                       autoComplete="country"
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                       value={formData.country}
                       onChange={(e) => {
                         handleChange(e)
@@ -451,7 +451,7 @@ function BecomeMemberForm() {
                       name="provinceState"
                       required
                       autoComplete="address-level1"
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                       value={formData.provinceState}
                       onChange={handleChange}
                     >
@@ -472,7 +472,7 @@ function BecomeMemberForm() {
                       type="text"
                       required
                       autoComplete="postal-code"
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                       value={formData.postalZipCode}
                       onChange={handleChange}
                     />
@@ -496,7 +496,7 @@ function BecomeMemberForm() {
                   required
                   minLength={6}
                   autoComplete="new-password"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   value={formData.password}
                   onChange={handleChange}
                 />
@@ -516,7 +516,7 @@ function BecomeMemberForm() {
                 id="membershipClass"
                 name="membershipClass"
                 required={fieldRequired('membership_class')}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                 value={formData.membershipClass}
                 onChange={handleChange}
               >
@@ -562,7 +562,7 @@ function BecomeMemberForm() {
                       value={interest.value}
                       checked={Array.isArray(formData.interests) && formData.interests.includes(interest.value)}
                       onChange={(e) => handleInterestChange(interest.value, e.target.checked)}
-                      className="h-4 w-4 text-[#0d1e26] focus:ring-[#0d1e26] border-gray-300 rounded"
+                      className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] border-gray-300 rounded"
                     />
                     <span className="ml-2 text-sm text-gray-700">{interest.label}</span>
                   </label>
@@ -588,7 +588,7 @@ function BecomeMemberForm() {
                 name="statementOfInterest"
                 rows={4}
                 required={fieldRequired('statement_of_interest')}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                 value={formData.statementOfInterest}
                 onChange={handleChange}
               />
@@ -612,7 +612,7 @@ function BecomeMemberForm() {
                     placeholder={field.placeholder ?? ''}
                     value={(customFieldValues[field.key] as string) ?? ''}
                     onChange={e => handleCustomFieldChange(field.key, e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   />
                 )}
 
@@ -623,7 +623,7 @@ function BecomeMemberForm() {
                     rows={4}
                     value={(customFieldValues[field.key] as string) ?? ''}
                     onChange={e => handleCustomFieldChange(field.key, e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   />
                 )}
 
@@ -632,7 +632,7 @@ function BecomeMemberForm() {
                     required={field.required}
                     value={(customFieldValues[field.key] as string) ?? ''}
                     onChange={e => handleCustomFieldChange(field.key, e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   >
                     <option value="">Select…</option>
                     {(field.options ?? []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
@@ -648,7 +648,7 @@ function BecomeMemberForm() {
                           value={opt}
                           checked={Array.isArray(customFieldValues[field.key]) && (customFieldValues[field.key] as string[]).includes(opt)}
                           onChange={e => handleCustomCheckboxGroupChange(field.key, opt, e.target.checked)}
-                          className="h-4 w-4 text-[#0d1e26] focus:ring-[#0d1e26] border-gray-300 rounded"
+                          className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] border-gray-300 rounded"
                         />
                         <span className="ml-2 text-sm text-gray-700">{opt}</span>
                       </label>
@@ -663,7 +663,7 @@ function BecomeMemberForm() {
                       required={field.required}
                       checked={(customFieldValues[field.key] as string) === 'true'}
                       onChange={e => handleCustomFieldChange(field.key, e.target.checked ? 'true' : '')}
-                      className="h-4 w-4 text-[#0d1e26] focus:ring-[#0d1e26] border-gray-300 rounded"
+                      className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] border-gray-300 rounded"
                     />
                     <span className="text-sm text-gray-700">Yes</span>
                   </label>
@@ -684,14 +684,14 @@ function BecomeMemberForm() {
                     type="checkbox"
                     name="agreedToBylaws"
                     required
-                    className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]"
+                    className="mt-1 mr-3 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                     checked={formData.agreedToBylaws}
                     onChange={handleChange}
                   />
                   <span className="text-sm text-gray-700">
                     {bylawsUrl ? (
                       <>I have reviewed and agree to the{' '}
-                        <Link href={bylawsUrl} target="_blank" rel="noopener noreferrer" className="text-[#0d1e26] underline hover:no-underline">By-Laws</Link>.{' '}
+                        <Link href={bylawsUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline hover:no-underline">By-Laws</Link>.{' '}
                       </>
                     ) : (
                       <>I have reviewed and agree to this organization&apos;s governing documents (by-laws, constitution, or equivalent).{' '}</>
@@ -704,14 +704,14 @@ function BecomeMemberForm() {
                     type="checkbox"
                     name="agreedToGovernancePolicy"
                     required
-                    className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]"
+                    className="mt-1 mr-3 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                     checked={formData.agreedToGovernancePolicy}
                     onChange={handleChange}
                   />
                   <span className="text-sm text-gray-700">
                     {membershipPolicyUrl ? (
                       <>I have reviewed and agree to the{' '}
-                        <Link href={membershipPolicyUrl} target="_blank" rel="noopener noreferrer" className="text-[#0d1e26] underline hover:no-underline">Governance &amp; Membership Policy</Link>.{' '}
+                        <Link href={membershipPolicyUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline hover:no-underline">Governance &amp; Membership Policy</Link>.{' '}
                       </>
                     ) : (
                       <>I have reviewed and agree to this organization&apos;s membership terms and policies.{' '}</>
@@ -724,7 +724,7 @@ function BecomeMemberForm() {
                     type="checkbox"
                     name="understandsApprovalProcess"
                     required
-                    className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]"
+                    className="mt-1 mr-3 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                     checked={formData.understandsApprovalProcess}
                     onChange={handleChange}
                   />
@@ -737,7 +737,7 @@ function BecomeMemberForm() {
                     type="checkbox"
                     name="agreedToElectronicInfo"
                     required
-                    className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]"
+                    className="mt-1 mr-3 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                     checked={formData.agreedToElectronicInfo}
                     onChange={handleChange}
                   />
@@ -786,7 +786,7 @@ function BecomeMemberForm() {
             <button
               type="submit"
               disabled={loading || !orgConfigReady}
-              className="px-6 py-3 bg-[#0d1e26] text-white font-semibold rounded-lg hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0d1e26] disabled:opacity-50"
+              className="px-6 py-3 bg-[var(--color-primary)] text-white font-semibold rounded-lg hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-primary)] disabled:opacity-50"
             >
               {loading ? 'Creating account...' : 'Become a Member'}
             </button>

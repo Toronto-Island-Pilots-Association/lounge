@@ -61,7 +61,7 @@ export default function OrgPlanUpgradeControls({
             type="button"
             disabled={processing}
             onClick={() => handleUpgrade(p)}
-            className="px-3 py-1.5 text-xs font-medium bg-[#0d1e26] text-white rounded-md hover:bg-[#0a171c] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 py-1.5 text-xs font-medium bg-[var(--color-primary)] text-white rounded-md hover:bg-[#0a171c] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Upgrade to {labelForPlan(p)}
           </button>

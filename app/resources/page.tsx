@@ -154,7 +154,7 @@ export default function ResourcesPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search announcements..."
-              className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-[#0d1e26] focus:border-[#0d1e26] text-gray-900"
+              className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] text-gray-900"
             />
           </div>
 
@@ -165,7 +165,7 @@ export default function ResourcesPage() {
                 onClick={() => setSelectedCategory('all')}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                   selectedCategory === 'all'
-                    ? 'bg-[#0d1e26] text-white'
+                    ? 'bg-[var(--color-primary)] text-white'
                     : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                 }`}
               >
@@ -177,7 +177,7 @@ export default function ResourcesPage() {
                   onClick={() => setSelectedCategory(category)}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                     selectedCategory === category
-                      ? 'bg-[#0d1e26] text-white'
+                      ? 'bg-[var(--color-primary)] text-white'
                       : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                   }`}
                 >
@@ -200,7 +200,7 @@ export default function ResourcesPage() {
             {isAdmin && (
               <a
                 href="/admin/resources"
-                className="inline-flex items-center px-5 py-2.5 bg-[#0d1e26] text-white text-sm font-semibold rounded-lg hover:bg-[#0a171c] transition-colors"
+                className="inline-flex items-center px-5 py-2.5 bg-[var(--color-primary)] text-white text-sm font-semibold rounded-lg hover:bg-[#0a171c] transition-colors"
               >
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -290,7 +290,7 @@ export default function ResourcesPage() {
                               day: 'numeric',
                             })}
                           </span>
-                          <span className="px-2 py-0.5 bg-[#0d1e26] text-white rounded font-medium">
+                          <span className="px-2 py-0.5 bg-[var(--color-primary)] text-white rounded font-medium">
                             {getCategoryLabel(resource.category)}
                           </span>
                           {resource.file_url && (

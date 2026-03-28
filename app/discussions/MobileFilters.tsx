@@ -107,7 +107,7 @@ export default function MobileFilters({ categoryConfig }: { categoryConfig: OrgC
                 onClick={() => handleCategoryChange('all')}
                 className={`flex items-center gap-2 w-full px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                   category === 'all'
-                    ? 'bg-[#0d1e26] text-white shadow-sm'
+                    ? 'bg-[var(--color-primary)] text-white shadow-sm'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
@@ -128,7 +128,7 @@ export default function MobileFilters({ categoryConfig }: { categoryConfig: OrgC
                     onClick={() => handleCategoryChange(cat)}
                     className={`flex items-center gap-2 w-full px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                       category === cat
-                        ? 'bg-[#0d1e26] text-white shadow-sm'
+                        ? 'bg-[var(--color-primary)] text-white shadow-sm'
                         : 'text-gray-700 hover:bg-gray-100'
                     }`}
                   >
@@ -151,7 +151,7 @@ export default function MobileFilters({ categoryConfig }: { categoryConfig: OrgC
                     onClick={() => handleCategoryChange(cat)}
                     className={`flex items-center gap-2 w-full px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                       category === cat
-                        ? 'bg-[#0d1e26] text-white shadow-sm'
+                        ? 'bg-[var(--color-primary)] text-white shadow-sm'
                         : 'text-gray-700 hover:bg-gray-100'
                     }`}
                   >
@@ -177,7 +177,7 @@ export default function MobileFilters({ categoryConfig }: { categoryConfig: OrgC
                   }}
                   className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                     sortBy === 'latest'
-                      ? 'bg-white text-[#0d1e26] shadow-sm'
+                      ? 'bg-white text-[var(--color-primary)] shadow-sm'
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
@@ -190,7 +190,7 @@ export default function MobileFilters({ categoryConfig }: { categoryConfig: OrgC
                   }}
                   className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                     sortBy === 'hot'
-                      ? 'bg-white text-[#0d1e26] shadow-sm'
+                      ? 'bg-white text-[var(--color-primary)] shadow-sm'
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >

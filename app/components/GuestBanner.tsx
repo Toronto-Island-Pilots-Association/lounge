@@ -29,14 +29,14 @@ export default async function GuestBanner() {
 
   if (isDemo) {
     return (
-      <div className="bg-[#0d1e26] text-white px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm">
+      <div className="bg-[var(--color-primary)] text-white px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm">
         <span className="text-gray-300">
           You&apos;re previewing the demo. Sign in or apply to participate.
         </span>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           <a
             href={platformSignupUrl}
-            className="bg-white text-[#0d1e26] px-3 py-1.5 rounded-md font-medium text-xs hover:bg-gray-100 transition-colors text-center"
+            className="bg-white text-[var(--color-primary)] px-3 py-1.5 rounded-md font-medium text-xs hover:bg-gray-100 transition-colors text-center"
           >
             Create your lounge
           </a>
@@ -52,7 +52,7 @@ export default async function GuestBanner() {
   }
 
   return (
-    <div className="bg-[#0d1e26] text-white px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm">
+    <div className="bg-[var(--color-primary)] text-white px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm">
       <span className="text-gray-300">
         You&apos;re previewing <span className="text-white font-medium">{displayName}</span>. Sign in or apply
         to participate.
@@ -60,7 +60,7 @@ export default async function GuestBanner() {
       <div className="flex flex-wrap items-center gap-2 shrink-0">
         <Link
           href="/login"
-          className="bg-white text-[#0d1e26] px-3 py-1.5 rounded-md font-medium text-xs hover:bg-gray-100 transition-colors text-center"
+          className="bg-white text-[var(--color-primary)] px-3 py-1.5 rounded-md font-medium text-xs hover:bg-gray-100 transition-colors text-center"
         >
           Sign in
         </Link>
