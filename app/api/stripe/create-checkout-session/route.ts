@@ -8,6 +8,7 @@ import {
   type MembershipLevelKey,
 } from '@/lib/settings'
 import { getOrgByHostname } from '@/lib/org'
+import { TIPA_ORG_ID } from '@/types/database'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
@@ -78,6 +79,16 @@ export async function POST(request: Request) {
         connectedAccountId = org.stripe_account_id
       }
       orgName = org?.name?.trim() || orgName
+    }
+
+    // TIPA is the legacy tenant with a direct Stripe account (pre-Connect).
+    // All other orgs must have completed Stripe Connect onboarding.
+    const isTipa = resolvedOrgId === TIPA_ORG_ID
+    if (!connectedAccountId && !isTipa) {
+      return NextResponse.json(
+        { error: 'Payment is not configured for this organization. Please contact your administrator.' },
+        { status: 503 }
+      )
     }
 
     // IMPORTANT:
