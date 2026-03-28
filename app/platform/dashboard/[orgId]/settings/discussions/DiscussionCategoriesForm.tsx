@@ -138,7 +138,7 @@ export default function DiscussionCategoriesForm({
       {adding ? (
         <div className="rounded-lg border border-gray-200 p-4 space-y-3">
           <p className="text-sm font-medium text-gray-700">New category</p>
-          <div className="flex gap-2">
+          <div className="flex items-end gap-2">
             <div className="space-y-1">
               <label className="text-xs text-gray-500">Emoji</label>
               <input
