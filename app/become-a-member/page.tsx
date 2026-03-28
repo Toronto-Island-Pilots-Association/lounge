@@ -6,8 +6,8 @@ import Link from 'next/link'
 import Loading from '@/components/Loading'
 import PasswordInput from '@/components/PasswordInput'
 import { COUNTRIES, getStatesProvinces } from './constants'
-import type { MembershipLevelKey, SignupField } from '@/lib/settings'
-import { signupFieldIsTipaOnlyBuiltIn } from '@/lib/settings'
+import type { MembershipLevelKey, SignupField } from '@/lib/settings-shared'
+import { signupFieldIsTipaOnlyBuiltIn } from '@/lib/settings-shared'
 
 const DEFAULT_FEES: Record<MembershipLevelKey, number> = {
   Full: 45,

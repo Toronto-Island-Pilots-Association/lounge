@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import type { OrgFeatureFlags, OrgIdentity, OrgMembershipLevel, SignupField } from '@/lib/settings'
-import { signupFieldIsTipaOnlyBuiltIn } from '@/lib/settings'
+import type { OrgFeatureFlags, OrgIdentity, OrgMembershipLevel } from '@/lib/settings'
+import type { SignupField, SignupFieldType } from '@/lib/settings-shared'
+import { signupFieldIsTipaOnlyBuiltIn } from '@/lib/settings-shared'
 import { CnameRecord } from '@/components/platform/CnameRecord'
 import { orgStripeDuesUiStatus } from '@/lib/org-stripe-dues-status'
 
@@ -450,8 +451,6 @@ function MembershipTab() {
 }
 
 // ─── Signup Fields Tab ────────────────────────────────────────────────────────
-
-import type { SignupFieldType } from '@/lib/settings'
 
 const FIELD_TYPE_LABELS: Record<SignupFieldType, string> = {
   text: 'Text', textarea: 'Long text', select: 'Dropdown',

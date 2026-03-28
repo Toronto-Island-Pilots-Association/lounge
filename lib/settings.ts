@@ -2,6 +2,16 @@ import { createClient, createServiceRoleClient } from './supabase/server'
 import { headers } from 'next/headers'
 import { TIPA_ORG_ID } from '@/types/database'
 import { getPlanDef, DEFAULT_PLAN } from './plans'
+import {
+  DEFAULT_SIGNUP_FIELDS,
+  gateTipaOnlySignupFields,
+  isTipaOrgId,
+  type MembershipLevelKey,
+  type SignupField,
+} from './settings-shared'
+
+export type { MembershipLevelKey, SignupField, SignupFieldType } from './settings-shared'
+export { signupFieldIsTipaOnlyBuiltIn, isTipaOrgId, gateTipaOnlySignupFields } from './settings-shared'
 
 async function getOrgId(override?: string): Promise<string> {
   if (override) return override
@@ -37,7 +47,6 @@ async function getEffectiveOrgPlanKey(orgIdOverride?: string): Promise<string> {
 
 // Legacy hardcoded levels — used as fallback for TIPA and type compat
 const MEMBERSHIP_LEVELS = ['Full', 'Student', 'Associate', 'Corporate', 'Honorary'] as const
-export type MembershipLevelKey = string  // now open — orgs can define any level key
 
 const DEFAULT_FEES: Record<string, number> = {
   Full: 45, Student: 25, Associate: 25, Corporate: 125, Honorary: 0,
@@ -395,54 +404,7 @@ export async function setEnabledLevels(enabled: Record<string, boolean>): Promis
 }
 
 // ─── Signup Fields Config ─────────────────────────────────────────────────────
-
-export type SignupFieldType =
-  | 'text' | 'textarea' | 'select' | 'checkbox_group'
-  | 'boolean' | 'number' | 'date' | 'email' | 'phone' | 'url'
-
-export type SignupField = {
-  key: string
-  label: string
-  group?: string
-  enabled: boolean
-  required: boolean
-  // Only set on custom (admin-created) fields:
-  isCustom?: boolean
-  type?: SignupFieldType
-  placeholder?: string
-  helpText?: string
-  options?: string[]  // for select / checkbox_group
-}
-
-const DEFAULT_SIGNUP_FIELDS: SignupField[] = [
-  { key: 'phone',                label: 'Phone',                    group: 'contact',     enabled: true,  required: false },
-  { key: 'address',              label: 'Mailing Address',          group: 'address',     enabled: true,  required: false },
-  { key: 'membership_class',     label: 'Membership Class',         group: 'membership',  enabled: true,  required: true  },
-  { key: 'aviation_info',        label: 'Aviation Information',     group: 'aviation',    enabled: true,  required: false },
-  { key: 'fly_frequency',        label: 'How Often Fly From YTZ',   group: 'aviation',    enabled: false, required: false },
-  { key: 'student_pilot',        label: 'Student Pilot Info',       group: 'student',     enabled: true,  required: false },
-  { key: 'copa_membership',      label: 'COPA Membership',          group: 'copa',        enabled: false, required: false },
-  { key: 'statement_of_interest',label: 'Statement of Interest',    group: 'application', enabled: true,  required: false },
-  { key: 'interests',            label: 'Interests',                group: 'application', enabled: true,  required: false },
-  { key: 'how_did_you_hear',     label: 'How Did You Hear',         group: 'application', enabled: true,  required: false },
-]
-
-/** Built-in signup sections only rendered for TIPA; other orgs use custom fields instead. */
-const TIPA_ONLY_SIGNUP_FIELD_KEYS = new Set([
-  'aviation_info',
-  'fly_frequency',
-  'student_pilot',
-  'copa_membership',
-  'interests',
-])
-
-export function signupFieldIsTipaOnlyBuiltIn(key: string): boolean {
-  return TIPA_ONLY_SIGNUP_FIELD_KEYS.has(key)
-}
-
-export function isTipaOrgId(orgId: string): boolean {
-  return orgId === TIPA_ORG_ID
-}
+// Types + TIPA gating live in settings-shared.ts (safe for Client Components).
 
 function mergeSignupFieldsWithDefaults(parsed: SignupField[]): SignupField[] {
   const defaultKeys = new Set(DEFAULT_SIGNUP_FIELDS.map(d => d.key))
@@ -455,17 +417,6 @@ function mergeSignupFieldsWithDefaults(parsed: SignupField[]): SignupField[] {
     if (!defaultKeys.has(f.key)) out.push(f)
   }
   return out
-}
-
-/** Force TIPA-only built-in sections off for non-TIPA orgs (read + save). */
-export function gateTipaOnlySignupFields(fields: SignupField[], orgId: string): SignupField[] {
-  if (orgId === TIPA_ORG_ID) return fields
-  return fields.map(f => {
-    if (f.isCustom !== true && signupFieldIsTipaOnlyBuiltIn(f.key)) {
-      return { ...f, enabled: false, required: false }
-    }
-    return f
-  })
 }
 
 export async function getSignupFieldsConfig(orgIdOverride?: string): Promise<SignupField[]> {
