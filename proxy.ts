@@ -102,7 +102,12 @@ export async function proxy(request: NextRequest) {
     {
       cookies: {
         getAll() {
-          return request.cookies.getAll()
+          try {
+            return request.cookies.getAll()
+          } catch {
+            // Corrupted or non-UTF-8 cookie value — treat as no session
+            return []
+          }
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
