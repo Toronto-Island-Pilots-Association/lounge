@@ -22,6 +22,7 @@ type OrgConfig = {
     logoUrl: string | null
     siteIconUrl?: string | null
     feedbackUrl?: string | null
+    accentColor?: string | null
   }
   features: {
     discussions: boolean; events: boolean; resources: boolean
