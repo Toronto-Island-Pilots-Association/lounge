@@ -12,7 +12,7 @@ export default async function PlatformHome() {
   const { data: { user } } = await supabase.auth.getUser()
   if (user) redirect('/platform/dashboard')
 
-  const demoOrigin = `${PROTOCOL}://demo.${ROOT_DOMAIN}${PORT}`
+  const demoOrigin = `${PROTOCOL}://demo.${ROOT_DOMAIN}${PORT}/discussions`
 
   return (
     <ClubLoungeLanding
