@@ -63,6 +63,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Root-domain /signup would rewrite to /marketing/signup (no such route) — platform signup creates a new org
+  if (domainType === 'marketing' && pathname === '/signup') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/platform/signup'
+    return NextResponse.redirect(url)
+  }
+
   // Rewrite marketing domain to internal /marketing/* prefix.
   // /platform/* and /auth/* paths are served directly without rewriting.
   // clublounge.app/foo          → /marketing/foo
