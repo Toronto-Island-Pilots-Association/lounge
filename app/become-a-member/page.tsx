@@ -80,11 +80,6 @@ function BecomeMemberForm() {
     country: '',
     // Membership Application
     membershipClass: '',
-    // COPA Membership
-    isCopaMember: '',
-    joinCopaFlight32: '',
-    copaMembershipNumber: '',
-    // Statement of Interest
     statementOfInterest: '',
     // Interests (array)
     interests: [] as string[],
@@ -93,15 +88,7 @@ function BecomeMemberForm() {
     agreedToGovernancePolicy: false,
     understandsApprovalProcess: false,
     agreedToElectronicInfo: false,
-    // Existing fields
-    pilotLicenseType: '',
-    aircraftType: '',
-    callSign: '',
-    howOftenFlyFromYTZ: '',
     howDidYouHear: '',
-    flightSchool: '',
-    instructorName: '',
-    studentNotes: '',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -125,20 +112,10 @@ function BecomeMemberForm() {
     const value = target.type === 'checkbox' ? (target as HTMLInputElement).checked : target.value
     const name = target.name
 
-    // Reset conditional fields when parent field changes
-    if (name === 'isCopaMember' && value !== 'yes') {
-      setFormData(prev => ({
-        ...prev,
-        [name]: String(value),
-        joinCopaFlight32: '',
-        copaMembershipNumber: '',
-      }))
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value,
-      }))
-    }
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+    }))
   }
 
   const handleInterestChange = (interestValue: string, checked: boolean) => {
@@ -179,7 +156,33 @@ function BecomeMemberForm() {
       setError('Please select at least one interest')
       return
     }
-    
+    if (fieldEnabled('how_did_you_hear') && fieldRequired('how_did_you_hear') && !String(formData.howDidYouHear || '').trim()) {
+      setError('Please tell us how you heard about us')
+      return
+    }
+    const customDefs = signupFields?.filter(f => f.isCustom && f.enabled) ?? []
+    for (const f of customDefs) {
+      if (!f.required) continue
+      const v = customFieldValues[f.key]
+      if (f.type === 'checkbox_group') {
+        if (!Array.isArray(v) || v.length === 0) {
+          setError(`Please complete: ${f.label}`)
+          return
+        }
+      } else if (f.type === 'boolean') {
+        if (v !== 'true') {
+          setError(`Please complete: ${f.label}`)
+          return
+        }
+      } else {
+        const s = v === undefined || v === null ? '' : String(v)
+        if (!s.trim()) {
+          setError(`Please complete: ${f.label}`)
+          return
+        }
+      }
+    }
+
     setLoading(true)
 
     try {
@@ -196,37 +199,19 @@ function BecomeMemberForm() {
           firstName: formData.firstName,
           lastName: formData.lastName,
           phone: formData.phone,
-          // Mailing Address
           street: formData.street,
           city: formData.city,
           provinceState: formData.provinceState,
           postalZipCode: formData.postalZipCode,
           country: formData.country,
-          // Membership Application
           membershipClass: formData.membershipClass,
-          // COPA Membership
-          isCopaMember: formData.isCopaMember,
-          joinCopaFlight32: formData.joinCopaFlight32,
-          copaMembershipNumber: formData.copaMembershipNumber,
-          // Statement of Interest
           statementOfInterest: formData.statementOfInterest,
-          // Interests
           interests: formData.interests,
-          // Acknowledgements
           agreedToBylaws: formData.agreedToBylaws,
           agreedToGovernancePolicy: formData.agreedToGovernancePolicy,
           understandsApprovalProcess: formData.understandsApprovalProcess,
           agreedToElectronicInfo: formData.agreedToElectronicInfo,
-          // Existing fields
-          pilotLicenseType: formData.pilotLicenseType,
-          aircraftType: formData.aircraftType,
-          callSign: formData.callSign,
-          howOftenFlyFromYTZ: formData.howOftenFlyFromYTZ,
           howDidYouHear: formData.howDidYouHear,
-          isStudentPilot: formData.pilotLicenseType === 'student' || formData.membershipClass === 'student',
-          flightSchool: (formData.pilotLicenseType === 'student' || formData.membershipClass === 'student') ? formData.flightSchool : '',
-          instructorName: (formData.pilotLicenseType === 'student' || formData.membershipClass === 'student') ? formData.instructorName : '',
-          studentNotes: formData.studentNotes || '',
         }),
       })
 
@@ -252,24 +237,15 @@ function BecomeMemberForm() {
         postalZipCode: '',
         country: '',
         membershipClass: '',
-        isCopaMember: '',
-        joinCopaFlight32: '',
-        copaMembershipNumber: '',
         statementOfInterest: '',
         interests: [],
         agreedToBylaws: false,
         agreedToGovernancePolicy: false,
         understandsApprovalProcess: false,
         agreedToElectronicInfo: false,
-        pilotLicenseType: '',
-        aircraftType: '',
-        callSign: '',
-        howOftenFlyFromYTZ: '',
         howDidYouHear: '',
-        flightSchool: '',
-        instructorName: '',
-        studentNotes: '',
       })
+      setCustomFieldValues({})
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -539,7 +515,7 @@ function BecomeMemberForm() {
               <select
                 id="membershipClass"
                 name="membershipClass"
-                required
+                required={fieldRequired('membership_class')}
                 className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
                 value={formData.membershipClass}
                 onChange={handleChange}
@@ -550,231 +526,6 @@ function BecomeMemberForm() {
                 {(enabledLevels?.Associate ?? true) && <option value="associate">Associate — ${membershipFees.Associate}/year</option>}
                 {(enabledLevels?.Corporate ?? true) && <option value="corporate">Corporate — ${membershipFees.Corporate}/year</option>}
               </select>
-            </div>
-          </div>
-          )}
-
-          {/* Aviation Information */}
-          {fieldEnabled('aviation_info') && (
-          <div className="bg-gray-50 p-6 rounded-lg">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Aviation Information</h2>
-            <p className="text-sm text-gray-600 mb-4">
-              Please provide your aviation background information:
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="pilotLicenseType" className="block text-sm font-medium text-gray-700 mb-1">
-                  Pilot License Type {formData.membershipClass === 'student' && <span className="text-red-500">*</span>}
-                </label>
-                <select
-                  id="pilotLicenseType"
-                  name="pilotLicenseType"
-                  required={formData.membershipClass === 'student'}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                  value={formData.pilotLicenseType}
-                  onChange={handleChange}
-                >
-                  <option value="">Select...</option>
-                  <option value="student">Student Pilot</option>
-                  <option value="private">Private Pilot</option>
-                  <option value="commercial">Commercial Pilot</option>
-                  <option value="atp">Airline Transport Pilot</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div>
-                <label htmlFor="aircraftType" className="block text-sm font-medium text-gray-700 mb-1">
-                  Aircraft Type
-                </label>
-                <input
-                  type="text"
-                  id="aircraftType"
-                  name="aircraftType"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                  value={formData.aircraftType}
-                  onChange={handleChange}
-                  placeholder="e.g., Cessna 172, Piper Cherokee"
-                />
-              </div>
-              <div>
-                <label htmlFor="callSign" className="block text-sm font-medium text-gray-700 mb-1">
-                  Call Sign
-                </label>
-                <input
-                  type="text"
-                  id="callSign"
-                  name="callSign"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                  value={formData.callSign}
-                  onChange={handleChange}
-                  placeholder="e.g., C-GABC"
-                />
-              </div>
-              {fieldEnabled('fly_frequency') && (
-              <div>
-                <label htmlFor="howOftenFlyFromYTZ" className="block text-sm font-medium text-gray-700 mb-1">
-                  How Often Do You Fly From YTZ? {fieldRequired('fly_frequency') && <span className="text-red-500">*</span>}
-                </label>
-                <select
-                  id="howOftenFlyFromYTZ"
-                  name="howOftenFlyFromYTZ"
-                  required={fieldRequired('fly_frequency')}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                  value={formData.howOftenFlyFromYTZ}
-                  onChange={handleChange}
-                >
-                  <option value="">Select...</option>
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                  <option value="occasionally">Occasionally</option>
-                  <option value="rarely">Rarely</option>
-                </select>
-              </div>
-              )}
-            </div>
-
-            {/* Student Pilot Fields */}
-            {fieldEnabled('student_pilot') && (formData.membershipClass === 'student' || formData.pilotLicenseType === 'student') && (
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <h3 className="text-md font-semibold text-gray-900 mb-4">Student Pilot Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="flightSchool" className="block text-sm font-medium text-gray-700 mb-1">
-                      Flight School / Training Organization {formData.membershipClass === 'student' && <span className="text-red-500">*</span>}
-                    </label>
-                    <input
-                      type="text"
-                      id="flightSchool"
-                      name="flightSchool"
-                      required={formData.membershipClass === 'student'}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                      value={formData.flightSchool}
-                      onChange={handleChange}
-                      placeholder="e.g., Island Air, Freelance, etc."
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="instructorName" className="block text-sm font-medium text-gray-700 mb-1">
-                      Instructor Name {formData.membershipClass === 'student' && <span className="text-red-500">*</span>}
-                    </label>
-                    <input
-                      type="text"
-                      id="instructorName"
-                      name="instructorName"
-                      required={formData.membershipClass === 'student'}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                      value={formData.instructorName}
-                      onChange={handleChange}
-                      placeholder="e.g., Jane Smith"
-                    />
-                  </div>
-                </div>
-                {formData.membershipClass === 'student' && (
-                  <div className="mt-4">
-                    <label htmlFor="studentNotes" className="block text-sm font-medium text-gray-700 mb-1">
-                      Additional Student Information (Optional)
-                    </label>
-                    <textarea
-                      id="studentNotes"
-                      name="studentNotes"
-                      rows={3}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                      value={formData.studentNotes || ''}
-                      onChange={handleChange}
-                      placeholder="e.g., Expected graduation date, current training stage, etc."
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-          )}
-
-          {/* COPA Membership */}
-          {fieldEnabled('copa_membership') && (
-          <div className="bg-gray-50 p-6 rounded-lg">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">COPA Membership</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Are you a COPA Member? {fieldRequired('copa_membership') && <span className="text-red-500">*</span>}
-                </label>
-                <div className="flex gap-6">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="isCopaMember"
-                      value="yes"
-                      required
-                      className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
-                      checked={formData.isCopaMember === 'yes'}
-                      onChange={handleChange}
-                    />
-                    <span className="text-sm text-gray-700">Yes</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="isCopaMember"
-                      value="no"
-                      required
-                      className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
-                      checked={formData.isCopaMember === 'no'}
-                      onChange={handleChange}
-                    />
-                    <span className="text-sm text-gray-700">No</span>
-                  </label>
-                </div>
-              </div>
-
-              {formData.isCopaMember === 'yes' && (
-                <div className="pt-4 border-t border-gray-200 space-y-4">
-                  <div>
-                    <label htmlFor="copaMembershipNumber" className="block text-sm font-medium text-gray-700 mb-1">
-                      Please enter your COPA Membership Number <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="copaMembershipNumber"
-                      name="copaMembershipNumber"
-                      type="text"
-                      required={formData.isCopaMember === 'yes'}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                      value={formData.copaMembershipNumber}
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Would you like to join COPA Flight 32? COPA Flight 32 is free to join and a working partner with TIPA.
-                    </label>
-                    <div className="flex gap-6">
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          name="joinCopaFlight32"
-                          value="yes"
-                          className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
-                          checked={formData.joinCopaFlight32 === 'yes'}
-                          onChange={handleChange}
-                        />
-                        <span className="text-sm text-gray-700">Yes</span>
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          name="joinCopaFlight32"
-                          value="no"
-                          className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
-                          checked={formData.joinCopaFlight32 === 'no'}
-                          onChange={handleChange}
-                        />
-                        <span className="text-sm text-gray-700">No</span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
           )}
@@ -796,8 +547,8 @@ function BecomeMemberForm() {
                   { value: 'safety', label: 'Safety & Proficiency' },
                   { value: 'community', label: 'Community & Networking' },
                   { value: 'events', label: 'Events & Social Activities' },
-                  { value: 'advocacy', label: 'Aviation Advocacy' },
-                  { value: 'island-operations', label: 'Island Operations / YTZ' },
+                  { value: 'advocacy', label: 'Advocacy & policy' },
+                  { value: 'island-operations', label: 'Regional / local activities' },
                   { value: 'aircraft-maintenance', label: 'Aircraft Maintenance' },
                   { value: 'mentoring', label: 'Mentoring' },
                   { value: 'hangar-storage', label: 'Hangar/Storage' },
@@ -998,17 +749,19 @@ function BecomeMemberForm() {
             )}
           </div>
 
-          {/* Additional Information */}
+          {fieldEnabled('how_did_you_hear') && (
           <div className="bg-gray-50 p-6 rounded-lg">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Additional Information</h2>
             <div>
               <label htmlFor="howDidYouHear" className="block text-sm font-medium text-gray-700 mb-1">
                 {orgName ? `How did you hear about ${orgName}?` : 'How did you hear about us?'}
+                {fieldRequired('how_did_you_hear') && <span className="text-red-500"> *</span>}
               </label>
               <select
                 id="howDidYouHear"
                 name="howDidYouHear"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required={fieldRequired('how_did_you_hear')}
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={formData.howDidYouHear}
                 onChange={handleChange}
               >
@@ -1021,6 +774,7 @@ function BecomeMemberForm() {
               </select>
             </div>
           </div>
+          )}
 
           <div className="flex items-center justify-between">
             <Link

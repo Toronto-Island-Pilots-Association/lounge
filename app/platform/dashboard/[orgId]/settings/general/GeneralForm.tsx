@@ -4,11 +4,11 @@ import { useState } from 'react'
 import type { OrgIdentity } from '@/lib/settings'
 
 function inputCls() {
-  return 'w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none focus:ring-0'
+  return 'w-full min-w-0 rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none focus:ring-0'
 }
 
 function fileInputCls() {
-  return 'block w-full text-sm text-gray-600 file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-gray-900 hover:file:bg-gray-200'
+  return 'block w-full max-w-full min-w-0 text-sm text-gray-600 file:mr-3 file:max-w-full file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-gray-900 hover:file:bg-gray-200'
 }
 
 async function parseError(res: Response): Promise<string> {
@@ -230,19 +230,19 @@ export default function GeneralForm({
         <textarea className={inputCls()} rows={3} placeholder="One-line description shown on the welcome page." value={draft.description} onChange={set('description')} />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="min-w-0">
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Contact email</label>
           <input type="email" className={inputCls()} placeholder="info@yourclub.com" value={draft.contactEmail} onChange={set('contactEmail')} />
         </div>
-        <div>
+        <div className="min-w-0">
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Website</label>
           <input type="url" className={inputCls()} placeholder="https://yourclub.com" value={draft.websiteUrl} onChange={set('websiteUrl')} />
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="min-w-0">
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Accent colour</label>
           <div className="flex items-center gap-2">
             <input
@@ -259,7 +259,7 @@ export default function GeneralForm({
             />
           </div>
         </div>
-        <div>
+        <div className="min-w-0">
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Timezone</label>
           <input className={inputCls()} placeholder="America/Toronto" value={draft.timezone} onChange={set('timezone')} />
           <p className="text-xs text-gray-400 mt-1">IANA format, e.g. America/Vancouver</p>
@@ -299,7 +299,7 @@ export default function GeneralForm({
         <button
           type="submit"
           disabled={saving}
-          className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-700 disabled:opacity-50 transition-colors"
+          className="w-full rounded-md bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-700 disabled:opacity-50 sm:w-auto"
         >
           {saving ? 'Saving…' : 'Save changes'}
         </button>

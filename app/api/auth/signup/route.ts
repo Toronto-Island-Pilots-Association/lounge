@@ -12,33 +12,15 @@ export async function POST(request: Request) {
       firstName,
       lastName,
       phone,
-      // Mailing Address
       street,
       city,
       provinceState,
       postalZipCode,
       country,
-      // Membership Application
       membershipClass,
-      // COPA Membership
-      isCopaMember,
-      joinCopaFlight32,
-      copaMembershipNumber,
-      // Statement of Interest
       statementOfInterest,
-      // Interests
       interests,
-      // Aviation Information
-      pilotLicenseType,
-      aircraftType,
-      callSign,
-      howOftenFlyFromYTZ,
       howDidYouHear,
-      isStudentPilot,
-      flightSchool,
-      instructorName,
-      studentNotes,
-      // Admin-configured custom fields
       customFields,
     } = await request.json()
 
@@ -93,29 +75,13 @@ export async function POST(request: Request) {
           provinceState: toNullIfEmpty(provinceState),
           postalZipCode: toNullIfEmpty(postalZipCode),
           country: toNullIfEmpty(country),
-          // Membership Application
           membershipClass: toNullIfEmpty(membershipClass),
-          // COPA Membership
-          isCopaMember: toNullIfEmpty(isCopaMember),
-          joinCopaFlight32: toNullIfEmpty(joinCopaFlight32),
-          copaMembershipNumber: toNullIfEmpty(copaMembershipNumber),
-          // Statement of Interest (append student notes if provided)
-          statementOfInterest: studentNotes 
-            ? `${toNullIfEmpty(statementOfInterest) || ''}\n\nStudent Information:\n${studentNotes}`.trim()
-            : toNullIfEmpty(statementOfInterest),
-          // Interests (store as JSON array string)
-          interests: interests && Array.isArray(interests) && interests.length > 0 
-            ? JSON.stringify(interests) 
-            : null,
-          // Aviation Information
-          pilot_license_type: toNullIfEmpty(pilotLicenseType),
-          aircraft_type: toNullIfEmpty(aircraftType),
-          call_sign: toNullIfEmpty(callSign),
-          how_often_fly_from_ytz: toNullIfEmpty(howOftenFlyFromYTZ),
+          statementOfInterest: toNullIfEmpty(statementOfInterest),
+          interests:
+            interests && Array.isArray(interests) && interests.length > 0
+              ? JSON.stringify(interests)
+              : null,
           how_did_you_hear: toNullIfEmpty(howDidYouHear),
-          is_student_pilot: Boolean(isStudentPilot),
-          flight_school: isStudentPilot ? toNullIfEmpty(flightSchool) : null,
-          instructor_name: isStudentPilot ? toNullIfEmpty(instructorName) : null,
           org_id: orgId,
           role: 'member',
           membership_level: membershipLevel,
@@ -235,27 +201,22 @@ export async function POST(request: Request) {
                 org_id: orgId,
                 // Membership Application
                 membership_class: toNullIfEmpty(membershipClass),
-                // COPA Membership
-                is_copa_member: toNullIfEmpty(isCopaMember),
-                join_copa_flight_32: toNullIfEmpty(joinCopaFlight32),
-                copa_membership_number: toNullIfEmpty(copaMembershipNumber),
-                // Statement of Interest (append student notes if provided)
-                statement_of_interest: studentNotes
-                  ? `${toNullIfEmpty(statementOfInterest) || ''}\n\nStudent Information:\n${studentNotes}`.trim()
-                  : toNullIfEmpty(statementOfInterest),
-                // Interests (store as JSON array string)
-                interests: interests && Array.isArray(interests) && interests.length > 0
-                  ? JSON.stringify(interests)
-                  : null,
-                // Aviation Information
-                pilot_license_type: toNullIfEmpty(pilotLicenseType),
-                aircraft_type: toNullIfEmpty(aircraftType),
-                call_sign: toNullIfEmpty(callSign),
-                how_often_fly_from_ytz: toNullIfEmpty(howOftenFlyFromYTZ),
+                statement_of_interest: toNullIfEmpty(statementOfInterest),
+                interests:
+                  interests && Array.isArray(interests) && interests.length > 0
+                    ? JSON.stringify(interests)
+                    : null,
                 how_did_you_hear: toNullIfEmpty(howDidYouHear),
-                is_student_pilot: Boolean(isStudentPilot),
-                flight_school: isStudentPilot ? toNullIfEmpty(flightSchool) : null,
-                instructor_name: isStudentPilot ? toNullIfEmpty(instructorName) : null,
+                is_copa_member: null,
+                join_copa_flight_32: null,
+                copa_membership_number: null,
+                pilot_license_type: null,
+                aircraft_type: null,
+                call_sign: null,
+                how_often_fly_from_ytz: null,
+                is_student_pilot: false,
+                flight_school: null,
+                instructor_name: null,
                 role: userRole,
                 membership_level: membershipLevel,
                 status: 'pending',
@@ -292,12 +253,21 @@ export async function POST(request: Request) {
         }
         
         // Store custom field values from admin-configured form fields
-        if (profile && customFields && typeof customFields === 'object' && Object.keys(customFields).length > 0) {
-          await adminClient
-            .from('org_memberships')
-            .update({ custom_data: customFields })
-            .eq('id', profile.id)
-            .eq('org_id', orgId)
+        if (profile && customFields && typeof customFields === 'object' && !Array.isArray(customFields)) {
+          const keys = Object.keys(customFields as object)
+          if (keys.length > 0) {
+            const prev =
+              profile.custom_data &&
+              typeof profile.custom_data === 'object' &&
+              !Array.isArray(profile.custom_data)
+                ? (profile.custom_data as Record<string, unknown>)
+                : {}
+            await adminClient
+              .from('org_memberships')
+              .update({ custom_data: { ...prev, ...(customFields as Record<string, unknown>) } })
+              .eq('id', profile.id)
+              .eq('org_id', orgId)
+          }
         }
 
         // Note: Google Sheets append happens when status changes from 'pending' to 'approved'

@@ -57,32 +57,39 @@ export default function PlatformMobileHeader({
   ]
 
   return (
-    <>
+    <div className="md:hidden w-full min-w-0 shrink-0">
       {/* Mobile top bar */}
-      <header className="md:hidden sticky top-0 z-20 flex items-center justify-between bg-white border-b border-gray-200 px-4 h-14">
-        <div className="flex items-center gap-2 min-w-0">
+      <header
+        className="sticky top-0 z-20 flex min-h-14 items-center justify-between gap-2 border-b border-gray-200 bg-white px-4 pb-3"
+        style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top, 0px))' }}
+      >
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           <Link
             href="/platform/dashboard"
-            className="text-gray-400 hover:text-gray-600 shrink-0"
+            className="shrink-0 text-gray-400 hover:text-gray-600"
             aria-label="All lounges"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </Link>
-          <span className="text-sm font-semibold text-gray-900 truncate">{orgName}</span>
-          <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 capitalize shrink-0">{planLabel}</span>
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-900">{orgName}</span>
+          <span className="hidden shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-xs capitalize text-gray-500 sm:inline">
+            {planLabel}
+          </span>
           {trialActive && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 shrink-0">Trial</span>
+            <span className="hidden shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700 sm:inline">
+              Trial
+            </span>
           )}
         </div>
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="p-2 rounded-md text-gray-500 hover:bg-gray-100"
+          className="shrink-0 rounded-md p-2 text-gray-500 hover:bg-gray-100"
           aria-label="Open menu"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
@@ -91,19 +98,23 @@ export default function PlatformMobileHeader({
       {/* Backdrop */}
       {open && (
         <div
-          className="md:hidden fixed inset-0 z-30 bg-black/30"
+          className="fixed inset-0 z-30 bg-black/30"
           onClick={() => setOpen(false)}
+          aria-hidden
         />
       )}
 
       {/* Drawer */}
       <div
-        className={`md:hidden fixed inset-y-0 left-0 z-40 w-64 bg-white flex flex-col transition-transform duration-200 ${
-          open ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed inset-y-0 left-0 z-40 flex w-[min(18rem,100vw)] max-w-full flex-col bg-white transition-transform duration-200 ${
+          open ? 'translate-x-0' : '-translate-x-full pointer-events-none'
         }`}
       >
         {/* Drawer header */}
-        <div className="px-4 py-4 border-b border-gray-100 flex items-start justify-between">
+        <div
+          className="flex items-start justify-between border-b border-gray-100 px-4 pb-4"
+          style={{ paddingTop: 'max(1rem, env(safe-area-inset-top, 0px))' }}
+        >
           <div className="space-y-1">
             <Link
               href="/platform/dashboard"
@@ -167,20 +178,23 @@ export default function PlatformMobileHeader({
         </nav>
 
         {/* Footer */}
-        <div className="px-4 py-4 border-t border-gray-100">
+        <div
+          className="border-t border-gray-100 px-4 pt-4"
+          style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))' }}
+        >
           <a
             href={orgUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800 transition-colors"
+            className="flex items-center gap-1.5 text-xs text-gray-500 transition-colors hover:text-gray-800"
           >
             Visit lounge
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>
           </a>
         </div>
       </div>
-    </>
+    </div>
   )
 }

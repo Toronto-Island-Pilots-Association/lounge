@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import { getPlanDef, DEFAULT_PLAN } from './plans'
 import {
   DEFAULT_SIGNUP_FIELDS,
+  LEGACY_SIGNUP_FIELD_KEYS,
   type MembershipLevelKey,
   type SignupField,
 } from './settings-shared'
@@ -412,16 +413,17 @@ export async function setEnabledLevels(enabled: Record<string, boolean>): Promis
 }
 
 // ─── Signup Fields Config ─────────────────────────────────────────────────────
-// Types + TIPA gating live in settings-shared.ts (safe for Client Components).
+// Built-in catalog is generic for all orgs; see settings-shared.ts (safe for Client Components).
 
 function mergeSignupFieldsWithDefaults(parsed: SignupField[]): SignupField[] {
+  const withoutLegacy = parsed.filter(f => !LEGACY_SIGNUP_FIELD_KEYS.has(f.key))
   const defaultKeys = new Set(DEFAULT_SIGNUP_FIELDS.map(d => d.key))
-  const byKey = new Map(parsed.map(f => [f.key, f]))
+  const byKey = new Map(withoutLegacy.map(f => [f.key, f]))
   const out: SignupField[] = DEFAULT_SIGNUP_FIELDS.map(d => {
     const o = byKey.get(d.key)
     return o ? { ...d, ...o } : { ...d }
   })
-  for (const f of parsed) {
+  for (const f of withoutLegacy) {
     if (!defaultKeys.has(f.key)) out.push(f)
   }
   return out
@@ -442,9 +444,16 @@ export async function getSignupFieldsConfig(orgIdOverride?: string): Promise<Sig
 export async function setSignupFieldsConfig(fields: SignupField[], orgIdOverride?: string): Promise<void> {
   const supabase = createServiceRoleClient()
   const orgId = await getOrgId(orgIdOverride)
+  if (!orgId) throw new Error('No org context for signup fields')
+  const sanitized = fields.filter(f => !LEGACY_SIGNUP_FIELD_KEYS.has(f.key))
   const { error } = await supabase.from('settings').upsert(
-    { key: 'signup_fields_config', value: JSON.stringify(fields), org_id: orgId, updated_at: new Date().toISOString() },
-    { onConflict: 'key,org_id' }
+    {
+      key: 'signup_fields_config',
+      value: JSON.stringify(sanitized),
+      org_id: orgId,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'key,org_id' },
   )
   if (error) throw new Error(`Failed to save signup fields: ${error.message}`)
 }

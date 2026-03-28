@@ -19,11 +19,23 @@ export type SignupField = {
   options?: string[] // for select / checkbox_group
 }
 
+/**
+ * Built-in signup sections — same catalog for every org (including TIPA).
+ * Org-specific questions (e.g. aviation) use custom fields in settings.
+ */
 export const DEFAULT_SIGNUP_FIELDS: SignupField[] = [
   { key: 'phone',               label: 'Phone',               group: 'contact',     enabled: true,  required: false },
   { key: 'address',             label: 'Mailing Address',     group: 'address',     enabled: true,  required: false },
   { key: 'statement_of_interest', label: 'Statement of Interest', group: 'application', enabled: true, required: false },
   { key: 'interests',           label: 'Interests',           group: 'application', enabled: true,  required: false },
   { key: 'how_did_you_hear',    label: 'How Did You Hear',    group: 'application', enabled: true,  required: false },
+  { key: 'membership_class',    label: 'Membership Class',    group: 'membership',  enabled: true,  required: true },
 ]
 
+/** Legacy built-in keys removed from config — dropped on read so they do not appear as system rows. */
+export const LEGACY_SIGNUP_FIELD_KEYS = new Set([
+  'aviation_info',
+  'fly_frequency',
+  'student_pilot',
+  'copa_membership',
+])

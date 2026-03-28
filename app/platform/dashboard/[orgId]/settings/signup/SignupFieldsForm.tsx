@@ -67,7 +67,7 @@ function CustomFieldEditor({
   const ic = inputCls()
   return (
     <div className="rounded-md border border-gray-300 bg-gray-50 p-4 space-y-3">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">Label <span className="text-red-500">*</span></label>
           <input className={ic} placeholder="e.g. Emergency Contact" value={draft.label}

@@ -43,7 +43,7 @@ export default async function OrgAdminLayout({
   const planLabel = (org.plan ?? 'hobby').replace('_', ' ')
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-h-screen flex flex-col md:flex-row bg-gray-50 min-w-0">
       {/* Desktop sidebar */}
       <aside className="hidden md:flex w-56 fixed inset-y-0 left-0 bg-white border-r border-gray-200 flex-col z-10">
         {/* Header */}
@@ -101,7 +101,7 @@ export default async function OrgAdminLayout({
       />
 
       {/* Content */}
-      <div className="md:ml-56 flex-1 min-h-screen flex flex-col">
+      <div className="md:ml-56 flex-1 min-h-screen min-w-0 flex flex-col">
         {children}
       </div>
     </div>
