@@ -56,6 +56,13 @@ export async function proxy(request: NextRequest) {
     return new NextResponse(null, { status: 404 })
   }
 
+  // On the marketing domain, /login is the org member login — redirect to the platform login instead
+  if (domainType === 'marketing' && pathname === '/login') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/platform/login'
+    return NextResponse.redirect(url)
+  }
+
   // Rewrite marketing domain to internal /marketing/* prefix.
   // /platform/* and /auth/* paths are served directly without rewriting.
   // clublounge.app/foo          → /marketing/foo
