@@ -76,10 +76,10 @@ export async function POST(request: Request) {
       const db = createServiceRoleClient()
       const { data: org } = await db
         .from('organizations')
-        .select('stripe_account_id, stripe_onboarding_complete, name')
+        .select('stripe_account_id, stripe_charges_enabled, name')
         .eq('id', resolvedOrgId)
         .maybeSingle()
-      if (org?.stripe_onboarding_complete && org?.stripe_account_id) {
+      if (org?.stripe_charges_enabled && org?.stripe_account_id) {
         connectedAccountId = org.stripe_account_id
       }
       orgName = org?.name?.trim() || orgName

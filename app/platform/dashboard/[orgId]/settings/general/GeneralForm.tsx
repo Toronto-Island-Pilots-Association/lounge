@@ -7,6 +7,20 @@ function inputCls() {
   return 'w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none focus:ring-0'
 }
 
+function fileInputCls() {
+  return 'block w-full text-sm text-gray-600 file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-gray-900 hover:file:bg-gray-200'
+}
+
+async function parseError(res: Response): Promise<string> {
+  try {
+    const j = await res.json()
+    if (j && typeof j.error === 'string') return j.error
+  } catch {
+    /* ignore */
+  }
+  return 'Something went wrong'
+}
+
 export default function GeneralForm({
   initial,
   initialLogoUrl,
@@ -24,10 +38,78 @@ export default function GeneralForm({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [uploadingFavicon, setUploadingFavicon] = useState(false)
 
   const set = (k: keyof OrgIdentity) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setDraft(p => ({ ...p, [k]: e.target.value }))
+
+  const brandingBase = `/api/platform/orgs/${orgId}/settings/branding-asset`
+
+  const handleLogoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploadingLogo(true)
+    setError(null)
+    try {
+      const fd = new FormData()
+      fd.set('file', file)
+      fd.set('kind', 'logo')
+      const res = await fetch(brandingBase, { method: 'POST', body: fd })
+      if (!res.ok) throw new Error(await parseError(res))
+      const data = (await res.json()) as { url?: string }
+      if (data.url) setLogoUrl(data.url)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Logo upload failed')
+    } finally {
+      setUploadingLogo(false)
+    }
+  }
+
+  const handleFaviconFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploadingFavicon(true)
+    setError(null)
+    try {
+      const fd = new FormData()
+      fd.set('file', file)
+      fd.set('kind', 'favicon')
+      const res = await fetch(brandingBase, { method: 'POST', body: fd })
+      if (!res.ok) throw new Error(await parseError(res))
+      const data = (await res.json()) as { url?: string }
+      if (data.url) setFaviconUrl(data.url)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Favicon upload failed')
+    } finally {
+      setUploadingFavicon(false)
+    }
+  }
+
+  const handleRemoveLogo = async () => {
+    setError(null)
+    try {
+      const res = await fetch(`${brandingBase}?kind=logo`, { method: 'DELETE' })
+      if (!res.ok) throw new Error(await parseError(res))
+      setLogoUrl('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not remove logo')
+    }
+  }
+
+  const handleRemoveFavicon = async () => {
+    setError(null)
+    try {
+      const res = await fetch(`${brandingBase}?kind=favicon`, { method: 'DELETE' })
+      if (!res.ok) throw new Error(await parseError(res))
+      setFaviconUrl('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not remove favicon')
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -64,32 +146,83 @@ export default function GeneralForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">Lounge logo URL</label>
-        <input
-          type="url"
-          className={inputCls()}
-          placeholder="https://…"
-          value={logoUrl}
-          onChange={e => setLogoUrl(e.target.value)}
-        />
-        <p className="text-xs text-gray-400 mt-1">
-          Navbar and membership card. Square or wide PNG/SVG from your storage (e.g. Supabase) works best.
-          Leave empty to clear.
-        </p>
+        <span className="block text-sm font-medium text-gray-700 mb-1.5">Lounge logo</span>
+        <div className="flex flex-wrap items-start gap-4">
+          {logoUrl ? (
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+              {/* eslint-disable-next-line @next/next/no-img-element -- remote org branding URL */}
+              <img src={logoUrl} alt="" className="max-h-full max-w-full object-contain" />
+            </div>
+          ) : (
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 text-xs text-gray-400 text-center px-1">
+              No logo
+            </div>
+          )}
+          <div className="min-w-0 flex-1 space-y-2">
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/svg+xml,.svg"
+              className={fileInputCls()}
+              disabled={uploadingLogo}
+              onChange={handleLogoFile}
+            />
+            <div className="flex flex-wrap gap-2">
+              {logoUrl ? (
+                <button
+                  type="button"
+                  onClick={handleRemoveLogo}
+                  disabled={uploadingLogo}
+                  className="text-sm text-gray-600 underline-offset-2 hover:underline disabled:opacity-50"
+                >
+                  Remove logo
+                </button>
+              ) : null}
+            </div>
+            <p className="text-xs text-gray-400">
+              {uploadingLogo ? 'Uploading…' : 'Navbar and membership card. Square or wide PNG or SVG works best (max 5MB).'}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">Favicon URL (optional)</label>
-        <input
-          type="url"
-          className={inputCls()}
-          placeholder="https://… (square .ico or PNG)"
-          value={faviconUrl}
-          onChange={e => setFaviconUrl(e.target.value)}
-        />
-        <p className="text-xs text-gray-400 mt-1">
-          Browser tab icon. If empty, the lounge logo is used. Use a small square image (e.g. 32×32).
-        </p>
+        <span className="block text-sm font-medium text-gray-700 mb-1.5">Favicon (optional)</span>
+        <div className="flex flex-wrap items-start gap-4">
+          {faviconUrl ? (
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded border border-gray-200 bg-gray-50">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={faviconUrl} alt="" className="max-h-full max-w-full object-contain" />
+            </div>
+          ) : (
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded border border-dashed border-gray-300 bg-gray-50 text-[10px] text-gray-400 text-center leading-tight px-0.5">
+              Tab icon
+            </div>
+          )}
+          <div className="min-w-0 flex-1 space-y-2">
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/svg+xml,.svg,.ico,image/x-icon"
+              className={fileInputCls()}
+              disabled={uploadingFavicon}
+              onChange={handleFaviconFile}
+            />
+            {faviconUrl ? (
+              <button
+                type="button"
+                onClick={handleRemoveFavicon}
+                disabled={uploadingFavicon}
+                className="text-sm text-gray-600 underline-offset-2 hover:underline disabled:opacity-50"
+              >
+                Remove favicon
+              </button>
+            ) : null}
+            <p className="text-xs text-gray-400">
+              {uploadingFavicon
+                ? 'Uploading…'
+                : 'Browser tab icon. If empty, the lounge logo is used. Prefer a small square image (about 32×32). PNG, ICO, or SVG (max 5MB).'}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div>

@@ -2,7 +2,9 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import type { OrgFeatureFlags, OrgIdentity, OrgMembershipLevel, SignupField } from '@/lib/settings'
+import { signupFieldIsTipaOnlyBuiltIn } from '@/lib/settings'
 import { CnameRecord } from '@/components/platform/CnameRecord'
+import { orgStripeDuesUiStatus } from '@/lib/org-stripe-dues-status'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -567,6 +569,7 @@ function CustomFieldEditor({
 
 function SignupTab() {
   const [fields, setFields] = useState<SignupField[]>([])
+  const [isTipaOrg, setIsTipaOrg] = useState<boolean | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -578,11 +581,17 @@ function SignupTab() {
   useEffect(() => {
     fetch('/api/admin/settings/signup-fields')
       .then(r => r.ok ? r.json() : Promise.reject())
-      .then(d => setFields(d.fields))
+      .then(d => {
+        setFields(d.fields)
+        setIsTipaOrg(typeof d.isTipaOrg === 'boolean' ? d.isTipaOrg : null)
+      })
       .catch(() => {})
   }, [])
 
   const systemFields = fields.filter(f => !f.isCustom)
+  const builtInRows = systemFields.filter(
+    f => isTipaOrg === true || !signupFieldIsTipaOnlyBuiltIn(f.key)
+  )
   const customFields = fields.filter(f => f.isCustom)
 
   const toggle = (key: string, prop: 'enabled' | 'required') =>
@@ -595,8 +604,11 @@ function SignupTab() {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fields }),
       })
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Failed')
-      setFields((await res.json()).fields)
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error((data as { error?: string }).error || 'Failed')
+      setFields((data as { fields: SignupField[] }).fields)
+      const tipa = (data as { isTipaOrg?: boolean }).isTipaOrg
+      if (typeof tipa === 'boolean') setIsTipaOrg(tipa)
       setSuccess(true); setTimeout(() => setSuccess(false), 3000)
     } catch (e) { setError(e instanceof Error ? e.message : 'Failed') }
     finally { setSaving(false) }
@@ -636,14 +648,21 @@ function SignupTab() {
 
       {/* System fields */}
       <div className="space-y-3">
-        <SectionHeader title="Built-in sections" description="Show or hide the preset sections on the signup form." />
+        <SectionHeader
+          title="Built-in sections"
+          description={
+            isTipaOrg === true
+              ? 'Show or hide the preset sections on the signup form.'
+              : 'Standard sections for every club. Aviation and TIPA-specific options are hidden — use custom fields for your org.'
+          }
+        />
         <div className="rounded-md border border-gray-200 divide-y divide-gray-100">
           <div className="grid grid-cols-[1fr_80px_80px] gap-2 px-4 py-2 bg-gray-50 text-xs font-medium text-gray-500 uppercase tracking-wide">
             <span>Section</span>
             <span className="text-center">Show</span>
             <span className="text-center">Required</span>
           </div>
-          {systemFields.map(f => (
+          {builtInRows.map(f => (
             <div key={f.key} className="grid grid-cols-[1fr_80px_80px] gap-2 items-center px-4 py-3">
               <span className="text-sm text-gray-900">{f.label}</span>
               <div className="flex justify-center">
@@ -796,6 +815,8 @@ type OrgIntegrations = {
   subdomain: string
   stripe_account_id: string | null
   stripe_onboarding_complete: boolean | null
+  stripe_charges_enabled: boolean | null
+  stripe_payouts_enabled: boolean | null
 }
 
 function IntegrationsTab() {
@@ -847,8 +868,10 @@ function IntegrationsTab() {
     finally { setDomainSaving(false) }
   }
 
-  const stripeConnected = !!org?.stripe_account_id && !!org?.stripe_onboarding_complete
-  const stripePending = !!org?.stripe_account_id && !org?.stripe_onboarding_complete
+  const stripeUi = org ? orgStripeDuesUiStatus(org) : 'not_connected'
+  const stripePending = stripeUi === 'pending'
+  const stripePayoutsPending = stripeUi === 'payments_active_payouts_pending'
+  const stripeFullyReady = stripeUi === 'fully_ready'
 
   if (loading) return <div className="flex py-12 justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0d1e26]" /></div>
 
@@ -860,14 +883,36 @@ function IntegrationsTab() {
         <SectionHeader title="Stripe Connect" description="Accept membership payments via your own Stripe account." />
 
         <div className="flex items-center gap-3">
-          <span className={`inline-block h-2.5 w-2.5 rounded-full ${stripeConnected ? 'bg-green-500' : stripePending ? 'bg-yellow-400' : 'bg-gray-300'}`} />
+          <span
+            className={`inline-block h-2.5 w-2.5 rounded-full ${
+              stripeFullyReady
+                ? 'bg-green-500'
+                : stripePayoutsPending
+                  ? 'bg-amber-500'
+                  : stripePending
+                    ? 'bg-yellow-400'
+                    : 'bg-gray-300'
+            }`}
+          />
           <span className="text-sm text-gray-700">
-            {stripeConnected ? 'Connected' : stripePending ? 'Setup in progress' : 'Not connected'}
+            {stripeFullyReady
+              ? 'Connected'
+              : stripePayoutsPending
+                ? 'Payments on — finish payout setup in Stripe'
+                : stripePending
+                  ? 'Setup in progress'
+                  : 'Not connected'}
           </span>
         </div>
 
-        {stripeConnected ? (
-          <div className="rounded-md bg-green-50 p-3 text-sm text-green-800">Accepting payments via Stripe.</div>
+        {stripeFullyReady ? (
+          <div className="rounded-md bg-green-50 p-3 text-sm text-green-800">
+            Accepting payments via Stripe; payouts are enabled.
+          </div>
+        ) : stripePayoutsPending ? (
+          <div className="rounded-md bg-amber-50 p-3 text-sm text-amber-900">
+            Members can pay online. Complete required steps in your Stripe Dashboard so payouts can reach your bank.
+          </div>
         ) : (
           <>
             {stripeError && <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">{stripeError}</div>}

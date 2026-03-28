@@ -29,7 +29,9 @@ export async function GET(
   const db = createServiceRoleClient()
   const { data: org, error } = await db
     .from('organizations')
-    .select('custom_domain, subdomain, stripe_account_id, stripe_onboarding_complete')
+    .select(
+      'custom_domain, subdomain, stripe_account_id, stripe_onboarding_complete, stripe_charges_enabled, stripe_payouts_enabled',
+    )
     .eq('id', orgId)
     .single()
 
@@ -103,7 +105,9 @@ export async function PATCH(
 
   const { data: org, error: fetchError } = await db
     .from('organizations')
-    .select('custom_domain, subdomain, stripe_account_id, stripe_onboarding_complete')
+    .select(
+      'custom_domain, subdomain, stripe_account_id, stripe_onboarding_complete, stripe_charges_enabled, stripe_payouts_enabled',
+    )
     .eq('id', orgId)
     .single()
 

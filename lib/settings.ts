@@ -427,24 +427,87 @@ const DEFAULT_SIGNUP_FIELDS: SignupField[] = [
   { key: 'how_did_you_hear',     label: 'How Did You Hear',         group: 'application', enabled: true,  required: false },
 ]
 
+/** Built-in signup sections only rendered for TIPA; other orgs use custom fields instead. */
+const TIPA_ONLY_SIGNUP_FIELD_KEYS = new Set([
+  'aviation_info',
+  'fly_frequency',
+  'student_pilot',
+  'copa_membership',
+  'interests',
+])
+
+export function signupFieldIsTipaOnlyBuiltIn(key: string): boolean {
+  return TIPA_ONLY_SIGNUP_FIELD_KEYS.has(key)
+}
+
+export function isTipaOrgId(orgId: string): boolean {
+  return orgId === TIPA_ORG_ID
+}
+
+function mergeSignupFieldsWithDefaults(parsed: SignupField[]): SignupField[] {
+  const defaultKeys = new Set(DEFAULT_SIGNUP_FIELDS.map(d => d.key))
+  const byKey = new Map(parsed.map(f => [f.key, f]))
+  const out: SignupField[] = DEFAULT_SIGNUP_FIELDS.map(d => {
+    const o = byKey.get(d.key)
+    return o ? { ...d, ...o } : { ...d }
+  })
+  for (const f of parsed) {
+    if (!defaultKeys.has(f.key)) out.push(f)
+  }
+  return out
+}
+
+/** Force TIPA-only built-in sections off for non-TIPA orgs (read + save). */
+export function gateTipaOnlySignupFields(fields: SignupField[], orgId: string): SignupField[] {
+  if (orgId === TIPA_ORG_ID) return fields
+  return fields.map(f => {
+    if (f.isCustom !== true && signupFieldIsTipaOnlyBuiltIn(f.key)) {
+      return { ...f, enabled: false, required: false }
+    }
+    return f
+  })
+}
+
 export async function getSignupFieldsConfig(orgIdOverride?: string): Promise<SignupField[]> {
+  const orgId = await getOrgId(orgIdOverride)
   const raw = await getSetting('signup_fields_config', orgIdOverride)
-  if (!raw) return DEFAULT_SIGNUP_FIELDS
-  try {
-    const parsed = JSON.parse(raw)
-    if (Array.isArray(parsed)) return parsed as SignupField[]
-  } catch { /* fall through */ }
-  return DEFAULT_SIGNUP_FIELDS
+  let fields: SignupField[]
+  if (!raw) {
+    fields = DEFAULT_SIGNUP_FIELDS.map(f => ({ ...f }))
+  } else {
+    try {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) {
+        fields = mergeSignupFieldsWithDefaults(parsed as SignupField[])
+      } else {
+        fields = DEFAULT_SIGNUP_FIELDS.map(f => ({ ...f }))
+      }
+    } catch {
+      fields = DEFAULT_SIGNUP_FIELDS.map(f => ({ ...f }))
+    }
+  }
+  return gateTipaOnlySignupFields(fields, orgId)
 }
 
 export async function setSignupFieldsConfig(fields: SignupField[], orgIdOverride?: string): Promise<void> {
   const supabase = createServiceRoleClient()
   const orgId = await getOrgId(orgIdOverride)
+  const sanitized = gateTipaOnlySignupFields(fields, orgId)
   const { error } = await supabase.from('settings').upsert(
-    { key: 'signup_fields_config', value: JSON.stringify(fields), org_id: orgId, updated_at: new Date().toISOString() },
+    { key: 'signup_fields_config', value: JSON.stringify(sanitized), org_id: orgId, updated_at: new Date().toISOString() },
     { onConflict: 'key,org_id' }
   )
   if (error) throw new Error(`Failed to save signup fields: ${error.message}`)
+}
+
+/** For admin/platform APIs: fields plus whether TIPA-only built-ins apply to this org. */
+export async function getSignupFieldsApiPayload(orgIdOverride?: string): Promise<{
+  fields: SignupField[]
+  isTipaOrg: boolean
+}> {
+  const orgId = await getOrgId(orgIdOverride)
+  const fields = await getSignupFieldsConfig(orgIdOverride)
+  return { fields, isTipaOrg: isTipaOrgId(orgId) }
 }
 
 // ─── Email Templates ──────────────────────────────────────────────────────────

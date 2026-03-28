@@ -7,6 +7,7 @@ import Loading from '@/components/Loading'
 import PasswordInput from '@/components/PasswordInput'
 import { COUNTRIES, getStatesProvinces } from './constants'
 import type { MembershipLevelKey, SignupField } from '@/lib/settings'
+import { signupFieldIsTipaOnlyBuiltIn } from '@/lib/settings'
 
 const DEFAULT_FEES: Record<MembershipLevelKey, number> = {
   Full: 45,
@@ -24,8 +25,11 @@ function BecomeMemberForm() {
 
   // Helper: is a signup field section enabled?
   const fieldEnabled = (key: string) => {
-    if (!signupFields) return true // default to showing everything while loading
-    return signupFields.find(f => f.key === key)?.enabled ?? true
+    if (!signupFields) {
+      // Avoid flashing TIPA-only blocks on other orgs before config loads
+      return signupFieldIsTipaOnlyBuiltIn(key) ? false : true
+    }
+    return signupFields.find(f => f.key === key)?.enabled ?? false
   }
   const fieldRequired = (key: string) => {
     if (!signupFields) return false

@@ -1,5 +1,5 @@
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
-import { getSignupFieldsConfig, setSignupFieldsConfig, type SignupField } from '@/lib/settings'
+import { getSignupFieldsApiPayload, setSignupFieldsConfig, type SignupField } from '@/lib/settings'
 import { NextResponse } from 'next/server'
 
 async function verifyAdmin(orgId: string) {
@@ -24,8 +24,8 @@ export async function GET(
   const { orgId } = await params
   const user = await verifyAdmin(orgId)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const fields = await getSignupFieldsConfig(orgId)
-  return NextResponse.json({ fields })
+  const payload = await getSignupFieldsApiPayload(orgId)
+  return NextResponse.json(payload)
 }
 
 export async function PATCH(
@@ -38,6 +38,6 @@ export async function PATCH(
   const { fields } = await request.json() as { fields: SignupField[] }
   if (!Array.isArray(fields)) return NextResponse.json({ error: 'Invalid fields' }, { status: 400 })
   await setSignupFieldsConfig(fields, orgId)
-  const updated = await getSignupFieldsConfig(orgId)
-  return NextResponse.json({ fields: updated })
+  const payload = await getSignupFieldsApiPayload(orgId)
+  return NextResponse.json(payload)
 }

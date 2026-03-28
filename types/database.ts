@@ -9,6 +9,8 @@ export interface Organization {
   favicon_url?: string | null
   stripe_account_id?: string | null
   stripe_onboarding_complete?: boolean
+  stripe_charges_enabled?: boolean
+  stripe_payouts_enabled?: boolean
   stripe_customer_id?: string | null
   stripe_subscription_id?: string | null
   created_at: string

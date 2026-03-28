@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
-import { getPlatformStripeInstance } from '@/lib/stripe'
+import { syncOrgStripeOnboardingFromStripe } from '@/lib/platform-stripe-onboarding'
 
 export default async function StripeReturnPage({
   searchParams,
@@ -16,28 +16,14 @@ export default async function StripeReturnPage({
 
   const db = createServiceRoleClient()
 
-  // Get org and verify admin
   const { data: org } = await db
     .from('organizations')
     .select('id, stripe_account_id')
     .eq('id', org_id)
-    .single()
+    .maybeSingle()
 
   if (org?.stripe_account_id) {
-    try {
-      const stripe = getPlatformStripeInstance()
-      const account = await stripe.accounts.retrieve(org.stripe_account_id)
-
-      // Mark onboarding complete if Stripe confirms charges are enabled
-      if (account.charges_enabled) {
-        await db
-          .from('organizations')
-          .update({ stripe_onboarding_complete: true })
-          .eq('id', org_id)
-      }
-    } catch (e) {
-      console.error('Error verifying Stripe account:', e)
-    }
+    await syncOrgStripeOnboardingFromStripe(org_id)
   }
 
   redirect('/platform/dashboard')

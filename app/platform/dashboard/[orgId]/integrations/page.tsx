@@ -35,6 +35,15 @@ export default async function PlatformIntegrationsPage({
     redirect(`/platform/dashboard/${orgId}/integrations`)
   }
 
+  const { data: orgStripeRow } = await db
+    .from('organizations')
+    .select('stripe_account_id')
+    .eq('id', orgId)
+    .maybeSingle()
+  if (orgStripeRow?.stripe_account_id) {
+    await syncOrgStripeOnboardingFromStripe(orgId)
+  }
+
   return (
     <div className="px-8 py-10">
       <div className="max-w-2xl">

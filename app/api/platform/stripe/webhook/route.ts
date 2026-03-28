@@ -1,14 +1,16 @@
 /**
- * Platform-owned Stripe webhook for org plan tiers.
+ * Platform-owned Stripe webhook for org plan tiers and Connect account state.
  *
  * Keeps:
  * - `organizations.plan`
  * - `organizations.stripe_subscription_id`
+ * - `organizations.stripe_charges_enabled` / `stripe_payouts_enabled` (Connect `account.updated`)
  *
- * in sync with Stripe subscription lifecycle. Subscription identifiers are
- * stored at checkout time (for initial set) and updated on subscription events.
+ * in sync with Stripe. Subscription identifiers are stored at checkout time
+ * (for initial set) and updated on subscription events.
  */
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { syncOrgStripeByConnectedAccountId } from '@/lib/platform-stripe-onboarding'
 import { getPlatformStripeInstance } from '@/lib/stripe'
 import * as Sentry from '@sentry/nextjs'
 import { PLAN_KEYS, type PlanKey } from '@/lib/plans'
@@ -110,6 +112,14 @@ export async function POST(request: Request) {
           })
           .eq('id', orgId)
 
+        break
+      }
+
+      case 'account.updated': {
+        const account = event.data.object as Stripe.Account
+        if (account.id) {
+          await syncOrgStripeByConnectedAccountId(account.id)
+        }
         break
       }
 

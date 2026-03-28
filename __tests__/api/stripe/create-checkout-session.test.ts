@@ -92,7 +92,7 @@ describe('/api/stripe/create-checkout-session', () => {
           maybeSingle: jest.fn().mockResolvedValue({
             data: {
               stripe_account_id: 'acct_rowing',
-              stripe_onboarding_complete: true,
+              stripe_charges_enabled: true,
               name: 'Toronto Rowing Club',
             },
           }),

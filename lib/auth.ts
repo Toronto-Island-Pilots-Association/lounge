@@ -1,6 +1,7 @@
 import { createClient } from './supabase/server'
 import { headers } from 'next/headers'
-import { MemberProfile, UserProfile } from '@/types/database'
+import { MemberProfile, TIPA_ORG_ID, UserProfile } from '@/types/database'
+import { isStripeEnabled } from '@/lib/stripe'
 
 /** Read the org id injected by middleware from request headers. */
 async function getOrgId(): Promise<string | null> {
@@ -12,8 +13,13 @@ async function getOrgId(): Promise<string | null> {
   }
 }
 
-/** Check if the current org has completed Stripe Connect onboarding. */
+/**
+ * True when this org can run member-facing Stripe Checkout on the current hostname.
+ * Connect orgs require live `stripe_charges_enabled` (synced from Stripe).
+ * TIPA legacy uses the platform Stripe account when Connect is not used.
+ */
 export async function isOrgStripeConnected(): Promise<boolean> {
+  if (!isStripeEnabled()) return false
   const orgId = await getOrgId()
   if (!orgId) return false
   try {
@@ -21,10 +27,15 @@ export async function isOrgStripeConnected(): Promise<boolean> {
     const db = createServiceRoleClient()
     const { data } = await db
       .from('organizations')
-      .select('stripe_onboarding_complete')
+      .select('stripe_account_id, stripe_charges_enabled')
       .eq('id', orgId)
       .maybeSingle()
-    return data?.stripe_onboarding_complete === true
+    if (!data) return false
+    if (data.stripe_account_id) {
+      return data.stripe_charges_enabled === true
+    }
+    if (orgId === TIPA_ORG_ID) return true
+    return false
   } catch {
     return false
   }

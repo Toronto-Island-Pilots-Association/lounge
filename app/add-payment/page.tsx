@@ -1,5 +1,10 @@
 import { redirect } from 'next/navigation'
-import { getCurrentUserIncludingPending, shouldRequireProfileCompletion } from '@/lib/auth'
+import {
+  getCurrentUserIncludingPending,
+  shouldRequireProfileCompletion,
+  shouldRequirePayment,
+  isOrgStripeConnected,
+} from '@/lib/auth'
 import SubscriptionSection from '@/components/SubscriptionSection'
 
 export default async function AddPaymentPage() {
@@ -17,6 +22,11 @@ export default async function AddPaymentPage() {
   const isHonorary = user.profile.membership_level === 'Honorary'
 
   if (hasSubscription || isHonorary) {
+    redirect('/membership')
+  }
+
+  const orgStripeReady = await isOrgStripeConnected()
+  if (shouldRequirePayment(user.profile) && !orgStripeReady) {
     redirect('/membership')
   }
 

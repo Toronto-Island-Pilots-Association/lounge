@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { CnameRecord } from '@/components/platform/CnameRecord'
+import { orgStripeDuesUiStatus } from '@/lib/org-stripe-dues-status'
 
 function inputCls() {
   return 'w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:ring-1 focus:ring-gray-900'
@@ -33,6 +34,8 @@ type OrgIntegrations = {
   subdomain: string
   stripe_account_id: string | null
   stripe_onboarding_complete: boolean | null
+  stripe_charges_enabled: boolean | null
+  stripe_payouts_enabled: boolean | null
 }
 
 export default function IntegrationsPageClient({ orgId }: { orgId: string }) {
@@ -102,8 +105,12 @@ export default function IntegrationsPageClient({ orgId }: { orgId: string }) {
     }
   }
 
-  const stripeConnected = !!org?.stripe_account_id && !!org?.stripe_onboarding_complete
-  const stripePending = !!org?.stripe_account_id && !org?.stripe_onboarding_complete
+  const stripeUi = org
+    ? orgStripeDuesUiStatus(org)
+    : 'not_connected'
+  const stripePending = stripeUi === 'pending'
+  const stripePayoutsPending = stripeUi === 'payments_active_payouts_pending'
+  const stripeFullyReady = stripeUi === 'fully_ready'
 
   if (loading) {
     return (
@@ -124,21 +131,33 @@ export default function IntegrationsPageClient({ orgId }: { orgId: string }) {
         <div className="flex items-center gap-3">
           <span
             className={`inline-block h-2.5 w-2.5 rounded-full ${
-              stripeConnected ? 'bg-green-500' : stripePending ? 'bg-yellow-400' : 'bg-gray-300'
+              stripeFullyReady
+                ? 'bg-green-500'
+                : stripePayoutsPending
+                  ? 'bg-amber-500'
+                  : stripePending
+                    ? 'bg-yellow-400'
+                    : 'bg-gray-300'
             }`}
           />
           <span className="text-sm text-gray-700">
-            {stripeConnected
+            {stripeFullyReady
               ? 'Stripe connected — accepting payments'
-              : stripePending
-                ? 'Setup in progress'
-                : 'Not connected'}
+              : stripePayoutsPending
+                ? 'Member payments on — finish Stripe setup for payouts'
+                : stripePending
+                  ? 'Setup in progress'
+                  : 'Not connected'}
           </span>
         </div>
 
-        {stripeConnected ? (
+        {stripeFullyReady ? (
           <div className="rounded-md bg-green-50 p-3 text-sm text-green-800">
-            You can collect member dues directly through your lounge.
+            You can collect member dues directly through your lounge, and payouts are enabled on your Stripe account.
+          </div>
+        ) : stripePayoutsPending ? (
+          <div className="rounded-md bg-amber-50 p-3 text-sm text-amber-900">
+            Members can pay online. Open your Stripe Dashboard and complete any required information so payouts can reach your bank.
           </div>
         ) : (
           <>

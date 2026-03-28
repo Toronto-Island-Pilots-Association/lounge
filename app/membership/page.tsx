@@ -1,6 +1,12 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { getCurrentUserIncludingPending, shouldRequireProfileCompletion, shouldRequirePayment, isOrgPublic } from '@/lib/auth'
+import {
+  getCurrentUserIncludingPending,
+  shouldRequireProfileCompletion,
+  shouldRequirePayment,
+  isOrgPublic,
+  isOrgStripeConnected,
+} from '@/lib/auth'
 import {
   getMembershipFeeForLevel,
   getTrialEndDateAsync,
@@ -45,7 +51,8 @@ export default async function MembershipPage({
   const returningFromStripe =
     params?.subscription === 'success' && typeof params?.session_id === 'string'
 
-  if (shouldRequirePayment(user.profile) && !returningFromStripe) {
+  const orgStripeReady = await isOrgStripeConnected()
+  if (shouldRequirePayment(user.profile) && orgStripeReady && !returningFromStripe) {
     redirect('/add-payment')
   }
 
@@ -284,7 +291,12 @@ export default async function MembershipPage({
 
                 {/* Subscription Section first - Show for all users except rejected */}
                 {!isRejected && (
-                  <div className="mt-6">
+                  <div className="mt-6 space-y-4">
+                    {shouldRequirePayment(user.profile) && !orgStripeReady && (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                        Online membership payment is not available for this lounge yet. You can still use the site; an administrator will let you know when payment setup is ready.
+                      </div>
+                    )}
                     <SubscriptionSection user={user} />
                   </div>
                 )}

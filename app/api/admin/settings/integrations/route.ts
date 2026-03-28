@@ -23,7 +23,9 @@ export async function GET() {
     const supabase = createServiceRoleClient()
     const { data: org, error } = await supabase
       .from('organizations')
-      .select('custom_domain, subdomain, stripe_account_id, stripe_onboarding_complete')
+      .select(
+        'custom_domain, subdomain, stripe_account_id, stripe_onboarding_complete, stripe_charges_enabled, stripe_payouts_enabled',
+      )
       .eq('id', orgId)
       .single()
 
@@ -111,7 +113,9 @@ export async function PATCH(request: Request) {
 
     const { data: org, error: fetchError } = await supabase
       .from('organizations')
-      .select('custom_domain, subdomain, stripe_account_id, stripe_onboarding_complete')
+      .select(
+        'custom_domain, subdomain, stripe_account_id, stripe_onboarding_complete, stripe_charges_enabled, stripe_payouts_enabled',
+      )
       .eq('id', orgId)
       .single()
 

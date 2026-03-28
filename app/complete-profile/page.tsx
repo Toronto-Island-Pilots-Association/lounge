@@ -189,7 +189,15 @@ export default function CompleteProfilePage() {
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Failed to update profile')
       setSuccess(true)
-      setTimeout(() => router.push('/add-payment'), 2000)
+      setTimeout(async () => {
+        try {
+          const statusRes = await fetch('/api/stripe/status')
+          const statusData = statusRes.ok ? await statusRes.json() : { enabled: false }
+          router.push(statusData.enabled ? '/add-payment' : '/membership')
+        } catch {
+          router.push('/membership')
+        }
+      }, 2000)
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -214,7 +222,7 @@ export default function CompleteProfilePage() {
         )}
         {success && (
           <div className="mb-6 rounded-md bg-green-50 border border-green-200 p-4 text-green-700">
-            Profile updated successfully! You will be redirected to add your payment information.
+            Profile updated successfully! You will be redirected to continue membership setup.
           </div>
         )}
 

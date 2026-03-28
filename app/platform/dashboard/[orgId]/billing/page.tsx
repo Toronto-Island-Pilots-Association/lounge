@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { orgStripeDuesUiStatus } from '@/lib/org-stripe-dues-status'
+import { syncOrgStripeOnboardingFromStripe } from '@/lib/platform-stripe-onboarding'
 import { PLANS, PLAN_KEYS, type PlanKey } from '@/lib/plans'
 import ConnectStripeButton from '../../ConnectStripeButton'
 import PlanSelector from './PlanSelector'
@@ -49,9 +51,20 @@ export default async function BillingPage({
 
   if (!membership) redirect('/platform/dashboard')
 
+  const { data: orgStripeRow } = await db
+    .from('organizations')
+    .select('stripe_account_id')
+    .eq('id', orgId)
+    .maybeSingle()
+  if (orgStripeRow?.stripe_account_id) {
+    await syncOrgStripeOnboardingFromStripe(orgId)
+  }
+
   const { data: org } = await db
     .from('organizations')
-    .select('id, name, plan, stripe_account_id, stripe_onboarding_complete, stripe_subscription_id')
+    .select(
+      'id, name, plan, stripe_account_id, stripe_onboarding_complete, stripe_charges_enabled, stripe_payouts_enabled, stripe_subscription_id',
+    )
     .eq('id', orgId)
     .maybeSingle()
 
@@ -60,11 +73,7 @@ export default async function BillingPage({
   const currentPlan: PlanKey = (org.plan as PlanKey) ?? 'hobby'
   const currentPlanDef = PLANS[currentPlan]
 
-  const stripeStatus = org.stripe_onboarding_complete
-    ? 'connected'
-    : org.stripe_account_id
-      ? 'pending'
-      : 'not_connected'
+  const stripeStatus = orgStripeDuesUiStatus(org)
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -182,30 +191,41 @@ export default async function BillingPage({
             <div className="flex items-center justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${
-                    stripeStatus === 'connected' ? 'bg-green-500' :
-                    stripeStatus === 'pending' ? 'bg-yellow-400' :
-                    'bg-gray-300'
-                  }`} />
+                  <div
+                    className={`w-2 h-2 rounded-full ${
+                      stripeStatus === 'not_connected'
+                        ? 'bg-gray-300'
+                        : stripeStatus === 'pending'
+                          ? 'bg-yellow-400'
+                          : stripeStatus === 'payments_active_payouts_pending'
+                            ? 'bg-amber-500'
+                            : 'bg-green-500'
+                    }`}
+                  />
                   <span className="font-medium text-sm">
-                    {stripeStatus === 'connected' && 'Stripe connected — accepting payments'}
+                    {stripeStatus === 'fully_ready' && 'Stripe connected — accepting payments'}
+                    {stripeStatus === 'payments_active_payouts_pending' &&
+                      'Member payments on — finish Stripe setup for payouts'}
                     {stripeStatus === 'pending' && 'Stripe onboarding incomplete'}
                     {stripeStatus === 'not_connected' && 'Stripe not connected'}
                   </span>
                 </div>
                 <p className="text-sm text-gray-500 pl-4">
-                  {stripeStatus === 'connected'
-                    ? 'You can collect member dues directly through your lounge.'
-                    : stripeStatus === 'pending'
-                    ? 'Complete Stripe onboarding to start accepting member payments.'
-                    : 'Connect Stripe to collect membership dues from your members.'}
+                  {stripeStatus === 'fully_ready'
+                    ? 'You can collect member dues directly through your lounge, and payouts are enabled on your Stripe account.'
+                    : stripeStatus === 'payments_active_payouts_pending'
+                      ? 'Members can pay membership dues. Complete any required steps in your Stripe Dashboard so funds can be paid out to your bank.'
+                      : stripeStatus === 'pending'
+                        ? 'Complete Stripe onboarding so members can pay membership dues online.'
+                        : 'Connect Stripe to collect membership dues from your members.'}
                 </p>
               </div>
-              {stripeStatus !== 'connected' && (
+              {(stripeStatus === 'not_connected' || stripeStatus === 'pending') && (
                 <ConnectStripeButton orgId={orgId} isPending={stripeStatus === 'pending'} />
               )}
             </div>
-            {stripeStatus !== 'connected' && !currentPlanDef.features.stripeDues && (
+            {(stripeStatus === 'not_connected' || stripeStatus === 'pending') &&
+              !currentPlanDef.features.stripeDues && (
               <div className="mt-4 pt-4 border-t text-sm text-amber-700 bg-amber-50 rounded-lg px-4 py-3">
                 Stripe dues collection requires the <strong>Starter</strong> plan or higher.
               </div>
