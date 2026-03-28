@@ -198,9 +198,6 @@ export function ClubLoungeLanding({
             <NavLink href={demoHref} className="cl-btn-ghost" internalLinks={internalLinks}>
               See a demo
             </NavLink>
-            <NavLink href={loginHref} className="cl-btn-ghost" internalLinks={internalLinks}>
-              Log in
-            </NavLink>
           </div>
           <div className="cl-hero-proof">
             <div>
@@ -503,20 +500,6 @@ export function ClubLoungeLanding({
         <p className="cl-pricing-footnote">
           14-day free trial, no credit card required. Save 2 months with annual billing. Canadian dollars. No hidden fees.
         </p>
-      </section>
-
-      <section className="cl-testimonial-section">
-        <blockquote className="cl-testimonial-quote">
-          &ldquo;We went from email chaos and a Facebook group nobody checked to having everything in one place. Our
-          members actually know each other now.&rdquo;
-        </blockquote>
-        <div className="cl-testimonial-attr">
-          <div className="cl-test-av">JD</div>
-          <div>
-            <div className="cl-test-name">James D.</div>
-            <div className="cl-test-role">President, Toronto Island Pilots Association</div>
-          </div>
-        </div>
       </section>
 
       <section id="verticals">
