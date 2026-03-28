@@ -5,9 +5,9 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { buildOrgUrl, ROOT_DOMAIN } from '@/lib/org'
 import SignOutButton from './SignOutButton'
 
-function loungeAddressLabel(org: { subdomain: string; custom_domain?: string | null }) {
+function loungeAddressLabel(org: { subdomain: string; custom_domain?: string | null; custom_domain_verified?: boolean | null }) {
   const isDev = process.env.NODE_ENV === 'development'
-  if (!isDev && org.custom_domain) return org.custom_domain
+  if (!isDev && org.custom_domain && org.custom_domain_verified) return org.custom_domain
   return `${org.subdomain}.${ROOT_DOMAIN}`
 }
 

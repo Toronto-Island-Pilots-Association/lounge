@@ -1,6 +1,6 @@
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { getPlatformStripeInstance } from '@/lib/stripe'
-import { addDomainToProject } from '@/lib/vercel'
+import { addDomainToProject, checkDomainVerification } from '@/lib/vercel'
 import { NextResponse } from 'next/server'
 
 async function verifyAdmin(orgId: string) {
@@ -19,18 +19,39 @@ async function verifyAdmin(orgId: string) {
 }
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ orgId: string }> }
 ) {
   const { orgId } = await params
   const user = await verifyAdmin(orgId)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const { searchParams } = new URL(req.url)
+
+  if (searchParams.get('check') === 'domain') {
+    const db = createServiceRoleClient()
+    const { data: org } = await db
+      .from('organizations')
+      .select('custom_domain')
+      .eq('id', orgId)
+      .single()
+    if (!org?.custom_domain)
+      return NextResponse.json({ error: 'No custom domain set' }, { status: 400 })
+    const result = await checkDomainVerification(org.custom_domain)
+    if (result.status === 'verified') {
+      await db
+        .from('organizations')
+        .update({ custom_domain_verified: true })
+        .eq('id', orgId)
+    }
+    return NextResponse.json(result)
+  }
+
   const db = createServiceRoleClient()
   const { data: org, error } = await db
     .from('organizations')
     .select(
-      'custom_domain, subdomain, stripe_account_id, stripe_onboarding_complete, stripe_charges_enabled, stripe_payouts_enabled',
+      'custom_domain, custom_domain_verified, subdomain, stripe_account_id, stripe_onboarding_complete, stripe_charges_enabled, stripe_payouts_enabled',
     )
     .eq('id', orgId)
     .single()
@@ -81,6 +102,31 @@ export async function POST(
   return NextResponse.json({ url: accountLink.url })
 }
 
+// PUT — generate Stripe Express dashboard login link
+export async function PUT(
+  _req: Request,
+  { params }: { params: Promise<{ orgId: string }> }
+) {
+  const { orgId } = await params
+  const user = await verifyAdmin(orgId)
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const db = createServiceRoleClient()
+  const { data: org, error: orgError } = await db
+    .from('organizations')
+    .select('stripe_account_id')
+    .eq('id', orgId)
+    .single()
+
+  if (orgError) return NextResponse.json({ error: orgError.message }, { status: 500 })
+  if (!org?.stripe_account_id)
+    return NextResponse.json({ error: 'No Stripe account connected' }, { status: 400 })
+
+  const stripe = getPlatformStripeInstance()
+  const loginLink = await stripe.accounts.createLoginLink(org.stripe_account_id)
+  return NextResponse.json({ url: loginLink.url })
+}
+
 // PATCH — save custom domain
 export async function PATCH(
   request: Request,
@@ -106,7 +152,7 @@ export async function PATCH(
   const { data: org, error: fetchError } = await db
     .from('organizations')
     .select(
-      'custom_domain, subdomain, stripe_account_id, stripe_onboarding_complete, stripe_charges_enabled, stripe_payouts_enabled',
+      'custom_domain, custom_domain_verified, subdomain, stripe_account_id, stripe_onboarding_complete, stripe_charges_enabled, stripe_payouts_enabled',
     )
     .eq('id', orgId)
     .single()

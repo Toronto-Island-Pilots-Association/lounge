@@ -30,7 +30,7 @@ export default async function OrgAdminLayout({
 
   const { data: org } = await db
     .from('organizations')
-    .select('id, name, plan, subdomain, custom_domain, trial_ends_at')
+    .select('id, name, plan, subdomain, custom_domain, custom_domain_verified, trial_ends_at')
     .eq('id', orgId)
     .maybeSingle()
 

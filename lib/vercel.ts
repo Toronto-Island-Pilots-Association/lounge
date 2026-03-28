@@ -63,6 +63,38 @@ export async function addDomainToProject(domain: string): Promise<VercelDomainRe
   return { success: false, error: data.error?.message ?? 'Failed to register domain' }
 }
 
+export type DomainVerificationStatus = 'verified' | 'pending' | 'invalid' | 'misconfigured'
+
+export interface DomainVerificationResult {
+  status: DomainVerificationStatus
+  domain: string
+}
+
+/**
+ * Check whether a custom domain is correctly pointed at Vercel.
+ * Uses the project-scoped domains API which returns per-record verification state.
+ */
+export async function checkDomainVerification(domain: string): Promise<DomainVerificationResult> {
+  if (!process.env.VERCEL_API_TOKEN || !process.env.VERCEL_PROJECT_ID) {
+    return { status: 'pending', domain }
+  }
+
+  const res = await fetch(projectUrl(`/domains/${encodeURIComponent(domain)}`), {
+    headers: headers(),
+  })
+
+  if (res.status === 404) return { status: 'invalid', domain }
+
+  const data = await res.json()
+
+  if (!res.ok) return { status: 'invalid', domain }
+
+  if (data.verified) return { status: 'verified', domain }
+
+  // `misconfigured` means the domain exists in Vercel but DNS isn't correct yet
+  return { status: data.misconfigured ? 'misconfigured' : 'pending', domain }
+}
+
 /**
  * Remove a domain from the Vercel project.
  * Call when an org is deleted or changes their custom domain.

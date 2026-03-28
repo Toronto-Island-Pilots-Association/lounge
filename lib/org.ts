@@ -121,12 +121,12 @@ export function slugify(name: string): string {
 }
 
 /** Build the public URL for an org, using custom domain if set (prod only). */
-export function buildOrgUrl(org: { subdomain: string; custom_domain?: string | null }): string {
+export function buildOrgUrl(org: { subdomain: string; custom_domain?: string | null; custom_domain_verified?: boolean | null }): string {
   const isDev = process.env.NODE_ENV === 'development'
   const protocol = isDev ? 'http' : 'https'
   const port = isDev ? ':3000' : ''
-  // In dev, always use the subdomain so custom domains (which aren't proxied locally) don't break routing
-  if (!isDev && org.custom_domain) return `https://${org.custom_domain}`
+  // Only use custom domain once DNS is confirmed — avoids broken links during setup
+  if (!isDev && org.custom_domain && org.custom_domain_verified) return `https://${org.custom_domain}`
   return `${protocol}://${org.subdomain}.${ROOT_DOMAIN}${port}`
 }
 

@@ -1,31 +1,32 @@
 # Supabase migrations
 
-Run these in order against your existing database to apply schema changes without dropping tables or losing data.
+## Current layout
+
+- **`20260329100000_clublounge_multitenant_consolidated.sql`** — single migration containing the full multi-tenant schema path (legacy pre-multi-tenant deltas + org split + org branding storage + Stripe flags). Apply with CLI or SQL Editor on a **fresh** database, or use **`supabase db reset`** locally.
+
+**Demo / local data** is **not** in migrations: **`../seeds/demo_org.sql`** — bootstrap only (org + `public_access`). Full demo (users, threads, events, …) is **`npm run db:seed-demo-org`** → `scripts/seed-demo-org.ts`. See **`../seeds/README.md`**.
+
+**Historical per-step SQL** (not applied by the CLI): **`../migrations_archive/`**  
+- **`pre_multi_tenancy/`** — `20250303*`, `20250307*` (before the squash)  
+- **`multi_tenancy/`** — squashed file, follow-on migrations, and **`20260323000006_seed_demo_org.sql`** (reference only; live seed is `seeds/demo_org.sql`)
 
 ## How to run
 
-**Option A – Supabase Dashboard**  
-1. Open your project → SQL Editor.  
-2. Paste the contents of the latest migration file.  
-3. Run it.
-
-**Option B – Supabase CLI**  
-From the project root:
-
-```bash
-supabase db push
-```
-
-Or link the project and run migrations:
+**Supabase CLI** (recommended):
 
 ```bash
 supabase link --project-ref <your-project-ref>
 supabase db push
 ```
 
-**Option C – Manual**  
-Connect to your Postgres database with `psql` or any client and execute the `.sql` file.
+**Local reset** (migrations + seed):
 
-## Migrations
+```bash
+supabase db reset
+```
 
-- `20250303120000_add_invited_at_to_user_profiles.sql` – Adds `invited_at` to `user_profiles` and updates the signup trigger to set it for invited users. Safe to run on existing DBs (no data loss).
+**Dashboard** — paste the consolidated migration in SQL Editor only on empty / known-compatible databases; prefer `db push` for history tracking.
+
+## Existing Supabase projects
+
+If a remote database **already recorded** the old per-file migrations in `supabase_migrations.schema_migrations`, replacing the repo with this single file will **not** match CLI history. Options: **new project** + `db push`, or use Supabase **migration repair** / manual alignment (advanced). Do not delete old migration files on a branch that still deploys to databases that applied them without a coordinated cutover.
