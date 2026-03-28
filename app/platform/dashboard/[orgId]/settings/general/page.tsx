@@ -15,6 +15,12 @@ export default async function GeneralSettingsPage({
   if (!user) redirect('/platform/login')
 
   const identity = await getOrgIdentity(orgId)
+  const db = createServiceRoleClient()
+  const { data: orgRow } = await db
+    .from('organizations')
+    .select('logo_url, favicon_url')
+    .eq('id', orgId)
+    .maybeSingle()
 
   return (
     <div className="px-8 py-10">
@@ -24,7 +30,12 @@ export default async function GeneralSettingsPage({
           <p className="text-sm text-gray-500 mt-1">Basic info displayed throughout the member portal.</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <GeneralForm initial={identity} orgId={orgId} />
+          <GeneralForm
+            initial={identity}
+            initialLogoUrl={orgRow?.logo_url ?? ''}
+            initialFaviconUrl={orgRow?.favicon_url ?? ''}
+            orgId={orgId}
+          />
         </div>
       </div>
     </div>

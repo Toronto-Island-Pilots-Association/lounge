@@ -24,7 +24,11 @@ export async function POST(request: Request) {
     const user = await requireAuthIncludingPending()
     const level = (user.profile.membership_level || 'Full') as MembershipLevelKey
     const membershipFee = await getMembershipFeeForLevel(level)
-    const trialEnd = await getTrialEndDateAsync(level, user.profile.created_at ?? null)
+    const trialEnd = await getTrialEndDateAsync(
+      level,
+      user.profile.created_at ?? null,
+      user.profile.org_id,
+    )
     const now = new Date()
     const hasTrial = trialEnd && trialEnd > now
     const supabase = await createClient()
@@ -149,14 +153,9 @@ export async function POST(request: Request) {
     }
 
     if (hasTrial) {
-      // Use noon UTC for Sept 1 trial end so Stripe shows "starting September 1" not "August 31" in NA timezones
-      let trialEndUnix = trialEnd
-      if (trialEnd.getUTCDate() === 1 && trialEnd.getUTCMonth() === 8) {
-        trialEndUnix = new Date(Date.UTC(trialEnd.getUTCFullYear(), 8, 1, 12, 0, 0, 0))
-      }
       sessionParams.subscription_data = {
         ...(sessionParams.subscription_data ?? {}),
-        trial_end: Math.floor(trialEndUnix.getTime() / 1000),
+        trial_end: Math.floor(trialEnd.getTime() / 1000),
       }
     }
 

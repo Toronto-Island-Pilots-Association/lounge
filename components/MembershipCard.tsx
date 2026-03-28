@@ -19,8 +19,10 @@ interface MembershipCardProps {
   validThruDate?: string | null
   /** When true, show "-" instead of member number (trial members don't get a number yet). */
   isOnTrial?: boolean
-  /** Multi-tenant / demo: override TIPA header on the card */
-  clubBrand?: { shortName: string; tagline: string }
+  /** Multi-tenant / demo: override default header; `logoUrl` from `organizations.logo_url` */
+  clubBrand?: { shortName: string; tagline: string; logoUrl?: string | null }
+  /** TIPA org: use `/logo.png` in the chip when no `logoUrl` (legacy mark). */
+  preferTipaMarkWhenNoLogo?: boolean
 }
 
 export default function MembershipCard({
@@ -33,9 +35,12 @@ export default function MembershipCard({
   validThruDate,
   isOnTrial = false,
   clubBrand,
+  preferTipaMarkWhenNoLogo = false,
 }: MembershipCardProps) {
   const brandShort = clubBrand?.shortName ?? 'TIPA'
   const brandTagline = clubBrand?.tagline ?? 'Toronto Island Pilots Association'
+  const orgLogoUrl = clubBrand?.logoUrl?.trim() || null
+  const useTipaDefaultBranding = clubBrand == null
   const [tilt, setTilt] = useState({ x: 0, y: 0 })
   const [glarePosition, setGlarePosition] = useState({ x: 50, y: 50 })
   const cardRef = useRef<HTMLDivElement>(null)
@@ -123,13 +128,32 @@ export default function MembershipCard({
                 user.profile.status === 'approved' ? 'border-green-400/50' :
                 'border-yellow-400/30'
               }`}>
-                <div className="relative w-full h-full">
-                  <Image
-                    src="/logo.png"
-                    alt="Club logo"
-                    fill
-                    className="object-contain"
-                  />
+                <div className="relative w-full h-full flex items-center justify-center">
+                  {orgLogoUrl ? (
+                    <Image
+                      src={orgLogoUrl}
+                      alt={`${brandTagline} logo`}
+                      fill
+                      className="object-contain p-0.5"
+                      sizes="48px"
+                    />
+                  ) : useTipaDefaultBranding || preferTipaMarkWhenNoLogo ? (
+                    <Image
+                      src="/logo.png"
+                      alt="Club logo"
+                      fill
+                      className="object-contain"
+                      sizes="48px"
+                    />
+                  ) : (
+                    <span
+                      className="font-bold text-white/95 leading-none text-center px-0.5"
+                      style={{ fontSize: 'clamp(0.5rem, 2.5vw, 0.7rem)' }}
+                      aria-hidden
+                    >
+                      {brandShort.slice(0, 4)}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

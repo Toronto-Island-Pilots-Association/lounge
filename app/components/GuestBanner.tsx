@@ -38,7 +38,7 @@ export default async function GuestBanner() {
             href={platformSignupUrl}
             className="bg-white text-[#0d1e26] px-3 py-1.5 rounded-md font-medium text-xs hover:bg-gray-100 transition-colors text-center"
           >
-            Create your club
+            Create your lounge
           </a>
           <Link
             href="/login"

@@ -3,6 +3,12 @@ import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { TIPA_ORG_ID } from '@/types/database'
 import { appendMemberToSheet } from '@/lib/google-sheets'
+import {
+  getTrialConfig,
+  getTrialConfigItemForLevel,
+  computeTrialEndFromConfig,
+} from '@/lib/settings'
+import type { MembershipLevelKey } from '@/lib/settings'
 
 export async function POST(request: Request) {
   try {
@@ -113,19 +119,14 @@ export async function POST(request: Request) {
             const membershipLevelFromMetadata = authUser?.user?.user_metadata?.membership_level
             const membershipLevel = membershipLevelFromMetadata || 'Associate'
 
-            // If no payments and no active subscription, set membership level and Sept 1st expiration
             if (!hasPayments && !hasActiveSubscription) {
-              // Calculate September 1st - current year if before Sept 1, next year if after Sept 1
-              const now = new Date()
-              const currentYear = now.getFullYear()
-              const sep1ThisYear = new Date(currentYear, 8, 1) // Month is 0-indexed, so 8 = September
-              const sep1NextYear = new Date(currentYear + 1, 8, 1)
-              
-              // Use this year's Sept 1 if we're before it, otherwise next year's
-              const expirationDate = now < sep1ThisYear ? sep1ThisYear : sep1NextYear
-
               updateData.membership_level = membershipLevel
-              updateData.membership_expires_at = expirationDate.toISOString()
+              const trialConfig = await getTrialConfig(orgId)
+              const item = getTrialConfigItemForLevel(trialConfig, membershipLevel as MembershipLevelKey)
+              const trialEnd = computeTrialEndFromConfig(item, profile.created_at ?? null)
+              if (trialEnd) {
+                updateData.membership_expires_at = trialEnd.toISOString()
+              }
             } else {
               // If they have payments/subscriptions, still set the membership level from metadata if provided
               if (membershipLevelFromMetadata) {

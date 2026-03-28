@@ -17,6 +17,7 @@ export default async function MarketingHome() {
     <ClubLoungeLanding
       rootDomain={ROOT_DOMAIN}
       signupHref="/platform/signup"
+      loginHref="/platform/login"
       demoHref={demoOrigin}
       internalLinks={false}
     />

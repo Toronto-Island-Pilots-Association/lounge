@@ -6,7 +6,7 @@ import { CnameRecord } from '@/components/platform/CnameRecord'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type TrialType = 'none' | 'sept1' | 'months'
+type TrialType = 'none' | 'months'
 
 const TABS = ['Club', 'Features', 'Membership', 'Signup', 'Emails', 'Integrations'] as const
 type Tab = typeof TABS[number]
@@ -262,6 +262,7 @@ function slugify(str: string): string {
 
 function MembershipTab() {
   const [levels, setLevels] = useState<OrgMembershipLevel[]>([])
+  const [memberTrialsEnabled, setMemberTrialsEnabled] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -270,7 +271,10 @@ function MembershipTab() {
   useEffect(() => {
     fetch('/api/admin/settings/membership-levels')
       .then(r => r.ok ? r.json() : Promise.reject())
-      .then(d => { if (d.levels) setLevels(d.levels) })
+      .then(d => {
+        if (d.levels) setLevels(d.levels)
+        setMemberTrialsEnabled(!!d.memberTrialsEnabled)
+      })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
@@ -288,10 +292,16 @@ function MembershipTab() {
     e.preventDefault(); setSaving(true); setError(null); setSuccess(false)
     try {
       // Auto-generate key from label if blank
-      const payload = levels.map(l => ({
-        ...l,
-        key: l.key || slugify(l.label) || `level-${Math.random().toString(36).slice(2, 6)}`,
-      }))
+      const payload = levels.map(l => {
+        const base = {
+          ...l,
+          key: l.key || slugify(l.label) || `level-${Math.random().toString(36).slice(2, 6)}`,
+        }
+        if (!memberTrialsEnabled) {
+          return { ...base, trialType: 'none' as const, trialMonths: undefined }
+        }
+        return base
+      })
       const res = await fetch('/api/admin/settings/membership-levels', {
         method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
       })
@@ -306,8 +316,23 @@ function MembershipTab() {
 
   return (
     <form onSubmit={handleSave} className="space-y-5 max-w-2xl">
-      <SectionHeader title="Membership levels" description="Define all membership tiers, fees, and trial periods." />
+      <SectionHeader
+        title="Membership levels"
+        description={
+          memberTrialsEnabled
+            ? 'Define all membership tiers, fees, and trial periods.'
+            : 'Define all membership tiers and annual fees.'
+        }
+      />
       <Feedback error={error} success={success} />
+
+      {!memberTrialsEnabled && (
+        <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-sm text-amber-950">
+          <strong>Club Pro:</strong> Member trial periods (months from sign-up, Stripe checkout trial) require the{' '}
+          <strong>Club Pro</strong> plan. Upgrade in the ClubLounge platform under{' '}
+          <strong>Billing &amp; plan</strong> for this organization.
+        </div>
+      )}
 
       <div className="space-y-3">
         {levels.map((level, idx) => (
@@ -354,41 +379,43 @@ function MembershipTab() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              {/* Trial type */}
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Trial</label>
-                <select
-                  value={level.trialType}
-                  onChange={e => {
-                    const t = e.target.value as TrialType
-                    updateLevel(idx, {
-                      trialType: t,
-                      trialMonths: t === 'months' ? (level.trialMonths ?? 12) : undefined,
-                    })
-                  }}
-                  className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-[#0d1e26] focus:ring-1 focus:ring-[#0d1e26]"
-                >
-                  <option value="none">No trial</option>
-                  <option value="sept1">Until Sept 1</option>
-                  <option value="months">Months from sign-up</option>
-                </select>
-              </div>
-              {level.trialType === 'months' && (
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Months</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number" min={1} max={60}
-                      value={level.trialMonths ?? 12}
-                      onChange={e => { const n = parseInt(e.target.value, 10); updateLevel(idx, { trialMonths: isNaN(n) || n < 1 ? 12 : n }) }}
-                      className="w-16 rounded-md border border-gray-300 px-2 py-1.5 text-sm text-gray-900 focus:border-[#0d1e26] focus:ring-1 focus:ring-[#0d1e26]"
-                    />
-                    <span className="text-sm text-gray-500">months</span>
+              {memberTrialsEnabled ? (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Trial</label>
+                    <select
+                      value={level.trialType}
+                      onChange={e => {
+                        const t = e.target.value as TrialType
+                        updateLevel(idx, {
+                          trialType: t,
+                          trialMonths: t === 'months' ? (level.trialMonths ?? 12) : undefined,
+                        })
+                      }}
+                      className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-[#0d1e26] focus:ring-1 focus:ring-[#0d1e26]"
+                    >
+                      <option value="none">No trial</option>
+                      <option value="months">Months from sign-up</option>
+                    </select>
                   </div>
-                </div>
-              )}
+                  {level.trialType === 'months' && (
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Months</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number" min={1} max={60}
+                          value={level.trialMonths ?? 12}
+                          onChange={e => { const n = parseInt(e.target.value, 10); updateLevel(idx, { trialMonths: isNaN(n) || n < 1 ? 12 : n }) }}
+                          className="w-16 rounded-md border border-gray-300 px-2 py-1.5 text-sm text-gray-900 focus:border-[#0d1e26] focus:ring-1 focus:ring-[#0d1e26]"
+                        />
+                        <span className="text-sm text-gray-500">months</span>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : null}
               {/* Enabled */}
-              <div className="ml-auto flex items-center gap-2 pt-4">
+              <div className={`ml-auto flex items-center gap-2 ${memberTrialsEnabled ? 'pt-4' : ''}`}>
                 <label className="text-sm font-medium text-gray-700 cursor-pointer select-none" htmlFor={`enabled-${idx}`}>
                   Enabled
                 </label>
@@ -888,6 +915,12 @@ function IntegrationsTab() {
 
 export default function SettingsPageClient() {
   const [tab, setTab] = useState<Tab>('Club')
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const q = new URLSearchParams(window.location.search).get('tab')
+    if (q && (TABS as readonly string[]).includes(q)) setTab(q as Tab)
+  }, [])
 
   return (
     <div className="space-y-6">

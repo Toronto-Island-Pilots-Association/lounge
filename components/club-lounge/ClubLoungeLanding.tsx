@@ -84,6 +84,8 @@ export type ClubLoungeLandingProps = {
   rootDomain: string
   /** Same-host paths when internalLinks is true; full URLs when false. */
   signupHref: string
+  /** Platform / org-admin sign-in (e.g. `/platform/login`). */
+  loginHref: string
   demoHref: string
   internalLinks: boolean
 }
@@ -116,6 +118,7 @@ function NavLink({
 export function ClubLoungeLanding({
   rootDomain,
   signupHref,
+  loginHref,
   demoHref,
   internalLinks,
 }: ClubLoungeLandingProps) {
@@ -137,6 +140,11 @@ export function ClubLoungeLanding({
           </li>
           <li>
             <a href="#verticals">Who it&apos;s for</a>
+          </li>
+          <li>
+            <NavLink href={loginHref} internalLinks={internalLinks}>
+              Log in
+            </NavLink>
           </li>
           <li>
             <NavLink href={signupHref} className="cl-nav-cta" internalLinks={internalLinks}>
@@ -163,6 +171,9 @@ export function ClubLoungeLanding({
             </NavLink>
             <NavLink href={demoHref} className="cl-btn-ghost" internalLinks={internalLinks}>
               See a demo
+            </NavLink>
+            <NavLink href={loginHref} className="cl-btn-ghost" internalLinks={internalLinks}>
+              Log in
             </NavLink>
           </div>
           <div className="cl-hero-proof">
@@ -536,6 +547,11 @@ export function ClubLoungeLanding({
           </li>
           <li>
             <a href="#pricing">Pricing</a>
+          </li>
+          <li>
+            <NavLink href={loginHref} internalLinks={internalLinks}>
+              Log in
+            </NavLink>
           </li>
           <li>
             <a href={mailto}>Contact</a>

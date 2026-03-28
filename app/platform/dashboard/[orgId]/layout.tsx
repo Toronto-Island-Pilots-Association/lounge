@@ -72,7 +72,10 @@ export default async function OrgAdminLayout({
         </div>
 
         {/* Nav */}
-        <PlatformSideNav orgId={orgId} />
+        <PlatformSideNav
+          orgId={orgId}
+          loungeAdminSettingsUrl={`${buildOrgUrl(org)}/admin/settings`}
+        />
 
         {/* Footer */}
         <div className="px-4 py-4 border-t border-gray-100">

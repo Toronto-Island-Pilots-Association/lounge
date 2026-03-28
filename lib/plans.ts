@@ -26,6 +26,8 @@ export type PlanFeatures = {
   analytics: boolean
   customDomain: boolean
   membershipTiers: boolean
+  /** Time-limited trials on membership levels (Stripe + portal). Club Pro only. */
+  memberTrials: boolean
   // Branding: when false, "Powered by ClubLounge" badge is shown
   hideBranding: boolean
 }
@@ -54,6 +56,7 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
       analytics: false,
       customDomain: false,
       membershipTiers: false,
+      memberTrials: false,
       hideBranding: false,
     },
   },
@@ -73,6 +76,7 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
       analytics: false,
       customDomain: true,
       membershipTiers: false,
+      memberTrials: false,
       hideBranding: true,
     },
   },
@@ -92,6 +96,7 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
       analytics: true,
       customDomain: true,
       membershipTiers: false,
+      memberTrials: false,
       hideBranding: true,
     },
   },
@@ -111,6 +116,7 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
       analytics: true,
       customDomain: true,
       membershipTiers: true,
+      memberTrials: true,
       hideBranding: true,
     },
   },

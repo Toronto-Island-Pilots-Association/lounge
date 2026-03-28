@@ -18,6 +18,7 @@ export default async function PlatformHome() {
     <ClubLoungeLanding
       rootDomain={ROOT_DOMAIN}
       signupHref="/signup"
+      loginHref="/platform/login"
       demoHref={demoOrigin}
       internalLinks
     />

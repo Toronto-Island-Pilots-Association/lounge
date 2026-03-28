@@ -4,9 +4,9 @@
  * Used by Navbar, signup form, and any client component that needs org config.
  * No auth required (this info is safe to expose publicly).
  */
-import { createClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
 import { TIPA_ORG_ID } from '@/types/database'
+import { fetchPublicOrgBranding } from '@/lib/org-public-branding'
 import {
   getFeatureFlags,
   getOrgIdentity,
@@ -19,18 +19,12 @@ import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
-    // Resolve org name/logo from organizations table
     const h = await headers()
     const orgId = h.get('x-org-id') ?? TIPA_ORG_ID
 
-    const supabase = await createClient()
-    const { data: org } = await supabase
-      .from('organizations')
-      .select('name, slug, logo_url, plan')
-      .eq('id', orgId)
-      .maybeSingle()
+    const branding = await fetchPublicOrgBranding(orgId)
 
-    const plan = (org?.plan as string) || DEFAULT_PLAN
+    const plan = (branding.plan as string) || DEFAULT_PLAN
     const planDef = getPlanDef(plan)
 
     const [features, identity, levels, signupFields, fees] = await Promise.all([
@@ -43,15 +37,17 @@ export async function GET() {
 
     return NextResponse.json({
       org: {
-        name:        org?.name ?? '',
-        slug:        org?.slug ?? '',
-        logoUrl:     org?.logo_url ?? null,
-        accentColor: identity.accentColor,
-        displayName: identity.displayName,
-        description: identity.description,
+        name:         branding.name,
+        slug:         branding.slug,
+        logoUrl:      branding.logoUrl,
+        /** Resolved tab icon (custom favicon, else logo) — same as HTML favicon when set */
+        siteIconUrl:  branding.siteIconUrl,
+        accentColor:  identity.accentColor,
+        displayName:  branding.displayName || identity.displayName,
+        description:  identity.description,
         contactEmail: identity.contactEmail,
-        websiteUrl:  identity.websiteUrl,
-        timezone:    identity.timezone,
+        websiteUrl:   identity.websiteUrl,
+        timezone:     identity.timezone,
       },
       plan,
       planDef: {

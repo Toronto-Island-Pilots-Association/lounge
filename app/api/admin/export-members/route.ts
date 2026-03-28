@@ -66,7 +66,7 @@ export async function GET(request: Request) {
     const membersWithEnrichment = await Promise.all(
       (profiles ?? []).map(async (member) => {
         const level = (member.membership_level || 'Full') as MembershipLevelKey
-        const trialEnd = await getTrialEndDateAsync(level, member.created_at ?? null)
+        const trialEnd = await getTrialEndDateAsync(level, member.created_at ?? null, orgId)
         const expected_fee = await getMembershipFeeForLevel(level)
         const payment_summary = latestPaymentByUser.get(member.user_id) ?? null
         return {

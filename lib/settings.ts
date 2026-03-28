@@ -13,6 +13,28 @@ async function getOrgId(override?: string): Promise<string> {
   }
 }
 
+/**
+ * Effective SaaS plan for feature gating (includes hobby → starter during org free trial).
+ */
+async function getEffectiveOrgPlanKey(orgIdOverride?: string): Promise<string> {
+  try {
+    const supabase = await createClient()
+    const orgId = await getOrgId(orgIdOverride)
+    const { data } = await supabase
+      .from('organizations')
+      .select('plan, trial_ends_at')
+      .eq('id', orgId)
+      .maybeSingle()
+    const plan = (data?.plan as string) || DEFAULT_PLAN
+    if (plan === 'hobby' && data?.trial_ends_at && new Date(data.trial_ends_at) > new Date()) {
+      return 'starter'
+    }
+    return plan
+  } catch {
+    return DEFAULT_PLAN
+  }
+}
+
 // Legacy hardcoded levels — used as fallback for TIPA and type compat
 const MEMBERSHIP_LEVELS = ['Full', 'Student', 'Associate', 'Corporate', 'Honorary'] as const
 export type MembershipLevelKey = string  // now open — orgs can define any level key
@@ -22,6 +44,8 @@ const DEFAULT_FEES: Record<string, number> = {
 }
 
 // ─── Configurable Membership Levels ──────────────────────────────────────────
+
+export type TrialType = 'none' | 'months'
 
 export type OrgMembershipLevel = {
   key: string           // url-safe lowercase, e.g. "full", "gold", "junior"
@@ -33,19 +57,49 @@ export type OrgMembershipLevel = {
 }
 
 const DEFAULT_MEMBERSHIP_LEVELS: OrgMembershipLevel[] = [
-  { key: 'full',      label: 'Full Member', fee: 45,  trialType: 'sept1',  enabled: true },
-  { key: 'student',   label: 'Student',     fee: 25,  trialType: 'months', trialMonths: 12, enabled: true },
-  { key: 'associate', label: 'Associate',   fee: 25,  trialType: 'sept1',  enabled: true },
-  { key: 'corporate', label: 'Corporate',   fee: 125, trialType: 'none',   enabled: true },
-  { key: 'honorary',  label: 'Honorary',    fee: 0,   trialType: 'none',   enabled: true },
+  { key: 'full',      label: 'Full Member', fee: 45,  trialType: 'none', enabled: true },
+  { key: 'student',   label: 'Student',     fee: 25,  trialType: 'none', enabled: true },
+  { key: 'associate', label: 'Associate',   fee: 25,  trialType: 'none', enabled: true },
+  { key: 'corporate', label: 'Corporate',   fee: 125, trialType: 'none', enabled: true },
+  { key: 'honorary',  label: 'Honorary',    fee: 0,   trialType: 'none', enabled: true },
 ]
+
+/** Legacy `sept1` trials were TIPA-specific — coerce to no trial when reading stored config. */
+function normalizeMembershipLevelsFromJson(parsed: unknown): OrgMembershipLevel[] | null {
+  if (!Array.isArray(parsed) || parsed.length === 0) return null
+  const out: OrgMembershipLevel[] = []
+  for (const raw of parsed) {
+    if (typeof raw !== 'object' || raw === null) return null
+    const r = raw as Record<string, unknown>
+    if (typeof r.key !== 'string' || !r.key) return null
+    if (typeof r.label !== 'string') return null
+    if (typeof r.fee !== 'number' || r.fee < 0) return null
+    if (typeof r.enabled !== 'boolean') return null
+    const rawTrial = r.trialType === 'months' ? 'months' : r.trialType === 'sept1' ? 'none' : 'none'
+    const trialType: TrialType = rawTrial === 'months' ? 'months' : 'none'
+    const level: OrgMembershipLevel = {
+      key: r.key,
+      label: r.label,
+      fee: r.fee,
+      trialType,
+      enabled: r.enabled,
+    }
+    if (trialType === 'months') {
+      const m = r.trialMonths
+      level.trialMonths = typeof m === 'number' && m >= 1 ? m : 12
+    }
+    out.push(level)
+  }
+  return out
+}
 
 export async function getMembershipLevels(orgId?: string): Promise<OrgMembershipLevel[]> {
   const raw = await getSetting('membership_levels_config', orgId)
   if (raw) {
     try {
       const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed as OrgMembershipLevel[]
+      const normalized = normalizeMembershipLevelsFromJson(parsed)
+      if (normalized) return normalized
     } catch { /* fall through */ }
   }
   return DEFAULT_MEMBERSHIP_LEVELS
@@ -54,9 +108,19 @@ export async function getMembershipLevels(orgId?: string): Promise<OrgMembership
 export async function setMembershipLevels(levels: OrgMembershipLevel[], orgIdOverride?: string): Promise<void> {
   const supabase = createServiceRoleClient()
   const orgId = await getOrgId(orgIdOverride)
+  const plan = await getEffectiveOrgPlanKey(orgIdOverride)
+  const allowTrials = getPlanDef(plan).features.memberTrials
+  const toSave = allowTrials
+    ? levels
+    : levels.map(l => ({ ...l, trialType: 'none' as TrialType, trialMonths: undefined }))
   const { error } = await supabase.from('settings').upsert(
-    { key: 'membership_levels_config', value: JSON.stringify(levels), org_id: orgId, updated_at: new Date().toISOString() },
-    { onConflict: 'key,org_id' }
+    {
+      key: 'membership_levels_config',
+      value: JSON.stringify(toSave),
+      org_id: orgId,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'key,org_id' },
   )
   if (error) throw new Error(`Failed to save membership levels: ${error.message}`)
 }
@@ -105,19 +169,20 @@ export async function getMembershipFee(): Promise<number> {
   return getMembershipFeeForLevel('Full')
 }
 
-/** Trial type per level: none, sept1 (until next Sept 1), or months from sign-up */
-export type TrialType = 'none' | 'sept1' | 'months'
-
 export type TrialConfigItem = { type: TrialType; months?: number }
 
-/** Load trial config keyed by level key. Reads from levels config (single source of truth). */
-export async function getTrialConfig(): Promise<Record<string, TrialConfigItem>> {
-  const levels = await getMembershipLevels()
+/** Load trial config keyed by level key. `months` trials apply only on Club Pro (`memberTrials` plan feature). */
+export async function getTrialConfig(orgIdOverride?: string): Promise<Record<string, TrialConfigItem>> {
+  const levels = await getMembershipLevels(orgIdOverride)
+  const plan = await getEffectiveOrgPlanKey(orgIdOverride)
+  const allow = getPlanDef(plan).features.memberTrials
   return Object.fromEntries(
-    levels.map(l => [l.key, l.trialType === 'months'
-      ? { type: 'months' as const, months: l.trialMonths ?? 12 }
-      : { type: l.trialType }
-    ])
+    levels.map(l => [
+      l.key,
+      allow && l.trialType === 'months'
+        ? { type: 'months' as const, months: l.trialMonths ?? 12 }
+        : { type: 'none' as const },
+    ]),
   )
 }
 
@@ -128,12 +193,6 @@ export function computeTrialEndFromConfig(
 ): Date | null {
   if (!config) return null
   if (config.type === 'none') return null
-  const now = new Date()
-  if (config.type === 'sept1') {
-    const year = now.getFullYear()
-    const sep1 = new Date(year, 8, 1)
-    return now < sep1 ? sep1 : new Date(year + 1, 8, 1)
-  }
   if (config.type === 'months' && profileCreatedAt) {
     const created = new Date(profileCreatedAt)
     const end = new Date(created)
@@ -160,9 +219,10 @@ export function getTrialConfigItemForLevel(
 /** Trial end date for a membership level (reads admin config from DB). Use this on the server. */
 export async function getTrialEndDateAsync(
   level: MembershipLevelKey,
-  profileCreatedAt: string | null
+  profileCreatedAt: string | null,
+  orgIdOverride?: string,
 ): Promise<Date | null> {
-  const config = await getTrialConfig()
+  const config = await getTrialConfig(orgIdOverride)
   // getTrialConfig() keys are stored lowercase (e.g. "full", "student"),
   // but member profiles may store "Full"/"Student" or custom casing.
   const item = getTrialConfigItemForLevel(config, level)
@@ -179,42 +239,11 @@ export async function setTrialConfigForLevel(level: string, item: TrialConfigIte
   await setMembershipLevels(updated)
 }
 
-/**
- * Trial end date for a membership level (sync, default config only).
- * Use getTrialEndDateAsync on the server when admin-editable config is required.
- */
-export function getTrialEndDate(
-  level: string,
-  profileCreatedAt: string | null
-): Date | null {
-  const found = DEFAULT_MEMBERSHIP_LEVELS.find(l => l.key.toLowerCase() === level.toLowerCase())
-  const config: TrialConfigItem = found
-    ? { type: found.trialType, months: found.trialMonths }
-    : { type: 'none' }
-  return computeTrialEndFromConfig(config, profileCreatedAt)
-}
-
 // ─── Org Plan ────────────────────────────────────────────────────────────────
 
 /** Returns the plan key for the current org. Falls back to DEFAULT_PLAN on error. */
 export async function getOrgPlan(orgIdOverride?: string): Promise<string> {
-  try {
-    const supabase = await createClient()
-    const orgId = await getOrgId(orgIdOverride)
-    const { data } = await supabase
-      .from('organizations')
-      .select('plan, trial_ends_at')
-      .eq('id', orgId)
-      .maybeSingle()
-    const plan = (data?.plan as string) || DEFAULT_PLAN
-    // During active trial, treat as starter regardless of plan
-    if (plan === 'hobby' && data?.trial_ends_at && new Date(data.trial_ends_at) > new Date()) {
-      return 'starter'
-    }
-    return plan
-  } catch {
-    return DEFAULT_PLAN
-  }
+  return getEffectiveOrgPlanKey(orgIdOverride)
 }
 
 // ─── Org Feature Flags ───────────────────────────────────────────────────────
@@ -449,20 +478,11 @@ export async function setEmailTemplates(templates: Partial<EmailTemplates>, orgI
   if (error) throw new Error(`Failed to save email templates: ${error.message}`)
 }
 
-/**
- * Membership expiry when syncing from Stripe.
- * If the subscription started before Sept 1st (trial period), extend to Sept 1st next year
- * so the member gets trial remainder + full year. Otherwise use Stripe's current_period_end.
- */
+/** Membership expiry when syncing from Stripe — use the subscription period end from Stripe. */
 export function getMembershipExpiresAtFromSubscription(
   stripeCurrentPeriodEnd: Date,
-  stripeCurrentPeriodStart: Date
+  _stripeCurrentPeriodStart: Date
 ): string {
-  const year = stripeCurrentPeriodStart.getFullYear()
-  const sep1ThisYear = new Date(year, 8, 1) // Sept 1
-  if (stripeCurrentPeriodStart < sep1ThisYear) {
-    return new Date(year + 1, 8, 1).toISOString() // Sept 1 next year
-  }
   return stripeCurrentPeriodEnd.toISOString()
 }
 

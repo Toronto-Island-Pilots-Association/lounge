@@ -16,7 +16,7 @@ describe('lib/settings trial helpers', () => {
 
   test('getTrialConfigItemForLevel supports case-insensitive lookup', () => {
     const config: Record<string, TrialConfigItem> = {
-      full: { type: 'sept1' },
+      full: { type: 'none' },
       student: { type: 'months', months: 12 },
     }
 

@@ -3,7 +3,13 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import * as Sentry from '@sentry/nextjs'
 import { sendMemberApprovalEmail } from '@/lib/resend'
 import { appendMemberToSheet } from '@/lib/google-sheets'
-import { getTrialConfig, getAllMembershipFees, getMembershipFeeForLevel } from '@/lib/settings'
+import {
+  getTrialConfig,
+  getAllMembershipFees,
+  getMembershipFeeForLevel,
+  getTrialConfigItemForLevel,
+  computeTrialEndFromConfig,
+} from '@/lib/settings'
 import type { MembershipLevelKey } from '@/lib/settings'
 import { getStripeInstance, isStripeEnabled } from '@/lib/stripe'
 import { NextResponse } from 'next/server'
@@ -28,22 +34,13 @@ export async function GET(request: Request) {
     }
 
     // Fetch once, compute per-member inline — avoids N×2 DB round-trips
-    const [trialConfig, allFees] = await Promise.all([getTrialConfig(), getAllMembershipFees()])
+    const [trialConfig, allFees] = await Promise.all([getTrialConfig(orgId), getAllMembershipFees()])
 
     const membersWithTrial = (data ?? []).map((member) => {
       const level = (member.membership_level || 'Full') as MembershipLevelKey
-      const config = trialConfig[level]
-      let trial_end: string | null = null
-      if (config?.type === 'sept1') {
-        const now = new Date()
-        const year = now.getFullYear()
-        const sep1 = new Date(year, 8, 1)
-        trial_end = (now < sep1 ? sep1 : new Date(year + 1, 8, 1)).toISOString()
-      } else if (config?.type === 'months' && member.created_at) {
-        const end = new Date(member.created_at)
-        end.setMonth(end.getMonth() + (config.months ?? 12))
-        trial_end = end.toISOString()
-      }
+      const item = getTrialConfigItemForLevel(trialConfig, level)
+      const trialEnd = computeTrialEndFromConfig(item, member.created_at ?? null)
+      const trial_end = trialEnd ? trialEnd.toISOString() : null
       return { ...member, trial_end, expected_fee: allFees[level] }
     })
 
@@ -193,27 +190,24 @@ export async function PATCH(request: Request) {
     // Check if status is being changed to 'approved' (from any status)
     const isApproving = updates.status === 'approved' && currentMember.status !== 'approved'
 
-    // If approving a member who hasn't paid yet, set Associate level and Sept 1st expiration
     if (isApproving) {
-      // Check if member has any payments
       const { data: payments } = await supabase
         .from('payments')
         .select('id')
         .eq('user_id', authUserId)
         .limit(1)
 
-      // Check if member has active Stripe or PayPal subscription
       const hasActiveSubscription = currentMember.stripe_subscription_id || currentMember.paypal_subscription_id
       const hasPayments = payments && payments.length > 0
 
-      // If no payments and no active subscription, set trial expiration to Sept 1st (keep existing membership_level)
       if (!hasPayments && !hasActiveSubscription) {
-        const now = new Date()
-        const currentYear = now.getFullYear()
-        const sep1ThisYear = new Date(currentYear, 8, 1)
-        const sep1NextYear = new Date(currentYear + 1, 8, 1)
-        const expirationDate = now < sep1ThisYear ? sep1ThisYear : sep1NextYear
-        updates.membership_expires_at = expirationDate.toISOString()
+        const trialConfig = await getTrialConfig(orgId)
+        const level = (currentMember.membership_level || 'Full') as MembershipLevelKey
+        const item = getTrialConfigItemForLevel(trialConfig, level)
+        const trialEnd = computeTrialEndFromConfig(item, currentMember.created_at ?? null)
+        if (trialEnd) {
+          updates.membership_expires_at = trialEnd.toISOString()
+        }
       }
     }
 

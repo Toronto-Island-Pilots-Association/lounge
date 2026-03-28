@@ -9,12 +9,18 @@ function inputCls() {
 
 export default function GeneralForm({
   initial,
+  initialLogoUrl,
+  initialFaviconUrl,
   orgId,
 }: {
   initial: OrgIdentity
+  initialLogoUrl: string
+  initialFaviconUrl: string
   orgId: string
 }) {
   const [draft, setDraft] = useState<OrgIdentity>(initial)
+  const [logoUrl, setLogoUrl] = useState(initialLogoUrl)
+  const [faviconUrl, setFaviconUrl] = useState(initialFaviconUrl)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -30,10 +36,13 @@ export default function GeneralForm({
       const res = await fetch(`/api/platform/orgs/${orgId}/settings/general`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(draft),
+        body: JSON.stringify({ ...draft, logoUrl, faviconUrl }),
       })
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Failed to save')
-      setDraft((await res.json()).identity)
+      const data = await res.json()
+      setDraft(data.identity)
+      setLogoUrl(data.logoUrl ?? '')
+      setFaviconUrl(data.faviconUrl ?? '')
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch (err) {
@@ -51,7 +60,36 @@ export default function GeneralForm({
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1.5">Display name</label>
         <input className={inputCls()} placeholder="e.g. TIPA" value={draft.displayName} onChange={set('displayName')} />
-        <p className="text-xs text-gray-400 mt-1">Short name shown throughout the member portal.</p>
+        <p className="text-xs text-gray-400 mt-1">Short name shown throughout the member portal and browser title.</p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">Lounge logo URL</label>
+        <input
+          type="url"
+          className={inputCls()}
+          placeholder="https://…"
+          value={logoUrl}
+          onChange={e => setLogoUrl(e.target.value)}
+        />
+        <p className="text-xs text-gray-400 mt-1">
+          Navbar and membership card. Square or wide PNG/SVG from your storage (e.g. Supabase) works best.
+          Leave empty to clear.
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">Favicon URL (optional)</label>
+        <input
+          type="url"
+          className={inputCls()}
+          placeholder="https://… (square .ico or PNG)"
+          value={faviconUrl}
+          onChange={e => setFaviconUrl(e.target.value)}
+        />
+        <p className="text-xs text-gray-400 mt-1">
+          Browser tab icon. If empty, the lounge logo is used. Use a small square image (e.g. 32×32).
+        </p>
       </div>
 
       <div>

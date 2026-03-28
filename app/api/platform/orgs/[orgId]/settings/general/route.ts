@@ -25,7 +25,17 @@ export async function GET(
   const user = await verifyAdmin(orgId)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const identity = await getOrgIdentity(orgId)
-  return NextResponse.json({ identity })
+  const db = createServiceRoleClient()
+  const { data: orgRow } = await db
+    .from('organizations')
+    .select('logo_url, favicon_url')
+    .eq('id', orgId)
+    .maybeSingle()
+  return NextResponse.json({
+    identity,
+    logoUrl: orgRow?.logo_url ?? '',
+    faviconUrl: orgRow?.favicon_url ?? '',
+  })
 }
 
 export async function PATCH(
@@ -44,6 +54,31 @@ export async function PATCH(
     if (typeof body[key] === 'string') update[key] = body[key]
   }
   await setOrgIdentity(update, orgId)
+
+  const db = createServiceRoleClient()
+  const orgPatch: { logo_url?: string | null; favicon_url?: string | null } = {}
+  if ('logoUrl' in body && typeof body.logoUrl === 'string') {
+    const v = body.logoUrl.trim()
+    orgPatch.logo_url = v.length > 0 ? v : null
+  }
+  if ('faviconUrl' in body && typeof body.faviconUrl === 'string') {
+    const v = body.faviconUrl.trim()
+    orgPatch.favicon_url = v.length > 0 ? v : null
+  }
+  if (Object.keys(orgPatch).length > 0) {
+    const { error } = await db.from('organizations').update(orgPatch).eq('id', orgId)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
   const identity = await getOrgIdentity(orgId)
-  return NextResponse.json({ identity })
+  const { data: orgRow } = await db
+    .from('organizations')
+    .select('logo_url, favicon_url')
+    .eq('id', orgId)
+    .maybeSingle()
+  return NextResponse.json({
+    identity,
+    logoUrl: orgRow?.logo_url ?? '',
+    faviconUrl: orgRow?.favicon_url ?? '',
+  })
 }

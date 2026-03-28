@@ -80,7 +80,6 @@ export async function syncSubscriptionStatus(
     const currentPeriodEnd = new Date((subscription as any).current_period_end * 1000)
     const currentPeriodStart = new Date((subscription as any).current_period_start * 1000)
     const now = new Date()
-    // If subscribed before Sept 1, expiry is Sept 1 next year; else use Stripe period end
     const computedExpiresAt = getMembershipExpiresAtFromSubscription(currentPeriodEnd, currentPeriodStart)
 
     // Determine status based on subscription state.

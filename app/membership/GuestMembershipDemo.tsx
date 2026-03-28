@@ -1,22 +1,13 @@
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { clubShortFromDisplayName } from '@/lib/org'
 import { getOrgIdentity, getFeatureFlags } from '@/lib/settings'
 import MembershipCard from '@/components/MembershipCard'
 import MembershipActivitySidebar, {
   type MembershipSidebarThread,
 } from '@/components/membership/MembershipActivitySidebar'
 import { Event, Resource, MemberProfile, getMembershipLevelLabel } from '@/types/database'
-
-function clubShortFromDisplayName(displayName: string): string {
-  const parts = displayName.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return 'CLUB'
-  return parts
-    .slice(0, 4)
-    .map((p) => p[0]!.toUpperCase())
-    .join('')
-    .slice(0, 6)
-}
 
 function buildDemoMemberProfile(orgId: string): MemberProfile {
   const expires = new Date()
@@ -80,6 +71,12 @@ export default async function GuestMembershipDemo() {
   const [identity, flags] = await Promise.all([getOrgIdentity(), getFeatureFlags()])
   const supabase = createServiceRoleClient()
 
+  const { data: orgBranding } = await supabase
+    .from('organizations')
+    .select('name, logo_url')
+    .eq('id', orgId)
+    .maybeSingle()
+
   const now = new Date().toISOString()
   const [{ data: resources }, { data: events }, { data: threads }] = await Promise.all([
     supabase
@@ -131,6 +128,7 @@ export default async function GuestMembershipDemo() {
 
   const demoProfile = buildDemoMemberProfile(orgId)
   const discussionsSidebarTitle = `Recent ${flags.discussionsLabel}`
+  const displayForBrand = identity.displayName?.trim() || orgBranding?.name || 'Club'
 
   return (
     <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
@@ -147,8 +145,9 @@ export default async function GuestMembershipDemo() {
                 isExpired={false}
                 membershipLevelDisplay={getMembershipLevelLabel('Full')}
                 clubBrand={{
-                  shortName: clubShortFromDisplayName(identity.displayName),
-                  tagline: identity.displayName,
+                  shortName: clubShortFromDisplayName(displayForBrand),
+                  tagline: displayForBrand,
+                  logoUrl: orgBranding?.logo_url ?? null,
                 }}
               />
             </div>

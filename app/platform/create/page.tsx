@@ -97,7 +97,7 @@ export default function CreateOrgPage() {
     <main className="min-h-screen flex flex-col items-center justify-center p-8 bg-gray-50">
       <div className="max-w-md w-full space-y-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Create your club lounge</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Create your lounge</h1>
           <p className="text-sm text-gray-500 mt-1">Takes about 60 seconds.</p>
         </div>
 

@@ -3,12 +3,17 @@ import Link from 'next/link'
 import { getCurrentUserIncludingPending, shouldRequireProfileCompletion, shouldRequirePayment, isOrgPublic } from '@/lib/auth'
 import {
   getMembershipFeeForLevel,
-  getTrialEndDate,
+  getTrialEndDateAsync,
+  getTrialConfig,
+  getTrialConfigItemForLevel,
+  computeTrialEndFromConfig,
   getFeatureFlags,
+  getOrgIdentity,
   type MembershipLevelKey,
 } from '@/lib/settings'
+import { clubShortFromDisplayName } from '@/lib/org'
 import { createClient } from '@/lib/supabase/server'
-import { Resource, Event, getMembershipLevelLabel } from '@/types/database'
+import { Resource, Event, TIPA_ORG_ID, getMembershipLevelLabel } from '@/types/database'
 import { Suspense } from 'react'
 import MembershipCard from '@/components/MembershipCard'
 import SubscriptionSection from '@/components/SubscriptionSection'
@@ -58,7 +63,11 @@ export default async function MembershipPage({
 
   const membershipLevel = (user.profile.membership_level || 'Full') as MembershipLevelKey
   const membershipFee = await getMembershipFeeForLevel(membershipLevel)
-  const trialEnd = getTrialEndDate(membershipLevel, user.profile.created_at ?? null)
+  const trialEnd = await getTrialEndDateAsync(
+    membershipLevel,
+    user.profile.created_at ?? null,
+    user.profile.org_id,
+  )
   const isOnTrial = trialEnd != null && trialEnd > new Date()
   const hasStripeSubscription = !!user.profile.stripe_subscription_id
   // If already subscribed in Stripe, do not show trial label or trial-based validity
@@ -87,20 +96,37 @@ export default async function MembershipPage({
       : false
   const validThruDate = hasMembershipExpiry ? null : (showTrial && trialEnd ? trialEnd.toISOString() : null)
 
-  const membershipLevelDisplay =
-    showTrial && membershipLevel !== 'Student'
-      ? `${getMembershipLevelLabel(membershipLevel)} (trial)`
-      : getMembershipLevelLabel(membershipLevel)
+  const membershipLevelDisplay = showTrial
+    ? `${getMembershipLevelLabel(membershipLevel)} (trial)`
+    : getMembershipLevelLabel(membershipLevel)
 
-  // Pending approval copy: level-specific message (Full/Associate trial until Sept 1, etc.)
   const levelLabel = getMembershipLevelLabel(membershipLevel)
   const article = (membershipLevel === 'Associate' || membershipLevel === 'Honorary') ? 'an' : 'a'
+  const trialCfg = await getTrialConfig(user.profile.org_id)
+  const pendingTrialItem = getTrialConfigItemForLevel(trialCfg, membershipLevel)
+  const pendingTrialEnd = computeTrialEndFromConfig(
+    pendingTrialItem,
+    user.profile.created_at ?? null,
+  )
   const pendingTrialCopy =
-    membershipLevel === 'Full' || membershipLevel === 'Associate'
-      ? <>Once approved, you will be registered as {article} <strong>{levelLabel} member</strong> (trial) until <strong>September 1st</strong></>
-      : membershipLevel === 'Student'
-        ? <>Once approved, you will be registered as {article} <strong>{levelLabel} member</strong> with a free 12-months from approval</>
-        : <>Once approved, you will be registered as {article} <strong>{levelLabel} member</strong></>
+    pendingTrialEnd && pendingTrialItem?.type === 'months'
+      ? (
+          <>
+            Once approved, you will be registered as {article} <strong>{levelLabel} member</strong> with a trial
+            until{' '}
+            <strong>
+              {pendingTrialEnd.toLocaleDateString('en-US', {
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric',
+              })}
+            </strong>
+            .
+          </>
+        )
+      : (
+          <>Once approved, you will be registered as {article} <strong>{levelLabel} member</strong>.</>
+        )
 
     // Fetch top resources, events, and threads (only for approved users)
     const supabase = await createClient()
@@ -169,6 +195,23 @@ export default async function MembershipPage({
     }
   }
 
+  const supabaseForBrand = await createClient()
+  const [identity, orgBrandingResult] = await Promise.all([
+    getOrgIdentity(),
+    supabaseForBrand
+      .from('organizations')
+      .select('name, logo_url')
+      .eq('id', user.profile.org_id)
+      .maybeSingle(),
+  ])
+  const orgBranding = orgBrandingResult.data
+  const displayForBrand = identity.displayName?.trim() || orgBranding?.name || 'Club'
+  const clubBrandForCard = {
+    shortName: clubShortFromDisplayName(displayForBrand),
+    tagline: displayForBrand,
+    logoUrl: orgBranding?.logo_url ?? null,
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
       <Suspense fallback={null}>
@@ -194,6 +237,8 @@ export default async function MembershipPage({
                       membershipLevelDisplay={membershipLevelDisplay}
                       validThruDate={validThruDate}
                       isOnTrial={showTrial}
+                      clubBrand={clubBrandForCard}
+                      preferTipaMarkWhenNoLogo={user.profile.org_id === TIPA_ORG_ID}
                     />
                   )}
 

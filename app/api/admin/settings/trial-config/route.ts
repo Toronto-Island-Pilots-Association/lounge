@@ -1,26 +1,18 @@
 import { requireAdmin } from '@/lib/auth'
 import {
   getMembershipLevels,
+  getTrialConfig,
   setMembershipLevels,
-  type TrialConfigItem,
   type TrialType,
 } from '@/lib/settings'
 import { NextResponse } from 'next/server'
 
-const TRIAL_TYPES: TrialType[] = ['none', 'sept1', 'months']
+const TRIAL_TYPES: TrialType[] = ['none', 'months']
 
 export async function GET() {
   try {
     await requireAdmin()
-    const levels = await getMembershipLevels()
-    const trial: Record<string, TrialConfigItem> = Object.fromEntries(
-      levels.map(l => [
-        l.key,
-        l.trialType === 'months'
-          ? { type: 'months' as const, months: l.trialMonths ?? 12 }
-          : { type: l.trialType },
-      ])
-    )
+    const trial = await getTrialConfig()
     return NextResponse.json({ trial })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to load trial config'
@@ -50,15 +42,7 @@ export async function PATCH(request: Request) {
       return { ...l, trialType: type as TrialType, trialMonths: undefined }
     })
     await setMembershipLevels(updated)
-    const levels = await getMembershipLevels()
-    const trial: Record<string, TrialConfigItem> = Object.fromEntries(
-      levels.map(l => [
-        l.key,
-        l.trialType === 'months'
-          ? { type: 'months' as const, months: l.trialMonths ?? 12 }
-          : { type: l.trialType },
-      ])
-    )
+    const trial = await getTrialConfig()
     return NextResponse.json({ trial })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to update trial config'

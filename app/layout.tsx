@@ -9,19 +9,41 @@ import PoweredByBadge from "@/components/PoweredByBadge";
 import GuestBanner, {
   shouldShowOrgGuestBanner,
 } from "@/app/components/GuestBanner";
+import { TIPA_ORG_ID } from "@/types/database";
+import { fetchPublicOrgBranding, iconMimeTypeForUrl } from "@/lib/org-public-branding";
 
 const interTight = Inter_Tight({
   variable: "--font-inter-tight",
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "Toronto Island Pilots Association",
-  description: "TIPA is dedicated to the preservation and promotion of general aviation at Billy Bishop Toronto City Airport (CYTZ).",
-  icons: {
-    icon: '/favicon.ico',
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const h = await headers();
+  const domainType = h.get("x-domain-type") ?? "org";
+  if (domainType !== "org") {
+    return { icons: { icon: "/favicon.ico" } };
+  }
+  const orgId = h.get("x-org-id") ?? TIPA_ORG_ID;
+  const b = await fetchPublicOrgBranding(orgId);
+  const title = b.displayName || b.name || "ClubLounge";
+  const siteIcon = b.siteIconUrl;
+  const icons: Metadata["icons"] =
+    !siteIcon
+      ? { icon: "/favicon.ico" }
+      : siteIcon.startsWith("/")
+        ? { icon: siteIcon }
+        : {
+            icon: {
+              url: siteIcon,
+              type: iconMimeTypeForUrl(siteIcon),
+            },
+          };
+  return {
+    title,
+    description: `Member portal for ${title}.`,
+    icons,
+  };
+}
 
 export default async function RootLayout({
   children,

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { MemberProfile, MembershipLevel, getMembershipLevelLabel, Payment } from '@/types/database'
-import { isOnTrial, getTrialEndDate } from '@/lib/trial'
+import { isOnTrialFromTrialEnd, trialUntilLabel } from '@/lib/trial'
 import { COUNTRIES, getStatesProvinces } from '@/app/become-a-member/constants'
 import {
   Drawer,
@@ -147,6 +147,7 @@ export default function MemberDetailModal({
   const [recordingPayment, setRecordingPayment] = useState(false)
   const [activityData, setActivityData] = useState<ActivityData | null>(null)
   const [loadingActivity, setLoadingActivity] = useState(false)
+  const trialUntilText = trialUntilLabel(member.trial_end)
 
   useEffect(() => {
     if (activeTab === 'activity' || activeTab === 'membership') {
@@ -265,13 +266,9 @@ export default function MemberDetailModal({
                       }`}>
                         {member.membership_level ? getMembershipLevelLabel(member.membership_level) : 'Full'}
                       </span>
-                      {isOnTrial(member.membership_level, member.created_at, member.status) && (
+                      {isOnTrialFromTrialEnd(member.status, member.trial_end) && (
                         <span className="inline-flex px-2 py-0.5 text-xs rounded font-medium bg-blue-100 text-blue-800">
-                          Trial
-                          {(() => {
-                            const trialEnd = getTrialEndDate(member.membership_level, member.created_at)
-                            return trialEnd ? ` until ${trialEnd.toLocaleDateString('en-US', { timeZone: 'UTC' })}` : ''
-                          })()}
+                          Trial{trialUntilText ? ` until ${trialUntilText}` : ''}
                         </span>
                       )}
                       {member.stripe_subscription_id && (

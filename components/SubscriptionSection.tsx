@@ -193,7 +193,7 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
     }
   }
 
-  // Use UTC so period end matches Stripe (e.g. "September 1, 2026" not "August 31, 2026" in local time)
+  // Use UTC so calendar day matches Stripe’s period end in western timezones
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       timeZone: 'UTC',
@@ -245,7 +245,9 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
                     <div>
                       <p className="text-sm font-medium text-gray-900">Annual Membership</p>
                       <p className="text-xs text-gray-500 mt-1">
-                        {isPending ? 'Billed annually · First charge after approval (or trial end, e.g. Sept 1st)' : 'Billed annually · First charge September 1st'}
+                        {isPending
+                          ? 'Billed annually · First charge after approval or when your trial ends'
+                          : 'Billed annually · First charge at renewal'}
                       </p>
                     </div>
                     <p className="text-2xl font-bold text-gray-900">
@@ -349,7 +351,9 @@ export default function SubscriptionSection({ user, profile: profileProp, embedd
                     <div>
                       <p className="text-sm font-medium text-gray-900">Annual Membership</p>
                       <p className="text-xs text-gray-500 mt-1">
-                        {isPending ? 'Billed annually · First charge after approval (or trial end, e.g. Sept 1st)' : 'Billed annually · First charge September 1st'}
+                        {isPending
+                          ? 'Billed annually · First charge after approval or when your trial ends'
+                          : 'Billed annually · First charge at renewal'}
                       </p>
                     </div>
                     <p className="text-2xl font-bold text-gray-900">

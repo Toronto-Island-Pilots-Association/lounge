@@ -3,10 +3,23 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-type NavItem = { label: string; href: string }
+type NavItem =
+  | { label: string; href: string; external?: false }
+  | { label: string; href: string; external: true }
+
 type NavGroup = { label: string; items: NavItem[] }
 
-export default function PlatformSideNav({ orgId }: { orgId: string }) {
+/**
+ * Membership, signup, and email templates are edited on the lounge hostname — those APIs
+ * resolve org from `x-org-id` (subdomain). Platform dashboard links there with `?tab=`.
+ */
+export default function PlatformSideNav({
+  orgId,
+  loungeAdminSettingsUrl,
+}: {
+  orgId: string
+  loungeAdminSettingsUrl: string
+}) {
   const pathname = usePathname()
   const base = `/platform/dashboard/${orgId}`
 
@@ -14,18 +27,18 @@ export default function PlatformSideNav({ orgId }: { orgId: string }) {
     {
       label: 'Configure',
       items: [
-        { label: 'General',      href: `${base}/settings/general` },
-        { label: 'Membership',   href: `${base}/settings/membership` },
-        { label: 'Features',     href: `${base}/settings/features` },
-        { label: 'Signup form',  href: `${base}/settings/signup` },
-        { label: 'Emails',       href: `${base}/settings/emails` },
+        { label: 'General', href: `${base}/settings/general` },
+        { label: 'Membership', href: `${loungeAdminSettingsUrl}?tab=Membership`, external: true },
+        { label: 'Features', href: `${base}/settings/features` },
+        { label: 'Signup form', href: `${loungeAdminSettingsUrl}?tab=Signup`, external: true },
+        { label: 'Emails', href: `${loungeAdminSettingsUrl}?tab=Emails`, external: true },
       ],
     },
     {
       label: 'Business',
       items: [
-        { label: 'Billing & plan',  href: `${base}/billing` },
-        { label: 'Integrations',    href: `${base}/integrations` },
+        { label: 'Billing & plan', href: `${base}/billing` },
+        { label: 'Integrations', href: `${base}/integrations` },
       ],
     },
   ]
@@ -39,19 +52,25 @@ export default function PlatformSideNav({ orgId }: { orgId: string }) {
           </p>
           <ul className="space-y-0.5">
             {group.items.map(item => {
-              const active = pathname === item.href || pathname.startsWith(item.href + '/')
+              const active =
+                !item.external &&
+                (pathname === item.href || pathname.startsWith(item.href + '/'))
+              const className = `flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors ${
+                active
+                  ? 'bg-gray-100 text-gray-900 font-medium'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }`
               return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className={`flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors ${
-                      active
-                        ? 'bg-gray-100 text-gray-900 font-medium'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
+                <li key={`${item.label}-${item.href}`}>
+                  {item.external ? (
+                    <a href={item.href} className={className}>
+                      {item.label}
+                    </a>
+                  ) : (
+                    <Link href={item.href} className={className}>
+                      {item.label}
+                    </Link>
+                  )}
                 </li>
               )
             })}

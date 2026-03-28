@@ -27,6 +27,17 @@ export function isClubLoungeDemoOrgSlug(slug: string | null | undefined): boolea
   return slug === CLUBLOUNGE_DEMO_ORG_SLUG
 }
 
+/** Abbreviation for membership card header (e.g. "Lakeside Sports Club" → "LSC"). */
+export function clubShortFromDisplayName(displayName: string): string {
+  const parts = displayName.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return 'CLUB'
+  return parts
+    .slice(0, 4)
+    .map((p) => p[0]!.toUpperCase())
+    .join('')
+    .slice(0, 6)
+}
+
 /** Subdomains reserved for platform use — cannot be registered as org slugs. */
 export const RESERVED_SUBDOMAINS = new Set([
   'platform',

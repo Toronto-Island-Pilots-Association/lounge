@@ -18,6 +18,7 @@ const FEATURE_ROWS: { label: string; key: keyof (typeof PLANS)[PlanKey]['feature
   { label: 'Analytics', key: 'analytics' },
   { label: 'Custom domain', key: 'customDomain' },
   { label: 'Membership tiers', key: 'membershipTiers' },
+  { label: 'Member trial periods', key: 'memberTrials' },
   { label: 'Remove ClubLounge branding', key: 'hideBranding' },
 ]
 

@@ -8,8 +8,20 @@ import { MemberProfile, getMembershipLevelLabel } from '@/types/database'
 import { createClient } from '@/lib/supabase/client'
 import { getPlatformSignupAbsoluteUrl, isClubLoungeDemoOrgSlug } from '@/lib/org'
 
+/** Navbar persona for unauthenticated visitors on the public demo org (demo.* / Lakeside). */
+const DEMO_GUEST_PREVIEW = {
+  name: 'Jamie Rivera',
+  initials: 'JR',
+} as const
+
 type OrgConfig = {
-  org: { name: string; slug?: string; displayName: string; logoUrl: string | null }
+  org: {
+    name: string
+    slug?: string
+    displayName: string
+    logoUrl: string | null
+    siteIconUrl?: string | null
+  }
   features: {
     discussions: boolean; events: boolean; resources: boolean
     memberDirectory: boolean; allowMemberInvitations: boolean
@@ -24,6 +36,7 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
   const [isGuest, setIsGuest] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [guestDemoMenuOpen, setGuestDemoMenuOpen] = useState(false)
   const [isDevEnvironment, setIsDevEnvironment] = useState(false)
   const [pendingCount, setPendingCount] = useState<number>(0)
   const [notificationCount, setNotificationCount] = useState<number>(0)
@@ -147,16 +160,19 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
       if (!target.closest('[data-user-menu]')) {
         setUserMenuOpen(false)
       }
+      if (!target.closest('[data-guest-demo-menu]')) {
+        setGuestDemoMenuOpen(false)
+      }
     }
 
-    if (userMenuOpen) {
+    if (userMenuOpen || guestDemoMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside)
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [userMenuOpen])
+  }, [userMenuOpen, guestDemoMenuOpen])
 
   const handleLogout = async () => {
     try {
@@ -176,6 +192,7 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
   const handleLinkClick = () => {
     setMobileMenuOpen(false)
     setUserMenuOpen(false)
+    setGuestDemoMenuOpen(false)
   }
 
   const showMemberBrowse =
@@ -193,6 +210,11 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
         : isDevEnvironment
           ? 'top-[28px]'
           : 'top-0'
+
+  const navBrandLabel = orgConfig
+    ? orgConfig.org.displayName?.trim() || orgConfig.org.name?.trim() || 'Club'
+    : ''
+  const navHeaderLogo = orgConfig?.org.logoUrl?.trim() || ''
 
   return (
     <>
@@ -212,19 +234,20 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
             <Link 
               href="/discussions"
               onClick={handleLinkClick}
-              className="flex items-center hover:opacity-80 transition-opacity"
+              className="flex items-center hover:opacity-80 transition-opacity min-w-0 max-w-[min(100%,14rem)] sm:max-w-[min(100%,18rem)]"
             >
-              {orgConfig?.org.logoUrl ? (
+              {navHeaderLogo ? (
                 <Image
-                  src={orgConfig.org.logoUrl}
-                  alt={`${orgConfig.org.displayName || orgConfig.org.name} logo`}
-                  width={100}
-                  height={100}
-                  className="h-10 sm:h-14 w-auto object-contain"
+                  src={navHeaderLogo}
+                  alt={`${navBrandLabel} — home`}
+                  width={200}
+                  height={56}
+                  className="h-10 sm:h-14 w-auto max-w-full object-contain object-left"
+                  priority
                 />
               ) : orgConfig ? (
-                <span className="text-lg font-bold tracking-tight text-[#0d1e26]">
-                  {orgConfig.org.displayName || orgConfig.org.name}
+                <span className="text-lg font-bold tracking-tight text-[#0d1e26] truncate">
+                  {navBrandLabel}
                 </span>
               ) : null}
             </Link>
@@ -454,24 +477,69 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
                   )}
                 </div>
               </>
+            ) : isDemoLoungeGuest ? (
+              <div className="relative flex items-center" data-guest-demo-menu>
+                <button
+                  type="button"
+                  onClick={() => setGuestDemoMenuOpen(!guestDemoMenuOpen)}
+                  className="flex items-center space-x-2 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:ring-offset-2 rounded-md p-1"
+                  aria-label="Demo preview menu"
+                  aria-expanded={guestDemoMenuOpen}
+                >
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center border border-gray-300 text-xs font-semibold text-white shrink-0">
+                    {DEMO_GUEST_PREVIEW.initials}
+                  </div>
+                  <span className="text-sm text-gray-700 hidden lg:inline max-w-[140px] truncate">
+                    {DEMO_GUEST_PREVIEW.name}
+                  </span>
+                  <svg
+                    className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${
+                      guestDemoMenuOpen ? 'transform rotate-180' : ''
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {guestDemoMenuOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+                    <p className="px-4 py-2 text-xs text-gray-500 border-b border-gray-100 leading-snug">
+                      Sample member — you&apos;re browsing the demo as a guest.
+                    </p>
+                    <Link
+                      href="/login"
+                      onClick={() => setGuestDemoMenuOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                      </svg>
+                      Sign in
+                    </Link>
+                    <a
+                      href={getPlatformSignupAbsoluteUrl()}
+                      rel="noopener noreferrer"
+                      onClick={() => setGuestDemoMenuOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Create your lounge
+                    </a>
+                  </div>
+                )}
+              </div>
             ) : (
               <>
-                {isDemoLoungeGuest ? (
-                  <a
-                    href={getPlatformSignupAbsoluteUrl()}
-                    rel="noopener noreferrer"
-                    className="text-gray-700 hover:text-gray-900 px-4 py-2 rounded-md text-sm font-medium transition-colors"
-                  >
-                    Create your club
-                  </a>
-                ) : (
-                  <Link
-                    href="/become-a-member"
-                    className="text-gray-700 hover:text-gray-900 px-4 py-2 rounded-md text-sm font-medium transition-colors"
-                  >
-                    Become a Member
-                  </Link>
-                )}
+                <Link
+                  href="/become-a-member"
+                  className="text-gray-700 hover:text-gray-900 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                >
+                  Become a Member
+                </Link>
                 <Link
                   href="/login"
                   className="text-gray-700 hover:text-gray-900 px-4 py-2 rounded-md text-sm font-medium transition-colors"
@@ -693,30 +761,56 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
               {isGuest && (
                 <div className="pt-2 mt-2 border-t border-gray-200 space-y-1">
                   {isDemoLoungeGuest ? (
-                    <a
-                      href={getPlatformSignupAbsoluteUrl()}
-                      rel="noopener noreferrer"
-                      onClick={handleLinkClick}
-                      className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
-                    >
-                      Create your club
-                    </a>
+                    <>
+                      <div className="flex items-center gap-3 px-3 py-3 mx-1 mb-2 rounded-lg bg-gray-50 border border-gray-100">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center text-sm font-semibold text-white shrink-0">
+                          {DEMO_GUEST_PREVIEW.initials}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-900 truncate">{DEMO_GUEST_PREVIEW.name}</p>
+                          <p className="text-xs text-gray-500">Demo preview · not signed in</p>
+                        </div>
+                      </div>
+                      <Link
+                        href="/login"
+                        onClick={handleLinkClick}
+                        className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                        </svg>
+                        Sign in
+                      </Link>
+                      <a
+                        href={getPlatformSignupAbsoluteUrl()}
+                        rel="noopener noreferrer"
+                        onClick={handleLinkClick}
+                        className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Create your lounge
+                      </a>
+                    </>
                   ) : (
-                    <Link
-                      href="/become-a-member"
-                      onClick={handleLinkClick}
-                      className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
-                    >
-                      Become a Member
-                    </Link>
+                    <>
+                      <Link
+                        href="/become-a-member"
+                        onClick={handleLinkClick}
+                        className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                      >
+                        Become a Member
+                      </Link>
+                      <Link
+                        href="/login"
+                        onClick={handleLinkClick}
+                        className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                      >
+                        Login
+                      </Link>
+                    </>
                   )}
-                  <Link
-                    href="/login"
-                    onClick={handleLinkClick}
-                    className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
-                  >
-                    Login
-                  </Link>
                 </div>
               )}
             </div>

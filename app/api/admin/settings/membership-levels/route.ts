@@ -1,8 +1,9 @@
 import { requireAdmin } from '@/lib/auth'
-import { getMembershipLevels, setMembershipLevels, type OrgMembershipLevel } from '@/lib/settings'
+import { getMembershipLevels, getOrgPlan, setMembershipLevels, type OrgMembershipLevel } from '@/lib/settings'
+import { getPlanDef } from '@/lib/plans'
 import { NextResponse } from 'next/server'
 
-const TRIAL_TYPES = ['none', 'sept1', 'months'] as const
+const TRIAL_TYPES = ['none', 'months'] as const
 
 function validateLevels(body: unknown): OrgMembershipLevel[] | null {
   if (!Array.isArray(body) || body.length === 0) return null
@@ -27,8 +28,9 @@ function validateLevels(body: unknown): OrgMembershipLevel[] | null {
 export async function GET() {
   try {
     await requireAdmin()
-    const levels = await getMembershipLevels()
-    return NextResponse.json({ levels })
+    const [levels, plan] = await Promise.all([getMembershipLevels(), getOrgPlan()])
+    const memberTrialsEnabled = getPlanDef(plan).features.memberTrials
+    return NextResponse.json({ levels, memberTrialsEnabled })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to load membership levels'
     const status = message === 'Forbidden: Admin access required' ? 403 : 500

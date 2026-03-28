@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { MemberProfile, MembershipLevel, getMembershipLevelLabel, Payment } from '@/types/database'
-import { isOnTrial } from '@/lib/trial'
 import Loading from '@/components/Loading'
 import MemberDetailModal from './MemberDetailModal'
 import {

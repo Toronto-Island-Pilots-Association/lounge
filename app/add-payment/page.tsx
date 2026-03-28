@@ -28,7 +28,7 @@ export default async function AddPaymentPage() {
             Add your payment information
           </h1>
           <p className="mt-2 text-gray-600">
-            Add a payment method to access lounge features. You won’t be charged until you’re approved or the trial ends (e.g. September 1st).
+            Add a payment method to access lounge features. You won’t be charged until you’re approved or, if your plan includes one, when your trial ends.
           </p>
         </div>
 

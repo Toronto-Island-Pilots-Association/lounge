@@ -6,6 +6,7 @@ export interface Organization {
   custom_domain: string | null
   subdomain: string | null
   logo_url: string | null
+  favicon_url?: string | null
   stripe_account_id?: string | null
   stripe_onboarding_complete?: boolean
   stripe_customer_id?: string | null
