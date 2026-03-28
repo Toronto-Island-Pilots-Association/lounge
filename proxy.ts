@@ -43,6 +43,22 @@ export async function proxy(request: NextRequest) {
   // This happens when redirectTo isn't in Supabase's allowed URL list.
   // Forward to /auth/callback, inferring the right `next` from domain type.
   if (request.nextUrl.searchParams.has('code') && !pathname.startsWith('/auth')) {
+    const code = request.nextUrl.searchParams.get('code')!
+    const state = request.nextUrl.searchParams.get('state')
+
+    if (domainType === 'marketing') {
+      // The PKCE verifier lives on the platform domain (where signInWithOAuth ran).
+      // Forward the code there so the exchange can succeed.
+      const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'
+      const proto = process.env.NODE_ENV === 'development' ? 'http' : 'https'
+      const port = process.env.NODE_ENV === 'development' ? ':3000' : ''
+      const platformCallback = new URL(`${proto}://platform.${rootDomain}${port}/auth/callback`)
+      platformCallback.searchParams.set('code', code)
+      platformCallback.searchParams.set('next', '/platform/dashboard')
+      if (state) platformCallback.searchParams.set('state', state)
+      return NextResponse.redirect(platformCallback)
+    }
+
     const callbackUrl = request.nextUrl.clone()
     callbackUrl.pathname = '/auth/callback'
     if (!callbackUrl.searchParams.has('next')) {
