@@ -94,7 +94,7 @@ export default function DiscussionCategoriesForm({
             onChange={e => updateLabel(cat.slug, e.target.value)}
             className="flex-1 text-sm bg-white border border-gray-200 rounded-md px-2 py-1 focus:border-gray-400 focus:outline-none"
           />
-          <span className="text-xs text-gray-400 font-mono shrink-0">{cat.slug}</span>
+          <span className="min-w-0 truncate text-xs font-mono text-gray-400 hidden sm:block">{cat.slug}</span>
           <button
             type="button"
             onClick={() => toggleEnabled(cat.slug)}
