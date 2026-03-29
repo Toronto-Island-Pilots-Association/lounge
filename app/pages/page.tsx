@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
+import { TIPA_ORG_ID } from '@/types/database'
 
 export default async function PagesListPage() {
   const h = await headers()
@@ -19,7 +20,7 @@ export default async function PagesListPage() {
 
   if (error) notFound()
 
-  const pages = data || []
+  const pages = (data || []).filter((page) => !(orgId === TIPA_ORG_ID && page.slug === 'about'))
 
   return (
     <div className="min-h-screen bg-gray-50 py-6 sm:py-8">

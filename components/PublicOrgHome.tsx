@@ -260,12 +260,6 @@ function TipaPublicHome({
             >
               Get Started
             </Link>
-            <Link
-              href="/pages/about"
-              className="inline-flex items-center rounded-lg border border-gray-300 px-6 py-3 text-base font-semibold text-gray-900 transition-colors hover:border-gray-400 sm:px-8 sm:py-3.5 sm:text-lg"
-            >
-              Learn More
-            </Link>
           </div>
         </div>
       </section>
