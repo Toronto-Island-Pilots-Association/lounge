@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { CnameRecord } from '@/components/platform/CnameRecord'
 import { orgStripeDuesUiStatus } from '@/lib/org-stripe-dues-status'
-import { buildOrgUrl } from '@/lib/org'
+import { buildOrgUrl, ROOT_DOMAIN } from '@/lib/org'
 
 function inputCls() {
   return 'w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:ring-1 focus:ring-gray-900'
@@ -44,14 +44,18 @@ type OrgIntegrations = {
 
 export default function IntegrationsPageClient({ orgId }: { orgId: string }) {
   const [org, setOrg] = useState<OrgIntegrations | null>(null)
+  const [subdomain, setSubdomain] = useState('')
   const [customDomain, setCustomDomain] = useState('')
   const [loading, setLoading] = useState(true)
   const [stripeConnecting, setStripeConnecting] = useState(false)
   const [stripeDashboardLoading, setStripeDashboardLoading] = useState(false)
+  const [subdomainSaving, setSubdomainSaving] = useState(false)
   const [domainSaving, setDomainSaving] = useState(false)
   const [domainChecking, setDomainChecking] = useState(false)
   const [domainVerification, setDomainVerification] = useState<'verified' | 'pending' | 'invalid' | 'misconfigured' | null>(null)
   const [stripeError, setStripeError] = useState<string | null>(null)
+  const [subdomainError, setSubdomainError] = useState<string | null>(null)
+  const [subdomainSuccess, setSubdomainSuccess] = useState(false)
   const [domainError, setDomainError] = useState<string | null>(null)
   const [domainSuccess, setDomainSuccess] = useState(false)
 
@@ -63,6 +67,7 @@ export default function IntegrationsPageClient({ orgId }: { orgId: string }) {
       .then(d => {
         if (cancelled) return
         setOrg(d.org)
+        setSubdomain(d.org?.subdomain ?? '')
         setCustomDomain(d.org?.custom_domain ?? '')
       })
       .catch(() => {})
@@ -142,6 +147,30 @@ export default function IntegrationsPageClient({ orgId }: { orgId: string }) {
       setDomainError(e instanceof Error ? e.message : 'Failed')
     } finally {
       setDomainSaving(false)
+    }
+  }
+
+  const saveSubdomain = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubdomainSaving(true)
+    setSubdomainError(null)
+    setSubdomainSuccess(false)
+    try {
+      const res = await fetch(`/api/platform/orgs/${orgId}/settings/integrations`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subdomain }),
+      })
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Failed')
+      const d = await res.json()
+      setOrg(d.org)
+      setSubdomain(d.org?.subdomain ?? '')
+      setSubdomainSuccess(true)
+      setTimeout(() => setSubdomainSuccess(false), 3000)
+    } catch (e) {
+      setSubdomainError(e instanceof Error ? e.message : 'Failed')
+    } finally {
+      setSubdomainSaving(false)
     }
   }
 
@@ -233,6 +262,54 @@ export default function IntegrationsPageClient({ orgId }: { orgId: string }) {
           </>
         )}
       </div>
+
+      <form onSubmit={saveSubdomain} className="space-y-4 pt-6 border-t border-gray-200">
+        <SectionHeader
+          title="Default subdomain"
+          description="Change the default ClubLounge address for your lounge."
+        />
+
+        {subdomainError && <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">{subdomainError}</div>}
+        {subdomainSuccess && <div className="rounded-md bg-green-50 p-3 text-sm text-green-800">Saved.</div>}
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Subdomain</label>
+          <div className="flex items-center rounded-md border border-gray-300 focus-within:border-gray-900 focus-within:ring-1 focus-within:ring-gray-900">
+            <input
+              className="w-full rounded-l-md border-0 px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-0"
+              placeholder="yourclub"
+              value={subdomain}
+              onChange={e => setSubdomain(e.target.value.toLowerCase())}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+            <span className="shrink-0 rounded-r-md border-l border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-500">
+              .{ROOT_DOMAIN}
+            </span>
+          </div>
+          <p className="text-xs text-gray-400 mt-1">
+            Lowercase letters, numbers, and hyphens only. Your old subdomain stops working after this change.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3 flex-wrap">
+          <SaveButton saving={subdomainSaving} label="Save subdomain" />
+          {org ? (
+            <a
+              href={`https://${subdomain || org.subdomain}.${ROOT_DOMAIN}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm text-gray-700 hover:text-gray-900 underline underline-offset-2"
+            >
+              Visit current subdomain
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
+          ) : null}
+        </div>
+      </form>
 
       <form onSubmit={saveDomain} className="space-y-4 pt-6 border-t border-gray-200">
         <SectionHeader title="Custom domain" description="Serve your member portal on your own domain." />

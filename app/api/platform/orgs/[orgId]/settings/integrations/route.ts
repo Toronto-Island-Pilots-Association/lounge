@@ -4,6 +4,7 @@ import { getPlatformStripeInstance } from '@/lib/stripe'
 import { addDomainToProject, checkDomainVerification } from '@/lib/vercel'
 import { getOrgPlan } from '@/lib/settings'
 import { getPlanDef } from '@/lib/plans'
+import { validateOrgSlug } from '@/lib/org'
 import { NextResponse } from 'next/server'
 
 async function verifyAdmin(orgId: string) {
@@ -151,7 +152,7 @@ export async function PUT(
   return NextResponse.json({ url: loginLink.url })
 }
 
-// PATCH — save custom domain
+// PATCH — save integrations settings
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ orgId: string }> }
@@ -160,23 +161,84 @@ export async function PATCH(
   const user = await verifyAdmin(orgId)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const plan = await getOrgPlan(orgId)
-  if (!getPlanDef(plan).features.customDomain) {
-    return NextResponse.json({ error: 'Custom domains require Growth plan or higher' }, { status: 403 })
+  const db = createServiceRoleClient()
+  const body = await request.json() as { customDomain?: string; subdomain?: string }
+  const patch: {
+    custom_domain?: string | null
+    custom_domain_verified?: boolean | null
+    subdomain?: string
+  } = {}
+
+  if ('subdomain' in body) {
+    if (typeof body.subdomain !== 'string') {
+      return NextResponse.json({ error: 'subdomain must be a string' }, { status: 400 })
+    }
+
+    const nextSubdomain = body.subdomain.trim().toLowerCase()
+    const validation = validateOrgSlug(nextSubdomain)
+    if (!validation.valid) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
+    }
+
+    const { data: existingSubdomain, error: subdomainLookupError } = await db
+      .from('organizations')
+      .select('id')
+      .eq('subdomain', nextSubdomain)
+      .neq('id', orgId)
+      .maybeSingle()
+
+    if (subdomainLookupError) {
+      return NextResponse.json({ error: subdomainLookupError.message }, { status: 500 })
+    }
+    if (existingSubdomain) {
+      return NextResponse.json({ error: 'This subdomain is already taken' }, { status: 409 })
+    }
+
+    patch.subdomain = nextSubdomain
   }
 
-  const { customDomain } = await request.json() as { customDomain?: string }
-  if (typeof customDomain !== 'string')
-    return NextResponse.json({ error: 'customDomain is required' }, { status: 400 })
+  if ('customDomain' in body) {
+    if (typeof body.customDomain !== 'string') {
+      return NextResponse.json({ error: 'customDomain must be a string' }, { status: 400 })
+    }
 
-  const db = createServiceRoleClient()
+    const plan = await getOrgPlan(orgId)
+    if (!getPlanDef(plan).features.customDomain) {
+      return NextResponse.json({ error: 'Custom domains require Growth plan or higher' }, { status: 403 })
+    }
+
+    const nextCustomDomain = body.customDomain.trim().toLowerCase()
+    if (nextCustomDomain) {
+      const { data: existingDomain, error: domainLookupError } = await db
+        .from('organizations')
+        .select('id')
+        .eq('custom_domain', nextCustomDomain)
+        .neq('id', orgId)
+        .maybeSingle()
+
+      if (domainLookupError) {
+        return NextResponse.json({ error: domainLookupError.message }, { status: 500 })
+      }
+      if (existingDomain) {
+        return NextResponse.json({ error: 'This custom domain is already registered' }, { status: 409 })
+      }
+    }
+
+    patch.custom_domain = nextCustomDomain || null
+    patch.custom_domain_verified = nextCustomDomain ? false : null
+  }
+
+  if (Object.keys(patch).length === 0) {
+    return NextResponse.json({ error: 'No integration settings provided' }, { status: 400 })
+  }
+
   const { error: updateError } = await db
     .from('organizations')
-    .update({ custom_domain: customDomain || null })
+    .update(patch)
     .eq('id', orgId)
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
-  if (customDomain) await addDomainToProject(customDomain)
+  if (patch.custom_domain) await addDomainToProject(patch.custom_domain)
 
   const { data: org, error: fetchError } = await db
     .from('organizations')
