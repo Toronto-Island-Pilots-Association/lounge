@@ -123,6 +123,63 @@ export default function EventsPageClient() {
     return <Loading message="Loading events..." />
   }
 
+  if (events.length === 0) {
+    return (
+      <div className="rounded-2xl border border-gray-200 bg-gradient-to-br from-white via-white to-[color:var(--color-primary)]/5 p-6 sm:p-8">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-2xl">
+            <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] mb-4">
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Start your club calendar</h2>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-gray-600">
+              Publish the events members need to show up for: rides, meetings, socials, launches, training days, or anything else your club runs.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {['Monthly meetup', 'Training session', 'Volunteer day', 'Season opener'].map((example) => (
+                <span
+                  key={example}
+                  className="inline-flex items-center rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-600"
+                >
+                  {example}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-5 lg:w-80">
+            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-gray-400">First event</h3>
+            <ul className="mt-4 space-y-3 text-sm text-gray-600">
+              <li className="flex gap-3">
+                <span className="mt-0.5 h-2 w-2 rounded-full bg-[var(--color-primary)]" />
+                Give it a clear title and date.
+              </li>
+              <li className="flex gap-3">
+                <span className="mt-0.5 h-2 w-2 rounded-full bg-[var(--color-primary)]" />
+                Add a location, short description, and optional image.
+              </li>
+              <li className="flex gap-3">
+                <span className="mt-0.5 h-2 w-2 rounded-full bg-[var(--color-primary)]" />
+                Members will see it immediately and can RSVP.
+              </li>
+            </ul>
+            <button
+              onClick={() => {
+                setEditingEvent(null)
+                setShowEventForm(true)
+              }}
+              className="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-[var(--color-primary)] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#0a171c]"
+            >
+              Create your first event
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-end">

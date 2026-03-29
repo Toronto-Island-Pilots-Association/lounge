@@ -32,6 +32,12 @@ type OrgConfig = {
   }
 }
 
+type NavPage = {
+  id: string
+  title: string
+  slug: string
+}
+
 export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: boolean }) {
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<MemberProfile | null>(null)
@@ -44,6 +50,7 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
   const [pendingCount, setPendingCount] = useState<number>(0)
   const [notificationCount, setNotificationCount] = useState<number>(0)
   const [orgConfig, setOrgConfig] = useState<OrgConfig | null>(null)
+  const [navPages, setNavPages] = useState<NavPage[]>([])
   const router = useRouter()
 
   // Check if we're in a dev environment
@@ -125,6 +132,39 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
       subscription.unsubscribe()
     }
   }, [])
+
+  useEffect(() => {
+    if (!(orgConfig?.features.pages ?? true)) {
+      setNavPages([])
+      return
+    }
+
+    let active = true
+
+    fetch('/api/pages')
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then((data) => {
+        if (!active) return
+        const pages = Array.isArray(data?.pages) ? data.pages : []
+        setNavPages(
+          pages
+            .filter((page: unknown): page is NavPage => {
+              if (!page || typeof page !== 'object') return false
+              const candidate = page as Record<string, unknown>
+              return typeof candidate.id === 'string' && typeof candidate.slug === 'string' && typeof candidate.title === 'string'
+            })
+            .map((page: NavPage) => ({ id: page.id, title: page.title, slug: page.slug })),
+        )
+      })
+      .catch(() => {
+        if (!active) return
+        setNavPages([])
+      })
+
+    return () => {
+      active = false
+    }
+  }, [orgConfig?.features.pages])
 
   const fetchPendingCount = async () => {
     try {
@@ -265,18 +305,15 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
           
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-4">
-            {/* Pages — always public, shown to all visitors */}
-            {(orgConfig?.features.pages ?? true) && (
+            {isGuest && navPages.map((page) => (
               <Link
-                href="/pages"
-                className="flex items-center gap-1.5 text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                key={page.id}
+                href={`/pages/${page.slug}`}
+                className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                {orgConfig?.features.pagesLabel ?? 'Pages'}
+                {page.title}
               </Link>
-            )}
+            ))}
             {showMemberBrowse && (
               <>
                 {(orgConfig?.features.discussions ?? true) && (
@@ -489,6 +526,18 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
                           Platform
                         </a>
                       )}
+                      {isOrgManagerRole(profile?.role) && (
+                        <Link
+                          href="/admin/pages"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          Pages
+                        </Link>
+                      )}
                       <button
                         onClick={handleLogout}
                         className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -615,19 +664,19 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
         {mobileMenuOpen && (user || isGuest) && (
           <div className="md:hidden border-t border-gray-200 py-4 max-h-[calc(100vh-4rem)] overflow-y-auto">
             <div className="space-y-1">
-              {/* Pages — always public */}
-              {(orgConfig?.features.pages ?? true) && (
+              {isGuest && navPages.map((page) => (
                 <Link
-                  href="/pages"
+                  key={page.id}
+                  href={`/pages/${page.slug}`}
                   onClick={handleLinkClick}
                   className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  {orgConfig?.features.pagesLabel ?? 'Pages'}
+                  {page.title}
                 </Link>
-              )}
+              ))}
               {showMemberBrowse && (
                 <>
                   {(orgConfig?.features.discussions ?? true) && (
@@ -786,6 +835,18 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
                       </svg>
                       Platform
                     </a>
+                  )}
+                  {isOrgManagerRole(profile?.role) && (
+                    <Link
+                      href="/admin/pages"
+                      onClick={handleLinkClick}
+                      className="flex items-center gap-2 px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Pages
+                    </Link>
                   )}
                   <button
                     onClick={handleLogout}

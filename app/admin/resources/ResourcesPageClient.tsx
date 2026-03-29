@@ -120,6 +120,63 @@ export default function ResourcesPageClient() {
     return <Loading message="Loading Announcements..." />
   }
 
+  if (resources.length === 0) {
+    return (
+      <div className="rounded-2xl border border-gray-200 bg-gradient-to-br from-white via-white to-[color:var(--color-primary)]/5 p-6 sm:p-8">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-2xl">
+            <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] mb-4">
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Publish your first announcement</h2>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-gray-600">
+              Use announcements for updates members should not miss: registration opening, meeting notes, schedule changes, race results, or important club news.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {['Club update', 'Schedule change', 'Document upload', 'Registration reminder'].map((example) => (
+                <span
+                  key={example}
+                  className="inline-flex items-center rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-600"
+                >
+                  {example}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-5 lg:w-80">
+            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-gray-400">Good first post</h3>
+            <ul className="mt-4 space-y-3 text-sm text-gray-600">
+              <li className="flex gap-3">
+                <span className="mt-0.5 h-2 w-2 rounded-full bg-[var(--color-primary)]" />
+                Lead with a clear title.
+              </li>
+              <li className="flex gap-3">
+                <span className="mt-0.5 h-2 w-2 rounded-full bg-[var(--color-primary)]" />
+                Add a short summary members can scan quickly.
+              </li>
+              <li className="flex gap-3">
+                <span className="mt-0.5 h-2 w-2 rounded-full bg-[var(--color-primary)]" />
+                Attach a file or link if people need to act on it.
+              </li>
+            </ul>
+            <button
+              onClick={() => {
+                setEditingResource(null)
+                setShowResourceForm(true)
+              }}
+              className="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-[var(--color-primary)] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#0a171c]"
+            >
+              Add your first announcement
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-end">

@@ -2,17 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
 import {
-  ArrowLeft,
   Users,
   FileText,
   Calendar,
   CreditCard,
   BarChart3,
-  Settings,
 } from 'lucide-react'
-import { isPlatformAdminRole } from '@/lib/org-roles'
 
 const NAV_ITEMS = [
   { href: '/admin/members', label: 'Members', icon: Users },
@@ -20,7 +16,6 @@ const NAV_ITEMS = [
   { href: '/admin/events', label: 'Events', icon: Calendar },
   { href: '/admin/payments', label: 'Payments', icon: CreditCard },
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/admin/settings', label: 'Settings', icon: Settings },
 ] as const
 
 function NavLink({
@@ -51,31 +46,7 @@ function NavLink({
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const [canAccessPlatformSettings, setCanAccessPlatformSettings] = useState(false)
-
-  useEffect(() => {
-    let active = true
-
-    fetch('/api/profile')
-      .then((res) => res.ok ? res.json() : null)
-      .then((data) => {
-        if (!active) return
-        setCanAccessPlatformSettings(isPlatformAdminRole(data?.profile?.role))
-      })
-      .catch(() => {
-        if (!active) return
-        setCanAccessPlatformSettings(false)
-      })
-
-    return () => {
-      active = false
-    }
-  }, [])
-
   const isActive = (path: string) => pathname === path
-  const navItems = canAccessPlatformSettings
-    ? NAV_ITEMS
-    : NAV_ITEMS.filter(({ href }) => href !== '/admin/settings')
 
   return (
     <div className="min-h-screen bg-gray-50 py-6 sm:py-8">
@@ -87,7 +58,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             className="mt-3 flex overflow-x-auto overscroll-x-contain gap-1.5 pb-1 -mx-1"
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
-            {navItems.map(({ href, label }) => (
+            {NAV_ITEMS.map(({ href, label }) => (
               <Link
                 key={href}
                 href={href}
@@ -112,7 +83,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 Admin
               </h3>
               <nav className="space-y-1">
-                {navItems.map(({ href, label, icon }) => (
+                {NAV_ITEMS.map(({ href, label, icon }) => (
                   <NavLink
                     key={href}
                     href={href}
