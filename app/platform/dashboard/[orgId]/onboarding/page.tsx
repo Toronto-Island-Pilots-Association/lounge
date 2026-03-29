@@ -7,12 +7,14 @@ import { confirmOrgPlanCheckoutSession } from '@/lib/platform-org-billing'
 import { syncOrgStripeOnboardingFromStripe } from '@/lib/platform-stripe-onboarding'
 import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
 import { PLAN_KEYS, PLANS, type PlanKey } from '@/lib/plans'
-import { getPlanPriceMonthly } from '@/lib/settings'
+import { getOrgIdentity, getPlanPriceMonthly } from '@/lib/settings'
+import { getBillableOrgMemberCount, getOrgPlanPricingBreakdown } from '@/lib/org-plan-pricing'
 import MembershipLevelsForm from '../settings/membership/MembershipLevelsForm'
 import PlanSelector from '../billing/PlanSelector'
 import ManageOrgBillingButton from '../billing/ManageOrgBillingButton'
 import ConnectStripeButton from '../../ConnectStripeButton'
 import CopyJoinLinkButton from './CopyJoinLinkButton'
+import ClubProfileSetupForm from './ClubProfileSetupForm'
 
 export default async function OrgOnboardingPage({
   params,
@@ -44,8 +46,16 @@ export default async function OrgOnboardingPage({
   let notice: { tone: 'success' | 'warning'; text: string } | null = null
 
   if (sp.checkout === 'success' && typeof sp.session_id === 'string' && sp.session_id.trim()) {
-    await confirmOrgPlanCheckoutSession(orgId, sp.session_id.trim())
-    notice = { tone: 'success', text: 'Billing details saved.' }
+    const sessionId = sp.session_id.trim()
+    try {
+      if (sessionId.includes('{CHECKOUT_SESSION_ID}')) {
+        throw new Error('Missing checkout session id')
+      }
+      await confirmOrgPlanCheckoutSession(orgId, sessionId)
+      notice = { tone: 'success', text: 'Billing details saved.' }
+    } catch {
+      notice = { tone: 'warning', text: 'Billing return could not be confirmed automatically. Open billing and try again if your plan still looks inactive.' }
+    }
   } else if (sp.checkout === 'cancelled') {
     notice = { tone: 'warning', text: 'Billing setup was cancelled.' }
   }
@@ -74,11 +84,18 @@ export default async function OrgOnboardingPage({
   if (!org) redirect('/platform/dashboard')
 
   const currentPlan = (org.plan as PlanKey) ?? 'hobby'
+  const identity = await getOrgIdentity(orgId)
+  const memberCount = await getBillableOrgMemberCount(orgId)
   const planPrices = Object.fromEntries(
     await Promise.all(
       PLAN_KEYS.map(async (planKey) => [planKey, await getPlanPriceMonthly(planKey, orgId)] as const),
     ),
   ) as Record<PlanKey, number>
+  const pricingByPlan = Object.fromEntries(
+    await Promise.all(
+      PLAN_KEYS.map(async (planKey) => [planKey, await getOrgPlanPricingBreakdown(orgId, planKey, memberCount)] as const),
+    ),
+  ) as Record<PlanKey, Awaited<ReturnType<typeof getOrgPlanPricingBreakdown>>>
   const billingStatus = await getOrgBillingActivationStatus(orgId)
   const stripeStatus = orgStripeDuesUiStatus(org)
   const orgUrl = buildOrgUrl(org)
@@ -128,6 +145,25 @@ export default async function OrgOnboardingPage({
         <section className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6 space-y-5">
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Step 1</div>
+            <h2 className="mt-1 text-lg font-semibold text-gray-900">Tell us about your club</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Pick the closest club type and size so the lounge starts with more sensible defaults.
+            </p>
+          </div>
+          <ClubProfileSetupForm
+            orgId={orgId}
+            initial={{
+              clubType: identity.clubType,
+              clubSize: identity.clubSize,
+              websiteUrl: identity.websiteUrl,
+              contactEmail: identity.contactEmail,
+            }}
+          />
+        </section>
+
+        <section className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6 space-y-5">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Step 2</div>
             <h2 className="mt-1 text-lg font-semibold text-gray-900">Set membership fees</h2>
             <p className="mt-1 text-sm text-gray-500">
               Define the levels you want members to join and the annual amount for each one.
@@ -139,7 +175,7 @@ export default async function OrgOnboardingPage({
         <section className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6 space-y-5">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Step 2</div>
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Step 3</div>
               <h2 className="mt-1 text-lg font-semibold text-gray-900">Choose your plan</h2>
               <p className="mt-1 text-sm text-gray-500">
                 Pick the plan that fits this club and add billing details before inviting members.
@@ -151,13 +187,16 @@ export default async function OrgOnboardingPage({
           </div>
 
           <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
-            <span className="font-medium text-gray-900">Current:</span> {PLANS[currentPlan].label} at ${planPrices[currentPlan]}/mo CAD
+            <span className="font-medium text-gray-900">Current:</span> {PLANS[currentPlan].label} at ${pricingByPlan[currentPlan].totalMonthly.toFixed(2)}/mo CAD
+            {pricingByPlan[currentPlan].includedMembers != null && pricingByPlan[currentPlan].additionalMemberPriceCents != null
+              ? ` for ${memberCount} active members`
+              : ''}
           </div>
 
           <PlanSelector
             orgId={orgId}
             currentPlan={currentPlan}
-            planPrices={planPrices}
+            pricingByPlan={pricingByPlan}
             billingActivated={billingStatus.activated}
             returnTo={onboardingPath}
           />
@@ -165,7 +204,7 @@ export default async function OrgOnboardingPage({
 
         <section className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6 space-y-5">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Step 3</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Step 4</div>
             <h2 className="mt-1 text-lg font-semibold text-gray-900">Connect Stripe for dues</h2>
             <p className="mt-1 text-sm text-gray-500">
               Do this when you&apos;re ready to collect dues online. Stripe processing fees apply, plus a 2% ClubLounge platform fee on dues payments.
@@ -212,7 +251,7 @@ export default async function OrgOnboardingPage({
 
         <section className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6 space-y-4">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Step 4</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Step 5</div>
             <h2 className="mt-1 text-lg font-semibold text-gray-900">Invite members</h2>
             <p className="mt-1 text-sm text-gray-500">
               Share your join link once billing is active and your setup is ready.

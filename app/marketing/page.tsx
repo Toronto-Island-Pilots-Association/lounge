@@ -48,7 +48,7 @@ const jsonLd = {
           name: 'How much does Club Lounge cost?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: 'Plans start at $5/month for clubs of up to 20 members. Core is $49/month and is best for clubs with up to 200 members and up to 2 admins. Growth is $99/month and is best for clubs with up to 500 members and up to 5 admins. Pro is for larger clubs that need higher-touch support.',
+            text: 'Plans start at $5/month for clubs of up to 20 members. Core is $49/month and includes 200 active members, then $0.15 per additional active member per month. Growth is $99/month and includes 500 active members, then $0.05 per additional active member per month. Pro is for larger clubs that need higher-touch support.',
           },
         },
         {
@@ -88,7 +88,7 @@ const jsonLd = {
           name: 'How does dues collection work?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: 'Club Lounge uses Stripe Connect. Set an annual fee for each membership level, connect your club Stripe account, and members pay through Stripe. Membership renews annually, admins can track payments in the lounge admin, and Stripe processing fees apply alongside a 2% ClubLounge platform fee on dues payments.',
+            text: 'Club Lounge uses Stripe for dues collection. Set an annual fee for each membership level, connect your club Stripe account, and members pay through Stripe. Membership renews annually, admins can track payments in the lounge admin, and Stripe processing fees apply alongside a 2% ClubLounge platform fee on dues payments.',
           },
         },
       ],

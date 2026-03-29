@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { sendMemberApprovalEmail } from '@/lib/resend'
 import { appendMemberToSheet } from '@/lib/google-sheets'
 import { getMembershipFeeForLevel, type MembershipLevelKey } from '@/lib/settings'
+import { syncOrgPlanSubscriptionBilling } from '@/lib/org-plan-subscription'
 import { NextResponse } from 'next/server'
 
 /**
@@ -157,6 +158,12 @@ export async function POST(request: Request) {
     if (paymentError) {
       console.error('Error recording payment:', paymentError)
       // Don't fail the request if payment record fails, but log it
+    }
+
+    if (currentMember.status !== updatedMember.status) {
+      syncOrgPlanSubscriptionBilling(orgId).catch(err => {
+        console.error('Failed to sync org billing after recording payment:', err)
+      })
     }
 
     return NextResponse.json({

@@ -9,6 +9,7 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { getPlatformStripeInstance } from '@/lib/stripe'
 import { PLAN_KEYS, PLANS, type PlanKey } from '@/lib/plans'
 import { getPlanPriceMonthly } from '@/lib/settings'
+import { buildOrgPlanCheckoutLineItems, syncOrgPlanSubscriptionBilling } from '@/lib/org-plan-subscription'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
@@ -17,6 +18,12 @@ function resolvePlatformPath(value: unknown, fallback: string) {
   const trimmed = value.trim()
   if (!trimmed.startsWith('/platform/')) return fallback
   return trimmed
+}
+
+function withRawCheckoutSessionId(url: URL) {
+  return url
+    .toString()
+    .replace('%7BCHECKOUT_SESSION_ID%7D', '{CHECKOUT_SESSION_ID}')
 }
 
 export async function POST(
@@ -123,17 +130,8 @@ export async function POST(
       await db.from('organizations').update({ stripe_customer_id: customerId }).eq('id', orgId)
     }
 
-    const productName = `${orgName} ${planDef.label}`
-
     // When org has no subscription yet: create Checkout session.
     if (!org.stripe_subscription_id) {
-      const price = await stripe.prices.create({
-        currency: 'cad',
-        unit_amount: Math.round(priceMonthly * 100),
-        recurring: { interval: 'month' },
-        product_data: { name: productName },
-      })
-
       const host = request.headers.get('host') ?? 'clublounge.local:3000'
       const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
       const baseUrl = `${protocol}://${host}`
@@ -145,11 +143,13 @@ export async function POST(
       cancelUrl.searchParams.set('checkout', 'cancelled')
       cancelUrl.searchParams.set('plan', planKey)
 
+      const { lineItems } = await buildOrgPlanCheckoutLineItems(orgId, orgName, planKey)
+
       const checkoutSession = await stripe.checkout.sessions.create({
         mode: 'subscription',
         customer: customerId,
-        line_items: [{ price: price.id, quantity: 1 }],
-        success_url: successUrl.toString(),
+        line_items: lineItems,
+        success_url: withRawCheckoutSessionId(successUrl),
         cancel_url: cancelUrl.toString(),
         metadata: { orgId, planKey },
         subscription_data: {
@@ -161,27 +161,7 @@ export async function POST(
     }
 
     // Otherwise update the existing platform subscription.
-    const existingSubscription = await stripe.subscriptions.retrieve(org.stripe_subscription_id, {
-      expand: ['items.data.price'],
-    })
-
-    const firstItem = existingSubscription.items.data[0]
-    if (!firstItem) {
-      return NextResponse.json({ error: 'Existing subscription has no items' }, { status: 400 })
-    }
-
-    const price = await stripe.prices.create({
-      currency: 'cad',
-      unit_amount: Math.round(priceMonthly * 100),
-      recurring: { interval: 'month' },
-      product_data: { name: productName },
-    })
-
-    await stripe.subscriptions.update(org.stripe_subscription_id, {
-      items: [{ id: firstItem.id, price: price.id }],
-      proration_behavior: 'create_prorations',
-      metadata: { orgId, planKey },
-    } as Stripe.SubscriptionUpdateParams)
+    await syncOrgPlanSubscriptionBilling(orgId, { planKey })
 
     // Optimistic DB update so the UI updates promptly; webhook stays source of truth.
     await db.from('organizations').update({ plan: planKey }).eq('id', orgId)

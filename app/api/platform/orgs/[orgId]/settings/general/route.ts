@@ -47,7 +47,17 @@ export async function PATCH(
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const body = await request.json()
   const validKeys: (keyof OrgIdentity)[] = [
-    'description', 'contactEmail', 'websiteUrl', 'accentColor', 'displayName', 'timezone',
+    'description',
+    'contactEmail',
+    'websiteUrl',
+    'accentColor',
+    'displayName',
+    'timezone',
+    'clubType',
+    'clubSize',
+    'bylawsUrl',
+    'membershipPolicyUrl',
+    'feedbackUrl',
   ]
   const update: Partial<OrgIdentity> = {}
   for (const key of validKeys) {

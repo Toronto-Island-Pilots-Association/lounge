@@ -21,6 +21,13 @@ export type PlanFeatures = {
   allowMemberInvitations: boolean
   // Built — Stripe dues collection
   stripeDues: boolean
+  /**
+   * Public pages (About, Benefits, etc.) — shown before the paywall/login gate.
+   * Admins can create and publish pages that are always publicly accessible,
+   * regardless of the org's public_access setting.
+   * Enabled on all plans.
+   */
+  pages: boolean
   // Future — not yet implemented, tracked for roadmap
   digestEmails: boolean
   analytics: boolean
@@ -38,6 +45,8 @@ export type PlanDefinition = {
   maxMembers: number | null  // null = unlimited
   recommendedMembers: string
   recommendedAdmins: string
+  includedMembers: number | null
+  additionalMemberPriceCents: number | null
   features: PlanFeatures
 }
 
@@ -48,6 +57,8 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
     maxMembers: 20,
     recommendedMembers: 'Up to 20 members',
     recommendedAdmins: '1 admin',
+    includedMembers: 20,
+    additionalMemberPriceCents: null,
     features: {
       memberDirectory: true,
       events: true,
@@ -56,6 +67,7 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
       requireMemberApproval: true,
       allowMemberInvitations: false,
       stripeDues: true,
+      pages: true,
       digestEmails: false,
       analytics: false,
       customDomain: false,
@@ -70,6 +82,8 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
     maxMembers: null,
     recommendedMembers: 'Up to 200 members',
     recommendedAdmins: 'Up to 2 admins',
+    includedMembers: 200,
+    additionalMemberPriceCents: 15,
     features: {
       memberDirectory: true,
       events: true,
@@ -78,6 +92,7 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
       requireMemberApproval: true,
       allowMemberInvitations: true,
       stripeDues: true,
+      pages: true,
       digestEmails: false,
       analytics: false,
       customDomain: false,
@@ -92,6 +107,8 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
     maxMembers: null,
     recommendedMembers: 'Up to 500 members',
     recommendedAdmins: 'Up to 5 admins',
+    includedMembers: 500,
+    additionalMemberPriceCents: 5,
     features: {
       memberDirectory: true,
       events: true,
@@ -100,6 +117,7 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
       requireMemberApproval: true,
       allowMemberInvitations: true,
       stripeDues: true,
+      pages: true,
       digestEmails: true,
       analytics: true,
       customDomain: true,
@@ -114,6 +132,8 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
     maxMembers: null,
     recommendedMembers: 'Custom member volume',
     recommendedAdmins: 'Custom admins',
+    includedMembers: null,
+    additionalMemberPriceCents: null,
     features: {
       memberDirectory: true,
       events: true,
@@ -122,6 +142,7 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
       requireMemberApproval: true,
       allowMemberInvitations: true,
       stripeDues: true,
+      pages: true,
       digestEmails: true,
       analytics: true,
       customDomain: true,

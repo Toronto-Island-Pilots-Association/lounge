@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { sendMembershipExpiredEmail } from '@/lib/resend'
+import { syncOrgPlanSubscriptionBilling } from '@/lib/org-plan-subscription'
 import { NextResponse } from 'next/server'
 
 // This endpoint should be protected with a secret token or Vercel Cron
@@ -37,7 +38,7 @@ export async function GET(request: Request) {
     // Exclude admins from automatic expiration
     const { data: expiredMembers, error: fetchError } = await supabase
       .from('member_profiles')
-      .select('id, email, full_name, membership_expires_at, status')
+      .select('id, org_id, email, full_name, membership_expires_at, status')
       .eq('status', 'approved')
       .neq('role', 'admin')
       .not('membership_expires_at', 'is', null)
@@ -93,6 +94,15 @@ export async function GET(request: Request) {
           )
       )
     }
+
+    const orgIds = [...new Set(expiredMembers.map(m => m.org_id).filter(Boolean))]
+    await Promise.allSettled(
+      orgIds.map(orgId =>
+        syncOrgPlanSubscriptionBilling(orgId).catch(err => {
+          console.error(`Failed to sync org billing after expiring members for org ${orgId}:`, err)
+        }),
+      ),
+    )
 
     return NextResponse.json({
       success: true,

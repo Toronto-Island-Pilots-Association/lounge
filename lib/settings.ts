@@ -59,10 +59,8 @@ export type OrgMembershipLevel = {
 }
 
 const DEFAULT_MEMBERSHIP_LEVELS: OrgMembershipLevel[] = [
-  { key: 'full',      label: 'Full Member', fee: 45,  trialType: 'none', enabled: true },
-  { key: 'student',   label: 'Student',     fee: 25,  trialType: 'none', enabled: true },
+  { key: 'full',      label: 'Regular',     fee: 45,  trialType: 'none', enabled: true },
   { key: 'associate', label: 'Associate',   fee: 25,  trialType: 'none', enabled: true },
-  { key: 'corporate', label: 'Corporate',   fee: 125, trialType: 'none', enabled: true },
   { key: 'honorary',  label: 'Honorary',    fee: 0,   trialType: 'none', enabled: true },
 ]
 
@@ -361,6 +359,8 @@ export type OrgIdentity = {
   accentColor: string
   displayName: string
   timezone: string
+  clubType: string
+  clubSize: string
   bylawsUrl: string
   membershipPolicyUrl: string
   feedbackUrl: string
@@ -373,6 +373,8 @@ const DEFAULT_IDENTITY: OrgIdentity = {
   accentColor: '#0d1e26',
   displayName: '',
   timezone: 'America/Toronto',
+  clubType: '',
+  clubSize: '',
   bylawsUrl: '',
   membershipPolicyUrl: '',
   feedbackUrl: '',
@@ -381,7 +383,7 @@ const DEFAULT_IDENTITY: OrgIdentity = {
 export async function getOrgIdentity(orgIdOverride?: string): Promise<OrgIdentity> {
   const supabase = await createClient()
   const orgId = await getOrgId(orgIdOverride)
-  const keys = ['club_description', 'contact_email', 'website_url', 'accent_color', 'club_display_name', 'timezone', 'bylaws_url', 'membership_policy_url', 'feedback_url']
+  const keys = ['club_description', 'contact_email', 'website_url', 'accent_color', 'club_display_name', 'timezone', 'club_type', 'club_size', 'bylaws_url', 'membership_policy_url', 'feedback_url']
   const { data: rows } = await supabase.from('settings').select('key, value').in('key', keys).eq('org_id', orgId)
   const map = new Map((rows ?? []).map(r => [r.key, r.value]))
   const s = (key: string, def: string) => map.get(key) ?? def
@@ -392,6 +394,8 @@ export async function getOrgIdentity(orgIdOverride?: string): Promise<OrgIdentit
     accentColor:         s('accent_color',           DEFAULT_IDENTITY.accentColor),
     displayName:         s('club_display_name',      DEFAULT_IDENTITY.displayName),
     timezone:            s('timezone',               DEFAULT_IDENTITY.timezone),
+    clubType:            s('club_type',              DEFAULT_IDENTITY.clubType),
+    clubSize:            s('club_size',              DEFAULT_IDENTITY.clubSize),
     bylawsUrl:           s('bylaws_url',             DEFAULT_IDENTITY.bylawsUrl),
     membershipPolicyUrl: s('membership_policy_url',  DEFAULT_IDENTITY.membershipPolicyUrl),
     feedbackUrl:         s('feedback_url',           DEFAULT_IDENTITY.feedbackUrl),
@@ -408,6 +412,8 @@ export async function setOrgIdentity(identity: Partial<OrgIdentity>, orgIdOverri
     accentColor:         'accent_color',
     displayName:         'club_display_name',
     timezone:            'timezone',
+    clubType:            'club_type',
+    clubSize:            'club_size',
     bylawsUrl:           'bylaws_url',
     membershipPolicyUrl: 'membership_policy_url',
     feedbackUrl:         'feedback_url',

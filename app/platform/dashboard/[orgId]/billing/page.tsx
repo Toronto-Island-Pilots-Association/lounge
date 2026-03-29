@@ -6,6 +6,7 @@ import { syncOrgStripeOnboardingFromStripe } from '@/lib/platform-stripe-onboard
 import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
 import { PLANS, PLAN_KEYS, type PlanKey } from '@/lib/plans'
 import { getPlanPriceMonthly } from '@/lib/settings'
+import { getBillableOrgMemberCount, getOrgPlanPricingBreakdown } from '@/lib/org-plan-pricing'
 import ManageOrgBillingButton from './ManageOrgBillingButton'
 import PlanSelector from './PlanSelector'
 import DeleteOrgButton from './DeleteOrgButton'
@@ -58,8 +59,16 @@ export default async function BillingPage({
 
   let checkoutNotice: string | null = null
   if (sp.checkout === 'success' && typeof sp.session_id === 'string' && sp.session_id.trim()) {
-    await confirmOrgPlanCheckoutSession(orgId, sp.session_id.trim())
-    checkoutNotice = 'Billing details saved.'
+    const sessionId = sp.session_id.trim()
+    try {
+      if (sessionId.includes('{CHECKOUT_SESSION_ID}')) {
+        throw new Error('Missing checkout session id')
+      }
+      await confirmOrgPlanCheckoutSession(orgId, sessionId)
+      checkoutNotice = 'Billing details saved.'
+    } catch {
+      checkoutNotice = 'Billing return could not be confirmed automatically. Try adding billing details again if this plan still shows as inactive.'
+    }
   } else if (sp.checkout === 'cancelled') {
     checkoutNotice = 'Billing setup was cancelled.'
   }
@@ -86,11 +95,18 @@ export default async function BillingPage({
   const currentPlan: PlanKey = (org.plan as PlanKey) ?? 'hobby'
   const currentPlanDef = PLANS[currentPlan]
   const billingStatus = await getOrgBillingActivationStatus(orgId)
+  const memberCount = await getBillableOrgMemberCount(orgId)
   const planPrices = Object.fromEntries(
     await Promise.all(
       PLAN_KEYS.map(async (planKey) => [planKey, await getPlanPriceMonthly(planKey, orgId)] as const),
     ),
   ) as Record<PlanKey, number>
+  const pricingByPlan = Object.fromEntries(
+    await Promise.all(
+      PLAN_KEYS.map(async (planKey) => [planKey, await getOrgPlanPricingBreakdown(orgId, planKey, memberCount)] as const),
+    ),
+  ) as Record<PlanKey, Awaited<ReturnType<typeof getOrgPlanPricingBreakdown>>>
+  const currentPricing = pricingByPlan[currentPlan]
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -113,7 +129,9 @@ export default async function BillingPage({
         {checkoutNotice && (
           <div className={`rounded-xl border px-4 py-3 text-sm ${
             sp.checkout === 'success'
-              ? 'border-green-200 bg-green-50 text-green-900'
+              ? checkoutNotice === 'Billing details saved.'
+                ? 'border-green-200 bg-green-50 text-green-900'
+                : 'border-amber-200 bg-amber-50 text-amber-900'
               : 'border-amber-200 bg-amber-50 text-amber-900'
           }`}>
             {checkoutNotice}
@@ -126,10 +144,15 @@ export default async function BillingPage({
             <div className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Current plan</div>
             <div className="flex items-center gap-3">
               <span className="text-xl font-bold">{currentPlanDef.label}</span>
-              <span className="text-sm text-gray-400">${planPrices[currentPlan]}/mo CAD</span>
+              <span className="text-sm text-gray-400">${currentPricing.totalMonthly.toFixed(2)}/mo CAD</span>
             </div>
             <div className="text-sm text-gray-500 mt-1">{currentPlanDef.recommendedMembers}</div>
             <div className="text-sm text-gray-500">{currentPlanDef.recommendedAdmins}</div>
+            {currentPricing.includedMembers != null && currentPricing.additionalMemberPriceCents != null && (
+              <div className="text-sm text-gray-500 mt-1">
+                {memberCount} active members. Includes {currentPricing.includedMembers}, then ${(currentPricing.additionalMemberPriceCents / 100).toFixed(2)}/member/mo.
+              </div>
+            )}
           </div>
           {billingStatus.requiresActivation ? (
             <div className="flex items-center gap-1.5 text-sm text-amber-900 bg-amber-50 px-3 py-1.5 rounded-full">
@@ -150,14 +173,14 @@ export default async function BillingPage({
           <PlanSelector
             orgId={orgId}
             currentPlan={currentPlan}
-            planPrices={planPrices}
+            pricingByPlan={pricingByPlan}
             billingActivated={billingStatus.activated}
           />
           {org.stripe_customer_id && planPrices[currentPlan] > 0 && (
             <ManageOrgBillingButton orgId={orgId} />
           )}
           <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
-            Manage member dues and Stripe Connect from
+            Manage member dues and Stripe from
             {' '}
             <Link href={`/platform/dashboard/${orgId}/settings/membership`} className="font-medium underline underline-offset-2">
               Membership
@@ -195,6 +218,7 @@ export default async function BillingPage({
                   {PLAN_KEYS.map((planKey) => (
                     <td key={planKey} className={`text-center px-3 py-2.5 font-medium ${planKey === currentPlan ? 'text-[var(--color-primary)]' : 'text-gray-700'}`}>
                       ${planPrices[planKey]}
+                      {pricingByPlan[planKey].overageMembers > 0 ? ` + ${pricingByPlan[planKey].overageMembers} overage` : ''}
                     </td>
                   ))}
                 </tr>

@@ -6,22 +6,7 @@ import Link from 'next/link'
 import Loading from '@/components/Loading'
 import { COUNTRIES, getStatesProvinces } from '@/app/become-a-member/constants'
 import { DEFAULT_SIGNUP_FIELDS, type SignupField } from '@/lib/settings-shared'
-
-const INTEREST_OPTIONS = [
-  { value: 'flying', label: 'Flying' },
-  { value: 'aircraft-ownership', label: 'Aircraft Ownership' },
-  { value: 'training', label: 'Training & Education' },
-  { value: 'safety', label: 'Safety & Proficiency' },
-  { value: 'community', label: 'Community & Networking' },
-  { value: 'events', label: 'Events & Social Activities' },
-  { value: 'advocacy', label: 'Advocacy & policy' },
-  { value: 'island-operations', label: 'Regional / local activities' },
-  { value: 'aircraft-maintenance', label: 'Aircraft Maintenance' },
-  { value: 'mentoring', label: 'Mentoring' },
-  { value: 'hangar-storage', label: 'Hangar/Storage' },
-  { value: 'volunteer-flying-public-benefit', label: 'Volunteer Flying (Public Benefit)' },
-  { value: 'other', label: 'Other' },
-]
+import { COMMON_INTEREST_OPTIONS } from '@/lib/club-options'
 
 export default function CompleteProfilePage() {
   const [signupFields, setSignupFields] = useState<SignupField[] | null>(null)
@@ -379,7 +364,7 @@ export default function CompleteProfilePage() {
                 <span className="text-xs text-gray-500 font-normal">(Select all that apply)</span>
               </label>
               <div className="space-y-2">
-                {INTEREST_OPTIONS.map(interest => (
+                {COMMON_INTEREST_OPTIONS.map(interest => (
                   <label key={interest.value} className="flex items-center">
                     <input type="checkbox" name="interests" value={interest.value} checked={formData.interests.includes(interest.value)} onChange={e => handleInterestChange(interest.value, e.target.checked)} className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] border-gray-300 rounded" />
                     <span className="ml-2 text-sm text-gray-700">{interest.label}</span>

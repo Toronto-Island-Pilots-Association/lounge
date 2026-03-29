@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { MemberProfile, MembershipLevel, TIPA_ORG_ID, getMembershipLevelLabel, Payment } from '@/types/database'
 import { isOnTrialFromTrialEnd, trialUntilLabel } from '@/lib/trial'
+import { COMMON_INTEREST_OPTIONS } from '@/lib/club-options'
 import { COUNTRIES, getStatesProvinces } from '@/app/become-a-member/constants'
 import {
   Drawer,
@@ -463,20 +464,9 @@ export default function MemberDetailModal({
                           return <span className="text-gray-500">No interests specified</span>
                         }
 
-                        const interestLabels: Record<string, string> = {
-                          'flying': 'Flying',
-                          'aircraft-ownership': 'Aircraft Ownership',
-                          'training': 'Training & Education',
-                          'safety': 'Safety & Proficiency',
-                          'community': 'Community & Networking',
-                          'events': 'Events & Social Activities',
-                          'advocacy': 'Aviation Advocacy',
-                          'island-operations': 'Island Operations / YTZ',
-                          'aircraft-maintenance': 'Aircraft Maintenance',
-                          'mentoring': 'Mentoring',
-                          'hangar-storage': 'Hangar/Storage',
-                          'volunteer-flying-public-benefit': 'Volunteer Flying (Public Benefit)',
-                        }
+                        const interestLabels: Record<string, string> = Object.fromEntries(
+                          COMMON_INTEREST_OPTIONS.map((option) => [option.value, option.label]),
+                        )
 
                         return (
                           <div className="flex flex-wrap gap-2">

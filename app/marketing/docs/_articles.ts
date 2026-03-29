@@ -79,12 +79,12 @@ export const ARTICLES: Article[] = [
   {
     slug: 'dues-and-payments',
     title: 'Dues collection and payments',
-    description: 'How Stripe Connect works, how to set dues amounts, and how members pay.',
+    description: 'How dues collection works, how to set dues amounts, and how members pay.',
     category: 'Features',
     sections: [
       {
         heading: 'How it works',
-        body: 'Club Lounge uses Stripe Connect Express. Your club connects its own Stripe account, members pay through Stripe, and payouts go to your club\'s connected bank account. Stripe processes the payment, and Club Lounge applies a 2% platform fee on dues payments.',
+        body: 'Club Lounge uses Stripe for dues collection. Your club connects its own Stripe account, members pay through Stripe, and payouts go directly to your club\'s bank account. Stripe processes the payment, and Club Lounge applies a 2% platform fee on dues payments.',
       },
       {
         heading: 'Setting up payments',

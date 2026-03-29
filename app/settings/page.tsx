@@ -7,6 +7,7 @@ import { UserProfile } from '@/types/database'
 import ProfilePictureUpload from '@/components/ProfilePictureUpload'
 import Loading from '@/components/Loading'
 import { COUNTRIES, getStatesProvinces } from '@/app/become-a-member/constants'
+import { COMMON_INTEREST_OPTIONS } from '@/lib/club-options'
 
 export default function SettingsPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -560,25 +561,11 @@ export default function SettingsPage() {
           <div className="bg-white shadow rounded-lg overflow-hidden">
             <div className="px-6 py-5 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Interests</h2>
-              <p className="mt-1 text-sm text-gray-500">Select your main interests within TIPA</p>
+              <p className="mt-1 text-sm text-gray-500">Select the topics you care about most in your club.</p>
             </div>
             <div className="px-6 py-5">
               <div className="space-y-2">
-                {[
-                  { value: 'flying', label: 'Flying' },
-                  { value: 'aircraft-ownership', label: 'Aircraft Ownership' },
-                  { value: 'training', label: 'Training & Education' },
-                  { value: 'safety', label: 'Safety & Proficiency' },
-                  { value: 'community', label: 'Community & Networking' },
-                  { value: 'events', label: 'Events & Social Activities' },
-                  { value: 'advocacy', label: 'Aviation Advocacy' },
-                  { value: 'island-operations', label: 'Island Operations / YTZ' },
-                  { value: 'aircraft-maintenance', label: 'Aircraft Maintenance' },
-                  { value: 'mentoring', label: 'Mentoring' },
-                  { value: 'hangar-storage', label: 'Hangar/Storage' },
-                  { value: 'volunteer-flying-public-benefit', label: 'Volunteer Flying (Public Benefit)' },
-                  { value: 'other', label: 'Other' },
-                ].map((interest) => (
+                {COMMON_INTEREST_OPTIONS.map((interest) => (
                   <label key={interest.value} className="flex items-center">
                     <input
                       type="checkbox"

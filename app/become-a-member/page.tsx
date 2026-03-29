@@ -7,19 +7,28 @@ import Loading from '@/components/Loading'
 import PasswordInput from '@/components/PasswordInput'
 import { COUNTRIES, getStatesProvinces } from './constants'
 import type { MembershipLevelKey, SignupField } from '@/lib/settings-shared'
+import { COMMON_INTEREST_OPTIONS } from '@/lib/club-options'
 
-const DEFAULT_FEES: Record<MembershipLevelKey, number> = {
-  full: 45,
-  student: 25,
-  associate: 25,
-  corporate: 125,
-  honorary: 0,
+type PublicMembershipLevel = {
+  key: string
+  label: string
+  fee: number
+  enabled: boolean
 }
 
+const DEFAULT_LEVELS: PublicMembershipLevel[] = [
+  { key: 'full', label: 'Regular', fee: 45, enabled: true },
+  { key: 'associate', label: 'Associate', fee: 25, enabled: true },
+  { key: 'honorary', label: 'Honorary', fee: 0, enabled: true },
+]
+
 function BecomeMemberForm() {
-  const [membershipFees, setMembershipFees] = useState<Record<MembershipLevelKey, number>>(DEFAULT_FEES)
+  const [membershipFees, setMembershipFees] = useState<Record<MembershipLevelKey, number>>(
+    Object.fromEntries(DEFAULT_LEVELS.map(level => [level.key, level.fee])),
+  )
   const [signupFields, setSignupFields] = useState<SignupField[] | null>(null)
   const [enabledLevels, setEnabledLevels] = useState<Record<MembershipLevelKey, boolean> | null>(null)
+  const [membershipLevels, setMembershipLevels] = useState<PublicMembershipLevel[]>(DEFAULT_LEVELS)
   const [orgName, setOrgName] = useState<string>('')
   const [bylawsUrl, setBylawsUrl] = useState<string | null>(null)
   const [membershipPolicyUrl, setMembershipPolicyUrl] = useState<string | null>(null)
@@ -44,6 +53,9 @@ function BecomeMemberForm() {
         if (data.membership?.fees) setMembershipFees(data.membership.fees)
         if (data.signupFields)     setSignupFields(data.signupFields)
         if (data.membership?.enabledLevels) setEnabledLevels(data.membership.enabledLevels)
+        if (Array.isArray(data.membership?.levels) && data.membership.levels.length > 0) {
+          setMembershipLevels(data.membership.levels)
+        }
         if (data.org?.name)        setOrgName(data.org.displayName || data.org.name)
         if (data.org?.bylawsUrl)           setBylawsUrl(data.org.bylawsUrl)
         if (data.org?.membershipPolicyUrl) setMembershipPolicyUrl(data.org.membershipPolicyUrl)
@@ -96,6 +108,7 @@ function BecomeMemberForm() {
   const [userEmail, setUserEmail] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
+  const visibleMembershipLevels = membershipLevels.filter(level => enabledLevels?.[level.key] ?? level.enabled)
 
   // Check for error in URL params (e.g., from Google OAuth redirect)
   useEffect(() => {
@@ -521,10 +534,11 @@ function BecomeMemberForm() {
                 onChange={handleChange}
               >
                 <option value="">Select…</option>
-                {(enabledLevels?.full     ?? true) && <option value="full">Full — ${membershipFees.full}/year</option>}
-                {(enabledLevels?.student  ?? true) && <option value="student">Student — ${membershipFees.student}/year</option>}
-                {(enabledLevels?.associate ?? true) && <option value="associate">Associate — ${membershipFees.associate}/year</option>}
-                {(enabledLevels?.corporate ?? true) && <option value="corporate">Corporate — ${membershipFees.corporate}/year</option>}
+                {visibleMembershipLevels.map((level) => (
+                  <option key={level.key} value={level.key}>
+                    {level.label} — ${(membershipFees[level.key] ?? level.fee)}/year
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -540,21 +554,7 @@ function BecomeMemberForm() {
                 <span className="text-xs text-gray-500 font-normal ml-2">(Select all that apply)</span>
               </label>
               <div className="space-y-2">
-                {[
-                  { value: 'flying', label: 'Flying' },
-                  { value: 'aircraft-ownership', label: 'Aircraft Ownership' },
-                  { value: 'training', label: 'Training & Education' },
-                  { value: 'safety', label: 'Safety & Proficiency' },
-                  { value: 'community', label: 'Community & Networking' },
-                  { value: 'events', label: 'Events & Social Activities' },
-                  { value: 'advocacy', label: 'Advocacy & policy' },
-                  { value: 'island-operations', label: 'Regional / local activities' },
-                  { value: 'aircraft-maintenance', label: 'Aircraft Maintenance' },
-                  { value: 'mentoring', label: 'Mentoring' },
-                  { value: 'hangar-storage', label: 'Hangar/Storage' },
-                  { value: 'volunteer-flying-public-benefit', label: 'Volunteer Flying (Public Benefit)' },
-                  { value: 'other', label: 'Other' },
-                ].map((interest) => (
+                {COMMON_INTEREST_OPTIONS.map((interest) => (
                   <label key={interest.value} className="flex items-center">
                     <input
                       type="checkbox"
@@ -805,4 +805,3 @@ export default function BecomeMemberPage() {
     </Suspense>
   )
 }
-

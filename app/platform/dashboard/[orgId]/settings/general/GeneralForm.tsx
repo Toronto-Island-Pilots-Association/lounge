@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { OrgIdentity } from '@/lib/settings'
+import { CLUB_SIZE_OPTIONS, CLUB_TYPE_OPTIONS } from '@/lib/club-options'
 
 function inputCls() {
   return 'w-full min-w-0 rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none focus:ring-0'
@@ -42,7 +43,7 @@ export default function GeneralForm({
   const [uploadingFavicon, setUploadingFavicon] = useState(false)
 
   const set = (k: keyof OrgIdentity) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
       setDraft(p => ({ ...p, [k]: e.target.value }))
 
   const brandingBase = `/api/platform/orgs/${orgId}/settings/branding-asset`
@@ -228,6 +229,31 @@ export default function GeneralForm({
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
         <textarea className={inputCls()} rows={3} placeholder="One-line description shown on the welcome page." value={draft.description} onChange={set('description')} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="min-w-0">
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Club type</label>
+          <select className={inputCls()} value={draft.clubType} onChange={set('clubType')}>
+            <option value="">Select club type…</option>
+            {CLUB_TYPE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-400 mt-1">Used internally to understand which clubs are a strong fit.</p>
+        </div>
+        <div className="min-w-0">
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Club size</label>
+          <select className={inputCls()} value={draft.clubSize} onChange={set('clubSize')}>
+            {CLUB_SIZE_OPTIONS.map((option) => (
+              <option key={option.value || 'empty'} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

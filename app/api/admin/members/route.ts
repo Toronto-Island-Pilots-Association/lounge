@@ -12,6 +12,7 @@ import {
 } from '@/lib/settings'
 import type { MembershipLevelKey } from '@/lib/settings'
 import { getStripeInstance, isStripeEnabled } from '@/lib/stripe'
+import { syncOrgPlanSubscriptionBilling } from '@/lib/org-plan-subscription'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
@@ -275,6 +276,12 @@ export async function PATCH(request: Request) {
       })
     }
 
+    if (currentMember.status !== updatedMember.status) {
+      syncOrgPlanSubscriptionBilling(orgId).catch(err => {
+        console.error('Failed to sync org billing after member status change:', err)
+      })
+    }
+
     return NextResponse.json({ member: updatedMember })
   } catch (error: any) {
     return NextResponse.json(
@@ -283,4 +290,3 @@ export async function PATCH(request: Request) {
     )
   }
 }
-

@@ -10,6 +10,7 @@ import {
   getFeatureFlags,
   getOrgIdentity,
   getEnabledLevels,
+  getMembershipLevels,
   getSignupFieldsConfig,
   getAllMembershipFees,
   getPlanPriceMonthly,
@@ -29,12 +30,13 @@ export async function GET() {
     const planDef = getPlanDef(plan)
     const priceMonthly = await getPlanPriceMonthly(plan, orgId)
 
-    const [features, identity, levels, signupFields, fees] = await Promise.all([
+    const [features, identity, levels, signupFields, fees, membershipLevels] = await Promise.all([
       getFeatureFlags(),
       getOrgIdentity(),
       getEnabledLevels(),
       getSignupFieldsConfig(),
       getAllMembershipFees(),
+      getMembershipLevels(),
     ])
 
     return NextResponse.json({
@@ -62,7 +64,7 @@ export async function GET() {
         features:     planDef.features,
       },
       features,
-      membership: { enabledLevels: levels, fees },
+      membership: { enabledLevels: levels, fees, levels: membershipLevels },
       signupFields,
     })
   } catch (error: unknown) {

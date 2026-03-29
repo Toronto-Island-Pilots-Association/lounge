@@ -20,7 +20,7 @@ const MARQUEE_ITEMS = [
 const FAQS = [
   {
     q: 'How much does Club Lounge cost?',
-    a: 'Plans start at $5/month for clubs of up to 20 members. Core is $49/month and is best for clubs with up to 200 members and up to 2 admins. Growth is $99/month and is best for clubs with up to 500 members and up to 5 admins. Pro is $199/month for larger clubs that need higher-touch support.',
+    a: 'Plans start at $5/month for clubs of up to 20 members. Core is $49/month and includes 200 active members, then $0.15 per additional active member per month. Growth is $99/month and includes 500 active members, then $0.05 per additional active member per month. Pro is $199/month for larger clubs that need higher-touch support.',
   },
   {
     q: 'Can I migrate from Wild Apricot?',
@@ -32,7 +32,7 @@ const FAQS = [
   },
   {
     q: 'How does dues collection work?',
-    a: 'Club Lounge uses Stripe Connect. Set your annual or monthly dues amount and members pay directly. Automatic renewals, instant payment records, and a real-time view of who has paid — all from your admin dashboard. Stripe processing fees apply, plus a 2% ClubLounge platform fee on dues payments.',
+    a: 'Club Lounge uses Stripe for dues collection. Set your annual dues amount and members pay directly. Automatic renewals, instant payment records, and a real-time view of who has paid all live in your admin tools. Stripe processing fees apply, plus a 2% ClubLounge platform fee on dues payments.',
   },
   {
     q: 'Do you support clubs in the US and Canada?',
@@ -187,9 +187,9 @@ function MembershipVisual() {
   )
 }
 
-function DuesVisual({ rootDomain }: { rootDomain: string }) {
+function DuesVisual() {
   return (
-    <AppWindow url={`admin.${rootDomain}`} showChrome={false}>
+    <div className="cl-dues-card">
       {/* Revenue summary */}
       <div className="cl-dues-summary">
         <div className="cl-dues-stat">
@@ -225,7 +225,7 @@ function DuesVisual({ rootDomain }: { rootDomain: string }) {
           </div>
         ))}
       </div>
-    </AppWindow>
+    </div>
   )
 }
 
@@ -487,7 +487,7 @@ export function ClubLoungeLanding({
               members pay online, and renewals happen automatically. No more chasing e-transfers.
             </p>
             <ul className="cl-feat-bullets">
-              <li><span className="cl-fb-check">✓</span>Stripe Connect — no third-party processor needed</li>
+              <li><span className="cl-fb-check">✓</span>Stripe — no third-party processor needed</li>
               <li><span className="cl-fb-check">✓</span>Annual &amp; monthly billing options</li>
               <li><span className="cl-fb-check">✓</span>Automatic renewals with email reminders</li>
               <li><span className="cl-fb-check">✓</span>See who&apos;s paid at a glance from your dashboard</li>
@@ -497,7 +497,7 @@ export function ClubLoungeLanding({
             </NavLink>
           </div>
           <div className="cl-feat-visual">
-            <DuesVisual rootDomain={rootDomain} />
+            <DuesVisual />
           </div>
         </section>
 
@@ -583,6 +583,44 @@ export function ClubLoungeLanding({
 
       </div>
 
+      {/* ── Domain setup ── */}
+      <section className="cl-domain-section">
+        <div className="cl-domain-inner">
+          <div className="cl-feat-text">
+            <div className="cl-section-eyebrow">Your own address</div>
+            <h2 className="cl-feat-h2">
+              Every club gets<br /><em>its own URL.</em>
+            </h2>
+            <p className="cl-feat-sub">
+              Your members land on your own subdomain from day one — no shared URLs, no generic links.
+              Upgrade to a fully custom domain like <strong>lounge.yourclub.com</strong> and your brand is front and center.
+            </p>
+            <ul className="cl-feat-bullets">
+              <li><span className="cl-fb-check">✓</span>Free subdomain on every plan</li>
+              <li><span className="cl-fb-check">✓</span>Custom domain on Growth and above</li>
+              <li><span className="cl-fb-check">✓</span>HTTPS provisioned automatically</li>
+              <li><span className="cl-fb-check">✓</span>No DNS expertise required</li>
+            </ul>
+          </div>
+          <div className="cl-domain-visual">
+            <div className="cl-domain-url-card">
+              <div className="cl-domain-url-label">Free subdomain — every plan</div>
+              <div className="cl-domain-url-val">
+                <span className="cl-dom-slug">yourclub</span>
+                <span className="cl-dom-root">.{rootDomain}</span>
+              </div>
+            </div>
+            <div className="cl-domain-arrow">↓ upgrade for a custom domain</div>
+            <div className="cl-domain-url-card cl-dom-custom">
+              <div className="cl-domain-url-label">Custom domain — Growth &amp; above</div>
+              <div className="cl-domain-url-val">
+                <span className="cl-dom-slug">lounge.yourclub.com</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── Pricing ── */}
       <section id="pricing" className="cl-pricing-band">
         <div className="cl-section-eyebrow">Simple pricing</div>
@@ -620,6 +658,8 @@ export function ClubLoungeLanding({
             <ul className="cl-price-features">
               <li><span className="cl-check">✓</span>Everything in Hobby</li>
               <li><span className="cl-check">✓</span>Member invitations</li>
+              <li><span className="cl-check">✓</span>Includes 200 active members</li>
+              <li><span className="cl-check">✓</span>$0.15 per additional active member / month</li>
               <li><span className="cl-check">✓</span>Recommended for up to 2 admins</li>
               <li><span className="cl-cross">—</span>Custom domain</li>
               <li><span className="cl-cross">—</span>Remove ClubLounge branding</li>
@@ -636,6 +676,8 @@ export function ClubLoungeLanding({
             <div className="cl-price-period">best for up to 500 members · 5 admins</div>
             <ul className="cl-price-features">
               <li><span className="cl-check">✓</span>Everything in Core</li>
+              <li><span className="cl-check">✓</span>Includes 500 active members</li>
+              <li><span className="cl-check">✓</span>$0.05 per additional active member / month</li>
               <li><span className="cl-check">✓</span>Recommended for up to 5 admins</li>
               <li><span className="cl-check">✓</span>Custom domain</li>
               <li><span className="cl-check">✓</span>Remove ClubLounge branding</li>
@@ -662,7 +704,7 @@ export function ClubLoungeLanding({
           </div>
         </div>
         <p className="cl-pricing-footnote">
-          Monthly pricing shown. New lounges start on Hobby, and plan changes happen from your billing settings. Stripe fees apply, plus a 2% ClubLounge platform fee on dues payments.
+          Monthly pricing shown. Core and Growth include active-member allowances with simple overage pricing as your club grows. New lounges start on Hobby, and plan changes happen from your billing settings. Stripe fees apply, plus a 2% ClubLounge platform fee on dues payments.
         </p>
         <a
           href="https://tipa.ca"

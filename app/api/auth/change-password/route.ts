@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { appendMemberToSheet } from '@/lib/google-sheets'
+import { syncOrgPlanSubscriptionBilling } from '@/lib/org-plan-subscription'
 import {
   getTrialConfig,
   getTrialConfigItemForLevel,
@@ -147,6 +148,9 @@ export async function POST(request: Request) {
               appendMemberToSheet(updatedProfile).catch(err => {
                 console.error('Failed to append invited user to Google Sheet after password change:', err)
               })
+              syncOrgPlanSubscriptionBilling(orgId).catch(err => {
+                console.error('Failed to sync org billing after invited member approval:', err)
+              })
             }
           }
 
@@ -178,4 +182,3 @@ export async function POST(request: Request) {
     )
   }
 }
-

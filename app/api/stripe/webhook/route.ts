@@ -4,6 +4,7 @@ import * as Sentry from '@sentry/nextjs'
 import { sendSubscriptionConfirmationEmail } from '@/lib/resend'
 import { syncSubscriptionBySubscriptionId, syncSubscriptionStatus } from '@/lib/subscription-sync'
 import { getMembershipFeeForLevel, getMembershipExpiresAtFromSubscription, type MembershipLevelKey } from '@/lib/settings'
+import { syncOrgPlanSubscriptionBilling } from '@/lib/org-plan-subscription'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
@@ -142,6 +143,9 @@ export async function POST(request: Request) {
 
         // Sync subscription status (will update status field based on Stripe subscription state)
         await syncSubscriptionStatus(userId, subscriptionId, orgId)
+        await syncOrgPlanSubscriptionBilling(orgId).catch(err => {
+          console.error('Failed to sync org billing after member checkout:', err)
+        })
 
         // Send upgrade email
         const { data: profile } = await supabase
@@ -179,6 +183,17 @@ export async function POST(request: Request) {
         // Sync subscription status (will update both status and membership_expires_at)
         await syncSubscriptionBySubscriptionId(subscriptionId)
 
+        const { data: membership } = await supabase
+          .from('org_memberships')
+          .select('org_id')
+          .eq('stripe_subscription_id', subscriptionId)
+          .maybeSingle()
+        if (membership?.org_id) {
+          await syncOrgPlanSubscriptionBilling(membership.org_id).catch(err => {
+            console.error('Failed to sync org billing after member subscription update:', err)
+          })
+        }
+
         break
       }
 
@@ -194,7 +209,7 @@ export async function POST(request: Request) {
         // Find user by subscription ID
         const { data: profile } = await supabase
           .from('org_memberships')
-          .select('id, membership_expires_at')
+          .select('id, org_id, membership_expires_at')
           .eq('stripe_subscription_id', subscriptionId)
           .single()
 
@@ -213,6 +228,12 @@ export async function POST(request: Request) {
               // Keep membership_expires_at if it's in the future (user paid for the period)
             })
             .eq('id', profile.id)
+        }
+
+        if (profile?.org_id) {
+          await syncOrgPlanSubscriptionBilling(profile.org_id).catch(err => {
+            console.error('Failed to sync org billing after member subscription deletion:', err)
+          })
         }
 
         break

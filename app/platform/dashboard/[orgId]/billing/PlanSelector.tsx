@@ -2,17 +2,18 @@
 
 import { useState } from 'react'
 import { PLAN_KEYS, PLANS, type PlanKey } from '@/lib/plans'
+import type { OrgPlanPricingBreakdown } from '@/lib/org-plan-pricing'
 
 export default function PlanSelector({
   orgId,
   currentPlan,
-  planPrices,
+  pricingByPlan,
   billingActivated,
   returnTo,
 }: {
   orgId: string
   currentPlan: string
-  planPrices: Record<PlanKey, number>
+  pricingByPlan: Record<PlanKey, OrgPlanPricingBreakdown>
   billingActivated: boolean
   returnTo?: string
 }) {
@@ -48,13 +49,15 @@ export default function PlanSelector({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {PLAN_KEYS.map((planKey) => {
           const plan = PLANS[planKey]
+          const pricing = pricingByPlan[planKey]
           const isCurrent = planKey === currentPlan
           const isProcessing = processing === planKey
           const currentIdx = PLAN_KEYS.indexOf(currentPlan as PlanKey)
           const planIdx = PLAN_KEYS.indexOf(planKey)
           const isUpgrade = planIdx > currentIdx
           const isDowngrade = planIdx < currentIdx
-          const needsBillingSetup = isCurrent && !billingActivated && planPrices[planKey] > 0
+          const needsBillingSetup = isCurrent && !billingActivated && pricing.baseMonthly > 0
+          const showsOverage = pricing.includedMembers != null && pricing.additionalMemberPriceCents != null
 
           return (
             <div
@@ -77,7 +80,7 @@ export default function PlanSelector({
                   )}
                 </div>
                 <div className={`text-2xl font-bold ${isCurrent ? 'text-white' : 'text-gray-900'}`}>
-                  ${planPrices[planKey]}
+                  ${pricing.baseMonthly.toFixed(0)}
                   <span className={`text-sm font-normal ml-1 ${isCurrent ? 'text-gray-300' : 'text-gray-400'}`}>/mo</span>
                 </div>
                 <div className={`text-xs mt-1 ${isCurrent ? 'text-gray-300' : 'text-gray-500'}`}>
@@ -86,6 +89,16 @@ export default function PlanSelector({
                 <div className={`text-xs ${isCurrent ? 'text-gray-300' : 'text-gray-500'}`}>
                   {plan.recommendedAdmins}
                 </div>
+                {showsOverage && (
+                  <div className={`text-xs mt-2 leading-5 ${isCurrent ? 'text-gray-200' : 'text-gray-500'}`}>
+                    Includes {pricing.includedMembers} active members, then ${(pricing.additionalMemberPriceCents! / 100).toFixed(2)}/member/mo.
+                  </div>
+                )}
+                {isCurrent && pricing.overageMembers > 0 && (
+                  <div className="text-xs mt-2 text-gray-200">
+                    Current overage: {pricing.overageMembers} members, ${pricing.totalMonthly.toFixed(2)}/mo total.
+                  </div>
+                )}
               </div>
 
               {!isCurrent && (
