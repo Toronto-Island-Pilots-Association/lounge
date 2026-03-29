@@ -5,7 +5,7 @@ import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment, i
 import { getFeatureFlags } from '@/lib/settings'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
-import { MemberProfile, getMembershipLevelLabel } from '@/types/database'
+import { MemberProfile, TIPA_ORG_ID, getMembershipLevelLabel } from '@/types/database'
 
 const MEMBERS_PER_PAGE = 25
 
@@ -26,6 +26,7 @@ export default async function MembersPage({
   const isGuest = !user
   const h = await headers()
   const orgId = isGuest ? h.get('x-org-id') : user!.profile.org_id
+  const showTipaMemberDirectoryFields = orgId === TIPA_ORG_ID
 
   const features = await getFeatureFlags()
   if (!features.memberDirectory) {
@@ -125,12 +126,12 @@ export default async function MembersPage({
                         <div className="text-sm text-gray-600 truncate">
                           <span className="font-medium">Email:</span> {member.email}
                         </div>
-                        {member.call_sign && (
+                        {showTipaMemberDirectoryFields && member.call_sign && (
                           <div className="text-sm text-gray-600">
                             <span className="font-medium">Call Sign:</span> {member.call_sign}
                           </div>
                         )}
-                        {member.aircraft_type && (
+                        {showTipaMemberDirectoryFields && member.aircraft_type && (
                           <div className="text-sm text-gray-600">
                             <span className="font-medium">Aircraft:</span> {member.aircraft_type}
                           </div>
@@ -157,12 +158,16 @@ export default async function MembersPage({
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Email
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Call Sign
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Aircraft Type
-                    </th>
+                    {showTipaMemberDirectoryFields && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Call Sign
+                      </th>
+                    )}
+                    {showTipaMemberDirectoryFields && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Aircraft Type
+                      </th>
+                    )}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Membership
                     </th>
@@ -211,12 +216,16 @@ export default async function MembersPage({
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">{member.email}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{member.call_sign || '—'}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{member.aircraft_type || '—'}</div>
-                      </td>
+                      {showTipaMemberDirectoryFields && (
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{member.call_sign || '—'}</div>
+                        </td>
+                      )}
+                      {showTipaMemberDirectoryFields && (
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{member.aircraft_type || '—'}</div>
+                        </td>
+                      )}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 text-xs rounded-full ${
                           member.membership_level === 'Full' || member.membership_level === 'Corporate' || member.membership_level === 'Honorary'
@@ -348,4 +357,3 @@ export default async function MembersPage({
     </div>
   )
 }
-

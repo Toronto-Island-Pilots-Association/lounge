@@ -2,14 +2,31 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { requireAdmin } from '@/lib/auth'
 import { syncOrgStripeOnboardingFromStripe } from '@/lib/platform-stripe-onboarding'
-import AdminLayout from '@/components/AdminLayout'
-import SettingsPageClient from './SettingsPageClient'
 
 const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'
 const platformBase =
   process.env.NODE_ENV === 'development'
     ? `http://${ROOT_DOMAIN}:3000`
     : `https://${ROOT_DOMAIN}`
+
+function getOrgSettingsPath(orgId: string, tab?: string) {
+  const normalizedTab = tab?.toLowerCase()
+
+  switch (normalizedTab) {
+    case 'features':
+      return `${platformBase}/platform/dashboard/${orgId}/settings/features`
+    case 'signup':
+      return `${platformBase}/platform/dashboard/${orgId}/settings/signup`
+    case 'membership':
+      return `${platformBase}/platform/dashboard/${orgId}/settings/membership`
+    case 'integrations':
+      return `${platformBase}/platform/dashboard/${orgId}/settings/integrations`
+    case 'club':
+    case 'emails':
+    default:
+      return `${platformBase}/platform/dashboard/${orgId}/settings/general`
+  }
+}
 
 export default async function SettingsPage({
   searchParams,
@@ -24,27 +41,16 @@ export default async function SettingsPage({
   }
 
   const sp = await searchParams
-  if (sp.tab === 'Membership') {
-    redirect(`${platformBase}/platform/dashboard/${user.profile.org_id}/settings/membership`)
-  }
-
-  if (sp.tab === 'Integrations') {
-    redirect(`${platformBase}/platform/dashboard/${user.profile.org_id}/settings/integrations`)
-  }
 
   if (sp.stripe === 'return' || sp.stripe === 'refresh') {
     const h = await headers()
     const orgId = h.get('x-org-id')
     if (orgId) {
       await syncOrgStripeOnboardingFromStripe(orgId)
-      redirect(`${platformBase}/platform/dashboard/${orgId}/settings/integrations`)
+      redirect(getOrgSettingsPath(orgId, 'integrations'))
     }
-    redirect('/admin/settings')
+    redirect(getOrgSettingsPath(user.profile.org_id, 'integrations'))
   }
 
-  return (
-    <AdminLayout>
-      <SettingsPageClient />
-    </AdminLayout>
-  )
+  redirect(getOrgSettingsPath(user.profile.org_id, sp.tab))
 }
