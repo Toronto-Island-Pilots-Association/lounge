@@ -4,6 +4,7 @@ import { confirmOrgPlanCheckoutSession } from '@/lib/platform-org-billing'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { syncOrgStripeOnboardingFromStripe } from '@/lib/platform-stripe-onboarding'
 import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
+import { getManagedOrgConfig } from '@/lib/managed-orgs'
 import { PLANS, PLAN_KEYS, type PlanKey } from '@/lib/plans'
 import { getPlanPriceMonthly } from '@/lib/settings'
 import { getBillableOrgMemberCount, getOrgPlanPricingBreakdown } from '@/lib/org-plan-pricing'
@@ -93,6 +94,7 @@ export default async function BillingPage({
   if (!org) redirect('/platform/dashboard')
 
   const currentPlan: PlanKey = (org.plan as PlanKey) ?? 'hobby'
+  const managedOrg = getManagedOrgConfig(orgId)
   const currentPlanDef = PLANS[currentPlan]
   const billingStatus = await getOrgBillingActivationStatus(orgId)
   const memberCount = await getBillableOrgMemberCount(orgId)
@@ -159,6 +161,11 @@ export default async function BillingPage({
               <div className="w-2 h-2 rounded-full bg-amber-500" />
               Billing setup needed
             </div>
+          ) : currentPricing.baseMonthly <= 0 ? (
+            <div className="flex items-center gap-1.5 text-sm text-green-700 bg-green-50 px-3 py-1.5 rounded-full">
+              <div className="w-2 h-2 rounded-full bg-green-500" />
+              Managed by ClubLounge
+            </div>
           ) : org.stripe_subscription_id ? (
             <div className="flex items-center gap-1.5 text-sm text-green-700 bg-green-50 px-3 py-1.5 rounded-full">
               <div className="w-2 h-2 rounded-full bg-green-500" />
@@ -175,8 +182,14 @@ export default async function BillingPage({
             currentPlan={currentPlan}
             pricingByPlan={pricingByPlan}
             billingActivated={billingStatus.activated}
+            allowSelfServePlanChanges={managedOrg?.allowSelfServePlanChanges !== false}
           />
-          {org.stripe_customer_id && planPrices[currentPlan] > 0 && (
+          {managedOrg?.billingManagedByPlatform && (
+            <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900">
+              Billing and plan changes for this organization are managed by ClubLounge.
+            </div>
+          )}
+          {!managedOrg?.billingManagedByPlatform && org.stripe_customer_id && planPrices[currentPlan] > 0 && (
             <ManageOrgBillingButton orgId={orgId} />
           )}
           <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">

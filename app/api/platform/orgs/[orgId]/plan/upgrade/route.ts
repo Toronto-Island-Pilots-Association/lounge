@@ -9,6 +9,7 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { getPlatformStripeInstance } from '@/lib/stripe'
 import { PLAN_KEYS, PLANS, type PlanKey } from '@/lib/plans'
 import { getPlanPriceMonthly } from '@/lib/settings'
+import { getManagedOrgConfig } from '@/lib/managed-orgs'
 import { buildOrgPlanCheckoutLineItems, syncOrgPlanSubscriptionBilling } from '@/lib/org-plan-subscription'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
@@ -76,6 +77,14 @@ export async function POST(
 
     const planKey = requestedPlan as PlanKey
     const planDef = PLANS[planKey]
+    const managedOrg = getManagedOrgConfig(orgId)
+
+    if (managedOrg?.allowSelfServePlanChanges === false) {
+      return NextResponse.json(
+        { error: 'This organization\'s billing and plan are managed by ClubLounge.' },
+        { status: 400 },
+      )
+    }
 
     const stripe = getPlatformStripeInstance()
 

@@ -79,6 +79,9 @@ Single source of truth for what each plan allows. `getOrgPlan()` in `lib/setting
 - Marketing, pricing, and plan naming must match the actual app behavior.
 - When changing plan labels, pricing copy, or feature availability, update all app-facing surfaces consistently instead of patching only the landing page.
 - Do not market a feature or limit unless it matches the current product implementation or an explicitly custom/high-touch offering.
+- Managed org policy lives in code, not only in seeded DB settings.
+- If ClubLounge controls an org's pricing, plan, billing mode, or account behavior, define that in a shared managed-org config layer and have app behavior read from it consistently.
+- Use the DB for org-editable content and runtime settings; use code for ClubLounge-managed account policy.
 
 ---
 

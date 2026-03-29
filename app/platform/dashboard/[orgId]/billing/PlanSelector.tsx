@@ -9,12 +9,14 @@ export default function PlanSelector({
   currentPlan,
   pricingByPlan,
   billingActivated,
+  allowSelfServePlanChanges = true,
   returnTo,
 }: {
   orgId: string
   currentPlan: string
   pricingByPlan: Record<PlanKey, OrgPlanPricingBreakdown>
   billingActivated: boolean
+  allowSelfServePlanChanges?: boolean
   returnTo?: string
 }) {
   const [processing, setProcessing] = useState<PlanKey | null>(null)
@@ -101,7 +103,7 @@ export default function PlanSelector({
                 )}
               </div>
 
-              {!isCurrent && (
+              {!isCurrent && allowSelfServePlanChanges && (
                 <button
                   type="button"
                   disabled={!!processing}
@@ -117,7 +119,7 @@ export default function PlanSelector({
                   {isProcessing ? 'Processing…' : isUpgrade ? `Upgrade to ${plan.label}` : `Downgrade to ${plan.label}`}
                 </button>
               )}
-              {needsBillingSetup && (
+              {needsBillingSetup && allowSelfServePlanChanges && (
                 <button
                   type="button"
                   disabled={!!processing}
@@ -128,6 +130,7 @@ export default function PlanSelector({
                 </button>
               )}
               {isCurrent && !needsBillingSetup && <div className="h-8" />}
+              {!allowSelfServePlanChanges && <div className="h-8" />}
             </div>
           )
         })}

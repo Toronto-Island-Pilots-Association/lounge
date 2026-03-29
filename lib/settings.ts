@@ -1,6 +1,7 @@
 import { createClient, createServiceRoleClient } from './supabase/server'
 import { headers } from 'next/headers'
-import { getPlanDef, DEFAULT_PLAN } from './plans'
+import { getPlanDef, DEFAULT_PLAN, type PlanKey } from './plans'
+import { getManagedOrgConfig } from '@/lib/managed-orgs'
 import {
   DEFAULT_SIGNUP_FIELDS,
   LEGACY_SIGNUP_FIELD_KEYS,
@@ -48,6 +49,8 @@ async function getEffectiveOrgPlanKey(orgIdOverride?: string): Promise<string> {
   try {
     const supabase = await createClient()
     const orgId = await getOrgId(orgIdOverride)
+    const managedOrg = getManagedOrgConfig(orgId)
+    if (managedOrg?.forcedPlan) return managedOrg.forcedPlan
     const { data } = await supabase
       .from('organizations')
       .select('plan')
@@ -183,6 +186,8 @@ export async function getHiddenPublicPageSlugs(orgIdOverride?: string): Promise<
 }
 
 export async function getStripeBillingMode(orgIdOverride?: string): Promise<StripeBillingMode> {
+  const managedOrg = getManagedOrgConfig(orgIdOverride)
+  if (managedOrg?.stripeBillingMode) return managedOrg.stripeBillingMode
   const raw = await getSetting('stripe_billing_mode', orgIdOverride)
   return raw === 'direct' ? 'direct' : 'connect'
 }
@@ -298,6 +303,12 @@ export async function getOrgPlan(orgIdOverride?: string): Promise<string> {
  * Supports per-org overrides via settings keys like `plan_price_monthly_override_club_pro`.
  */
 export async function getPlanPriceMonthly(plan: string, orgIdOverride?: string): Promise<number> {
+  const managedOrg = getManagedOrgConfig(orgIdOverride)
+  const managedPrice = managedOrg?.monthlyPriceOverrides?.[plan as PlanKey]
+  if (typeof managedPrice === 'number' && managedPrice >= 0) {
+    return managedPrice
+  }
+
   const overrideKey = `plan_price_monthly_override_${plan}`
   const rawOverride = await getSetting(overrideKey, orgIdOverride)
   if (rawOverride !== null) {
