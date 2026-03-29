@@ -14,39 +14,6 @@ const MARQUEE_ITEMS = [
   'Alumni associations',
 ] as const
 
-const FEATURES = [
-  {
-    icon: '👤',
-    title: 'Member directory',
-    body: 'A searchable, private directory of every member. Approval flows, member tiers, profile fields. Members manage their own info.',
-  },
-  {
-    icon: '💬',
-    title: 'Private discussions',
-    body: 'Threaded conversations, @mentions, and weekly digest emails. Your Facebook group, but private, organized, and actually yours.',
-  },
-  {
-    icon: '📅',
-    title: 'Events & RSVP',
-    body: 'Create events, manage RSVPs, sync to Google Calendar. Members register in one click. No more reply-all email chains.',
-  },
-  {
-    icon: '💳',
-    title: 'Dues on autopilot',
-    body: "Stripe-powered. Annual or monthly dues, automatic renewals, instant payment records. See who's paid at a glance.",
-  },
-  {
-    icon: '📁',
-    title: 'Resources & announcements',
-    body: 'A private library for your club — rulebooks, forms, newsletters, links. Pinned announcements members actually see.',
-  },
-  {
-    icon: '📊',
-    title: 'Admin analytics',
-    body: "Member growth, dues collected, engagement by discussion category, event attendance. Know what's working.",
-  },
-] as const
-
 const FAQS = [
   {
     q: 'How much does Club Lounge cost?',
@@ -71,70 +38,197 @@ const FAQS = [
 ] as const
 
 const VERTICALS = [
-  {
-    icon: '✈️',
-    title: 'Flying clubs & airports',
-    body: 'A community layer alongside your scheduling software. Where pilots actually talk to each other.',
-  },
-  {
-    icon: '⛵',
-    title: 'Yacht & sailing clubs',
-    body: 'Complex membership tiers, social calendars, fleet communications — all in one private space.',
-  },
-  {
-    icon: '⛳',
-    title: 'Golf clubs',
-    body: "The community layer your booking app doesn't have. Member retention starts with members knowing each other.",
-  },
-  {
-    icon: '🚴',
-    title: 'Cycling & triathlon clubs',
-    body: 'Replace the Facebook group and the spreadsheet. Ride sign-ups, kit votes, and route sharing — all in one place.',
-  },
-  {
-    icon: '🚣',
-    title: 'Rowing & paddling clubs',
-    body: 'Junior, masters, and university programs all in one lounge. Parents, coaches, and members on the same page.',
-  },
-  {
-    icon: '🏛️',
-    title: 'Professional chapters',
-    body: "Engineering, legal, medical, real estate association chapters. The private hub your national body doesn't provide.",
-  },
+  { icon: '✈️', title: 'Flying clubs & airports', body: 'A community layer alongside your scheduling software. Where pilots actually talk to each other.' },
+  { icon: '⛵', title: 'Yacht & sailing clubs', body: 'Complex membership tiers, social calendars, fleet communications — all in one private space.' },
+  { icon: '⛳', title: 'Golf clubs', body: "The community layer your booking app doesn't have. Member retention starts with members knowing each other." },
+  { icon: '🚴', title: 'Cycling & triathlon clubs', body: 'Replace the Facebook group and the spreadsheet. Ride sign-ups, kit votes, and route sharing — all in one place.' },
+  { icon: '🚣', title: 'Rowing & paddling clubs', body: 'Junior, masters, and university programs all in one lounge. Parents, coaches, and members on the same page.' },
+  { icon: '🏛️', title: 'Professional chapters', body: "Engineering, legal, medical, real estate association chapters. The private hub your national body doesn't provide." },
 ] as const
 
 export type ClubLoungeLandingProps = {
   rootDomain: string
-  /** Same-host paths when internalLinks is true; full URLs when false. */
   signupHref: string
-  /** Platform / org-admin sign-in (e.g. `/platform/login`). */
   loginHref: string
   demoHref: string
   internalLinks: boolean
 }
 
-function NavLink({
-  href,
-  className,
-  children,
-  internalLinks,
-}: {
-  href: string
-  className?: string
-  children: ReactNode
-  internalLinks: boolean
+function NavLink({ href, className, children, internalLinks }: {
+  href: string; className?: string; children: ReactNode; internalLinks: boolean
 }) {
-  if (internalLinks) {
-    return (
-      <Link href={href} className={className}>
-        {children}
-      </Link>
-    )
-  }
+  if (internalLinks) return <Link href={href} className={className}>{children}</Link>
+  return <a href={href} className={className}>{children}</a>
+}
+
+function AppWindow({ url, children }: { url: string; children: ReactNode }) {
   return (
-    <a href={href} className={className}>
-      {children}
-    </a>
+    <div className="cl-app-window">
+      <div className="cl-app-topbar">
+        <div className="cl-mock-dots">
+          <div className="cl-mock-dot cl-r" /><div className="cl-mock-dot cl-y" /><div className="cl-mock-dot cl-g" />
+        </div>
+        <div className="cl-mock-url">{url}</div>
+      </div>
+      <div className="cl-app-body">{children}</div>
+    </div>
+  )
+}
+
+function MembershipVisual({ rootDomain }: { rootDomain: string }) {
+  return (
+    <AppWindow url={`tipa.${rootDomain}`}>
+      {/* Membership card */}
+      <div className="cl-mc-card">
+        <div className="cl-mc-top">
+          <div className="cl-mc-org">TORONTO ISLAND PILOTS ASSOC.</div>
+          <div className="cl-mc-badge">✈</div>
+        </div>
+        <div className="cl-mc-name">Sarah Mitchell</div>
+        <div className="cl-mc-level-row">
+          <span className="cl-mc-level">Full Member</span>
+          <span className="cl-mc-since">Member since 2019</span>
+        </div>
+        <div className="cl-mc-id">#1042</div>
+      </div>
+      {/* Directory rows */}
+      <div className="cl-mini-dir">
+        {[
+          { init: 'SM', name: 'Sarah Mitchell', level: 'Full Member', color: '#6366f1', status: 'Active' },
+          { init: 'MK', name: 'Mike Kowalski',  level: 'Student',     color: '#f59e0b', status: 'Active' },
+          { init: 'TR', name: 'Tom Reynolds',   level: 'Associate',   color: '#10b981', status: 'Pending' },
+        ].map(m => (
+          <div key={m.name} className="cl-mini-dir-row">
+            <svg viewBox="0 0 28 28" width="28" height="28" aria-hidden>
+              <circle cx="14" cy="14" r="14" fill={m.color} />
+              <text x="14" y="18" textAnchor="middle" fill="#fff" fontSize="10" fontWeight="bold">{m.init}</text>
+            </svg>
+            <div className="cl-mini-dir-info">
+              <span className="cl-mini-dir-name">{m.name}</span>
+              <span className="cl-mini-dir-level">{m.level}</span>
+            </div>
+            <span className={`cl-mini-dir-badge ${m.status === 'Pending' ? 'cl-badge-pending' : 'cl-badge-active'}`}>
+              {m.status}
+            </span>
+          </div>
+        ))}
+      </div>
+    </AppWindow>
+  )
+}
+
+function DuesVisual({ rootDomain }: { rootDomain: string }) {
+  return (
+    <AppWindow url={`admin.${rootDomain}`}>
+      {/* Revenue summary */}
+      <div className="cl-dues-summary">
+        <div className="cl-dues-stat">
+          <div className="cl-dues-stat-num">$1,840</div>
+          <div className="cl-dues-stat-label">Collected this year</div>
+        </div>
+        <div className="cl-dues-stat">
+          <div className="cl-dues-stat-num">38 / 41</div>
+          <div className="cl-dues-stat-label">Members paid</div>
+        </div>
+      </div>
+      {/* Member dues list */}
+      <div className="cl-dues-list">
+        {[
+          { init: 'SM', name: 'Sarah M.', amount: '$45', color: '#6366f1', paid: true,  note: 'Auto-renews Nov' },
+          { init: 'MK', name: 'Mike K.',  amount: '$25', color: '#f59e0b', paid: true,  note: 'Paid Sep 3' },
+          { init: 'TR', name: 'Tom R.',   amount: '$45', color: '#10b981', paid: false, note: 'Due Nov 12' },
+          { init: 'LP', name: 'Lisa P.',  amount: '$25', color: '#ec4899', paid: true,  note: 'Auto-renews Dec' },
+        ].map(m => (
+          <div key={m.name} className="cl-dues-row">
+            <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden>
+              <circle cx="12" cy="12" r="12" fill={m.color} />
+              <text x="12" y="16" textAnchor="middle" fill="#fff" fontSize="8" fontWeight="bold">{m.init}</text>
+            </svg>
+            <div className="cl-dues-row-info">
+              <span className="cl-dues-row-name">{m.name}</span>
+              <span className="cl-dues-row-note">{m.note}</span>
+            </div>
+            <span className="cl-dues-row-amount">{m.amount}</span>
+            <span className={`cl-mini-dir-badge ${m.paid ? 'cl-badge-active' : 'cl-badge-pending'}`}>
+              {m.paid ? 'Paid' : 'Due'}
+            </span>
+          </div>
+        ))}
+      </div>
+    </AppWindow>
+  )
+}
+
+function DiscussionsVisual({ rootDomain }: { rootDomain: string }) {
+  return (
+    <AppWindow url={`ottawacycling.${rootDomain}`}>
+      <div className="cl-disc-header">
+        <span className="cl-disc-title">Discussions</span>
+        <button className="cl-disc-new" type="button">+ New post</button>
+      </div>
+      <div className="cl-disc-list">
+        {[
+          { init: 'SL', color: '#6366f1', name: 'Sarah L.', time: '2h ago', replies: 8,
+            body: 'Anyone doing the Gatineau hills ride Saturday morning? Leaving at 7am ☀️', pinned: false },
+          { init: 'MK', color: '#f59e0b', name: 'Mike K.', time: '4h ago', replies: 14,
+            body: 'New kit designs are up in Resources — vote closes Friday! Three options 🚴', pinned: false },
+          { init: '📌', color: '#0d1e26', name: 'Club Admin', time: 'Sep 28', replies: 2,
+            body: 'September newsletter is out. Read it in Resources → Newsletters.', pinned: true },
+        ].map((post, i) => (
+          <div key={i} className="cl-disc-post">
+            <div className="cl-disc-post-head">
+              {post.pinned ? (
+                <span className="cl-disc-av cl-disc-av-pin">📌</span>
+              ) : (
+                <svg viewBox="0 0 28 28" width="28" height="28" aria-hidden className="cl-disc-av">
+                  <circle cx="14" cy="14" r="14" fill={post.color} />
+                  <text x="14" y="18" textAnchor="middle" fill="#fff" fontSize="10" fontWeight="bold">{post.init}</text>
+                </svg>
+              )}
+              <span className="cl-disc-post-name">{post.name}</span>
+              <span className="cl-disc-post-time">{post.time}</span>
+              {post.pinned && <span className="cl-disc-pinned">Pinned</span>}
+            </div>
+            <div className="cl-disc-post-body">{post.body}</div>
+            <div className="cl-disc-post-foot">
+              <span className="cl-disc-replies">💬 {post.replies} replies</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </AppWindow>
+  )
+}
+
+function EventsVisual({ rootDomain }: { rootDomain: string }) {
+  return (
+    <AppWindow url={`ottawacycling.${rootDomain}`}>
+      <div className="cl-events-header">
+        <span className="cl-disc-title">Events</span>
+        <span className="cl-events-sub">3 upcoming</span>
+      </div>
+      <div className="cl-events-list">
+        {[
+          { month: 'APR', day: '12', title: 'Spring Century Ride', sub: '34 attending · Outdoors', rsvp: 'Going' },
+          { month: 'APR', day: '19', title: 'Annual General Meeting', sub: 'Members only · RSVP open', rsvp: 'RSVP' },
+          { month: 'MAY', day: '3',  title: 'Beginner Friendly Ride', sub: '8 attending · Registration open', rsvp: 'RSVP' },
+        ].map((ev, i) => (
+          <div key={i} className="cl-event-row">
+            <div className="cl-event-date-block">
+              <div className="cl-event-month">{ev.month}</div>
+              <div className="cl-event-day">{ev.day}</div>
+            </div>
+            <div className="cl-event-info">
+              <div className="cl-event-title">{ev.title}</div>
+              <div className="cl-event-sub">{ev.sub}</div>
+            </div>
+            <button type="button" className={`cl-event-rsvp ${ev.rsvp === 'Going' ? 'cl-rsvp-going' : ''}`}>
+              {ev.rsvp}
+            </button>
+          </div>
+        ))}
+      </div>
+    </AppWindow>
   )
 }
 
@@ -150,46 +244,37 @@ export function ClubLoungeLanding({
 
   return (
     <div className="club-lounge-landing">
+      {/* ── Nav ── */}
       <nav>
         <NavLink href="/" className="cl-nav-logo" internalLinks={internalLinks}>
           Club<span>Lounge</span>
         </NavLink>
         <ul className="cl-nav-links">
+          <li><a href="#features">Features</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#verticals">Who it&apos;s for</a></li>
+          <li><a href="#faq">FAQ</a></li>
           <li>
-            <a href="#features">Features</a>
+            <NavLink href={loginHref} internalLinks={internalLinks}>Log in</NavLink>
           </li>
           <li>
-            <a href="#pricing">Pricing</a>
-          </li>
-          <li>
-            <a href="#verticals">Who it&apos;s for</a>
-          </li>
-          <li>
-            <a href="#faq">FAQ</a>
-          </li>
-          <li>
-            <NavLink href={loginHref} internalLinks={internalLinks}>
-              Log in
-            </NavLink>
-          </li>
-          <li>
-            <NavLink href={signupHref} className="cl-nav-cta" internalLinks={internalLinks}>
-              Get started
-            </NavLink>
+            <NavLink href={signupHref} className="cl-nav-cta" internalLinks={internalLinks}>Get started</NavLink>
           </li>
         </ul>
       </nav>
 
+      {/* ── Hero ── */}
       <div className="cl-hero">
         <div className="cl-hero-left">
-          <div className="cl-hero-eyebrow">For clubs, associations & facilities</div>
+          <div className="cl-hero-eyebrow">For clubs, associations &amp; facilities</div>
           <h1 className="cl-hero-h1">
-            Every club deserves
-            <br />a <em>proper lounge.</em>
+            The lounge that makes
+            <br />your club <em>official.</em>
           </h1>
           <p className="cl-hero-sub">
-            Give your members a private home — directory, discussions, events, and Stripe-powered dues on higher plans.
-            Your club, your URL. <strong>From $5/month.</strong>
+            Member directory, dues collection, private discussions, and events —
+            in one private home your members will actually use.{' '}
+            <strong>From $5/month.</strong>
           </p>
           <div className="cl-hero-actions">
             <NavLink href={signupHref} className="cl-btn-primary" internalLinks={internalLinks}>
@@ -220,9 +305,7 @@ export function ClubLoungeLanding({
           <div className="cl-mockup-frame">
             <div className="cl-mock-topbar">
               <div className="cl-mock-dots">
-                <div className="cl-mock-dot cl-r" />
-                <div className="cl-mock-dot cl-y" />
-                <div className="cl-mock-dot cl-g" />
+                <div className="cl-mock-dot cl-r" /><div className="cl-mock-dot cl-y" /><div className="cl-mock-dot cl-g" />
               </div>
               <div className="cl-mock-url">ottawacycling.{rootDomain}</div>
             </div>
@@ -244,31 +327,23 @@ export function ClubLoungeLanding({
                 <div className="cl-mock-post-head">
                   <svg className="cl-mock-mini-av" viewBox="0 0 20 20" aria-hidden>
                     <circle cx="10" cy="10" r="10" fill="#6366f1" />
-                    <text x="10" y="14" textAnchor="middle" fill="#fff" fontSize="9" fontWeight="bold">
-                      SL
-                    </text>
+                    <text x="10" y="14" textAnchor="middle" fill="#fff" fontSize="9" fontWeight="bold">SL</text>
                   </svg>
                   <span className="cl-mock-post-name">Sarah L.</span>
                   <span className="cl-mock-post-time">2h ago</span>
                 </div>
-                <div className="cl-mock-post-body">
-                  Anyone doing the Gatineau hills ride Saturday morning? Leaving from the usual spot at 7am ☀️
-                </div>
+                <div className="cl-mock-post-body">Anyone doing the Gatineau hills ride Saturday morning? Leaving from the usual spot at 7am ☀️</div>
               </div>
               <div className="cl-mock-post">
                 <div className="cl-mock-post-head">
                   <svg className="cl-mock-mini-av" viewBox="0 0 20 20" aria-hidden>
                     <circle cx="10" cy="10" r="10" fill="#f59e0b" />
-                    <text x="10" y="14" textAnchor="middle" fill="#fff" fontSize="9" fontWeight="bold">
-                      MK
-                    </text>
+                    <text x="10" y="14" textAnchor="middle" fill="#fff" fontSize="9" fontWeight="bold">MK</text>
                   </svg>
                   <span className="cl-mock-post-name">Mike K.</span>
                   <span className="cl-mock-post-time">5h ago</span>
                 </div>
-                <div className="cl-mock-post-body">
-                  New kit designs are up in Resources — vote by Friday. Three options 🚴
-                </div>
+                <div className="cl-mock-post-body">New kit designs are up in Resources — vote by Friday. Three options 🚴</div>
               </div>
               <div className="cl-mock-upcoming">
                 <div className="cl-mock-upcoming-label">Upcoming</div>
@@ -298,71 +373,133 @@ export function ClubLoungeLanding({
         </div>
       </div>
 
+      {/* ── Marquee ── */}
       <div className="cl-marquee-wrap">
         <div className="cl-marquee-track">
           {marqueeDup.map((label, i) => (
-            <div key={`${label}-${i}`} className="cl-marquee-item">
-              {label}
-            </div>
+            <div key={`${label}-${i}`} className="cl-marquee-item">{label}</div>
           ))}
         </div>
       </div>
 
-      <section>
-        <div className="cl-section-eyebrow">Your club&apos;s own address</div>
-        <h2 className="cl-section-title">
-          Not generic software.
-          <br />
-          <em>Your club&apos;s lounge.</em>
-        </h2>
-        <p className="cl-section-sub">
-          Every club gets its own URL. Members bookmark it, share it, and find their way back. It&apos;s not a tenant in
-          someone else&apos;s platform — it&apos;s yours.
-        </p>
-        <div className="cl-url-showcase">
-          <div className="cl-url-label">Your URL</div>
-          <div className="cl-url-value">
-            <span className="cl-org">yourclub</span>
-            <span className="cl-domain">.{rootDomain}</span>
+      {/* ── Feature sections ── */}
+      <div id="features">
+
+        {/* 1 — Membership & Member Card */}
+        <section className="cl-feat-section">
+          <div className="cl-feat-text">
+            <div className="cl-section-eyebrow">Membership</div>
+            <h2 className="cl-feat-h2">
+              Your roster is finally<br /><em>official.</em>
+            </h2>
+            <p className="cl-feat-sub">
+              Every member gets a digital membership card, a profile, and a place in your private directory.
+              Approval flows, membership tiers, and custom fields — so you always know who&apos;s in.
+            </p>
+            <ul className="cl-feat-bullets">
+              <li><span className="cl-fb-check">✓</span>Approval-based or open signup</li>
+              <li><span className="cl-fb-check">✓</span>Multiple membership tiers (Full, Student, Associate…)</li>
+              <li><span className="cl-fb-check">✓</span>Digital membership card with member ID</li>
+              <li><span className="cl-fb-check">✓</span>Members manage their own profiles</li>
+            </ul>
+            <NavLink href={signupHref} className="cl-btn-primary" internalLinks={internalLinks}>
+              Get started →
+            </NavLink>
           </div>
-        </div>
-        <p className="cl-url-follow">
-          Every invite email, every event link, every &quot;join our community&quot; message — your club&apos;s name,
-          front and centre.
-        </p>
-      </section>
+          <div className="cl-feat-visual">
+            <MembershipVisual rootDomain={rootDomain} />
+          </div>
+        </section>
 
-      <section id="features">
-        <div className="cl-section-eyebrow">Everything your club needs</div>
-        <h2 className="cl-section-title">
-          One lounge.
-          <br />
-          <em>No more scattered tools.</em>
-        </h2>
-        <p className="cl-section-sub">
-          Stop juggling Facebook groups, email threads, Google Sheets, and Interac e-transfers. It&apos;s all here.
-        </p>
-        <div className="cl-features-grid">
-          {FEATURES.map(f => (
-            <div key={f.title} className="cl-feature-cell">
-              <div className="cl-feature-icon">{f.icon}</div>
-              <div className="cl-feature-title">{f.title}</div>
-              <div className="cl-feature-body">{f.body}</div>
-            </div>
-          ))}
-        </div>
-      </section>
+        {/* 2 — Dues Collection (flipped) */}
+        <section className="cl-feat-section cl-feat-flip cl-feat-alt">
+          <div className="cl-feat-text">
+            <div className="cl-section-eyebrow">Dues collection</div>
+            <h2 className="cl-feat-h2">
+              Collect dues without<br /><em>the awkward follow-up.</em>
+            </h2>
+            <p className="cl-feat-sub">
+              Stripe-powered dues collection, built right in. Set your annual or monthly amount,
+              members pay online, and renewals happen automatically. No more chasing e-transfers.
+            </p>
+            <ul className="cl-feat-bullets">
+              <li><span className="cl-fb-check">✓</span>Stripe Connect — no third-party processor needed</li>
+              <li><span className="cl-fb-check">✓</span>Annual &amp; monthly billing options</li>
+              <li><span className="cl-fb-check">✓</span>Automatic renewals with email reminders</li>
+              <li><span className="cl-fb-check">✓</span>See who&apos;s paid at a glance from your dashboard</li>
+            </ul>
+            <NavLink href={signupHref} className="cl-btn-primary" internalLinks={internalLinks}>
+              Get started →
+            </NavLink>
+          </div>
+          <div className="cl-feat-visual">
+            <DuesVisual rootDomain={rootDomain} />
+          </div>
+        </section>
 
+        {/* 3 — Discussions */}
+        <section className="cl-feat-section">
+          <div className="cl-feat-text">
+            <div className="cl-section-eyebrow">Private discussions</div>
+            <h2 className="cl-feat-h2">
+              Where your members<br /><em>actually talk.</em>
+            </h2>
+            <p className="cl-feat-sub">
+              A private discussion board that&apos;s actually organized. Threaded posts, @mentions,
+              and weekly digest emails so nobody misses important news — no group chat chaos.
+            </p>
+            <ul className="cl-feat-bullets">
+              <li><span className="cl-fb-check">✓</span>Threaded posts organized by category</li>
+              <li><span className="cl-fb-check">✓</span>@mention members to notify them directly</li>
+              <li><span className="cl-fb-check">✓</span>Weekly digest email keeps everyone in the loop</li>
+              <li><span className="cl-fb-check">✓</span>Private to members — no public visibility</li>
+            </ul>
+            <NavLink href={signupHref} className="cl-btn-primary" internalLinks={internalLinks}>
+              Get started →
+            </NavLink>
+          </div>
+          <div className="cl-feat-visual">
+            <DiscussionsVisual rootDomain={rootDomain} />
+          </div>
+        </section>
+
+        {/* 4 — Events (flipped) */}
+        <section className="cl-feat-section cl-feat-flip cl-feat-alt">
+          <div className="cl-feat-text">
+            <div className="cl-section-eyebrow">Events &amp; RSVP</div>
+            <h2 className="cl-feat-h2">
+              Events your members<br /><em>actually show up to.</em>
+            </h2>
+            <p className="cl-feat-sub">
+              Create events, open RSVPs, and see who&apos;s coming — all without leaving the lounge.
+              Members register in one tap, and it syncs to their Google Calendar automatically.
+            </p>
+            <ul className="cl-feat-bullets">
+              <li><span className="cl-fb-check">✓</span>One-click RSVP for members</li>
+              <li><span className="cl-fb-check">✓</span>Google Calendar sync</li>
+              <li><span className="cl-fb-check">✓</span>Members-only or public event visibility</li>
+              <li><span className="cl-fb-check">✓</span>Automated RSVP reminder emails</li>
+            </ul>
+            <NavLink href={signupHref} className="cl-btn-primary" internalLinks={internalLinks}>
+              Get started →
+            </NavLink>
+          </div>
+          <div className="cl-feat-visual">
+            <EventsVisual rootDomain={rootDomain} />
+          </div>
+        </section>
+
+      </div>
+
+      {/* ── Pricing ── */}
       <section id="pricing" className="cl-pricing-band">
         <div className="cl-section-eyebrow">Simple pricing</div>
         <h2 className="cl-section-title">
-          Flat rate.
-          <br />
-          <em>Grow all you want.</em>
+          Flat rate.<br /><em>Grow all you want.</em>
         </h2>
         <p className="cl-section-sub">
-          No per-contact fees. No surprise bills when your membership drive works. Plans from $5/month; unlimited
-          members on Starter and above. <strong>14-day free trial on all plans.</strong>
+          No per-contact fees. No surprise bills when your membership drive works. Plans from $5/month;
+          unlimited members on Starter and above. <strong>14-day free trial on all plans.</strong>
         </p>
         <div className="cl-pricing-grid">
           <div className="cl-price-col">
@@ -370,68 +507,32 @@ export function ClubLoungeLanding({
             <div className="cl-price-amount">$5</div>
             <div className="cl-price-period">per month · up to 20 members</div>
             <ul className="cl-price-features">
-              <li>
-                <span className="cl-check">✓</span>Your own {rootDomain} URL
-              </li>
-              <li>
-                <span className="cl-check">✓</span>Member directory + approvals
-              </li>
-              <li>
-                <span className="cl-check">✓</span>Events + RSVP
-              </li>
-              <li>
-                <span className="cl-check">✓</span>Announcements
-              </li>
-              <li>
-                <span className="cl-check">✓</span>Discussions
-              </li>
-              <li>
-                <span className="cl-cross">—</span>Dues collection via Stripe
-              </li>
-              <li>
-                <span className="cl-cross">—</span>Digest emails
-              </li>
-              <li>
-                <span className="cl-cross">—</span>Analytics
-              </li>
+              <li><span className="cl-check">✓</span>Your own {rootDomain} URL</li>
+              <li><span className="cl-check">✓</span>Member directory + approvals</li>
+              <li><span className="cl-check">✓</span>Events + RSVP</li>
+              <li><span className="cl-check">✓</span>Announcements</li>
+              <li><span className="cl-check">✓</span>Discussions</li>
+              <li><span className="cl-cross">—</span>Dues collection via Stripe</li>
+              <li><span className="cl-cross">—</span>Digest emails</li>
+              <li><span className="cl-cross">—</span>Analytics</li>
             </ul>
-            <NavLink href={signupHref} className="cl-price-btn" internalLinks={internalLinks}>
-              Start free trial
-            </NavLink>
+            <NavLink href={signupHref} className="cl-price-btn" internalLinks={internalLinks}>Start free trial</NavLink>
           </div>
           <div className="cl-price-col">
             <div className="cl-price-tier">Starter</div>
             <div className="cl-price-amount">$49</div>
             <div className="cl-price-period">per month · unlimited members</div>
             <ul className="cl-price-features">
-              <li>
-                <span className="cl-check">✓</span>Everything in Hobby
-              </li>
-              <li>
-                <span className="cl-check">✓</span>Dues collection via Stripe
-              </li>
-              <li>
-                <span className="cl-check">✓</span>Unlimited members
-              </li>
-              <li>
-                <span className="cl-check">✓</span>2 admin seats
-              </li>
-              <li>
-                <span className="cl-check">✓</span>Custom domain
-              </li>
-              <li>
-                <span className="cl-check">✓</span>Remove ClubLounge branding
-              </li>
-              <li>
-                <span className="cl-cross">—</span>Digest emails
-              </li>
-              <li>
-                <span className="cl-cross">—</span>Analytics
-              </li>
+              <li><span className="cl-check">✓</span>Everything in Hobby</li>
+              <li><span className="cl-check">✓</span>Dues collection via Stripe</li>
+              <li><span className="cl-check">✓</span>Unlimited members</li>
+              <li><span className="cl-check">✓</span>2 admin seats</li>
+              <li><span className="cl-check">✓</span>Custom domain</li>
+              <li><span className="cl-check">✓</span>Remove ClubLounge branding</li>
+              <li><span className="cl-cross">—</span>Digest emails</li>
+              <li><span className="cl-cross">—</span>Analytics</li>
             </ul>
-            <NavLink href={signupHref} className="cl-price-btn" internalLinks={internalLinks}>
-              Get started
-            </NavLink>
+            <NavLink href={signupHref} className="cl-price-btn" internalLinks={internalLinks}>Get started</NavLink>
           </div>
           <div className="cl-price-col cl-featured">
             <div className="cl-featured-badge">Most popular</div>
@@ -439,62 +540,30 @@ export function ClubLoungeLanding({
             <div className="cl-price-amount">$99</div>
             <div className="cl-price-period">per month · unlimited everything</div>
             <ul className="cl-price-features">
-              <li>
-                <span className="cl-check">✓</span>Everything in Starter
-              </li>
-              <li>
-                <span className="cl-check">✓</span>Unlimited admins
-              </li>
-              <li>
-                <span className="cl-check">✓</span>Private discussions + @mentions
-              </li>
-              <li>
-                <span className="cl-check">✓</span>Weekly digest emails
-              </li>
-              <li>
-                <span className="cl-check">✓</span>Analytics dashboard
-              </li>
-              <li>
-                <span className="cl-check">✓</span>Google Calendar sync
-              </li>
-              <li>
-                <span className="cl-check">✓</span>Member invites
-              </li>
-              <li>
-                <span className="cl-check">✓</span>Priority support
-              </li>
+              <li><span className="cl-check">✓</span>Everything in Starter</li>
+              <li><span className="cl-check">✓</span>Unlimited admins</li>
+              <li><span className="cl-check">✓</span>Private discussions + @mentions</li>
+              <li><span className="cl-check">✓</span>Weekly digest emails</li>
+              <li><span className="cl-check">✓</span>Analytics dashboard</li>
+              <li><span className="cl-check">✓</span>Google Calendar sync</li>
+              <li><span className="cl-check">✓</span>Member invites</li>
+              <li><span className="cl-check">✓</span>Priority support</li>
             </ul>
-            <NavLink href={signupHref} className="cl-price-btn" internalLinks={internalLinks}>
-              Get started
-            </NavLink>
+            <NavLink href={signupHref} className="cl-price-btn" internalLinks={internalLinks}>Get started</NavLink>
           </div>
           <div className="cl-price-col">
             <div className="cl-price-tier">Club Pro</div>
             <div className="cl-price-amount">$199</div>
             <div className="cl-price-period">per month · white-label</div>
             <ul className="cl-price-features">
-              <li>
-                <span className="cl-check">✓</span>Everything in Community
-              </li>
-              <li>
-                <span className="cl-check">✓</span>Multiple membership tiers
-              </li>
-              <li>
-                <span className="cl-check">✓</span>API access + data export
-              </li>
-              <li>
-                <span className="cl-check">✓</span>SSO / custom auth
-              </li>
-              <li>
-                <span className="cl-check">✓</span>Onboarding call
-              </li>
-              <li>
-                <span className="cl-check">✓</span>Annual contract option
-              </li>
+              <li><span className="cl-check">✓</span>Everything in Community</li>
+              <li><span className="cl-check">✓</span>Multiple membership tiers</li>
+              <li><span className="cl-check">✓</span>API access + data export</li>
+              <li><span className="cl-check">✓</span>SSO / custom auth</li>
+              <li><span className="cl-check">✓</span>Onboarding call</li>
+              <li><span className="cl-check">✓</span>Annual contract option</li>
             </ul>
-            <a href={mailto} className="cl-price-btn">
-              Book a demo
-            </a>
+            <a href={mailto} className="cl-price-btn">Book a demo</a>
           </div>
         </div>
         <p className="cl-pricing-footnote">
@@ -502,12 +571,11 @@ export function ClubLoungeLanding({
         </p>
       </section>
 
+      {/* ── Verticals ── */}
       <section id="verticals">
         <div className="cl-section-eyebrow">Built for every kind of club</div>
         <h2 className="cl-section-title">
-          Every club has
-          <br />
-          <em>a lounge now.</em>
+          Every club has<br /><em>a lounge now.</em>
         </h2>
         <p className="cl-section-sub">
           From 30-person hobby societies to 800-person yacht clubs. If your members pay dues and deserve a community,
@@ -524,11 +592,10 @@ export function ClubLoungeLanding({
         </div>
       </section>
 
+      {/* ── FAQ ── */}
       <section id="faq" className="cl-faq-section">
         <div className="cl-section-eyebrow">FAQ</div>
-        <h2 className="cl-section-title">
-          Common questions
-        </h2>
+        <h2 className="cl-section-title">Common questions</h2>
         <dl className="cl-faq-list">
           {FAQS.map(({ q, a }) => (
             <div key={q} className="cl-faq-item">
@@ -539,50 +606,33 @@ export function ClubLoungeLanding({
         </dl>
       </section>
 
+      {/* ── CTA ── */}
       <section className="cl-cta-section">
         <h2 className="cl-cta-title">
-          Your club deserves
-          <br />a proper lounge.
+          Make your club official.<br />Start today.
         </h2>
         <p className="cl-cta-sub">From $5/month for small clubs. No setup fee. Live in 48 hours.</p>
         <form className="cl-cta-form" action={signupHref} method="get">
           <input
-            type="email"
-            name="email"
-            className="cl-cta-input"
-            placeholder="your@email.com"
-            autoComplete="email"
-            aria-label="Email address"
+            type="email" name="email" className="cl-cta-input"
+            placeholder="your@email.com" autoComplete="email" aria-label="Email address"
           />
-          <button type="submit" className="cl-btn-primary">
-            Get started →
-          </button>
+          <button type="submit" className="cl-btn-primary">Get started →</button>
         </form>
         <p className="cl-cta-note">Already on Wild Apricot? We&apos;ll migrate your members for free.</p>
       </section>
 
+      {/* ── Footer ── */}
       <footer>
         <NavLink href="/" className="cl-footer-logo" internalLinks={internalLinks}>
           Club<span>Lounge</span>
         </NavLink>
         <ul className="cl-footer-links">
-          <li>
-            <a href="#features">Features</a>
-          </li>
-          <li>
-            <a href="#pricing">Pricing</a>
-          </li>
-          <li>
-            <NavLink href={loginHref} internalLinks={internalLinks}>
-              Log in
-            </NavLink>
-          </li>
-          <li>
-            <a href="/docs">Docs</a>
-          </li>
-          <li>
-            <a href={mailto}>Contact</a>
-          </li>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><NavLink href={loginHref} internalLinks={internalLinks}>Log in</NavLink></li>
+          <li><a href="/docs">Docs</a></li>
+          <li><a href={mailto}>Contact</a></li>
         </ul>
         <div className="cl-footer-copy">
           © {new Date().getFullYear()} Club Lounge · {rootDomain}

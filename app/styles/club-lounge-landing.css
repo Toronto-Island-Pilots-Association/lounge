@@ -631,6 +631,501 @@
   line-height: 1.65;
 }
 
+/* ── Feature sections ───────────────────────────────────── */
+
+.club-lounge-landing .cl-feat-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: center;
+}
+
+.club-lounge-landing .cl-feat-section.cl-feat-flip .cl-feat-text { order: 2; }
+.club-lounge-landing .cl-feat-section.cl-feat-flip .cl-feat-visual { order: 1; }
+
+.club-lounge-landing .cl-feat-alt {
+  background: var(--cl-surface);
+  border-radius: 20px;
+}
+
+.club-lounge-landing .cl-feat-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.club-lounge-landing .cl-feat-text .cl-section-eyebrow {
+  margin-bottom: 1rem;
+}
+
+.club-lounge-landing .cl-feat-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.club-lounge-landing .cl-feat-h2 {
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: var(--cl-primary);
+  margin: 0 0 1rem;
+}
+
+.club-lounge-landing .cl-feat-h2 em {
+  font-style: italic;
+}
+
+.club-lounge-landing .cl-feat-sub {
+  font-size: 1rem;
+  color: var(--cl-body);
+  line-height: 1.7;
+  margin: 0 0 1.5rem;
+  max-width: 36rem;
+}
+
+.club-lounge-landing .cl-feat-bullets {
+  list-style: none;
+  margin: 0 0 2rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.club-lounge-landing .cl-feat-bullets li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-size: 0.9375rem;
+  color: var(--cl-body);
+  line-height: 1.45;
+}
+
+.club-lounge-landing .cl-fb-check {
+  color: #2cdbb0;
+  font-weight: 700;
+  flex-shrink: 0;
+  width: 16px;
+}
+
+/* ── App window (feature mockups) ────────────────────────── */
+
+.club-lounge-landing .cl-app-window {
+  background: var(--cl-surface);
+  border-radius: 14px;
+  border: 1px solid var(--cl-border);
+  width: 100%;
+  max-width: 400px;
+  overflow: hidden;
+  box-shadow: 0 16px 48px rgba(13, 30, 38, 0.1), 0 2px 8px rgba(13, 30, 38, 0.05);
+}
+
+.club-lounge-landing .cl-app-topbar {
+  background: var(--cl-surface-2);
+  padding: 0.6rem 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  border-bottom: 1px solid var(--cl-border);
+}
+
+.club-lounge-landing .cl-app-body {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* ── Membership card ─────────────────────────────────────── */
+
+.club-lounge-landing .cl-mc-card {
+  background: linear-gradient(135deg, var(--cl-primary) 0%, #1a3a4c 100%);
+  border-radius: 12px;
+  padding: 1.125rem;
+  color: #fff;
+}
+
+.club-lounge-landing .cl-mc-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.625rem;
+}
+
+.club-lounge-landing .cl-mc-org {
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.65;
+  line-height: 1.3;
+}
+
+.club-lounge-landing .cl-mc-badge {
+  font-size: 1.125rem;
+  opacity: 0.85;
+}
+
+.club-lounge-landing .cl-mc-name {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.5rem;
+}
+
+.club-lounge-landing .cl-mc-level-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.625rem;
+}
+
+.club-lounge-landing .cl-mc-level {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 0.175rem 0.5rem;
+  border-radius: 999px;
+}
+
+.club-lounge-landing .cl-mc-since {
+  font-size: 0.625rem;
+  opacity: 0.55;
+}
+
+.club-lounge-landing .cl-mc-id {
+  font-size: 0.5625rem;
+  font-family: ui-monospace, monospace;
+  opacity: 0.4;
+  letter-spacing: 0.08em;
+}
+
+/* ── Mini directory ──────────────────────────────────────── */
+
+.club-lounge-landing .cl-mini-dir {
+  display: flex;
+  flex-direction: column;
+}
+
+.club-lounge-landing .cl-mini-dir-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0;
+  border-top: 1px solid var(--cl-border);
+}
+
+.club-lounge-landing .cl-mini-dir-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.club-lounge-landing .cl-mini-dir-name {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--cl-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.club-lounge-landing .cl-mini-dir-level {
+  display: block;
+  font-size: 0.6875rem;
+  color: var(--cl-muted);
+}
+
+.club-lounge-landing .cl-mini-dir-badge {
+  font-size: 0.625rem;
+  font-weight: 600;
+  padding: 0.175rem 0.5rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.club-lounge-landing .cl-badge-active {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.club-lounge-landing .cl-badge-pending {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+/* ── Dues visual ─────────────────────────────────────────── */
+
+.club-lounge-landing .cl-dues-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.625rem;
+}
+
+.club-lounge-landing .cl-dues-stat {
+  background: var(--cl-surface-2);
+  border: 1px solid var(--cl-border);
+  border-radius: 10px;
+  padding: 0.75rem;
+}
+
+.club-lounge-landing .cl-dues-stat-num {
+  font-size: 1.1875rem;
+  font-weight: 700;
+  color: var(--cl-primary);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.club-lounge-landing .cl-dues-stat-label {
+  font-size: 0.5625rem;
+  color: var(--cl-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+  margin-top: 3px;
+}
+
+.club-lounge-landing .cl-dues-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.club-lounge-landing .cl-dues-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--cl-border);
+}
+
+.club-lounge-landing .cl-dues-row-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.club-lounge-landing .cl-dues-row-name {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--cl-ink);
+}
+
+.club-lounge-landing .cl-dues-row-note {
+  display: block;
+  font-size: 0.6rem;
+  color: var(--cl-muted);
+}
+
+.club-lounge-landing .cl-dues-row-amount {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--cl-ink);
+  flex-shrink: 0;
+  margin-right: 0.25rem;
+}
+
+/* ── Discussions visual ──────────────────────────────────── */
+
+.club-lounge-landing .cl-disc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.375rem;
+}
+
+.club-lounge-landing .cl-disc-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--cl-ink);
+}
+
+.club-lounge-landing .cl-disc-new {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--cl-primary);
+  background: none;
+  border: 1px solid var(--cl-border);
+  border-radius: 6px;
+  padding: 0.2rem 0.5rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.club-lounge-landing .cl-disc-new:hover {
+  background: var(--cl-surface-2);
+}
+
+.club-lounge-landing .cl-disc-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.club-lounge-landing .cl-disc-post {
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--cl-border);
+}
+
+.club-lounge-landing .cl-disc-post-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.35rem;
+}
+
+.club-lounge-landing .cl-disc-av {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.club-lounge-landing .cl-disc-av-pin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.club-lounge-landing .cl-disc-post-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--cl-ink);
+}
+
+.club-lounge-landing .cl-disc-post-time {
+  font-size: 0.625rem;
+  color: var(--cl-faint);
+  margin-left: auto;
+}
+
+.club-lounge-landing .cl-disc-pinned {
+  font-size: 0.5625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--cl-muted);
+  background: var(--cl-surface-2);
+  border: 1px solid var(--cl-border);
+  border-radius: 999px;
+  padding: 0.1rem 0.4rem;
+}
+
+.club-lounge-landing .cl-disc-post-body {
+  font-size: 0.75rem;
+  color: var(--cl-body);
+  line-height: 1.5;
+  margin-bottom: 0.3rem;
+}
+
+.club-lounge-landing .cl-disc-post-foot {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.club-lounge-landing .cl-disc-replies {
+  font-size: 0.625rem;
+  color: var(--cl-muted);
+}
+
+/* ── Events visual ───────────────────────────────────────── */
+
+.club-lounge-landing .cl-events-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.375rem;
+}
+
+.club-lounge-landing .cl-events-sub {
+  font-size: 0.6875rem;
+  color: var(--cl-muted);
+}
+
+.club-lounge-landing .cl-events-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.club-lounge-landing .cl-event-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--cl-border);
+}
+
+.club-lounge-landing .cl-event-date-block {
+  width: 40px;
+  height: 44px;
+  background: var(--cl-surface-2);
+  border: 1px solid var(--cl-border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.club-lounge-landing .cl-event-month {
+  font-size: 0.5rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--cl-muted);
+  line-height: 1;
+}
+
+.club-lounge-landing .cl-event-day {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--cl-primary);
+  line-height: 1.1;
+}
+
+.club-lounge-landing .cl-event-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.club-lounge-landing .cl-event-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--cl-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.club-lounge-landing .cl-event-sub {
+  font-size: 0.625rem;
+  color: var(--cl-muted);
+  margin-top: 1px;
+}
+
+.club-lounge-landing .cl-event-rsvp {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--cl-border);
+  background: var(--cl-surface);
+  color: var(--cl-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.club-lounge-landing .cl-rsvp-going {
+  background: #dcfce7;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+
 /* ── Pricing ─────────────────────────────────────────────── */
 
 .club-lounge-landing .cl-pricing-band {
@@ -1132,6 +1627,24 @@
   .club-lounge-landing .cl-features-grid,
   .club-lounge-landing .cl-verticals-grid {
     grid-template-columns: 1fr;
+  }
+
+  .club-lounge-landing .cl-feat-section {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .club-lounge-landing .cl-feat-section.cl-feat-flip .cl-feat-text,
+  .club-lounge-landing .cl-feat-section.cl-feat-flip .cl-feat-visual {
+    order: unset;
+  }
+
+  .club-lounge-landing .cl-feat-alt {
+    border-radius: 12px;
+  }
+
+  .club-lounge-landing .cl-app-window {
+    max-width: 100%;
   }
 
   .club-lounge-landing .cl-pricing-band {
