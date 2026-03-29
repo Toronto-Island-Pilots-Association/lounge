@@ -2,12 +2,20 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { slugify, ROOT_DOMAIN } from '@/lib/org'
+import { PLAN_KEYS, PLANS, type PlanKey } from '@/lib/plans'
+
+function getSelectedPlan(value: string | null): PlanKey {
+  return value && PLAN_KEYS.includes(value as PlanKey) ? (value as PlanKey) : 'hobby'
+}
 
 export default function CreateOrgPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const selectedPlan = getSelectedPlan(searchParams.get('plan'))
+  const selectedPlanLabel = PLANS[selectedPlan].label
   const [checkingSession, setCheckingSession] = useState(true)
   const [form, setForm] = useState({ name: '', slug: '' })
   const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null)
@@ -75,7 +83,7 @@ export default function CreateOrgPage() {
       return
     }
 
-    router.replace(`/platform/dashboard/${data.orgId}/onboarding?created=1`)
+    router.replace(`/platform/dashboard/${data.orgId}/onboarding?created=1&plan=${selectedPlan}`)
   }
 
   if (checkingSession) {
@@ -131,7 +139,9 @@ export default function CreateOrgPage() {
           </div>
 
           <p className="text-xs text-gray-400">
-            You can choose a plan, set fees, and connect Stripe in the next step.
+            {selectedPlan === 'hobby'
+              ? 'Your new lounge will start on Hobby. You can set fees and add billing in the next step.'
+              : `You selected ${selectedPlanLabel}. We’ll create the lounge first, then finish ${selectedPlanLabel} billing in the next step.`}
           </p>
 
           {error && (

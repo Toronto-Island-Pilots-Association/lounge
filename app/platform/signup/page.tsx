@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { slugify, ROOT_DOMAIN } from '@/lib/org'
 import { GoogleButton } from '@/components/platform/GoogleButton'
+import { PLAN_KEYS, PLANS, type PlanKey } from '@/lib/plans'
 
 type Step = 1 | 2
 
@@ -21,9 +22,15 @@ interface ClubForm {
   slug: string
 }
 
+function getSelectedPlan(value: string | null): PlanKey {
+  return value && PLAN_KEYS.includes(value as PlanKey) ? (value as PlanKey) : 'hobby'
+}
+
 export default function PlatformSignup() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const selectedPlan = getSelectedPlan(searchParams.get('plan'))
+  const selectedPlanLabel = PLANS[selectedPlan].label
   const [checkingSession, setCheckingSession] = useState(true)
   const [step, setStep] = useState<Step>(1)
   const [account, setAccount] = useState<AccountForm>({ firstName: '', lastName: '', email: '', password: '' })
@@ -47,7 +54,7 @@ export default function PlatformSignup() {
         } = await supabase.auth.getSession()
 
         if (session?.user) {
-          router.replace('/platform/create')
+          router.replace(`/platform/create?plan=${selectedPlan}`)
           return
         }
       } catch {
@@ -58,7 +65,7 @@ export default function PlatformSignup() {
     }
 
     loadExistingSession()
-  }, [router])
+  }, [router, selectedPlan])
 
   const checkSlug = async (slug: string) => {
     setSlugAvailable(null)
@@ -123,7 +130,7 @@ export default function PlatformSignup() {
     await supabase.auth.signInWithPassword({ email: account.email, password: account.password })
 
     setLoading(false)
-    router.replace(`/platform/dashboard/${data.orgId}/onboarding?created=1`)
+    router.replace(`/platform/dashboard/${data.orgId}/onboarding?created=1&plan=${selectedPlan}`)
   }
 
   if (checkingSession) {
@@ -164,7 +171,9 @@ export default function PlatformSignup() {
           {step === 1 && (
             <>
               <p className="text-xs text-center text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-                Your lounge starts on Hobby. You can choose a different plan during setup.
+                {selectedPlan === 'hobby'
+                  ? 'You selected Hobby. We’ll create your lounge first, then you can add billing during setup.'
+                  : `You selected ${selectedPlanLabel}. We’ll create your lounge first, then add billing for ${selectedPlanLabel} during setup.`}
               </p>
               <GoogleButton
                 redirectTo="/platform/dashboard"

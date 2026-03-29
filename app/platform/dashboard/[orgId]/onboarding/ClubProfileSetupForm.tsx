@@ -52,7 +52,7 @@ export default function ClubProfileSetupForm({
 
       <div>
         <label className="block text-sm font-medium text-gray-900 mb-2">Club type</label>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
           {CLUB_TYPE_OPTIONS.map((option) => {
             const selected = draft.clubType === option.value
             return (
@@ -60,7 +60,7 @@ export default function ClubProfileSetupForm({
                 key={option.value}
                 type="button"
                 onClick={() => set('clubType', option.value)}
-                className={`rounded-xl border p-4 text-left transition-colors ${
+                className={`rounded-xl border p-3 text-left transition-colors ${
                   selected
                     ? 'border-gray-900 bg-gray-900 text-white'
                     : 'border-gray-200 bg-white text-gray-900 hover:border-gray-300'
@@ -68,15 +68,15 @@ export default function ClubProfileSetupForm({
               >
                 <div className="flex items-start gap-3">
                   <div
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-semibold ${
-                      selected ? 'bg-white/15 text-white' : 'bg-gray-100 text-gray-700'
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg ${
+                      selected ? 'bg-white/15 text-white' : 'bg-gray-100'
                     }`}
                   >
-                    {option.badge}
+                    <span aria-hidden>{option.emoji}</span>
                   </div>
                   <div className="min-w-0">
                     <div className="text-sm font-medium">{option.label}</div>
-                    <div className={`mt-1 text-xs leading-5 ${selected ? 'text-gray-200' : 'text-gray-500'}`}>
+                    <div className={`mt-0.5 text-xs leading-5 ${selected ? 'text-gray-200' : 'text-gray-500'}`}>
                       {option.description}
                     </div>
                   </div>

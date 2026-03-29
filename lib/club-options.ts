@@ -2,7 +2,7 @@ export type ClubTypeOption = {
   value: string
   label: string
   description: string
-  badge: string
+  emoji: string
 }
 
 export const CLUB_TYPE_OPTIONS: ClubTypeOption[] = [
@@ -10,91 +10,91 @@ export const CLUB_TYPE_OPTIONS: ClubTypeOption[] = [
     value: 'professional-associations',
     label: 'Professional Associations',
     description: 'Trade groups, industry chapters, and member-led professional networks.',
-    badge: 'PA',
+    emoji: '🏛️',
   },
   {
     value: 'car-motorcycle-clubs',
     label: 'Car & Motorcycle Clubs',
-    description: 'Driving clubs, enthusiast groups, and member communities built around vehicles.',
-    badge: 'CM',
+    description: 'Driving clubs and enthusiast communities built around vehicles.',
+    emoji: '🏎️',
   },
   {
     value: 'hobbyist-groups',
     label: 'Hobby Communities',
-    description: 'Photography clubs, maker groups, gaming communities, and other shared-interest groups.',
-    badge: 'HC',
+    description: 'Photography, maker, gaming, and other shared-interest groups.',
+    emoji: '🎨',
   },
   {
     value: 'active-lifestyle-clubs',
     label: 'Active Lifestyle Clubs',
-    description: 'Running clubs, outdoor groups, fitness communities, and activity-based memberships.',
-    badge: 'AL',
+    description: 'Running, outdoor, and fitness communities with active memberships.',
+    emoji: '🏃',
   },
   {
     value: 'parent-groups',
     label: 'Parent Groups',
-    description: 'School communities, family networks, and parent-led organizations.',
-    badge: 'PG',
+    description: 'School communities, family networks, and parent-led groups.',
+    emoji: '👨‍👩‍👧‍👦',
   },
   {
     value: 'ski-snow-clubs',
     label: 'Ski & Snow Clubs',
-    description: 'Winter sports clubs, mountain communities, and seasonal activity groups.',
-    badge: 'SS',
+    description: 'Winter sports clubs, mountain communities, and seasonal groups.',
+    emoji: '🎿',
   },
   {
     value: 'cycling-clubs',
     label: 'Cycling Clubs',
-    description: 'Road, gravel, triathlon, and community cycling organizations.',
-    badge: 'CY',
+    description: 'Road, gravel, triathlon, and community cycling clubs.',
+    emoji: '🚴',
   },
   {
     value: 'yacht-boating-clubs',
     label: 'Yacht & Boating Clubs',
-    description: 'Sailing clubs, marinas, yacht associations, and other boating communities.',
-    badge: 'YB',
+    description: 'Sailing clubs, marinas, yacht associations, and boating groups.',
+    emoji: '⛵',
   },
   {
     value: 'active-adult-communities',
     label: 'Active Adult Communities',
     description: 'Resident associations and social clubs for active adult communities.',
-    badge: 'AA',
+    emoji: '🌿',
   },
   {
     value: 'legal-financial-associations',
     label: 'Legal & Financial Associations',
-    description: 'Professional member organizations in law, accounting, finance, and advisory services.',
-    badge: 'LF',
+    description: 'Member organizations in law, accounting, finance, and advisory.',
+    emoji: '⚖️',
   },
   {
     value: 'chambers-of-commerce',
     label: 'Chambers of Commerce',
-    description: 'Business membership organizations serving local commercial communities.',
-    badge: 'CC',
+    description: 'Business membership organizations serving local communities.',
+    emoji: '🤝',
   },
   {
     value: 'aviation-groups',
     label: 'Aviation Clubs',
     description: 'Flying clubs, airport communities, and pilot associations.',
-    badge: 'AV',
+    emoji: '✈️',
   },
   {
     value: 'aging-in-place-villages',
     label: 'Aging-in-Place Villages',
-    description: 'Village organizations and support communities helping members age in place.',
-    badge: 'AP',
+    description: 'Village organizations helping members age in place.',
+    emoji: '🏡',
   },
   {
     value: 'civic-advocacy-groups',
     label: 'Civic & Advocacy Groups',
-    description: 'Member-driven advocacy organizations, civic groups, and issue-based communities.',
-    badge: 'CA',
+    description: 'Advocacy organizations, civic groups, and issue-based communities.',
+    emoji: '📣',
   },
   {
     value: 'homeowner-associations',
     label: 'Homeowner Associations',
     description: 'Resident associations, condo boards, and neighborhood communities.',
-    badge: 'HO',
+    emoji: '🏘️',
   },
 ]
 

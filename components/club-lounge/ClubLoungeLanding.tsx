@@ -112,6 +112,11 @@ export type ClubLoungeLandingProps = {
   internalLinks: boolean
 }
 
+function withPlan(href: string, plan: string) {
+  const separator = href.includes('?') ? '&' : '?'
+  return `${href}${separator}plan=${encodeURIComponent(plan)}`
+}
+
 function NavLink({ href, className, children, internalLinks }: {
   href: string; className?: string; children: ReactNode; internalLinks: boolean
 }) {
@@ -648,7 +653,7 @@ export function ClubLoungeLanding({
               <li><span className="cl-cross">—</span>Digest emails</li>
               <li><span className="cl-cross">—</span>Analytics</li>
             </ul>
-            <NavLink href={signupHref} className="cl-price-btn" internalLinks={internalLinks}>Get started</NavLink>
+            <NavLink href={withPlan(signupHref, 'hobby')} className="cl-price-btn" internalLinks={internalLinks}>Get started</NavLink>
           </div>
           <div className="cl-price-col">
             <div className="cl-price-tier">Core</div>
@@ -666,7 +671,7 @@ export function ClubLoungeLanding({
               <li><span className="cl-cross">—</span>Digest emails</li>
               <li><span className="cl-cross">—</span>Analytics</li>
             </ul>
-            <NavLink href={signupHref} className="cl-price-btn" internalLinks={internalLinks}>Get started</NavLink>
+            <NavLink href={withPlan(signupHref, 'starter')} className="cl-price-btn" internalLinks={internalLinks}>Get started</NavLink>
           </div>
           <div className="cl-price-col cl-featured">
             <div className="cl-featured-badge">Most popular</div>
@@ -686,7 +691,7 @@ export function ClubLoungeLanding({
               <li><span className="cl-check">✓</span>Multiple membership tiers</li>
               <li><span className="cl-check">✓</span>Member trial periods</li>
             </ul>
-            <NavLink href={signupHref} className="cl-price-btn" internalLinks={internalLinks}>Get started</NavLink>
+            <NavLink href={withPlan(signupHref, 'community')} className="cl-price-btn" internalLinks={internalLinks}>Get started</NavLink>
           </div>
           <div className="cl-price-col">
             <div className="cl-price-tier">Pro</div>
@@ -700,7 +705,7 @@ export function ClubLoungeLanding({
               <li><span className="cl-check">✓</span>Priority support</li>
               <li><span className="cl-check">✓</span>Custom billing / invoicing</li>
             </ul>
-            <NavLink href={signupHref} className="cl-price-btn" internalLinks={internalLinks}>Get started</NavLink>
+            <NavLink href={withPlan(signupHref, 'club_pro')} className="cl-price-btn" internalLinks={internalLinks}>Get started</NavLink>
           </div>
         </div>
         <p className="cl-pricing-footnote">

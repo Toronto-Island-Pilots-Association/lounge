@@ -21,7 +21,7 @@ export default async function OrgOnboardingPage({
   searchParams,
 }: {
   params: Promise<{ orgId: string }>
-  searchParams: Promise<{ created?: string; checkout?: string; session_id?: string; stripe?: string }>
+  searchParams: Promise<{ created?: string; checkout?: string; session_id?: string; stripe?: string; plan?: string }>
 }) {
   const { orgId } = await params
   const sp = await searchParams
@@ -84,6 +84,10 @@ export default async function OrgOnboardingPage({
   if (!org) redirect('/platform/dashboard')
 
   const currentPlan = (org.plan as PlanKey) ?? 'hobby'
+  const selectedPlan =
+    typeof sp.plan === 'string' && PLAN_KEYS.includes(sp.plan as PlanKey)
+      ? (sp.plan as PlanKey)
+      : null
   const identity = await getOrgIdentity(orgId)
   const memberCount = await getBillableOrgMemberCount(orgId)
   const planPrices = Object.fromEntries(
@@ -125,7 +129,9 @@ export default async function OrgOnboardingPage({
 
           {sp.created === '1' && (
             <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900">
-              Your lounge is live. Set dues, pick a plan, and connect Stripe when you&apos;re ready to collect payments.
+              {selectedPlan && selectedPlan !== 'hobby'
+                ? `Your lounge is live. You selected ${PLANS[selectedPlan].label}, so finish billing below to switch this club off Hobby.`
+                : 'Your lounge is live. Set dues, pick a plan, and connect Stripe when you’re ready to collect payments.'}
             </div>
           )}
 
@@ -192,6 +198,12 @@ export default async function OrgOnboardingPage({
               ? ` for ${memberCount} active members`
               : ''}
           </div>
+
+          {selectedPlan && selectedPlan !== currentPlan && (
+            <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+              Selected from marketing: <span className="font-medium">{PLANS[selectedPlan].label}</span>. Add billing details to move this lounge from {PLANS[currentPlan].label} to {PLANS[selectedPlan].label}.
+            </div>
+          )}
 
           <PlanSelector
             orgId={orgId}
