@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { UserProfile, MembershipLevel, getMembershipLevelLabel, Payment } from '@/types/database'
-import { isOnTrial } from '@/lib/trial'
+import { MemberProfile, MembershipLevel, getMembershipLevelLabel, Payment } from '@/types/database'
+import type { OrgMemberProfileFieldFlags } from '@/lib/settings'
 import Loading from '@/components/Loading'
 import MemberDetailModal from './MemberDetailModal'
+import { getOrgRoleBadgeClass, getOrgRoleLabel, isPlatformAdminRole } from '@/lib/org-roles'
 import {
   Drawer,
   DrawerContent,
@@ -15,7 +16,7 @@ import {
 } from '@/components/ui/drawer'
 
 type PaymentSummary = { amount: number; currency: string; payment_method: string } | null
-type MemberWithPayment = UserProfile & { payment_summary?: PaymentSummary }
+type MemberWithPayment = MemberProfile & { payment_summary?: PaymentSummary }
 
 function hasPaymentSetUp(member: MemberWithPayment): boolean {
   return !!(member.stripe_subscription_id || member.payment_summary)
@@ -78,10 +79,14 @@ function compareMembers(
   }
 }
 
-export default function MembersPageClient() {
-  const [members, setMembers] = useState<UserProfile[]>([])
+export default function MembersPageClient({
+  profileFieldFlags,
+}: {
+  profileFieldFlags: OrgMemberProfileFieldFlags
+}) {
+  const [members, setMembers] = useState<MemberProfile[]>([])
   const [loading, setLoading] = useState(true)
-  const [editingMember, setEditingMember] = useState<UserProfile | null>(null)
+  const [editingMember, setEditingMember] = useState<MemberProfile | null>(null)
   const [showInviteForm, setShowInviteForm] = useState(false)
   const [showBulkInviteForm, setShowBulkInviteForm] = useState(false)
   const [resendingMemberId, setResendingMemberId] = useState<string | null>(null)
@@ -90,6 +95,8 @@ export default function MembersPageClient() {
   const [sortDir, setSortDir] = useState<SortDirection>('desc')
   const [page, setPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'expired' | 'rejected'>('all')
+  const [canManageRoles, setCanManageRoles] = useState(false)
   const pageSize = PAGE_SIZE
 
   const loadData = useCallback(async () => {
@@ -108,27 +115,39 @@ export default function MembersPageClient() {
     loadData()
   }, [loadData])
 
+  useEffect(() => {
+    fetch('/api/profile')
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => setCanManageRoles(isPlatformAdminRole(data?.profile?.role)))
+      .catch(() => setCanManageRoles(false))
+  }, [])
+
   const sortedMembers = useMemo(() => {
     const list = [...members] as MemberWithPayment[]
     list.sort((a, b) => compareMembers(a, b, sortKey, sortDir))
     return list
   }, [members, sortKey, sortDir])
 
+  const statusFilteredMembers = useMemo(() => {
+    if (statusFilter === 'all') return sortedMembers
+    return sortedMembers.filter((m) => m.status === statusFilter)
+  }, [sortedMembers, statusFilter])
+
   const filteredMembers = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
-    if (!q) return sortedMembers
-    return sortedMembers.filter((m) => {
+    if (!q) return statusFilteredMembers
+    return statusFilteredMembers.filter((m) => {
       const name = (m.full_name || '').toLowerCase()
       const email = (m.email || '').toLowerCase()
       const memberNum = (m.member_number || '').toLowerCase()
       return name.includes(q) || email.includes(q) || memberNum.includes(q)
     })
-  }, [sortedMembers, searchQuery])
+  }, [statusFilteredMembers, searchQuery])
 
-  // Reset to first page when search changes
+  // Reset to first page when search or status filter changes
   useEffect(() => {
     setPage(1)
-  }, [searchQuery])
+  }, [searchQuery, statusFilter])
 
   const totalPages = Math.max(1, Math.ceil(filteredMembers.length / pageSize))
   const paginatedMembers = useMemo(() => {
@@ -213,7 +232,7 @@ export default function MembersPageClient() {
     }
   }
 
-  const handleUpdateMember = async (member: UserProfile, updates: Partial<UserProfile>) => {
+  const handleUpdateMember = async (member: MemberProfile, updates: Partial<MemberProfile>) => {
     try {
       const response = await fetch('/api/admin/members', {
         method: 'PATCH',
@@ -321,7 +340,7 @@ export default function MembersPageClient() {
             placeholder="Search by name, email, or member #"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] text-sm"
+            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] text-sm"
             aria-label="Search members"
           />
         </div>
@@ -372,19 +391,51 @@ export default function MembersPageClient() {
         </button>
         <button
           onClick={() => setShowInviteForm(true)}
-          className="bg-[#0d1e26] text-white px-2 py-1.5 sm:px-4 sm:py-2 rounded-md hover:bg-[#0a171c] text-xs sm:text-sm"
+          className="bg-[var(--color-primary)] text-white px-2 py-1.5 sm:px-4 sm:py-2 rounded-md hover:bg-[#0a171c] text-xs sm:text-sm"
         >
           <span className="hidden sm:inline">Invite Member</span>
           <span className="sm:hidden">Invite</span>
         </button>
         <button
           onClick={() => setShowBulkInviteForm(true)}
-          className="bg-[#0d1e26] text-white px-2 py-1.5 sm:px-4 sm:py-2 rounded-md hover:bg-[#0a171c] text-xs sm:text-sm"
+          className="bg-[var(--color-primary)] text-white px-2 py-1.5 sm:px-4 sm:py-2 rounded-md hover:bg-[#0a171c] text-xs sm:text-sm"
         >
           <span className="hidden sm:inline">Bulk Invite (CSV)</span>
           <span className="sm:hidden">Bulk</span>
         </button>
         </div>
+      </div>
+
+      {/* Status filter tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-1 sm:space-x-4 overflow-x-auto" aria-label="Status filter">
+          {(['all', 'pending', 'approved', 'expired', 'rejected'] as const).map((tab) => {
+            const count = tab === 'all' ? members.length : members.filter((m) => m.status === tab).length
+            const pendingCount = members.filter((m) => m.status === 'pending').length
+            return (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setStatusFilter(tab)}
+                className={`
+                  whitespace-nowrap py-2.5 px-2 sm:px-3 border-b-2 font-medium text-sm capitalize flex items-center gap-1.5
+                  ${statusFilter === tab
+                    ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
+                `}
+              >
+                {tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab === 'pending' && pendingCount > 0 ? (
+                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 min-w-[1.25rem]">
+                    {pendingCount}
+                  </span>
+                ) : (
+                  <span className="text-xs text-gray-400">({count})</span>
+                )}
+              </button>
+            )
+          })}
+        </nav>
       </div>
 
       <div className="overflow-x-auto -mx-4 sm:mx-0">
@@ -400,7 +451,7 @@ export default function MembersPageClient() {
                         <button
                           type="button"
                           onClick={() => setEditingMember(member)}
-                          className="font-medium text-gray-900 truncate hover:text-[#0d1e26] hover:underline cursor-pointer text-left"
+                          className="font-medium text-gray-900 truncate hover:text-[var(--color-primary)] hover:underline cursor-pointer text-left"
                         >
                           {member.full_name || '-'}
                         </button>
@@ -420,7 +471,7 @@ export default function MembersPageClient() {
                     </div>
                     <button
                       onClick={() => setEditingMember(member)}
-                      className="ml-2 text-[#0d1e26] hover:text-[#0a171c] text-sm shrink-0"
+                      className="ml-2 text-[var(--color-primary)] hover:text-[#0a171c] text-sm shrink-0"
                     >
                       Edit
                     </button>
@@ -436,9 +487,9 @@ export default function MembersPageClient() {
                     )}
                   </div>
                   <div className="flex flex-wrap gap-2 text-xs">
-                    {member.role === 'admin' && (
-                      <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded font-medium">
-                        Admin
+                    {member.role !== 'member' && (
+                      <span className={`px-2 py-1 rounded font-medium ${getOrgRoleBadgeClass(member.role)}`}>
+                        {getOrgRoleLabel(member.role)}
                       </span>
                     )}
                     <span className={`px-2 py-1 rounded font-medium ${
@@ -474,6 +525,27 @@ export default function MembersPageClient() {
                         : member.membership_expires_at
                           ? new Date(member.membership_expires_at).toLocaleDateString('en-US', { timeZone: 'UTC' })
                           : '-'}
+                    </div>
+                  )}
+                  {member.status === 'pending' && (
+                    <div className="mt-3 pt-3 border-t border-gray-100 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleApproveReject(member.id, 'approved')}
+                        className="flex-1 py-1.5 text-xs font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!confirm('Are you sure you want to reject this member?')) return
+                          handleApproveReject(member.id, 'rejected')
+                        }}
+                        className="flex-1 py-1.5 text-xs font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+                      >
+                        Reject
+                      </button>
                     </div>
                   )}
                 </div>
@@ -534,13 +606,13 @@ export default function MembersPageClient() {
                         <button
                           type="button"
                           onClick={() => setEditingMember(member)}
-                          className="truncate min-w-0 text-left font-medium text-gray-900 hover:text-[#0d1e26] hover:underline cursor-pointer"
+                          className="truncate min-w-0 text-left font-medium text-gray-900 hover:text-[var(--color-primary)] hover:underline cursor-pointer"
                         >
                           {member.full_name || '-'}
                         </button>
-                        {member.role === 'admin' && (
-                          <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded font-medium shrink-0">
-                            Admin
+                        {member.role !== 'member' && (
+                          <span className={`px-2 py-0.5 text-xs rounded font-medium shrink-0 ${getOrgRoleBadgeClass(member.role)}`}>
+                            {getOrgRoleLabel(member.role)}
                           </span>
                         )}
                         {member.status === 'pending' && member.invited_at && (
@@ -629,7 +701,7 @@ export default function MembersPageClient() {
                       )}
                       <button
                         onClick={() => setEditingMember(member)}
-                        className="text-[#0d1e26] hover:text-[#0a171c]"
+                        className="text-[var(--color-primary)] hover:text-[#0a171c]"
                       >
                         Edit
                       </button>
@@ -678,10 +750,12 @@ export default function MembersPageClient() {
       {editingMember && (
         <MemberDetailModal
           member={editingMember}
+          profileFieldFlags={profileFieldFlags}
           onClose={() => setEditingMember(null)}
           onSave={handleUpdateMember}
           onResendReminder={handleResendReminder}
           resendingMemberId={resendingMemberId}
+          canManageRoles={canManageRoles}
         />
       )}
 
@@ -736,7 +810,7 @@ function InviteMemberModal({
                 required
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                 placeholder="member@example.com"
               />
             </div>
@@ -746,7 +820,7 @@ function InviteMemberModal({
                 type="text"
                 value={formData.firstName}
                 onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                 placeholder="John"
               />
             </div>
@@ -756,7 +830,7 @@ function InviteMemberModal({
                 type="text"
                 value={formData.lastName}
                 onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                 placeholder="Doe"
               />
             </div>
@@ -765,7 +839,7 @@ function InviteMemberModal({
               <select
                 value={formData.membership_level}
                 onChange={(e) => setFormData({ ...formData, membership_level: e.target.value as 'Full' | 'Student' | 'Associate' | 'Corporate' | 'Honorary' })}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer"
               >
                 <option value="Full">Full</option>
                 <option value="Student">Student</option>
@@ -797,7 +871,7 @@ function InviteMemberModal({
                 })
                 onClose()
               }}
-              className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c]"
+              className="px-4 py-2 text-sm font-medium text-white bg-[var(--color-primary)] rounded-md hover:bg-[#0a171c]"
             >
               Create Account & Send Invitation
             </button>
@@ -882,7 +956,7 @@ jane@example.com,Jane,Smith`}
               type="file"
               accept=".csv,text/csv"
               onChange={handleFileChange}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
             />
             {file && (
               <p className="mt-2 text-sm text-gray-600">
@@ -895,7 +969,7 @@ jane@example.com,Jane,Smith`}
             <select
               value={membership_level}
               onChange={(e) => setMembershipLevel(e.target.value as 'Full' | 'Student' | 'Associate' | 'Corporate' | 'Honorary')}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer"
             >
               <option value="Full">Full</option>
               <option value="Student">Student</option>
@@ -919,7 +993,7 @@ jane@example.com,Jane,Smith`}
             <button
               onClick={handleSubmit}
               disabled={!file || uploading}
-              className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 text-sm font-medium text-white bg-[var(--color-primary)] rounded-md hover:bg-[#0a171c] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {uploading ? 'Processing...' : 'Upload & Process'}
             </button>

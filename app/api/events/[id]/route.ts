@@ -1,5 +1,8 @@
 import { requireAuth } from '@/lib/auth'
+import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
+import { isOrgManagerRole } from '@/lib/org-roles'
 import { createClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/settings'
 import { NextResponse } from 'next/server'
 
 // PATCH - Update event (admin only)
@@ -9,18 +12,33 @@ export async function PATCH(
 ) {
   try {
     const user = await requireAuth()
+    const flags = await getFeatureFlags()
+    if (!flags.events) {
+      return NextResponse.json({ error: 'Events are not enabled for this organization' }, { status: 403 })
+    }
+    const orgId = user.profile.org_id
     const { id } = await params
-    
+
     // Check if user is admin
-    if (user.profile.role !== 'admin') {
+    if (!isOrgManagerRole(user.profile.role)) {
       return NextResponse.json(
         { error: 'Forbidden: Admin access required' },
         { status: 403 }
       )
     }
+    const billingStatus = await getOrgBillingActivationStatus(orgId)
+    if (billingStatus.requiresActivation) {
+      return NextResponse.json(
+        { error: 'Add billing details in Billing before publishing events.' },
+        { status: 402 },
+      )
+    }
 
     const updates = await request.json()
     const supabase = await createClient()
+
+    // Prevent cross-tenant updates if a malicious client includes `org_id`.
+    if ('org_id' in updates) delete (updates as any).org_id
 
     // Handle image_url: only save storage paths, not signed URLs (which expire)
     if (updates.image_url !== undefined) {
@@ -35,6 +53,7 @@ export async function PATCH(
           .from('events')
           .select('image_url')
           .eq('id', id)
+          .eq('org_id', orgId)
           .single()
         
         if (existingEvent && existingEvent.image_url) {
@@ -61,6 +80,7 @@ export async function PATCH(
       .from('events')
       .update(updates)
       .eq('id', id)
+      .eq('org_id', orgId)
       .select()
       .single()
 
@@ -84,13 +104,25 @@ export async function DELETE(
 ) {
   try {
     const user = await requireAuth()
+    const flags = await getFeatureFlags()
+    if (!flags.events) {
+      return NextResponse.json({ error: 'Events are not enabled for this organization' }, { status: 403 })
+    }
+    const orgId = user.profile.org_id
     const { id } = await params
-    
+
     // Check if user is admin
-    if (user.profile.role !== 'admin') {
+    if (!isOrgManagerRole(user.profile.role)) {
       return NextResponse.json(
         { error: 'Forbidden: Admin access required' },
         { status: 403 }
+      )
+    }
+    const billingStatus = await getOrgBillingActivationStatus(orgId)
+    if (billingStatus.requiresActivation) {
+      return NextResponse.json(
+        { error: 'Add billing details in Billing before publishing events.' },
+        { status: 402 },
       )
     }
 
@@ -100,6 +132,7 @@ export async function DELETE(
       .from('events')
       .delete()
       .eq('id', id)
+      .eq('org_id', orgId)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 })
@@ -113,4 +146,3 @@ export async function DELETE(
     )
   }
 }
-

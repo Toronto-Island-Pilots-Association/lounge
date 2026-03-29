@@ -26,6 +26,7 @@ describe('/api/admin/invite-member - Complex Flow', () => {
   })
 
   it('should create user with temporary password, set status to pending, and send invitation email', async () => {
+    const orgId = 'org-123'
     const { createClient } = require('@/lib/supabase/server')
     const { createClient: createAdminClient } = require('@supabase/supabase-js')
     const { sendInvitationWithPasswordEmail } = require('@/lib/resend')
@@ -34,10 +35,7 @@ describe('/api/admin/invite-member - Complex Flow', () => {
       from: jest.fn(() => ({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({
-          data: null,
-          error: { code: 'PGRST116' },
-        }),
+        maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
       })),
     }
 
@@ -61,26 +59,35 @@ describe('/api/admin/invite-member - Complex Flow', () => {
           }),
         },
       },
-      from: jest.fn(() => ({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({
-          data: mockProfile,
-        }),
-      })),
+      from: jest.fn((table: string) => {
+        if (table === 'member_profiles') {
+          return {
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnThis(),
+            maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+          }
+        }
+        if (table === 'user_profiles') {
+          return { insert: jest.fn().mockResolvedValue({ error: null }) }
+        }
+        if (table === 'org_memberships') {
+          return { insert: jest.fn().mockResolvedValue({ error: null }) }
+        }
+        return {}
+      }),
     }
 
     createClient.mockResolvedValue(mockSupabase)
     createAdminClient.mockReturnValue(mockAdminClient)
 
-    const request = new Request('http://localhost:3000/api/admin/invite-member', {
+    const request = new Request('http://clublounge.local:3000/api/admin/invite-member', {
       method: 'POST',
       body: JSON.stringify({
         email: 'newuser@example.com',
         firstName: 'John',
         lastName: 'Doe',
       }),
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-org-id': orgId },
     }) as any
 
     const response = await POST(request)
@@ -96,12 +103,14 @@ describe('/api/admin/invite-member - Complex Flow', () => {
         email_confirm: true,
         user_metadata: expect.objectContaining({
           invited_by_admin: true,
+          org_id: orgId,
         }),
       })
     )
     
-    // Verify profile was created with 'pending' status
-    expect(mockSupabase.from).toHaveBeenCalledWith('user_profiles')
+    // Verify membership rows were created
+    expect(mockAdminClient.from).toHaveBeenCalledWith('user_profiles')
+    expect(mockAdminClient.from).toHaveBeenCalledWith('org_memberships')
     
     // Verify invitation email was sent with temporary password
     expect(sendInvitationWithPasswordEmail).toHaveBeenCalledWith(

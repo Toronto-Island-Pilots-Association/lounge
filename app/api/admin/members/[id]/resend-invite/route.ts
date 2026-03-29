@@ -1,4 +1,5 @@
 import { requireAdmin } from '@/lib/auth'
+import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
 import { sendInvitationReminderEmail } from '@/lib/resend'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
@@ -23,21 +24,34 @@ function generateTempPassword(): string {
 }
 
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin()
+    const orgId = request.headers.get('x-org-id')
+    if (!orgId) {
+      return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
+    }
+    const billingStatus = await getOrgBillingActivationStatus(orgId)
+    if (billingStatus.requiresActivation) {
+      return NextResponse.json(
+        { error: 'Add billing details in Billing before sending invite reminders.' },
+        { status: 402 },
+      )
+    }
     const { id: memberId } = await params
     if (!memberId) {
       return NextResponse.json({ error: 'Member ID is required' }, { status: 400 })
     }
 
     const supabase = await createClient()
+    // member_profiles view: id = org_memberships.id; user_id = auth user id
     const { data: profile, error: fetchError } = await supabase
-      .from('user_profiles')
-      .select('id, email, full_name, status, invited_at, last_reminder_sent_at, reminder_count')
+      .from('member_profiles')
+      .select('id, user_id, email, full_name, status, invited_at, last_reminder_sent_at, reminder_count')
       .eq('id', memberId)
+      .eq('org_id', orgId)
       .single()
 
     if (fetchError || !profile) {
@@ -73,7 +87,7 @@ export async function POST(
 
     const newTempPassword = generateTempPassword()
     const adminClient = createServiceRoleClient()
-    const { error: updateAuthError } = await adminClient.auth.admin.updateUserById(profile.id, {
+    const { error: updateAuthError } = await adminClient.auth.admin.updateUserById(profile.user_id, {
       password: newTempPassword,
     })
 
@@ -85,7 +99,7 @@ export async function POST(
       )
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'
 
     await sendInvitationReminderEmail(
       profile.email,
@@ -95,12 +109,13 @@ export async function POST(
     )
 
     const { error: updateProfileError } = await supabase
-      .from('user_profiles')
+      .from('org_memberships')
       .update({
         last_reminder_sent_at: new Date().toISOString(),
         reminder_count: count + 1,
       })
       .eq('id', memberId)
+      .eq('org_id', orgId)
 
     if (updateProfileError) {
       console.error('Resend invite: failed to update profile', updateProfileError)

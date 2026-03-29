@@ -18,6 +18,7 @@ export async function GET() {
       .from('payments')
       .select('*')
       .eq('user_id', user.id)
+      .eq('org_id', user.profile.org_id)
       .order('payment_date', { ascending: false })
 
     if (error) {

@@ -1,9 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { headers } from 'next/headers'
 import * as Sentry from '@sentry/nextjs'
 
 export async function POST(request: Request) {
   try {
+    const h = await headers()
+    const orgId = h.get('x-org-id')
+    if (!orgId) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     const { email, password } = await request.json()
 
     if (!email || !password) {
@@ -51,21 +55,25 @@ export async function POST(request: Request) {
           const wasInvited =
             meta?.invited_by_admin === true || meta?.invited_by_member === true
 
-          if (wasInvited) {
-            // Get profile: we set status to 'approved' when they change password, so use that as source of truth
-            const { data: profile } = await adminClient
-              .from('user_profiles')
-              .select('status')
-              .eq('id', data.user.id)
-              .single()
+          // Get profile status for all users (covers both invited and self-signup)
+          const { data: profile } = await adminClient
+            .from('org_memberships')
+            .select('status')
+            .eq('user_id', data.user.id)
+            .eq('org_id', orgId)
+            .maybeSingle()
 
-            // Only require password change if still pending (have not completed first-time change)
-            if (profile?.status === 'pending') {
-              return NextResponse.json({
-                user: data.user,
-                requiresPasswordChange: true,
-              })
-            }
+          if (wasInvited && profile?.status === 'pending') {
+            // Invited member who hasn't completed first-time password change yet
+            return NextResponse.json({
+              user: data.user,
+              requiresPasswordChange: true,
+            })
+          }
+
+          if (profile?.status === 'pending') {
+            // Self-signup member waiting for admin approval
+            return NextResponse.json({ requiresApproval: true })
           }
         } catch (updateError) {
           // Don't fail login if status update fails

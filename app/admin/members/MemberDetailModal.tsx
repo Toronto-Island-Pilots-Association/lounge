@@ -3,8 +3,11 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { UserProfile, MembershipLevel, getMembershipLevelLabel, Payment } from '@/types/database'
-import { isOnTrial, getTrialEndDate } from '@/lib/trial'
+import type { OrgMemberProfileFieldFlags } from '@/lib/settings'
+import { MemberProfile, MembershipLevel, getMembershipLevelLabel, Payment } from '@/types/database'
+import { isOnTrialFromTrialEnd, trialUntilLabel } from '@/lib/trial'
+import { COMMON_INTEREST_OPTIONS } from '@/lib/club-options'
+import { getOrgRoleBadgeClass, getOrgRoleLabel } from '@/lib/org-roles'
 import { COUNTRIES, getStatesProvinces } from '@/app/become-a-member/constants'
 import {
   Drawer,
@@ -59,16 +62,20 @@ interface ActivityData {
 
 export default function MemberDetailModal({
   member,
+  profileFieldFlags,
   onClose,
   onSave,
   onResendReminder,
   resendingMemberId,
+  canManageRoles = false,
 }: {
-  member: UserProfile
+  member: MemberProfile
+  profileFieldFlags: OrgMemberProfileFieldFlags
   onClose: () => void
-  onSave: (member: UserProfile, updates: Partial<UserProfile>) => void
+  onSave: (member: MemberProfile, updates: Partial<MemberProfile>) => void
   onResendReminder?: (memberId: string) => void
   resendingMemberId?: string | null
+  canManageRoles?: boolean
 }) {
   const [activeTab, setActiveTab] = useState<'overview' | 'edit' | 'membership' | 'activity'>('overview')
   const [cancellingStripe, setCancellingStripe] = useState(false)
@@ -147,6 +154,7 @@ export default function MemberDetailModal({
   const [recordingPayment, setRecordingPayment] = useState(false)
   const [activityData, setActivityData] = useState<ActivityData | null>(null)
   const [loadingActivity, setLoadingActivity] = useState(false)
+  const trialUntilText = trialUntilLabel(member.trial_end)
 
   useEffect(() => {
     if (activeTab === 'activity' || activeTab === 'membership') {
@@ -188,7 +196,7 @@ export default function MemberDetailModal({
                   py-3 px-1 border-b-2 font-medium text-sm capitalize
                   ${
                     activeTab === tab
-                      ? 'border-[#0d1e26] text-[#0d1e26]'
+                      ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }
                 `}
@@ -265,13 +273,9 @@ export default function MemberDetailModal({
                       }`}>
                         {member.membership_level ? getMembershipLevelLabel(member.membership_level) : 'Full'}
                       </span>
-                      {isOnTrial(member.membership_level, member.created_at, member.status) && (
+                      {isOnTrialFromTrialEnd(member.status, member.trial_end) && (
                         <span className="inline-flex px-2 py-0.5 text-xs rounded font-medium bg-blue-100 text-blue-800">
-                          Trial
-                          {(() => {
-                            const trialEnd = getTrialEndDate(member.membership_level, member.created_at)
-                            return trialEnd ? ` until ${trialEnd.toLocaleDateString('en-US', { timeZone: 'UTC' })}` : ''
-                          })()}
+                          Trial{trialUntilText ? ` until ${trialUntilText}` : ''}
                         </span>
                       )}
                       {member.stripe_subscription_id && (
@@ -323,6 +327,45 @@ export default function MemberDetailModal({
                   </div>
                 </div>
 
+                {/* Role Management */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <h4 className="text-xs font-semibold text-gray-700 mb-2">Role</h4>
+                  <div className="flex items-center gap-3">
+                    <span className={`inline-flex px-2 py-0.5 text-xs rounded font-medium ${
+                      getOrgRoleBadgeClass(member.role)
+                    }`}>
+                      {getOrgRoleLabel(member.role)}
+                    </span>
+                    {canManageRoles ? (
+                      member.role === 'admin' ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!confirm('Change this admin to editor?')) return
+                            onSave(member, { role: 'editor' })
+                          }}
+                          className="px-3 py-1 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-md hover:bg-purple-100"
+                        >
+                          Make editor
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!confirm('Grant admin role to this member?')) return
+                            onSave(member, { role: 'admin' })
+                          }}
+                          className="px-3 py-1 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-md hover:bg-purple-100"
+                        >
+                          Make admin
+                        </button>
+                      )
+                    ) : (
+                      <span className="text-xs text-gray-500">Only org admins can change roles.</span>
+                    )}
+                  </div>
+                </div>
+
                 {/* Address Information */}
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <h4 className="text-xs font-semibold text-gray-700 mb-2">Mailing Address</h4>
@@ -350,63 +393,79 @@ export default function MemberDetailModal({
                   </div>
                 </div>
 
-                {/* Aviation Information */}
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <h4 className="text-xs font-semibold text-gray-700 mb-2">Aviation Information</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <span className="text-gray-500">Pilot License Type:</span>
-                      <div className="font-medium text-gray-900">{member.pilot_license_type || '-'}</div>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Aircraft Type:</span>
-                      <div className="font-medium text-gray-900">{member.aircraft_type || '-'}</div>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Call Sign:</span>
-                      <div className="font-medium text-gray-900">{member.call_sign || '-'}</div>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">How Often Fly from YTZ:</span>
-                      <div className="font-medium text-gray-900">{member.how_often_fly_from_ytz || '-'}</div>
-                    </div>
-                    {member.is_student_pilot && (
-                      <>
-                        <div>
-                          <span className="text-gray-500">Flight School:</span>
-                          <div className="font-medium text-gray-900">{member.flight_school || '-'}</div>
+                {(profileFieldFlags.showAviationSection || profileFieldFlags.showCopaSection) && (
+                  <>
+                    {/* Aviation Information */}
+                    {profileFieldFlags.showAviationSection && (
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <h4 className="text-xs font-semibold text-gray-700 mb-2">Aviation Information</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                          {profileFieldFlags.showPilotLicenseType && (
+                            <div>
+                              <span className="text-gray-500">Pilot License Type:</span>
+                              <div className="font-medium text-gray-900">{member.pilot_license_type || '-'}</div>
+                            </div>
+                          )}
+                          {profileFieldFlags.showAircraftType && (
+                            <div>
+                              <span className="text-gray-500">Aircraft Type:</span>
+                              <div className="font-medium text-gray-900">{member.aircraft_type || '-'}</div>
+                            </div>
+                          )}
+                          {profileFieldFlags.showCallSign && (
+                            <div>
+                              <span className="text-gray-500">Call Sign:</span>
+                              <div className="font-medium text-gray-900">{member.call_sign || '-'}</div>
+                            </div>
+                          )}
+                          {profileFieldFlags.showFlightFrequency && (
+                            <div>
+                              <span className="text-gray-500">How Often Fly from YTZ:</span>
+                              <div className="font-medium text-gray-900">{member.how_often_fly_from_ytz || '-'}</div>
+                            </div>
+                          )}
+                          {profileFieldFlags.showStudentPilotFields && member.is_student_pilot && (
+                            <>
+                              <div>
+                                <span className="text-gray-500">Flight School:</span>
+                                <div className="font-medium text-gray-900">{member.flight_school || '-'}</div>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Instructor Name:</span>
+                                <div className="font-medium text-gray-900">{member.instructor_name || '-'}</div>
+                              </div>
+                            </>
+                          )}
                         </div>
-                        <div>
-                          <span className="text-gray-500">Instructor Name:</span>
-                          <div className="font-medium text-gray-900">{member.instructor_name || '-'}</div>
-                        </div>
-                      </>
+                      </div>
                     )}
-                  </div>
-                </div>
 
-                {/* COPA Membership */}
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <h4 className="text-xs font-semibold text-gray-700 mb-2">COPA Membership</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <span className="text-gray-500">COPA Member:</span>
-                      <div className="font-medium text-gray-900">
-                        {member.is_copa_member === 'yes' ? 'Yes' : member.is_copa_member === 'no' ? 'No' : '-'}
+                    {/* COPA Membership */}
+                    {profileFieldFlags.showCopaSection && (
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <h4 className="text-xs font-semibold text-gray-700 mb-2">COPA Membership</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <span className="text-gray-500">COPA Member:</span>
+                            <div className="font-medium text-gray-900">
+                              {member.is_copa_member === 'yes' ? 'Yes' : member.is_copa_member === 'no' ? 'No' : '-'}
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Join COPA Flight 32:</span>
+                            <div className="font-medium text-gray-900">
+                              {member.join_copa_flight_32 === 'yes' ? 'Yes' : member.join_copa_flight_32 === 'no' ? 'No' : '-'}
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">COPA Membership Number:</span>
+                            <div className="font-medium text-gray-900">{member.copa_membership_number || '-'}</div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Join COPA Flight 32:</span>
-                      <div className="font-medium text-gray-900">
-                        {member.join_copa_flight_32 === 'yes' ? 'Yes' : member.join_copa_flight_32 === 'no' ? 'No' : '-'}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">COPA Membership Number:</span>
-                      <div className="font-medium text-gray-900">{member.copa_membership_number || '-'}</div>
-                    </div>
-                  </div>
-                </div>
+                    )}
+                  </>
+                )}
 
                 {/* Interests */}
                 <div className="mt-4 pt-4 border-t border-gray-200">
@@ -426,20 +485,9 @@ export default function MemberDetailModal({
                           return <span className="text-gray-500">No interests specified</span>
                         }
 
-                        const interestLabels: Record<string, string> = {
-                          'flying': 'Flying',
-                          'aircraft-ownership': 'Aircraft Ownership',
-                          'training': 'Training & Education',
-                          'safety': 'Safety & Proficiency',
-                          'community': 'Community & Networking',
-                          'events': 'Events & Social Activities',
-                          'advocacy': 'Aviation Advocacy',
-                          'island-operations': 'Island Operations / YTZ',
-                          'aircraft-maintenance': 'Aircraft Maintenance',
-                          'mentoring': 'Mentoring',
-                          'hangar-storage': 'Hangar/Storage',
-                          'volunteer-flying-public-benefit': 'Volunteer Flying (Public Benefit)',
-                        }
+                        const interestLabels: Record<string, string> = Object.fromEntries(
+                          COMMON_INTEREST_OPTIONS.map((option) => [option.value, option.label]),
+                        )
 
                         return (
                           <div className="flex flex-wrap gap-2">
@@ -495,7 +543,7 @@ export default function MemberDetailModal({
                           type="text"
                           value={formData.full_name}
                           onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                         />
                       </div>
                       <div>
@@ -504,7 +552,7 @@ export default function MemberDetailModal({
                           type="email"
                           value={formData.email}
                           onChange={(e) => setFormData({ ...formData, email: e.target.value.trim() })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                           placeholder="member@example.com"
                         />
                         <p className="mt-1 text-xs text-gray-500">Admin can change email. Auth and profile will be updated.</p>
@@ -515,7 +563,7 @@ export default function MemberDetailModal({
                           type="text"
                           value={formData.first_name}
                           onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                         />
                       </div>
                       <div>
@@ -524,7 +572,7 @@ export default function MemberDetailModal({
                           type="text"
                           value={formData.last_name}
                           onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                         />
                       </div>
                       <div>
@@ -533,7 +581,7 @@ export default function MemberDetailModal({
                           type="tel"
                           value={formData.phone}
                           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                           placeholder="(555) 123-4567"
                         />
                       </div>
@@ -549,7 +597,7 @@ export default function MemberDetailModal({
                         type="text"
                         value={formData.street}
                         onChange={(e) => setFormData({ ...formData, street: e.target.value })}
-                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                         placeholder="123 Main Street"
                       />
                     </div>
@@ -560,7 +608,7 @@ export default function MemberDetailModal({
                           type="text"
                           value={formData.city}
                           onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                         />
                       </div>
                       <div>
@@ -568,7 +616,7 @@ export default function MemberDetailModal({
                         <select
                           value={formData.country}
                           onChange={(e) => setFormData({ ...formData, country: e.target.value, province_state: '' })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer"
                         >
                           <option value="">Select Country</option>
                           {COUNTRIES.map((country) => (
@@ -585,7 +633,7 @@ export default function MemberDetailModal({
                         <select
                           value={formData.province_state}
                           onChange={(e) => setFormData({ ...formData, province_state: e.target.value })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer"
                           disabled={!formData.country}
                         >
                           <option value="">Select Province/State</option>
@@ -602,7 +650,7 @@ export default function MemberDetailModal({
                           type="text"
                           value={formData.postal_zip_code}
                           onChange={(e) => setFormData({ ...formData, postal_zip_code: e.target.value })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                         />
                       </div>
                     </div>
@@ -616,8 +664,8 @@ export default function MemberDetailModal({
                         <label className="block text-sm font-medium text-gray-900 mb-1">Status</label>
                         <select
                           value={formData.status}
-                          onChange={(e) => setFormData({ ...formData, status: e.target.value as UserProfile['status'] })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                          onChange={(e) => setFormData({ ...formData, status: e.target.value as MemberProfile['status'] })}
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer"
                         >
                           <option value="pending">Pending</option>
                           <option value="approved">Approved</option>
@@ -629,19 +677,24 @@ export default function MemberDetailModal({
                         <label className="block text-sm font-medium text-gray-900 mb-1">Role</label>
                         <select
                           value={formData.role}
-                          onChange={(e) => setFormData({ ...formData, role: e.target.value as 'member' | 'admin' })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                          onChange={(e) => setFormData({ ...formData, role: e.target.value as MemberProfile['role'] })}
+                          disabled={!canManageRoles}
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer"
                         >
                           <option value="member">Member</option>
+                          <option value="editor">Editor</option>
                           <option value="admin">Admin</option>
                         </select>
+                        {!canManageRoles && (
+                          <p className="mt-1 text-xs text-gray-500">Only org admins can change roles.</p>
+                        )}
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-900 mb-1">Membership Level</label>
                         <select
                           value={formData.membership_level}
                           onChange={(e) => setFormData({ ...formData, membership_level: e.target.value as MembershipLevel })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer"
                         >
                           <option value="Full">Full</option>
                           <option value="Student">Student</option>
@@ -656,12 +709,12 @@ export default function MemberDetailModal({
                           type="date"
                           value={formData.membership_expires_at}
                           onChange={(e) => setFormData({ ...formData, membership_expires_at: e.target.value })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer"
                           style={{ position: 'relative', zIndex: 1 }}
                         />
                       </div>
                     </div>
-                    {formData.membership_level === 'Student' && (
+                    {profileFieldFlags.showStudentPilotFields && formData.membership_level === 'Student' && (
                       <div className="pt-2 border-t border-gray-200 space-y-3">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Flight school / club</label>
@@ -669,7 +722,7 @@ export default function MemberDetailModal({
                             type="text"
                             value={formData.flight_school}
                             onChange={(e) => setFormData({ ...formData, flight_school: e.target.value })}
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                             placeholder="e.g., Island Air, Freelance…"
                           />
                         </div>
@@ -679,7 +732,7 @@ export default function MemberDetailModal({
                             type="text"
                             value={formData.instructor_name}
                             onChange={(e) => setFormData({ ...formData, instructor_name: e.target.value })}
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                             placeholder="e.g., Jane Smith"
                           />
                         </div>
@@ -687,143 +740,159 @@ export default function MemberDetailModal({
                     )}
                   </div>
 
-                  {/* COPA Membership */}
-                  <div className="pt-4 border-t border-gray-200 space-y-4">
-                    <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">COPA Membership</h4>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-2">Are you a COPA Member?</label>
-                      <div className="flex gap-6">
-                        <label className="flex items-center">
-                          <input
-                            type="radio"
-                            name="is_copa_member"
-                            value="yes"
-                            checked={formData.is_copa_member === 'yes'}
-                            onChange={(e) => setFormData({ ...formData, is_copa_member: e.target.value })}
-                            className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
-                          />
-                          <span className="text-sm text-gray-700">Yes</span>
-                        </label>
-                        <label className="flex items-center">
-                          <input
-                            type="radio"
-                            name="is_copa_member"
-                            value="no"
-                            checked={formData.is_copa_member === 'no'}
-                            onChange={(e) => setFormData({ ...formData, is_copa_member: e.target.value, join_copa_flight_32: '', copa_membership_number: '' })}
-                            className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
-                          />
-                          <span className="text-sm text-gray-700">No</span>
-                        </label>
-                      </div>
-                    </div>
-                    {formData.is_copa_member === 'yes' && (
-                      <div className="space-y-4">
+                  {(profileFieldFlags.showAviationSection || profileFieldFlags.showCopaSection) && (
+                    <>
+                      {/* COPA Membership */}
+                      {profileFieldFlags.showCopaSection && (
+                      <div className="pt-4 border-t border-gray-200 space-y-4">
+                        <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">COPA Membership</h4>
                         <div>
-                          <label className="block text-sm font-medium text-gray-900 mb-2">Would you like to join COPA Flight 32?</label>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">Are you a COPA Member?</label>
                           <div className="flex gap-6">
                             <label className="flex items-center">
                               <input
                                 type="radio"
-                                name="join_copa_flight_32"
+                                name="is_copa_member"
                                 value="yes"
-                                checked={formData.join_copa_flight_32 === 'yes'}
-                                onChange={(e) => setFormData({ ...formData, join_copa_flight_32: e.target.value })}
-                                className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
+                                checked={formData.is_copa_member === 'yes'}
+                                onChange={(e) => setFormData({ ...formData, is_copa_member: e.target.value })}
+                                className="mr-2 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                               />
                               <span className="text-sm text-gray-700">Yes</span>
                             </label>
                             <label className="flex items-center">
                               <input
                                 type="radio"
-                                name="join_copa_flight_32"
+                                name="is_copa_member"
                                 value="no"
-                                checked={formData.join_copa_flight_32 === 'no'}
-                                onChange={(e) => setFormData({ ...formData, join_copa_flight_32: e.target.value, copa_membership_number: '' })}
-                                className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
+                                checked={formData.is_copa_member === 'no'}
+                                onChange={(e) => setFormData({ ...formData, is_copa_member: e.target.value, join_copa_flight_32: '', copa_membership_number: '' })}
+                                className="mr-2 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                               />
                               <span className="text-sm text-gray-700">No</span>
                             </label>
                           </div>
                         </div>
-                        {formData.join_copa_flight_32 === 'yes' && (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-900 mb-1">COPA Membership Number</label>
-                            <input
-                              type="text"
-                              value={formData.copa_membership_number}
-                              onChange={(e) => setFormData({ ...formData, copa_membership_number: e.target.value })}
-                              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                              placeholder="Enter COPA membership number"
-                            />
+                        {formData.is_copa_member === 'yes' && (
+                          <div className="space-y-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-900 mb-2">Would you like to join COPA Flight 32?</label>
+                              <div className="flex gap-6">
+                                <label className="flex items-center">
+                                  <input
+                                    type="radio"
+                                    name="join_copa_flight_32"
+                                    value="yes"
+                                    checked={formData.join_copa_flight_32 === 'yes'}
+                                    onChange={(e) => setFormData({ ...formData, join_copa_flight_32: e.target.value })}
+                                    className="mr-2 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                                  />
+                                  <span className="text-sm text-gray-700">Yes</span>
+                                </label>
+                                <label className="flex items-center">
+                                  <input
+                                    type="radio"
+                                    name="join_copa_flight_32"
+                                    value="no"
+                                    checked={formData.join_copa_flight_32 === 'no'}
+                                    onChange={(e) => setFormData({ ...formData, join_copa_flight_32: e.target.value, copa_membership_number: '' })}
+                                    className="mr-2 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                                  />
+                                  <span className="text-sm text-gray-700">No</span>
+                                </label>
+                              </div>
+                            </div>
+                            {formData.join_copa_flight_32 === 'yes' && (
+                              <div>
+                                <label className="block text-sm font-medium text-gray-900 mb-1">COPA Membership Number</label>
+                                <input
+                                  type="text"
+                                  value={formData.copa_membership_number}
+                                  onChange={(e) => setFormData({ ...formData, copa_membership_number: e.target.value })}
+                                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
+                                  placeholder="Enter COPA membership number"
+                                />
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
-                    )}
-                  </div>
+                      )}
 
-                  {/* Aviation Information */}
-                  <div className="pt-4 border-t border-gray-200 space-y-4">
-                    <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Aviation Information</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-900 mb-1">Pilot License Type</label>
-                        <select
-                          value={formData.pilot_license_type}
-                          onChange={(e) => setFormData({ ...formData, pilot_license_type: e.target.value })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
-                        >
-                          <option value="">Select...</option>
-                          <option value="student">Student Pilot</option>
-                          <option value="private">Private Pilot</option>
-                          <option value="commercial">Commercial Pilot</option>
-                          <option value="atp">Airline Transport Pilot</option>
-                          <option value="other">Other</option>
-                        </select>
+                      {/* Aviation Information */}
+                      {profileFieldFlags.showAviationSection && (
+                      <div className="pt-4 border-t border-gray-200 space-y-4">
+                        <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Aviation Information</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {profileFieldFlags.showPilotLicenseType && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-900 mb-1">Pilot License Type</label>
+                            <select
+                              value={formData.pilot_license_type}
+                              onChange={(e) => setFormData({ ...formData, pilot_license_type: e.target.value })}
+                              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer"
+                            >
+                              <option value="">Select...</option>
+                              <option value="student">Student Pilot</option>
+                              <option value="private">Private Pilot</option>
+                              <option value="commercial">Commercial Pilot</option>
+                              <option value="atp">Airline Transport Pilot</option>
+                              <option value="other">Other</option>
+                            </select>
+                          </div>
+                          )}
+                          {profileFieldFlags.showAircraftType && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-900 mb-1">Aircraft Type</label>
+                            <input
+                              type="text"
+                              value={formData.aircraft_type}
+                              onChange={(e) => setFormData({ ...formData, aircraft_type: e.target.value })}
+                              placeholder="e.g., Cessna 172, Piper Cherokee"
+                              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
+                            />
+                          </div>
+                          )}
+                          {profileFieldFlags.showCallSign && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-900 mb-1">Call Sign</label>
+                            <input
+                              type="text"
+                              value={formData.call_sign}
+                              onChange={(e) => setFormData({ ...formData, call_sign: e.target.value })}
+                              placeholder="e.g., C-GABC"
+                              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
+                            />
+                          </div>
+                          )}
+                          {profileFieldFlags.showFlightFrequency && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-900 mb-1">How Often Fly from YTZ</label>
+                            <select
+                              value={formData.how_often_fly_from_ytz}
+                              onChange={(e) => setFormData({ ...formData, how_often_fly_from_ytz: e.target.value })}
+                              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer"
+                            >
+                              <option value="">Select...</option>
+                              <option value="daily">Daily</option>
+                              <option value="weekly">Weekly</option>
+                              <option value="monthly">Monthly</option>
+                              <option value="occasionally">Occasionally</option>
+                              <option value="rarely">Rarely</option>
+                            </select>
+                          </div>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-900 mb-1">Aircraft Type</label>
-                        <input
-                          type="text"
-                          value={formData.aircraft_type}
-                          onChange={(e) => setFormData({ ...formData, aircraft_type: e.target.value })}
-                          placeholder="e.g., Cessna 172, Piper Cherokee"
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-900 mb-1">Call Sign</label>
-                        <input
-                          type="text"
-                          value={formData.call_sign}
-                          onChange={(e) => setFormData({ ...formData, call_sign: e.target.value })}
-                          placeholder="e.g., C-GABC"
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-900 mb-1">How Often Fly from YTZ</label>
-                        <select
-                          value={formData.how_often_fly_from_ytz}
-                          onChange={(e) => setFormData({ ...formData, how_often_fly_from_ytz: e.target.value })}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
-                        >
-                          <option value="">Select...</option>
-                          <option value="daily">Daily</option>
-                          <option value="weekly">Weekly</option>
-                          <option value="monthly">Monthly</option>
-                          <option value="occasionally">Occasionally</option>
-                          <option value="rarely">Rarely</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
+                      )}
+                    </>
+                  )}
 
                   {/* Save Button */}
                   <div className="pt-4 border-t border-gray-200">
                     <button
                       onClick={() => onSave(member, formData)}
-                      className="px-4 py-2 bg-[#0d1e26] text-white rounded-md hover:bg-[#0a171c] text-sm font-medium transition-colors"
+                      className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-md hover:bg-[#0a171c] text-sm font-medium transition-colors"
                     >
                       Save Changes
                     </button>
@@ -838,7 +907,7 @@ export default function MemberDetailModal({
             <div className="space-y-6">
               {loadingActivity ? (
                 <div className="text-center py-8">
-                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-[#0d1e26]"></div>
+                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-[var(--color-primary)]"></div>
                   <p className="mt-2 text-sm text-gray-500">Loading activity...</p>
                 </div>
               ) : activityData ? (
@@ -1137,7 +1206,7 @@ export default function MemberDetailModal({
                             paymentMethod: e.target.value as 'cash' | 'paypal' | 'wire',
                           })
                         }
-                        className="w-full px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                        className="w-full px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer"
                       >
                         <option value="cash">Cash</option>
                         <option value="paypal">PayPal</option>
@@ -1147,7 +1216,7 @@ export default function MemberDetailModal({
 
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Amount (CAD)
+                        Amount
                       </label>
                       <input
                         type="number"
@@ -1167,7 +1236,7 @@ export default function MemberDetailModal({
                             ? '45'
                             : ''
                         }
-                        className="w-full px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                        className="w-full px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                       />
                       <p className="mt-1 text-xs text-gray-500">
                         {member.membership_level === 'Corporate'
@@ -1194,7 +1263,7 @@ export default function MemberDetailModal({
                         onFocus={(e) => e.stopPropagation()}
                         onClick={(e) => e.stopPropagation()}
                         onMouseDown={(e) => e.stopPropagation()}
-                        className="w-full px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] cursor-pointer"
+                        className="w-full px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer"
                         style={{ position: 'relative', pointerEvents: 'auto', WebkitAppearance: 'none' }}
                       />
                       <p className="mt-1 text-xs text-gray-500">
@@ -1215,7 +1284,7 @@ export default function MemberDetailModal({
                           })
                         }
                         rows={2}
-                        className="w-full px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                        className="w-full px-2 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                         placeholder="Payment reference, receipt number, etc."
                       />
                     </div>
@@ -1232,7 +1301,7 @@ export default function MemberDetailModal({
                               clearStripeSubscription: e.target.checked,
                             })
                           }
-                          className="h-4 w-4 text-[#0d1e26] focus:ring-[#0d1e26] border-gray-300 rounded"
+                          className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] border-gray-300 rounded"
                         />
                         <label htmlFor="clearStripe" className="ml-2 text-xs text-gray-700">
                           Clear Stripe subscription (recommended for cash/PayPal/wire payments)
@@ -1305,7 +1374,7 @@ export default function MemberDetailModal({
               {/* Payment History */}
               {loadingActivity ? (
                 <div className="text-center py-8">
-                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-[#0d1e26]"></div>
+                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-[var(--color-primary)]"></div>
                   <p className="mt-2 text-sm text-gray-500">Loading payments...</p>
                 </div>
               ) : activityData ? (
@@ -1403,10 +1472,10 @@ export default function MemberDetailModal({
                 onSave(member, {
                   ...formData,
                   is_student_pilot: formData.membership_level === 'Student',
-                } as Partial<UserProfile>)
+                } as Partial<MemberProfile>)
                 onClose()
               }}
-              className="px-4 py-2 text-sm font-medium text-white bg-[#0d1e26] rounded-md hover:bg-[#0a171c]"
+              className="px-4 py-2 text-sm font-medium text-white bg-[var(--color-primary)] rounded-md hover:bg-[#0a171c]"
             >
               Save
             </button>

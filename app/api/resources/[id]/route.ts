@@ -1,5 +1,7 @@
 import { requireAuth, requireAdmin } from '@/lib/auth'
+import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
 import { createClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/settings'
 import { NextResponse } from 'next/server'
 import type { ResourceCategory } from '@/types/database'
 
@@ -37,7 +39,15 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAuth()
+    const user = await requireAuth()
+    const flags = await getFeatureFlags()
+    if (!flags.resources) {
+      return NextResponse.json({ error: 'Announcements are not enabled for this organization' }, { status: 403 })
+    }
+    const orgId = user.profile.org_id
+    if (!orgId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     const { id } = await params
     const supabase = await createClient()
 
@@ -45,6 +55,7 @@ export async function GET(
       .from('resources')
       .select('*')
       .eq('id', id)
+      .eq('org_id', orgId)
       .single()
 
     if (error) {
@@ -79,7 +90,22 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAdmin()
+    const user = await requireAdmin()
+    const flags = await getFeatureFlags()
+    if (!flags.resources) {
+      return NextResponse.json({ error: 'Announcements are not enabled for this organization' }, { status: 403 })
+    }
+    const orgId = user.profile.org_id
+    if (!orgId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const billingStatus = await getOrgBillingActivationStatus(orgId)
+    if (billingStatus.requiresActivation) {
+      return NextResponse.json(
+        { error: 'Add billing details in Billing before publishing announcements.' },
+        { status: 402 },
+      )
+    }
     const { id } = await params
     const body = await request.json()
 
@@ -92,10 +118,14 @@ export async function PATCH(
 
     const supabase = await createClient()
 
+    // Prevent cross-tenant updates if a malicious client includes `org_id`.
+    if ('org_id' in body) delete (body as any).org_id
+
     const { data, error } = await supabase
       .from('resources')
       .update(body)
       .eq('id', id)
+      .eq('org_id', orgId)
       .select()
       .single()
 
@@ -117,7 +147,22 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAdmin()
+    const user = await requireAdmin()
+    const flags = await getFeatureFlags()
+    if (!flags.resources) {
+      return NextResponse.json({ error: 'Announcements are not enabled for this organization' }, { status: 403 })
+    }
+    const orgId = user.profile.org_id
+    if (!orgId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const billingStatus = await getOrgBillingActivationStatus(orgId)
+    if (billingStatus.requiresActivation) {
+      return NextResponse.json(
+        { error: 'Add billing details in Billing before publishing announcements.' },
+        { status: 402 },
+      )
+    }
     const { id } = await params
     const supabase = await createClient()
 
@@ -125,6 +170,7 @@ export async function DELETE(
       .from('resources')
       .delete()
       .eq('id', id)
+      .eq('org_id', orgId)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 })
@@ -138,4 +184,3 @@ export async function DELETE(
     )
   }
 }
-

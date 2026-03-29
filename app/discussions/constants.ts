@@ -1,4 +1,74 @@
 import { DiscussionCategory } from '@/types/database'
+import type { OrgDiscussionCategory } from '@/lib/settings'
+
+// ─── Per-org category config ──────────────────────────────────────────────────
+
+export type OrgCategoryConfig = {
+  discussionCategories: DiscussionCategory[]
+  classifiedCategories: DiscussionCategory[]
+  categoryLabels: Record<DiscussionCategory, string>
+  categoryDescriptions: Record<DiscussionCategory, string>
+}
+
+// Generic labels/descriptions for non-TIPA orgs (reuse existing DB enum keys)
+const GENERIC_LABELS: Record<DiscussionCategory, string> = {
+  introduce_yourself: 'Introduce Yourself',
+  general_aviation: 'General',
+  other: 'Other',
+  // classifieds
+  gear_for_sale: 'For Sale',
+  wanted: 'Wanted',
+  // unused in generic config but must satisfy the full record type
+  aircraft_shares: 'Aircraft Shares',
+  instructor_availability: 'Instructor Availability',
+  flying_at_ytz: 'Flying at YTZ',
+  training_safety_proficiency: 'Training & Safety',
+  building_a_better_tipa: 'Feedback',
+}
+
+const GENERIC_DESCRIPTIONS: Record<DiscussionCategory, string> = {
+  introduce_yourself: 'Say hello to the community — share a bit about yourself and what brings you here.',
+  general_aviation: 'General discussion for the community — questions, ideas, and anything on your mind.',
+  other: 'Discussions that don\'t fit anywhere else.',
+  gear_for_sale: 'Buy, sell, or trade equipment and other items.',
+  wanted: 'Post what you\'re looking for.',
+  aircraft_shares: '',
+  instructor_availability: '',
+  flying_at_ytz: '',
+  training_safety_proficiency: '',
+  building_a_better_tipa: '',
+}
+
+export const DEFAULT_CATEGORY_CONFIG: OrgCategoryConfig = {
+  discussionCategories: ['introduce_yourself', 'general_aviation', 'other'],
+  classifiedCategories: ['gear_for_sale', 'wanted'],
+  categoryLabels: GENERIC_LABELS,
+  categoryDescriptions: GENERIC_DESCRIPTIONS,
+}
+
+/**
+ * Build an OrgCategoryConfig from the org's stored discussion categories.
+ * Used when categories are fetched from the DB rather than hardcoded.
+ */
+export function categoryConfigFromDb(dbCategories: OrgDiscussionCategory[]): OrgCategoryConfig {
+  const enabled = dbCategories.filter(c => c.enabled)
+  const discussionCategories = enabled
+    .filter(c => c.type === 'discussion')
+    .map(c => c.slug as DiscussionCategory)
+  const classifiedCategories = enabled
+    .filter(c => c.type === 'classified')
+    .map(c => c.slug as DiscussionCategory)
+
+  const categoryLabels = Object.fromEntries(
+    dbCategories.map(c => [c.slug, c.label])
+  ) as Record<DiscussionCategory, string>
+
+  const categoryDescriptions = Object.fromEntries(
+    dbCategories.map(c => [c.slug, CATEGORY_DESCRIPTIONS[c.slug as DiscussionCategory] ?? ''])
+  ) as Record<DiscussionCategory, string>
+
+  return { discussionCategories, classifiedCategories, categoryLabels, categoryDescriptions }
+}
 
 export const CATEGORY_LABELS: Record<DiscussionCategory, string> = {
   introduce_yourself: 'Introduce Yourself',

@@ -1,6 +1,8 @@
 import { requireAdmin } from '@/lib/auth'
+import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
 import { sendInvitationWithPasswordEmail } from '@/lib/resend'
 import { createClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/settings'
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 
@@ -30,6 +32,26 @@ function generateTempPassword(): string {
 export async function POST(request: Request) {
   try {
     await requireAdmin()
+    const flags = await getFeatureFlags()
+    if (!flags.allowMemberInvitations) {
+      return NextResponse.json({ error: 'Member invitations require Core plan or higher' }, { status: 403 })
+    }
+    const orgId = request.headers.get('x-org-id')
+    if (!orgId) {
+      return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
+    }
+    const billingStatus = await getOrgBillingActivationStatus(orgId)
+    if (billingStatus.requiresActivation) {
+      return NextResponse.json(
+        { error: `Add billing details in Billing before inviting members.` },
+        { status: 402 },
+      )
+    }
+
+    const { createServiceRoleClient } = await import('@/lib/supabase/server')
+    const db = createServiceRoleClient()
+    const { data: org } = await db.from('organizations').select('name').eq('id', orgId).maybeSingle()
+    const orgName = org?.name ?? 'Your Club'
     const {
       email,
       firstName,
@@ -74,10 +96,11 @@ export async function POST(request: Request) {
     // Check if profile exists first (simpler check)
     const supabase = await createClient()
     const { data: existingMember } = await supabase
-      .from('user_profiles')
+      .from('member_profiles')
       .select('id, email, full_name')
       .eq('email', normalizedEmail)
-      .single()
+      .eq('org_id', orgId)
+      .maybeSingle()
 
     if (existingMember) {
       return NextResponse.json(
@@ -105,33 +128,45 @@ export async function POST(request: Request) {
         last_name: lastName || null,
         role: 'member',
         membership_level: membershipLevel,
+        org_id: orgId,
         invited_by_admin: true, // Flag to indicate this user was invited
       }
     })
 
+    let userId: string
+    let isExistingUser = false
+
     if (createError || !newUser.user) {
-      console.error('Error creating user:', createError)
-      
-      // Check if error is due to existing user
-      if (createError?.message?.toLowerCase().includes('already') || 
-          createError?.message?.toLowerCase().includes('exists') ||
-          createError?.message?.toLowerCase().includes('duplicate')) {
+      const isAlreadyExists =
+        createError?.message?.toLowerCase().includes('already') ||
+        createError?.message?.toLowerCase().includes('exists') ||
+        createError?.message?.toLowerCase().includes('duplicate')
+
+      if (!isAlreadyExists) {
+        console.error('Error creating user:', createError)
         return NextResponse.json(
-          { 
-            error: 'This email is already registered',
-            details: 'A user with this email already exists'
-          },
-          { status: 400 }
+          { error: 'Failed to create user account', details: createError?.message || 'Unknown error' },
+          { status: 500 }
         )
       }
-      
-      return NextResponse.json(
-        { 
-          error: 'Failed to create user account',
-          details: createError?.message || 'Unknown error'
-        },
-        { status: 500 }
+
+      // User already has a ClubLounge account — look them up and add to this org
+      const { data: existingAuthUsers } = await adminClient.auth.admin.listUsers()
+      const existingAuthUser = existingAuthUsers?.users?.find(
+        (u) => u.email?.toLowerCase() === normalizedEmail
       )
+
+      if (!existingAuthUser) {
+        return NextResponse.json(
+          { error: 'Failed to locate existing user account' },
+          { status: 500 }
+        )
+      }
+
+      userId = existingAuthUser.id
+      isExistingUser = true
+    } else {
+      userId = newUser.user.id
     }
 
     // Wait for profile to be created by trigger, or create manually
@@ -140,13 +175,12 @@ export async function POST(request: Request) {
       if (attempt > 0) {
         await new Promise(resolve => setTimeout(resolve, 500))
       }
-      
       const { data: fetchedProfile } = await adminClient
-        .from('user_profiles')
+        .from('member_profiles')
         .select('*')
-        .eq('id', newUser.user.id)
-        .single()
-      
+        .eq('user_id', userId)
+        .eq('org_id', orgId)
+        .maybeSingle()
       if (fetchedProfile) {
         profile = fetchedProfile
         break
@@ -154,35 +188,47 @@ export async function POST(request: Request) {
     }
 
     // Create profile manually if trigger didn't create it
-    // Keep status as 'pending' - will be updated to 'approved' when they log in and change password
     if (!profile) {
-      const { error: profileError } = await adminClient
-        .from('user_profiles')
+      if (!isExistingUser) {
+        const { error: profileError } = await adminClient
+          .from('user_profiles')
+          .upsert({
+            user_id: userId,
+            email: normalizedEmail,
+            full_name: fullName,
+            first_name: firstName || null,
+            last_name: lastName || null,
+          }, { onConflict: 'user_id', ignoreDuplicates: true })
+
+        if (profileError) {
+          console.error('Error creating user_profiles row:', profileError)
+        }
+      }
+
+      const { error: membershipError } = await adminClient
+        .from('org_memberships')
         .insert({
-          id: newUser.user.id,
-          email: normalizedEmail,
-          full_name: fullName,
-          first_name: firstName || null,
-          last_name: lastName || null,
+          user_id: userId,
+          org_id: orgId,
           role: 'member',
           membership_level: membershipLevel,
-          status: 'pending', // Will be updated to 'approved' when they log in
+          status: 'pending',
           invited_at: new Date().toISOString(),
         })
 
-      if (profileError) {
-        console.error('Error creating profile:', profileError)
-        // User was created but profile failed - still send email
+      if (membershipError) {
+        console.error('Error creating org_memberships row:', membershipError)
       }
     }
 
-    // Send invitation email with temporary password
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    // Send invitation email — existing users don't get a temp password
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'
     await sendInvitationWithPasswordEmail(
       normalizedEmail,
       fullName || normalizedEmail,
-      tempPassword,
-      appUrl
+      isExistingUser ? null : tempPassword,
+      appUrl,
+      orgName,
     )
 
     return NextResponse.json({
@@ -197,4 +243,3 @@ export async function POST(request: Request) {
     )
   }
 }
-

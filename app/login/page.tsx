@@ -5,14 +5,17 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Loading from '@/components/Loading'
 import PasswordInput from '@/components/PasswordInput'
+import { getPlatformSignupAbsoluteUrl, isClubLoungeDemoOrgSlug } from '@/lib/org'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
+  const [pendingMessage, setPendingMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [checkingAuth, setCheckingAuth] = useState(true)
+  const [isDemoLounge, setIsDemoLounge] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -22,9 +25,20 @@ export default function LoginPage() {
 
     const checkAuth = async () => {
       try {
-        const response = await fetch('/api/auth/session')
-        const data = await response.json()
-        
+        const [sessionRes, configRes] = await Promise.all([
+          fetch('/api/auth/session'),
+          fetch('/api/org/config'),
+        ])
+        const data = await sessionRes.json()
+        try {
+          const cfg = await configRes.json()
+          if (cfg?.org?.slug && isClubLoungeDemoOrgSlug(cfg.org.slug)) {
+            setIsDemoLounge(true)
+          }
+        } catch {
+          /* ignore */
+        }
+
         if (data.authenticated) {
           window.location.href = safeRedirect
         } else {
@@ -76,6 +90,8 @@ export default function LoginPage() {
 
       if (data.requiresPasswordChange) {
         window.location.href = '/change-password?required=true'
+      } else if (data.requiresApproval) {
+        setPendingMessage('Your membership is pending approval. You\'ll receive an email once an admin approves your account.')
       } else {
         window.location.href = safeRedirect
       }
@@ -86,28 +102,15 @@ export default function LoginPage() {
     }
   }
 
-  const handleGoogleLogin = async () => {
-    setError('')
-    setLoading(true)
-
-    try {
-      const response = await fetch(`/api/auth/oauth?provider=google&redirectTo=${encodeURIComponent(`${window.location.origin}/auth/callback`)}`)
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to initiate Google login')
-      }
-
-      // Redirect to OAuth URL
-      if (data.url) {
-        window.location.href = data.url
-      } else {
-        throw new Error('No OAuth URL returned')
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to initiate Google login')
-      setLoading(false)
-    }
+  const handleGoogleLogin = () => {
+    // OAuth is initiated from the root domain (clublounge.app) so the PKCE verifier
+    // cookie and the /auth/callback handler live on the same domain.
+    const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'
+    const protocol = window.location.protocol
+    const port = window.location.port ? `:${window.location.port}` : ''
+    const platformOrigin = `${protocol}//${rootDomain}${port}`
+    const orgNext = `${window.location.origin}/discussions`
+    window.location.href = `${platformOrigin}/api/auth/oauth?provider=google&next=${encodeURIComponent(orgNext)}`
   }
 
   if (checkingAuth) {
@@ -123,10 +126,26 @@ export default function LoginPage() {
               Sign in to your account
             </h2>
             <p className="mt-2 text-sm text-gray-600">
-              Or{' '}
-              <Link href="/become-a-member" className="font-medium text-[#0d1e26] hover:text-[#416e82]">
-                become a member
-              </Link>
+              {isDemoLounge ? (
+                <>
+                  New to ClubLounge?{' '}
+                  <a
+                    href={getPlatformSignupAbsoluteUrl()}
+                    rel="noopener noreferrer"
+                    className="font-medium text-[var(--color-primary)] hover:text-[#416e82]"
+                  >
+                    Create your own club
+                  </a>
+                  <span className="text-gray-500"> — this site is a demo.</span>
+                </>
+              ) : (
+                <>
+                  Or{' '}
+                  <Link href="/become-a-member" className="font-medium text-[var(--color-primary)] hover:text-[#416e82]">
+                    become a member
+                  </Link>
+                </>
+              )}
             </p>
           </div>
           <form className="space-y-6" onSubmit={handleSubmit}>
@@ -140,6 +159,11 @@ export default function LoginPage() {
                 <div className="text-sm text-green-800">{successMessage}</div>
               </div>
             )}
+            {pendingMessage && (
+              <div className="rounded-md bg-blue-50 border border-blue-200 p-4">
+                <div className="text-sm text-blue-800">{pendingMessage}</div>
+              </div>
+            )}
             <div className="space-y-4">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
@@ -151,7 +175,7 @@ export default function LoginPage() {
                   type="email"
                   autoComplete="email"
                   required
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   placeholder="Email address"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -164,7 +188,7 @@ export default function LoginPage() {
                   </label>
                   <Link
                     href="/forgot-password"
-                    className="text-sm font-medium text-[#0d1e26] hover:text-[#416e82]"
+                    className="text-sm font-medium text-[var(--color-primary)] hover:text-[#416e82]"
                   >
                     Forgot password?
                   </Link>
@@ -174,7 +198,7 @@ export default function LoginPage() {
                   name="password"
                   autoComplete="current-password"
                   required
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -186,7 +210,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-[#0d1e26] hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0d1e26] disabled:opacity-50"
+                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-[var(--color-primary)] hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-primary)] disabled:opacity-50"
               >
                 {loading ? 'Signing in...' : 'Sign in'}
               </button>
@@ -208,7 +232,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-3 py-2 px-4 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0d1e26] disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-3 py-2 px-4 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-primary)] disabled:opacity-50"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path

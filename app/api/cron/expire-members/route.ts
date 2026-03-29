@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { sendMembershipExpiredEmail } from '@/lib/resend'
+import { syncOrgPlanSubscriptionBilling } from '@/lib/org-plan-subscription'
 import { NextResponse } from 'next/server'
 
 // This endpoint should be protected with a secret token or Vercel Cron
@@ -36,10 +37,10 @@ export async function GET(request: Request) {
     // Find all approved members whose membership has expired
     // Exclude admins from automatic expiration
     const { data: expiredMembers, error: fetchError } = await supabase
-      .from('user_profiles')
-      .select('id, email, full_name, membership_expires_at, status')
+      .from('member_profiles')
+      .select('id, org_id, email, full_name, membership_expires_at, status')
       .eq('status', 'approved')
-      .neq('role', 'admin')
+      .eq('role', 'member')
       .not('membership_expires_at', 'is', null)
       .lt('membership_expires_at', nowISO)
 
@@ -63,11 +64,10 @@ export async function GET(request: Request) {
 
     // Update status to 'expired' for all expired members
     const memberIds = expiredMembers.map(m => m.id)
-    const { data: updatedMembers, error: updateError } = await supabase
-      .from('user_profiles')
+    const { error: updateError } = await supabase
+      .from('org_memberships')
       .update({ status: 'expired' })
       .in('id', memberIds)
-      .select('id, email, full_name')
 
     if (updateError) {
       console.error('Error updating expired members:', updateError)
@@ -77,15 +77,15 @@ export async function GET(request: Request) {
       )
     }
 
-    console.log(`Expired ${updatedMembers?.length || 0} members:`, {
-      memberIds: updatedMembers?.map(m => m.id),
-      emails: updatedMembers?.map(m => m.email),
+    console.log(`Expired ${expiredMembers.length} members:`, {
+      memberIds: expiredMembers.map(m => m.id),
+      emails: expiredMembers.map(m => m.email),
     })
 
     // Notify each expired member
-    if (updatedMembers && updatedMembers.length > 0) {
+    if (expiredMembers.length > 0) {
       await Promise.allSettled(
-        updatedMembers
+        expiredMembers
           .filter(m => m.email)
           .map(m =>
             sendMembershipExpiredEmail(m.email, m.full_name).catch(err =>
@@ -95,12 +95,21 @@ export async function GET(request: Request) {
       )
     }
 
+    const orgIds = [...new Set(expiredMembers.map(m => m.org_id).filter(Boolean))]
+    await Promise.allSettled(
+      orgIds.map(orgId =>
+        syncOrgPlanSubscriptionBilling(orgId).catch(err => {
+          console.error(`Failed to sync org billing after expiring members for org ${orgId}:`, err)
+        }),
+      ),
+    )
+
     return NextResponse.json({
       success: true,
-      message: `Successfully expired ${updatedMembers?.length || 0} member(s)`,
-      membersExpired: updatedMembers?.length || 0,
+      message: `Successfully expired ${expiredMembers.length} member(s)`,
+      membersExpired: expiredMembers.length,
       membersChecked: expiredMembers.length,
-      expiredMembers: updatedMembers?.map(m => ({
+      expiredMembers: expiredMembers.map(m => ({
         id: m.id,
         email: m.email,
         name: m.full_name,

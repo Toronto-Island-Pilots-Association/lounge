@@ -39,7 +39,7 @@ describe('/api/auth/change-password - Complex Flow', () => {
       },
     }
 
-    let queryCallCount = 0
+    const _queryCallCount = 0
     const mockAdminClient = {
       auth: {
         admin: {
@@ -51,49 +51,42 @@ describe('/api/auth/change-password - Complex Flow', () => {
               },
             },
           }),
+          updateUserById: jest.fn().mockResolvedValue({ error: null }),
         },
       },
-      from: jest.fn((table) => {
-        const queryBuilder = {
-          select: jest.fn().mockReturnThis(),
-          update: jest.fn().mockReturnThis(),
-          eq: jest.fn().mockReturnThis(),
-          limit: jest.fn().mockReturnThis(),
-          single: jest.fn(),
-        }
-        
-        if (table === 'payments') {
-          // Payments query: select('id').eq().limit(1)
-          queryBuilder.limit.mockResolvedValue({
-            data: [], // No payments
+      from: (() => {
+        const orgMembershipsMaybeSingle = jest.fn()
+          .mockResolvedValueOnce({
+            data: { status: 'pending', id: 'user-123', email: 'invited@example.com', stripe_subscription_id: null },
           })
-        } else if (table === 'user_profiles') {
-          queryCallCount++
-          // First call chain: select('*').eq().single() - get current profile (status: pending)
-          // Second call chain: update().eq().select().single() - get updated profile (status: approved)
-          queryBuilder.single.mockImplementation(() => {
-            if (queryCallCount === 1) {
-              // First query: get current profile
-              return Promise.resolve({
-                data: { status: 'pending', id: 'user-123', email: 'invited@example.com', full_name: 'Test User' },
-              })
-            } else {
-              // Second query: get updated profile after update
-              return Promise.resolve({
-                data: { status: 'approved', id: 'user-123', email: 'invited@example.com', full_name: 'Test User' },
-              })
+          .mockResolvedValueOnce({
+            data: { status: 'approved', id: 'user-123', email: 'invited@example.com' },
+          })
+        return jest.fn().mockImplementation((table) => {
+          if (table === 'payments') {
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              limit: jest.fn().mockResolvedValue({ data: [] }),
             }
-          })
-        }
-        
-        return queryBuilder
-      }),
+          }
+          if (table === 'org_memberships') {
+            return {
+              select: jest.fn().mockReturnThis(),
+              update: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              maybeSingle: orgMembershipsMaybeSingle,
+            }
+          }
+          return { select: jest.fn().mockReturnThis(), eq: jest.fn().mockReturnThis() }
+        })
+      })(),
     }
 
     createClient.mockResolvedValue(mockSupabase)
     createAdminClient.mockReturnValue(mockAdminClient)
 
-    const request = new Request('http://localhost:3000/api/auth/change-password', {
+    const request = new Request('http://clublounge.local:3000/api/auth/change-password', {
       method: 'POST',
       body: JSON.stringify({
         currentPassword: 'oldpassword',
@@ -111,7 +104,7 @@ describe('/api/auth/change-password - Complex Flow', () => {
     expect(mockSupabase.auth.updateUser).toHaveBeenCalled()
     
     // Verify status was updated to 'approved'
-    expect(mockAdminClient.from).toHaveBeenCalledWith('user_profiles')
+    expect(mockAdminClient.from).toHaveBeenCalledWith('org_memberships')
     
     // Verify Google Sheets append was called with approved profile
     expect(appendMemberToSheet).toHaveBeenCalledWith(

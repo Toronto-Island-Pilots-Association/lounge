@@ -1,22 +1,25 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { headers } from 'next/headers'
 import { DiscussionCategory } from '@/types/database'
 import SortButtons from './SortButtons'
 import CategoryIcon from './CategoryIcons'
-import { CATEGORY_LABELS, CATEGORY_DESCRIPTIONS, CATEGORIES_WITH_ALL, ALL_CATEGORIES, CLASSIFIED_CATEGORIES, DISCUSSION_CATEGORIES } from './constants'
+import { OrgCategoryConfig } from './constants'
 
 // Component to render a list of categories
-function CategorySection({ 
-  categories, 
-  currentCategory, 
+function CategorySection({
+  categories,
+  categoryLabels,
+  currentCategory,
   currentSort,
-  title 
-}: { 
-  categories: DiscussionCategory[], 
-  currentCategory?: DiscussionCategory | 'all',
-  currentSort?: string,
-  title: string 
+  title
+}: {
+  categories: DiscussionCategory[]
+  categoryLabels: Record<DiscussionCategory, string>
+  currentCategory?: DiscussionCategory | 'all'
+  currentSort?: string
+  title: string
 }) {
   const selectedCategory = currentCategory || 'all'
   const sortBy = currentSort || 'latest'
@@ -33,7 +36,7 @@ function CategorySection({
             prefetch={true}
             className={`group flex flex-col px-3 py-1.5 rounded-md text-sm transition-all duration-200 ${
               isActive
-                ? 'bg-[#0d1e26] text-white font-medium'
+                ? 'bg-[var(--color-primary)] text-white font-medium'
                 : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
@@ -43,7 +46,7 @@ function CategorySection({
                   <CategoryIcon category={category} className="w-4 h-4" />
                 </span>
                 <span className="truncate">
-                  {CATEGORY_LABELS[category]}
+                  {categoryLabels[category]}
                 </span>
               </div>
               <Suspense fallback={
@@ -66,8 +69,7 @@ function CategorySection({
 }
 
 // Static category list component - always visible, links work immediately
-function CategoryList({ currentCategory, currentSort }: { currentCategory?: DiscussionCategory | 'all', currentSort?: string }) {
-  const selectedCategory = currentCategory || 'all'
+function CategoryList({ currentCategory, currentSort, categoryConfig }: { currentCategory?: DiscussionCategory | 'all', currentSort?: string, categoryConfig: OrgCategoryConfig }) {
   const sortBy = currentSort || 'latest'
 
   return (
@@ -78,8 +80,9 @@ function CategoryList({ currentCategory, currentSort }: { currentCategory?: Disc
       {/* Discussions Section */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
         <h3 className="text-sm font-semibold text-gray-900 mb-2 uppercase tracking-wide">Discussions</h3>
-        <CategorySection 
-          categories={DISCUSSION_CATEGORIES} 
+        <CategorySection
+          categories={categoryConfig.discussionCategories}
+          categoryLabels={categoryConfig.categoryLabels}
           currentCategory={currentCategory}
           currentSort={sortBy}
           title="Discussions"
@@ -89,8 +92,9 @@ function CategoryList({ currentCategory, currentSort }: { currentCategory?: Disc
       {/* Classifieds Section */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
         <h3 className="text-sm font-semibold text-gray-900 mb-2 uppercase tracking-wide">Classifieds</h3>
-        <CategorySection 
-          categories={CLASSIFIED_CATEGORIES} 
+        <CategorySection
+          categories={categoryConfig.classifiedCategories}
+          categoryLabels={categoryConfig.categoryLabels}
           currentCategory={currentCategory}
           currentSort={sortBy}
           title="Classifieds"
@@ -103,11 +107,13 @@ function CategoryList({ currentCategory, currentSort }: { currentCategory?: Disc
 // Component that fetches all category counts in one query and returns the count for a specific category
 async function CategoryCount({ category, isActive }: { category: DiscussionCategory | 'all', isActive: boolean }) {
   const supabase = await createClient()
-  
+  const orgId = (await headers()).get('x-org-id')
+
   // Fetch all threads once to get all counts
   const { data: threads } = await supabase
     .from('threads')
     .select('category')
+    .eq('org_id', orgId ?? '')
 
   let count = 0
   if (category === 'all') {
@@ -128,11 +134,11 @@ async function CategoryCount({ category, isActive }: { category: DiscussionCateg
 }
 
 
-export default function Sidebar({ currentCategory, currentSort }: { currentCategory?: DiscussionCategory | 'all', currentSort?: string }) {
+export default function Sidebar({ currentCategory, currentSort, categoryConfig }: { currentCategory?: DiscussionCategory | 'all', currentSort?: string, categoryConfig: OrgCategoryConfig }) {
   return (
     <div className="space-y-6">
       {/* Categories - Links always visible, counts load separately */}
-      <CategoryList currentCategory={currentCategory} currentSort={currentSort} />
+      <CategoryList currentCategory={currentCategory} currentSort={currentSort} categoryConfig={categoryConfig} />
     </div>
   )
 }

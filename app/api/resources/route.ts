@@ -1,5 +1,8 @@
-import { requireAuth, requireAdmin } from '@/lib/auth'
-import { createClient } from '@/lib/supabase/server'
+import { requireAuth, requireAdmin, isOrgPublic } from '@/lib/auth'
+import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/settings'
+import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type { ResourceCategory } from '@/types/database'
 
@@ -34,12 +37,31 @@ async function getResourceFileUrl(supabase: any, fileUrl: string | null): Promis
 
 export async function GET() {
   try {
-    await requireAuth()
-    const supabase = await createClient()
+    let orgId: string | null = null
+    let supabase: ReturnType<typeof createServiceRoleClient>
+
+    try {
+      const user = await requireAuth()
+      orgId = user.profile.org_id
+      if (!orgId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      supabase = await createClient() as any
+    } catch {
+      const orgPublic = await isOrgPublic()
+      if (!orgPublic) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      const h = await headers()
+      orgId = h.get('x-org-id')
+      supabase = createServiceRoleClient() as any
+    }
+
+    const flags = await getFeatureFlags()
+    if (!flags.resources) {
+      return NextResponse.json({ error: 'Announcements are not enabled for this organization' }, { status: 403 })
+    }
 
     const { data, error } = await supabase
       .from('resources')
       .select('*')
+      .eq('org_id', orgId)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -70,7 +92,22 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    await requireAdmin()
+    const user = await requireAdmin()
+    const flags = await getFeatureFlags()
+    if (!flags.resources) {
+      return NextResponse.json({ error: 'Announcements are not enabled for this organization' }, { status: 403 })
+    }
+    const orgId = user.profile.org_id
+    if (!orgId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const billingStatus = await getOrgBillingActivationStatus(orgId)
+    if (billingStatus.requiresActivation) {
+      return NextResponse.json(
+        { error: 'Add billing details in Billing before publishing announcements.' },
+        { status: 402 },
+      )
+    }
     const body = await request.json()
 
     if (body.category && !VALID_ANNOUNCEMENT_CATEGORIES.includes(body.category)) {
@@ -79,10 +116,16 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
-    const insertData = {
+    const insertData: Record<string, unknown> = {
       ...body,
+      // Force tenant scoping regardless of any incoming `org_id`.
+      org_id: orgId,
       category: body.category && VALID_ANNOUNCEMENT_CATEGORIES.includes(body.category) ? body.category : 'other',
     }
+
+    // Prevent accidental/hostile cross-org writes.
+    delete (insertData as any).org_id
+    insertData.org_id = orgId
 
     const supabase = await createClient()
 
@@ -104,4 +147,3 @@ export async function POST(request: Request) {
     )
   }
 }
-

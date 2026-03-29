@@ -8,7 +8,9 @@ export async function GET(
   { params }: { params: Promise<{ target: string }> }
 ) {
   try {
-    await requireAuth()
+    const user = await requireAuth()
+    const orgId = user.profile?.org_id
+    if (!orgId) return NextResponse.json({ error: 'Organization not found' }, { status: 400 })
     const { target } = await params
     const supabase = await createClient()
     const url = new URL(request.url)
@@ -25,6 +27,7 @@ export async function GET(
       .from('reactions')
       .select('*')
       .eq(type === 'thread' ? 'thread_id' : 'comment_id', target)
+      .eq('org_id', orgId)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 })

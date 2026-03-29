@@ -31,9 +31,10 @@ export async function POST() {
 
     const supabase = await createClient()
     await supabase
-      .from('user_profiles')
+      .from('org_memberships')
       .update({ subscription_cancel_at_period_end: false })
-      .eq('id', user.id)
+      .eq('user_id', user.id)
+      .eq('org_id', user.profile.org_id)
 
     return NextResponse.json({
       message: 'Cancellation undone. Your subscription will renew at the end of the current period.',

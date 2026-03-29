@@ -1,9 +1,17 @@
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment } from '@/lib/auth'
-import { createClient } from '@/lib/supabase/server'
+import {
+  getCurrentUser,
+  shouldRequireProfileCompletion,
+  shouldRequirePayment,
+  isOrgPublic,
+  isOrgStripeConnected,
+} from '@/lib/auth'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { headers } from 'next/headers'
 import { Resource } from '@/types/database'
+import { isOrgManagerRole } from '@/lib/org-roles'
 
 // Helper function to get signed URL for resource file/image
 async function getResourceFileUrl(supabase: any, fileUrl: string | null): Promise<string | null> {
@@ -37,33 +45,34 @@ export default async function ResourceDetailPage({
 }: {
   params: Promise<{ id: string }>
 }) {
-  const user = await getCurrentUser()
+  const [user, orgPublic, orgStripeConnected] = await Promise.all([
+    getCurrentUser(),
+    isOrgPublic(),
+    isOrgStripeConnected(),
+  ])
 
   if (!user) {
-    redirect('/login')
+    if (!orgPublic) redirect('/login')
+  } else {
+    if (shouldRequireProfileCompletion(user.profile)) redirect('/complete-profile')
+    if (shouldRequirePayment(user.profile) && orgStripeConnected) redirect('/add-payment')
+    if (user.profile.status !== 'approved' && !isOrgManagerRole(user.profile.role)) {
+      redirect('/pending-approval')
+    }
   }
 
-  if (shouldRequireProfileCompletion(user.profile)) {
-    redirect('/complete-profile')
-  }
-
-  if (shouldRequirePayment(user.profile)) {
-    redirect('/add-payment')
-  }
-
-  // Redirect pending users to approval page
-  if (user.profile.status !== 'approved' && user.profile.role !== 'admin') {
-    redirect('/pending-approval')
-  }
+  const isGuest = !user
+  const h = await headers()
+  const orgId = isGuest ? h.get('x-org-id') : user!.profile.org_id
 
   const { id } = await params
-  const supabase = await createClient()
+  const supabase = isGuest ? createServiceRoleClient() : await createClient()
 
-  // Fetch the resource directly from database
   const { data: resource, error } = await supabase
     .from('resources')
     .select('*')
     .eq('id', id)
+    .eq('org_id', orgId ?? '')
     .single()
 
   if (error || !resource) {

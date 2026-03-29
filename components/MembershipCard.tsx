@@ -2,11 +2,11 @@
 
 import { useState, useRef, useMemo } from 'react'
 import Image from 'next/image'
-import { UserProfile, getMembershipLevelLabel } from '@/types/database'
+import { MemberProfile, getMembershipLevelLabel } from '@/types/database'
 
 interface MembershipCardProps {
   user: {
-    profile: UserProfile
+    profile: MemberProfile
     user_metadata?: any
   }
   isPending: boolean
@@ -19,9 +19,28 @@ interface MembershipCardProps {
   validThruDate?: string | null
   /** When true, show "-" instead of member number (trial members don't get a number yet). */
   isOnTrial?: boolean
+  /** Multi-tenant / demo: override default header; `logoUrl` from `organizations.logo_url` */
+  clubBrand?: { shortName: string; tagline: string; logoUrl?: string | null }
+  /** TIPA org: use `/logo.png` in the chip when no `logoUrl` (legacy mark). */
+  preferTipaMarkWhenNoLogo?: boolean
 }
 
-export default function MembershipCard({ user, isPending, isRejected, isPaid, isExpired, membershipLevelDisplay, validThruDate, isOnTrial = false }: MembershipCardProps) {
+export default function MembershipCard({
+  user,
+  isPending,
+  isRejected,
+  isPaid,
+  isExpired,
+  membershipLevelDisplay,
+  validThruDate,
+  isOnTrial = false,
+  clubBrand,
+  preferTipaMarkWhenNoLogo = false,
+}: MembershipCardProps) {
+  const brandShort = clubBrand?.shortName ?? 'TIPA'
+  const brandTagline = clubBrand?.tagline ?? 'Toronto Island Pilots Association'
+  const orgLogoUrl = clubBrand?.logoUrl?.trim() || null
+  const useTipaDefaultBranding = clubBrand == null
   const [tilt, setTilt] = useState({ x: 0, y: 0 })
   const [glarePosition, setGlarePosition] = useState({ x: 50, y: 50 })
   const cardRef = useRef<HTMLDivElement>(null)
@@ -74,7 +93,7 @@ export default function MembershipCard({ user, isPending, isRejected, isPaid, is
     <div className="relative w-full">
       <div
         ref={cardRef}
-        className="relative bg-gradient-to-br from-[#0d1e26] via-[#0a171c] to-[#0d1e26] rounded-2xl overflow-hidden transition-all duration-300 ease-out sm:min-w-[380px] border-0"
+        className="relative bg-gradient-to-br from-[var(--color-primary)] via-[#0a171c] to-[var(--color-primary)] rounded-2xl overflow-hidden transition-all duration-300 ease-out sm:min-w-[380px] border-0"
         style={{
           aspectRatio: '1.586 / 1',
           transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale3d(1.02, 1.02, 1.02)`,
@@ -97,25 +116,38 @@ export default function MembershipCard({ user, isPending, isRejected, isPaid, is
           {/* Top Section */}
           <div className="flex items-start justify-between gap-[clamp(0.5rem,2vw,0.75rem)] min-w-0 flex-shrink-0">
             <div className="min-w-0 flex-1 pr-2">
-              <div className="text-[clamp(0.875rem,2vw,0.75rem)] uppercase tracking-widest text-white/70 mb-1">TIPA</div>
-              <div className="text-[clamp(0.75rem,1.5vw,0.625rem)] uppercase tracking-wide text-white/60 break-words leading-tight">Toronto Island Pilots Association</div>
+              <div className="text-[clamp(0.875rem,2vw,0.75rem)] uppercase tracking-widest text-white/70 mb-1">{brandShort}</div>
+              <div className="text-[clamp(0.75rem,1.5vw,0.625rem)] uppercase tracking-wide text-white/60 break-words leading-tight">{brandTagline}</div>
             </div>
             {/* Logo in Chip Area */}
             <div className="relative flex-shrink-0">
-              <div className={`w-[clamp(2.5rem,8vw,3rem)] h-[clamp(2rem,6.5vw,2.5rem)] bg-gradient-to-br rounded-md border flex items-center justify-center p-1 ${
-                isRejected ? 'border-red-400/50' :
-                isPending ? 'border-yellow-400/50' :
-                isExpired ? 'border-red-400/50' :
-                user.profile.status === 'approved' ? 'border-green-400/50' :
-                'border-yellow-400/30'
-              }`}>
-                <div className="relative w-full h-full">
-                  <Image
-                    src="/logo.png"
-                    alt="TIPA Logo"
-                    fill
-                    className="object-contain"
-                  />
+              <div className="w-[clamp(2.5rem,8vw,3rem)] h-[clamp(2rem,6.5vw,2.5rem)] bg-gradient-to-br rounded-md border border-white/20 flex items-center justify-center p-1">
+                <div className="relative w-full h-full flex items-center justify-center">
+                  {orgLogoUrl ? (
+                    <Image
+                      src={orgLogoUrl}
+                      alt={`${brandTagline} logo`}
+                      fill
+                      className="object-contain p-0.5"
+                      sizes="48px"
+                    />
+                  ) : useTipaDefaultBranding || preferTipaMarkWhenNoLogo ? (
+                    <Image
+                      src="/logo.png"
+                      alt="Club logo"
+                      fill
+                      className="object-contain"
+                      sizes="48px"
+                    />
+                  ) : (
+                    <span
+                      className="font-bold text-white/95 leading-none text-center px-0.5"
+                      style={{ fontSize: 'clamp(0.5rem, 2.5vw, 0.7rem)' }}
+                      aria-hidden
+                    >
+                      {brandShort.slice(0, 4)}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

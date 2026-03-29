@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Resource, ResourceCategory } from '@/types/database'
 import Loading from '@/components/Loading'
+import { isOrgManagerRole } from '@/lib/org-roles'
 
 // All announcement categories available for filtering
 const ANNOUNCEMENT_CATEGORIES: ResourceCategory[] = ['tipa_newsletters', 'airport_updates', 'reminder', 'other']
@@ -25,6 +26,7 @@ function truncateText(html: string | null, maxLength: number = 150): string {
 export default function ResourcesPage() {
   const [resources, setResources] = useState<Resource[]>([])
   const [loading, setLoading] = useState(true)
+  const [canManageAnnouncements, setCanManageAnnouncements] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<Resource['category'] | 'all'>('all')
   const router = useRouter()
@@ -43,9 +45,10 @@ export default function ResourcesPage() {
       }
 
       const data = await response.json()
+      if (data.isGuest) return
       const profile = data.profile
-
-      if (profile && profile.status !== 'approved' && profile.role !== 'admin') {
+      if (isOrgManagerRole(profile?.role)) setCanManageAnnouncements(true)
+      if (profile && profile.status !== 'approved' && !isOrgManagerRole(profile.role)) {
         router.push('/pending-approval')
         return
       }
@@ -152,7 +155,7 @@ export default function ResourcesPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search announcements..."
-              className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-[#0d1e26] focus:border-[#0d1e26] text-gray-900"
+              className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] text-gray-900"
             />
           </div>
 
@@ -163,7 +166,7 @@ export default function ResourcesPage() {
                 onClick={() => setSelectedCategory('all')}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                   selectedCategory === 'all'
-                    ? 'bg-[#0d1e26] text-white'
+                    ? 'bg-[var(--color-primary)] text-white'
                     : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                 }`}
               >
@@ -175,7 +178,7 @@ export default function ResourcesPage() {
                   onClick={() => setSelectedCategory(category)}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                     selectedCategory === category
-                      ? 'bg-[#0d1e26] text-white'
+                      ? 'bg-[var(--color-primary)] text-white'
                       : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                   }`}
                 >
@@ -187,8 +190,25 @@ export default function ResourcesPage() {
         </div>
 
         {!resources || resources.length === 0 ? (
-          <div className="bg-white shadow rounded-lg p-8 text-center">
-            <p className="text-gray-500">No announcements available yet.</p>
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-10 sm:p-16 text-center">
+            <svg className="w-12 h-12 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+            </svg>
+            <h3 className="text-base font-semibold text-gray-900 mb-1">No announcements yet</h3>
+            <p className="text-sm text-gray-500 mb-6 max-w-xs mx-auto">
+              {canManageAnnouncements ? 'Post your first announcement to keep members in the loop.' : 'Nothing posted yet. Check back soon.'}
+            </p>
+            {canManageAnnouncements && (
+              <a
+                href="/admin/resources"
+                className="inline-flex items-center px-5 py-2.5 bg-[var(--color-primary)] text-white text-sm font-semibold rounded-lg hover:bg-[#0a171c] transition-colors"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Post first announcement
+              </a>
+            )}
           </div>
         ) : filteredResources.length === 0 ? (
           <div className="bg-white shadow rounded-lg p-8 text-center">
@@ -271,7 +291,7 @@ export default function ResourcesPage() {
                               day: 'numeric',
                             })}
                           </span>
-                          <span className="px-2 py-0.5 bg-[#0d1e26] text-white rounded font-medium">
+                          <span className="px-2 py-0.5 bg-[var(--color-primary)] text-white rounded font-medium">
                             {getCategoryLabel(resource.category)}
                           </span>
                           {resource.file_url && (
@@ -330,4 +350,3 @@ export default function ResourcesPage() {
     </div>
   )
 }
-

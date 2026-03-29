@@ -341,7 +341,7 @@ export default function MentionInput({
             ? 'bg-transparent'
             : `rounded-lg border ${
                 focused
-                  ? 'border-[#0d1e26] shadow-[0_0_0_3px_rgba(13,30,38,0.08)] bg-white'
+                  ? 'border-[var(--color-primary)] shadow-[0_0_0_3px_rgba(13,30,38,0.08)] bg-white'
                   : 'border-gray-300 bg-white hover:border-gray-400'
               }`
         }`}

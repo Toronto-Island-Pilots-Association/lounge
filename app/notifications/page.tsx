@@ -1,11 +1,12 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
+import { isOrgManagerRole } from '@/lib/org-roles'
 import NotificationsClient from './NotificationsClient'
 
 export default async function NotificationsPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
-  if (user.profile.status !== 'approved' && user.profile.role !== 'admin') {
+  if (user.profile.status !== 'approved' && !isOrgManagerRole(user.profile.role)) {
     redirect('/pending-approval')
   }
 

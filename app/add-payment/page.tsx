@@ -1,5 +1,10 @@
 import { redirect } from 'next/navigation'
-import { getCurrentUserIncludingPending, shouldRequireProfileCompletion } from '@/lib/auth'
+import {
+  getCurrentUserIncludingPending,
+  shouldRequireProfileCompletion,
+  shouldRequirePayment,
+  isOrgStripeConnected,
+} from '@/lib/auth'
 import SubscriptionSection from '@/components/SubscriptionSection'
 
 export default async function AddPaymentPage() {
@@ -13,10 +18,18 @@ export default async function AddPaymentPage() {
     redirect('/complete-profile')
   }
 
-  const hasSubscription = !!user.profile.stripe_subscription_id
+  const hasSubscription =
+    !!user.profile.stripe_subscription_id ||
+    !!user.profile.paypal_subscription_id ||
+    !!(user.profile.membership_expires_at && new Date(user.profile.membership_expires_at) >= new Date())
   const isHonorary = user.profile.membership_level === 'Honorary'
 
   if (hasSubscription || isHonorary) {
+    redirect('/membership')
+  }
+
+  const orgStripeReady = await isOrgStripeConnected()
+  if (shouldRequirePayment(user.profile) && !orgStripeReady) {
     redirect('/membership')
   }
 
@@ -28,7 +41,7 @@ export default async function AddPaymentPage() {
             Add your payment information
           </h1>
           <p className="mt-2 text-gray-600">
-            Add a payment method to access lounge features. You won’t be charged until you’re approved or the trial ends (e.g. September 1st).
+            Add a payment method to access lounge features. You won’t be charged until you’re approved or, if your plan includes one, when your trial ends.
           </p>
         </div>
 

@@ -1,4 +1,5 @@
 import { requireAdmin } from '@/lib/auth'
+import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
 import { sendInvitationWithPasswordEmail } from '@/lib/resend'
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
@@ -78,6 +79,17 @@ function parseCSV(csvContent: string): Array<{ email: string; firstName?: string
 export async function POST(request: Request) {
   try {
     await requireAdmin()
+    const orgId = request.headers.get('x-org-id')
+    if (!orgId) {
+      return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
+    }
+    const billingStatus = await getOrgBillingActivationStatus(orgId)
+    if (billingStatus.requiresActivation) {
+      return NextResponse.json(
+        { error: 'Add billing details in Billing before inviting members.' },
+        { status: 402 },
+      )
+    }
     
     const formData = await request.formData()
     const file = formData.get('file') as File
@@ -137,7 +149,7 @@ export async function POST(request: Request) {
       errors: [] as Array<{ email: string; error: string }>
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'
 
     // Process users sequentially to avoid rate limits
     for (const user of users) {
@@ -166,6 +178,7 @@ export async function POST(request: Request) {
             last_name: user.lastName || null,
             role: 'member',
             membership_level: membershipLevel,
+            org_id: orgId,
             invited_by_admin: true,
           }
         })
@@ -193,10 +206,11 @@ export async function POST(request: Request) {
           }
           
           const { data: fetchedProfile } = await adminClient
-            .from('user_profiles')
+            .from('member_profiles')
             .select('*')
-            .eq('id', newUser.user.id)
-            .single()
+            .eq('user_id', newUser.user.id)
+            .eq('org_id', orgId)
+            .maybeSingle()
           
           if (fetchedProfile) {
             profile = fetchedProfile
@@ -210,19 +224,32 @@ export async function POST(request: Request) {
           const { error: profileError } = await adminClient
             .from('user_profiles')
             .insert({
-              id: newUser.user.id,
+              user_id: newUser.user.id,
               email: normalizedEmail,
               full_name: fullName,
               first_name: user.firstName || null,
               last_name: user.lastName || null,
+            })
+
+          if (profileError) {
+            console.error(`Error creating user_profiles row for ${normalizedEmail}:`, profileError)
+            // Continue anyway - user was created
+          }
+
+          // Insert membership row into org_memberships
+          const { error: membershipError } = await adminClient
+            .from('org_memberships')
+            .insert({
+              user_id: newUser.user.id,
+              org_id: orgId,
               role: 'member',
               membership_level: membershipLevel,
               status: 'pending', // Will be updated to 'approved' when they log in
               invited_at: new Date().toISOString(),
             })
 
-          if (profileError) {
-            console.error(`Error creating profile for ${normalizedEmail}:`, profileError)
+          if (membershipError) {
+            console.error(`Error creating org_memberships row for ${normalizedEmail}:`, membershipError)
             // Continue anyway - user was created
           }
         }
@@ -276,4 +303,3 @@ export async function POST(request: Request) {
     )
   }
 }
-

@@ -118,7 +118,7 @@ export default function EditDiscussionForm({
           value={category}
           onChange={(e) => setCategory(e.target.value as DiscussionCategory)}
           required
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-transparent"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
         >
           {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
             <option key={value} value={value}>
@@ -141,7 +141,7 @@ export default function EditDiscussionForm({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           required
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-transparent"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
           placeholder="Enter discussion title..."
         />
       </div>
@@ -150,7 +150,7 @@ export default function EditDiscussionForm({
         <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
           Description
         </label>
-        <div className="rounded-lg border border-gray-300 bg-white focus-within:border-[#0d1e26] focus-within:shadow-[0_0_0_3px_rgba(13,30,38,0.08)] transition-all">
+        <div className="rounded-lg border border-gray-300 bg-white focus-within:border-[var(--color-primary)] focus-within:shadow-[0_0_0_3px_rgba(13,30,38,0.08)] transition-all">
           {imageUrls.length > 0 && (
             <div className="flex flex-wrap gap-2 px-3 pt-2 pb-1 border-b border-gray-100">
               {imageUrls.map((url, index) => (
@@ -240,7 +240,7 @@ export default function EditDiscussionForm({
         <button
           type="submit"
           disabled={loading}
-          className="px-6 py-2 bg-[#0d1e26] text-white font-semibold rounded-lg hover:bg-[#0a171c] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-6 py-2 bg-[var(--color-primary)] text-white font-semibold rounded-lg hover:bg-[#0a171c] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? 'Saving...' : 'Save changes'}
         </button>

@@ -14,13 +14,32 @@ export async function GET(
   try {
     await requireAdmin()
     const { id } = await params
+    const orgId = request.headers.get('x-org-id')
+    if (!orgId) {
+      return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
+    }
     const supabase = await createClient()
+
+    // Map the admin URL param (member_profiles.id = org_memberships.id) to auth user id.
+    const { data: memberRow, error: memberFetchError } = await supabase
+      .from('member_profiles')
+      .select('user_id')
+      .eq('id', id)
+      .eq('org_id', orgId)
+      .maybeSingle()
+
+    if (memberFetchError || !memberRow) {
+      return NextResponse.json({ error: 'Member not found' }, { status: 404 })
+    }
+
+    const userId = memberRow.user_id
 
     // Get threads created by this user
     const { data: threads } = await supabase
       .from('threads')
       .select('id, title, category, created_at, comment_count:comments(count)')
-      .eq('created_by', id)
+      .eq('created_by', userId)
+      .eq('org_id', orgId)
       .order('created_at', { ascending: false })
       .limit(20)
 
@@ -29,7 +48,8 @@ export async function GET(
     const { data: commentCounts } = threadIds.length > 0 ? await supabase
       .from('comments')
       .select('thread_id')
-      .in('thread_id', threadIds) : { data: [] }
+      .in('thread_id', threadIds)
+      .eq('org_id', orgId) : { data: [] }
 
     const countsMap = new Map<string, number>()
     commentCounts?.forEach(c => {
@@ -54,7 +74,8 @@ export async function GET(
           category
         )
       `)
-      .eq('created_by', id)
+      .eq('created_by', userId)
+      .eq('org_id', orgId)
       .order('created_at', { ascending: false })
       .limit(20)
 
@@ -74,7 +95,8 @@ export async function GET(
           content
         )
       `)
-      .eq('user_id', id)
+      .eq('user_id', userId)
+      .eq('org_id', orgId)
       .order('created_at', { ascending: false })
       .limit(20)
 
@@ -82,7 +104,8 @@ export async function GET(
     const { data: events } = await supabase
       .from('events')
       .select('id, title, start_time, created_at')
-      .eq('created_by', id)
+      .eq('created_by', userId)
+      .eq('org_id', orgId)
       .order('created_at', { ascending: false })
       .limit(20)
 
@@ -90,7 +113,8 @@ export async function GET(
     const { data: payments } = await supabase
       .from('payments')
       .select('*')
-      .eq('user_id', id)
+      .eq('user_id', userId)
+      .eq('org_id', orgId)
       .order('payment_date', { ascending: false })
       .limit(20)
 

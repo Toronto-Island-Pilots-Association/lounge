@@ -1,6 +1,13 @@
 import { getCurrentUserIncludingPending } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getMembershipLevelLabel } from '@/types/database'
+import {
+  getTrialConfig,
+  getTrialConfigItemForLevel,
+  computeTrialEndFromConfig,
+  type MembershipLevelKey,
+} from '@/lib/settings'
+import { isOrgManagerRole } from '@/lib/org-roles'
 import SignOutButton from './SignOutButton'
 
 export default async function PendingApprovalPage() {
@@ -12,22 +19,41 @@ export default async function PendingApprovalPage() {
   }
 
   // If user is approved or is admin, redirect to membership
-  if (user.profile.status === 'approved' || user.profile.role === 'admin') {
+  if (user.profile.status === 'approved' || isOrgManagerRole(user.profile.role)) {
     redirect('/membership')
   }
 
   const isRejected = user.profile.status === 'rejected'
   const isExpired = user.profile.status === 'expired'
 
-  const level = user.profile.membership_level || 'Full'
+  const level = (user.profile.membership_level || 'Full') as MembershipLevelKey
   const levelLabel = getMembershipLevelLabel(level)
   const article = (level === 'Associate' || level === 'Honorary') ? 'an' : 'a'
+  const trialCfg = await getTrialConfig(user.profile.org_id)
+  const pendingTrialItem = getTrialConfigItemForLevel(trialCfg, level)
+  const pendingTrialEnd = computeTrialEndFromConfig(
+    pendingTrialItem,
+    user.profile.created_at ?? null,
+  )
   const pendingTrialCopy =
-    level === 'Full' || level === 'Associate'
-      ? <>Once approved, you will be registered as {article} <strong>{levelLabel} member</strong> (trial) until <strong>September 1st</strong></>
-      : level === 'Student'
-        ? <>Once approved, you will be registered as {article} <strong>{levelLabel} member</strong> with a free 12-month from approval</>
-        : <>Once approved, you will be registered as {article} <strong>{levelLabel} member</strong></>
+    pendingTrialEnd && pendingTrialItem?.type === 'months'
+      ? (
+          <>
+            Once approved, you will be registered as {article} <strong>{levelLabel} member</strong> with a trial
+            until{' '}
+            <strong>
+              {pendingTrialEnd.toLocaleDateString('en-US', {
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric',
+              })}
+            </strong>
+            .
+          </>
+        )
+      : (
+          <>Once approved, you will be registered as {article} <strong>{levelLabel} member</strong>.</>
+        )
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -79,7 +105,16 @@ export default async function PendingApprovalPage() {
               </p>
               <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
                 <li>{pendingTrialCopy}</li>
-                <li>Your access to the platform may be revoked if you do not pay your membership fees after that date</li>
+                {pendingTrialEnd && pendingTrialItem?.type === 'months' ? (
+                  <li>
+                    Your access to the platform may be revoked if you do not pay your membership fees after your
+                    trial ends
+                  </li>
+                ) : (
+                  <li>
+                    If your plan requires payment, you will be prompted to complete billing after approval.
+                  </li>
+                )}
               </ul>
             </div>
             <p className="text-sm text-gray-500">
@@ -94,4 +129,3 @@ export default async function PendingApprovalPage() {
     </div>
   )
 }
-

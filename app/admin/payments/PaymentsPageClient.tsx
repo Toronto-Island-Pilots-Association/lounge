@@ -104,7 +104,7 @@ export default function PaymentsPageClient() {
             onChange={(e) =>
               setFilters({ ...filters, paymentMethod: e.target.value as PaymentMethod | '' })
             }
-            className="h-8 text-sm px-2.5 border border-gray-300 rounded text-gray-900 focus:ring-1 focus:ring-[#0d1e26] focus:border-[#0d1e26] w-full sm:w-auto sm:min-w-[110px]"
+            className="h-8 text-sm px-2.5 border border-gray-300 rounded text-gray-900 focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] w-full sm:w-auto sm:min-w-[110px]"
           >
             <option value="">All methods</option>
             <option value="stripe">Stripe</option>
@@ -117,7 +117,7 @@ export default function PaymentsPageClient() {
             value={filters.search}
             onChange={(e) => setFilters({ ...filters, search: e.target.value })}
             placeholder="Search..."
-            className="h-8 text-sm px-2.5 border border-gray-300 rounded text-gray-900 placeholder-gray-400 focus:ring-1 focus:ring-[#0d1e26] focus:border-[#0d1e26] w-full sm:w-36 min-w-0"
+            className="h-8 text-sm px-2.5 border border-gray-300 rounded text-gray-900 placeholder-gray-400 focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] w-full sm:w-36 min-w-0"
           />
         </div>
       </div>

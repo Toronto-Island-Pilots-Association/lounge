@@ -15,7 +15,7 @@ describe('/api/members/search', () => {
   })
 
   it('returns empty members when q is missing', async () => {
-    const req = new Request('http://localhost:3000/api/members/search')
+    const req = new Request('http://clublounge.local:3000/api/members/search')
     const res = await GET(req)
     const data = await res.json()
     expect(res.status).toBe(200)
@@ -23,7 +23,7 @@ describe('/api/members/search', () => {
   })
 
   it('returns empty members when q is blank after trim', async () => {
-    const req = new Request('http://localhost:3000/api/members/search?q=   ')
+    const req = new Request('http://clublounge.local:3000/api/members/search?q=   ')
     const res = await GET(req)
     const data = await res.json()
     expect(res.status).toBe(200)
@@ -48,7 +48,7 @@ describe('/api/members/search', () => {
       })),
     })
 
-    const req = new Request('http://localhost:3000/api/members/search?q=alice')
+    const req = new Request('http://clublounge.local:3000/api/members/search?q=alice')
     const res = await GET(req)
     const data = await res.json()
 
@@ -69,7 +69,7 @@ describe('/api/members/search', () => {
       })),
     })
 
-    const req = new Request('http://localhost:3000/api/members/search?q=x')
+    const req = new Request('http://clublounge.local:3000/api/members/search?q=x')
     const res = await GET(req)
     const data = await res.json()
 

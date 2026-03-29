@@ -1,0 +1,49 @@
+import { requirePlatformAdmin } from '@/lib/auth'
+import { getSignupFieldsApiPayload, setSignupFieldsConfig, type SignupField } from '@/lib/settings'
+import { NextResponse } from 'next/server'
+
+export async function GET() {
+  try {
+    await requirePlatformAdmin()
+    const payload = await getSignupFieldsApiPayload()
+    return NextResponse.json(payload)
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to load signup fields'
+    const status = message === 'Forbidden: Admin access required' ? 403 : 500
+    return NextResponse.json({ error: message }, { status })
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    await requirePlatformAdmin()
+    const body = await request.json()
+    if (!Array.isArray(body.fields)) {
+      return NextResponse.json({ error: 'fields must be an array' }, { status: 400 })
+    }
+    const fields: SignupField[] = body.fields.map((f: SignupField) => {
+      const base: SignupField = {
+        key:      String(f.key),
+        label:    String(f.label),
+        group:    f.group ? String(f.group) : undefined,
+        enabled:  Boolean(f.enabled),
+        required: Boolean(f.required),
+      }
+      if (f.isCustom) {
+        base.isCustom    = true
+        base.type        = f.type
+        base.placeholder = f.placeholder ?? undefined
+        base.helpText    = f.helpText ?? undefined
+        base.options     = Array.isArray(f.options) ? f.options.map(String) : undefined
+      }
+      return base
+    })
+    await setSignupFieldsConfig(fields)
+    const payload = await getSignupFieldsApiPayload()
+    return NextResponse.json(payload)
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to update signup fields'
+    const status = message === 'Forbidden: Admin access required' ? 403 : 500
+    return NextResponse.json({ error: message }, { status })
+  }
+}

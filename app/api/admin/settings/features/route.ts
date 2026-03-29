@@ -1,0 +1,62 @@
+import { requirePlatformAdmin } from '@/lib/auth'
+import { getFeatureFlags, setFeatureFlags, getOrgPlan, type OrgFeatureFlags } from '@/lib/settings'
+import { getPlanDef, getRequiredPlan, type PlanFeatures } from '@/lib/plans'
+import { NextResponse } from 'next/server'
+
+export async function GET() {
+  try {
+    await requirePlatformAdmin()
+    const [features, plan] = await Promise.all([getFeatureFlags(), getOrgPlan()])
+    const planDef = getPlanDef(plan)
+    return NextResponse.json({ features, plan, planLabel: planDef.label, planFeatures: planDef.features })
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to load features'
+    const status = message === 'Forbidden: Admin access required' ? 403 : 500
+    return NextResponse.json({ error: message }, { status })
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    await requirePlatformAdmin()
+    const body = await request.json()
+    const boolKeys: (keyof OrgFeatureFlags)[] = [
+      'discussions', 'events', 'resources', 'memberDirectory',
+      'requireMemberApproval', 'allowMemberInvitations', 'pages',
+    ]
+    const stringKeys: (keyof OrgFeatureFlags)[] = [
+      'discussionsLabel', 'eventsLabel', 'resourcesLabel', 'pagesLabel',
+    ]
+    const validKeys = [...boolKeys, ...stringKeys]
+    const update: Partial<OrgFeatureFlags> = {}
+    for (const key of boolKeys) {
+      if (typeof body[key] === 'boolean') (update as any)[key] = body[key]
+    }
+    for (const key of stringKeys) {
+      if (typeof body[key] === 'string') (update as any)[key] = body[key].trim() || undefined
+    }
+
+    // Enforce plan ceiling — can't enable a feature the plan doesn't include
+    const plan = await getOrgPlan()
+    const planFeatures = getPlanDef(plan).features
+    for (const key of boolKeys) {
+      if ((update as any)[key] === true && !planFeatures[key as keyof PlanFeatures]) {
+        const requiredPlan = getRequiredPlan(key as keyof PlanFeatures)
+        const planLabel = requiredPlan ? getPlanDef(requiredPlan).label : 'a higher'
+        return NextResponse.json(
+          { error: `"${key}" is not available on your current plan. Upgrade to ${planLabel} to enable it.` },
+          { status: 403 }
+        )
+      }
+    }
+
+    await setFeatureFlags(update)
+    const features = await getFeatureFlags()
+    const planDef = getPlanDef(plan)
+    return NextResponse.json({ features, plan, planLabel: planDef.label, planFeatures: planDef.features })
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to update features'
+    const status = message === 'Forbidden: Admin access required' ? 403 : 500
+    return NextResponse.json({ error: message }, { status })
+  }
+}

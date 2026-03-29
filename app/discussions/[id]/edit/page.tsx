@@ -1,22 +1,26 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment } from '@/lib/auth'
+import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment, isOrgStripeConnected } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { DiscussionCategory } from '@/types/database'
+import { getFeatureFlags } from '@/lib/settings'
 import EditDiscussionForm from '../EditDiscussionForm'
+import { isOrgManagerRole } from '@/lib/org-roles'
 
 export default async function EditThreadPage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
-  const user = await getCurrentUser()
+  const [user, orgStripeConnected] = await Promise.all([getCurrentUser(), isOrgStripeConnected()])
   if (!user) redirect('/login')
   if (shouldRequireProfileCompletion(user.profile)) redirect('/complete-profile')
-  if (shouldRequirePayment(user.profile)) redirect('/add-payment')
-  if (user.profile.status !== 'approved' && user.profile.role !== 'admin') {
+  if (shouldRequirePayment(user.profile) && orgStripeConnected) redirect('/add-payment')
+  if (user.profile.status !== 'approved' && !isOrgManagerRole(user.profile.role)) {
     redirect('/pending-approval')
   }
+
+  const featureFlags = await getFeatureFlags(user.profile.org_id)
 
   const { id } = await params
   const supabase = await createClient()
@@ -24,6 +28,7 @@ export default async function EditThreadPage({
     .from('threads')
     .select('*')
     .eq('id', id)
+    .eq('org_id', user.profile.org_id)
     .single()
 
   if (error || !thread) {
@@ -34,9 +39,9 @@ export default async function EditThreadPage({
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Discussion Not Found</h2>
             <Link
               href="/discussions"
-              className="inline-block px-6 py-2 bg-[#0d1e26] text-white font-semibold rounded-lg"
+              className="inline-block px-6 py-2 bg-[var(--color-primary)] text-white font-semibold rounded-lg"
             >
-              Back to Hangar Talk
+              Back to {featureFlags.discussionsLabel}
             </Link>
           </div>
         </div>
@@ -55,7 +60,7 @@ export default async function EditThreadPage({
         <div className="mb-4 sm:mb-6">
           <Link
             href={`/discussions/${id}`}
-            className="text-[#0d1e26] hover:text-[#0a171c] text-sm font-medium inline-flex items-center gap-1"
+            className="text-[var(--color-primary)] hover:text-[#0a171c] text-sm font-medium inline-flex items-center gap-1"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />

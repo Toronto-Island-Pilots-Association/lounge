@@ -23,6 +23,8 @@ export interface NotificationItem {
 export async function GET(request: Request) {
   try {
     const user = await requireAuth()
+    const orgId = user.profile?.org_id
+    if (!orgId) return NextResponse.json({ error: 'Organization not found' }, { status: 400 })
     const supabase = await createClient()
     const { searchParams } = new URL(request.url)
     const limit = Math.min(
@@ -36,6 +38,7 @@ export async function GET(request: Request) {
       .from('notifications')
       .select('id, type, thread_id, comment_id, actor_id, read_at, created_at')
       .eq('user_id', user.id)
+      .eq('org_id', orgId)
       .order('created_at', { ascending: false })
 
     if (unreadOnly) {
@@ -52,6 +55,7 @@ export async function GET(request: Request) {
       .from('notifications')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
+      .eq('org_id', orgId)
       .is('read_at', null)
 
     if (!notifications || notifications.length === 0) {
@@ -67,14 +71,16 @@ export async function GET(request: Request) {
     const [threadsRes, actorsRes] = await Promise.all([
       threadIds.length > 0
         ? supabase.from('threads').select('id, title').in('id', threadIds)
+          .eq('org_id', orgId)
         : { data: [] },
       actorIds.length > 0
-        ? supabase.from('user_profiles').select('id, full_name, profile_picture_url').in('id', actorIds)
+        ? supabase.from('member_profiles').select('user_id, full_name, profile_picture_url').in('user_id', actorIds)
+          .eq('org_id', orgId)
         : { data: [] },
     ])
 
     const threadMap = new Map((threadsRes.data || []).map((t) => [t.id, t]))
-    const actorMap = new Map((actorsRes.data || []).map((a) => [a.id, a]))
+    const actorMap = new Map((actorsRes.data || []).map((a) => [a.user_id, { id: a.user_id, full_name: a.full_name, profile_picture_url: a.profile_picture_url }]))
 
     const items: NotificationItem[] = (notifications || []).map((n) => ({
       id: n.id,
@@ -105,6 +111,8 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const user = await requireAuth()
+    const orgId = user.profile?.org_id
+    if (!orgId) return NextResponse.json({ error: 'Organization not found' }, { status: 400 })
     const supabase = await createClient()
     const body = await request.json().catch(() => ({}))
     const { ids, thread_id: threadId } = body as { ids?: string[]; thread_id?: string }
@@ -116,6 +124,7 @@ export async function PATCH(request: Request) {
         .from('notifications')
         .update({ read_at: now })
         .eq('user_id', user.id)
+        .eq('org_id', orgId)
         .in('id', ids)
         .select('id')
       if (error) return NextResponse.json({ error: error.message }, { status: 400 })
@@ -127,6 +136,7 @@ export async function PATCH(request: Request) {
         .from('notifications')
         .update({ read_at: now })
         .eq('user_id', user.id)
+        .eq('org_id', orgId)
         .eq('thread_id', threadId)
         .select('id')
       if (error) return NextResponse.json({ error: error.message }, { status: 400 })

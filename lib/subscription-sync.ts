@@ -1,7 +1,34 @@
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getMembershipExpiresAtFromSubscription } from '@/lib/settings'
-import { getStripeInstance, isStripeEnabled } from '@/lib/stripe'
+import { getPlatformStripeInstance, getStripeInstance, isStripeEnabled } from '@/lib/stripe'
 import Stripe from 'stripe'
+
+type StripeContext = {
+  stripe: Stripe
+  requestOptions?: { stripeAccount: string }
+}
+
+export async function resolveMemberStripeContext(orgId?: string): Promise<StripeContext> {
+  if (!orgId) {
+    return { stripe: getStripeInstance() }
+  }
+
+  const supabase = createServiceRoleClient()
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('stripe_account_id')
+    .eq('id', orgId)
+    .maybeSingle()
+
+  if (org?.stripe_account_id) {
+    return {
+      stripe: getPlatformStripeInstance(),
+      requestOptions: { stripeAccount: org.stripe_account_id },
+    }
+  }
+
+  return { stripe: getStripeInstance() }
+}
 
 /**
  * Syncs a user's subscription status from Stripe to the database
@@ -15,16 +42,20 @@ import Stripe from 'stripe'
  */
 export async function syncSubscriptionStatus(
   userId: string,
-  subscriptionId: string | null
+  subscriptionId: string | null,
+  orgId?: string
 ): Promise<{ status: 'pending' | 'approved' | 'expired'; membership_expires_at: string | null } | null> {
   const supabase = createServiceRoleClient()
 
   // Get current user profile
-  const { data: profile, error: profileError } = await supabase
-    .from('user_profiles')
+  let membershipQuery = supabase
+    .from('org_memberships')
     .select('status, membership_expires_at, stripe_subscription_id, subscription_cancel_at_period_end')
-    .eq('id', userId)
-    .single()
+    .eq('user_id', userId)
+
+  if (orgId) membershipQuery = membershipQuery.eq('org_id', orgId)
+
+  const { data: profile, error: profileError } = await membershipQuery.single()
 
   if (profileError || !profile) {
     console.error('Error fetching user profile:', profileError)
@@ -63,7 +94,7 @@ export async function syncSubscriptionStatus(
     }
   }
 
-  const stripe = getStripeInstance()
+  const { stripe, requestOptions } = await resolveMemberStripeContext(orgId)
   const activeSubscriptionId = subscriptionId || profile.stripe_subscription_id
 
   if (!activeSubscriptionId) {
@@ -72,11 +103,10 @@ export async function syncSubscriptionStatus(
 
   try {
     // Fetch subscription from Stripe
-    const subscription = await stripe.subscriptions.retrieve(activeSubscriptionId)
+    const subscription = await stripe.subscriptions.retrieve(activeSubscriptionId, requestOptions as any)
     const currentPeriodEnd = new Date((subscription as any).current_period_end * 1000)
     const currentPeriodStart = new Date((subscription as any).current_period_start * 1000)
     const now = new Date()
-    // If subscribed before Sept 1, expiry is Sept 1 next year; else use Stripe period end
     const computedExpiresAt = getMembershipExpiresAtFromSubscription(currentPeriodEnd, currentPeriodStart)
 
     // Determine status based on subscription state.
@@ -115,16 +145,21 @@ export async function syncSubscriptionStatus(
     const expiresAtChanged = profile.membership_expires_at !== newExpiresAt
     const cancelAtPeriodEndChanged = (profile as any).subscription_cancel_at_period_end !== cancelAtPeriodEnd
     const needsBackfillExpires = !profile.membership_expires_at && newExpiresAt
+    const subscriptionIdChanged = profile.stripe_subscription_id !== activeSubscriptionId
 
-    if (statusChanged || expiresAtChanged || cancelAtPeriodEndChanged || needsBackfillExpires) {
-      await supabase
-        .from('user_profiles')
+    if (statusChanged || expiresAtChanged || cancelAtPeriodEndChanged || needsBackfillExpires || subscriptionIdChanged) {
+      let updateQuery = supabase
+        .from('org_memberships')
         .update({
           status: newStatus,
           membership_expires_at: newExpiresAt,
+          stripe_subscription_id: activeSubscriptionId,
           subscription_cancel_at_period_end: cancelAtPeriodEnd,
         })
-        .eq('id', userId)
+        .eq('user_id', userId)
+
+      if (orgId) updateQuery = updateQuery.eq('org_id', orgId)
+      await updateQuery
 
       console.log(`Synced subscription for user ${userId}:`, {
         oldStatus: profile.status,
@@ -157,14 +192,17 @@ export async function syncSubscriptionStatus(
       }
 
       if (profile.status !== newStatus || profile.stripe_subscription_id) {
-        await supabase
-          .from('user_profiles')
+        let updateQuery = supabase
+          .from('org_memberships')
           .update({
             status: newStatus,
             stripe_subscription_id: null,
             subscription_cancel_at_period_end: false,
           })
-          .eq('id', userId)
+          .eq('user_id', userId)
+
+        if (orgId) updateQuery = updateQuery.eq('org_id', orgId)
+        await updateQuery
       }
 
       return {
@@ -181,7 +219,8 @@ export async function syncSubscriptionStatus(
  * Syncs subscription status for a user by their Stripe subscription ID
  */
 export async function syncSubscriptionBySubscriptionId(
-  subscriptionId: string
+  subscriptionId: string,
+  orgId?: string
 ): Promise<boolean> {
   if (!isStripeEnabled()) {
     return false
@@ -190,37 +229,41 @@ export async function syncSubscriptionBySubscriptionId(
   const supabase = createServiceRoleClient()
 
   // Find user by subscription ID
-  const { data: profile } = await supabase
-    .from('user_profiles')
-    .select('id, stripe_subscription_id')
+  let membershipQuery = supabase
+    .from('org_memberships')
+    .select('user_id, stripe_subscription_id')
     .eq('stripe_subscription_id', subscriptionId)
-    .single()
+  if (orgId) membershipQuery = membershipQuery.eq('org_id', orgId)
+
+  const { data: profile } = await membershipQuery.single()
 
   if (!profile) {
     console.warn(`No user found with subscription ID: ${subscriptionId}`)
     return false
   }
 
-  const result = await syncSubscriptionStatus(profile.id, subscriptionId)
+  const result = await syncSubscriptionStatus(profile.user_id, subscriptionId, orgId)
   return result !== null
 }
 
 /**
  * Syncs subscription status for a user by their user ID
  */
-export async function syncSubscriptionByUserId(userId: string): Promise<boolean> {
+export async function syncSubscriptionByUserId(userId: string, orgId?: string): Promise<boolean> {
   const supabase = createServiceRoleClient()
 
-  const { data: profile } = await supabase
-    .from('user_profiles')
+  let membershipQuery = supabase
+    .from('org_memberships')
     .select('stripe_subscription_id')
-    .eq('id', userId)
-    .single()
+    .eq('user_id', userId)
+  if (orgId) membershipQuery = membershipQuery.eq('org_id', orgId)
+
+  const { data: profile } = await membershipQuery.single()
 
   if (!profile) {
     return false
   }
 
-  const result = await syncSubscriptionStatus(userId, profile.stripe_subscription_id || null)
+  const result = await syncSubscriptionStatus(userId, profile.stripe_subscription_id || null, orgId)
   return result !== null
 }

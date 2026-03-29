@@ -14,6 +14,7 @@ if (existsSync(sentryEnvPath)) {
 }
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ['*.clublounge.local'],
   images: {
     remotePatterns: [
       {

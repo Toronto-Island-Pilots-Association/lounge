@@ -81,7 +81,7 @@ export default function MembershipPageClient({
           </div>
           {loadingPayments ? (
             <div className="text-center py-6">
-              <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-[#0d1e26]"></div>
+              <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-[var(--color-primary)]"></div>
               <p className="mt-2 text-xs text-gray-500">Loading payments...</p>
             </div>
           ) : payments.length === 0 ? (
@@ -175,7 +175,7 @@ export default function MembershipPageClient({
                     }
                   }}
                   disabled={payProcessing}
-                  className="w-full px-4 py-3 bg-[#0d1e26] text-white font-medium rounded-md hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0d1e26] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="w-full px-4 py-3 bg-[var(--color-primary)] text-white font-medium rounded-md hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {payProcessing ? 'Redirecting...' : 'Pay with card'}
                 </button>

@@ -1,5 +1,6 @@
 import { requireAuth } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
+import { isOrgManagerRole } from '@/lib/org-roles'
 import { NextResponse } from 'next/server'
 
 export async function DELETE(
@@ -8,6 +9,8 @@ export async function DELETE(
 ) {
   try {
     const user = await requireAuth()
+    const orgId = user.profile?.org_id
+    if (!orgId) return NextResponse.json({ error: 'Organization not found' }, { status: 400 })
     const { id } = await params
     const supabase = await createClient()
 
@@ -16,20 +19,14 @@ export async function DELETE(
       .from('comments')
       .select('created_by')
       .eq('id', id)
+      .eq('org_id', orgId)
       .single()
 
     if (!comment) {
       return NextResponse.json({ error: 'Comment not found' }, { status: 404 })
     }
 
-    // Check if user is admin or owner
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    const isAdmin = profile?.role === 'admin'
+    const isAdmin = isOrgManagerRole(user.profile.role)
     const isOwner = comment.created_by === user.id
 
     if (!isAdmin && !isOwner) {
@@ -43,6 +40,7 @@ export async function DELETE(
       .from('comments')
       .delete()
       .eq('id', id)
+      .eq('org_id', orgId)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 })
@@ -56,4 +54,3 @@ export async function DELETE(
     )
   }
 }
-

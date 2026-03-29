@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { headers } from 'next/headers'
 import { DiscussionCategory } from '@/types/database'
 import { ALL_CATEGORIES } from './constants'
 import CategoryIcon from './CategoryIcons'
@@ -7,11 +8,13 @@ import { formatRelativeDate } from './utils'
 
 export default async function SidebarRecentPosts() {
   const supabase = await createClient()
+  const orgId = (await headers()).get('x-org-id')
 
   // Get recent threads for sidebar
   const { data: recentThreads } = await supabase
     .from('threads')
     .select('id, title, category, created_at')
+    .eq('org_id', orgId ?? '')
     .order('created_at', { ascending: false })
     .limit(5)
 
@@ -42,7 +45,7 @@ export default async function SidebarRecentPosts() {
                 {getCategoryIcon(thread.category)}
               </span>
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-900 group-hover:text-[#0d1e26] line-clamp-2 font-medium transition-colors">
+                <p className="text-sm text-gray-900 group-hover:text-[var(--color-primary)] line-clamp-2 font-medium transition-colors">
                   {thread.title}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">

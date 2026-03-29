@@ -1,5 +1,9 @@
-import { requireAuth } from '@/lib/auth'
-import { createClient } from '@/lib/supabase/server'
+import { requireAuth, isOrgPublic } from '@/lib/auth'
+import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
+import { isOrgManagerRole } from '@/lib/org-roles'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/settings'
+import { headers } from 'next/headers'
 import { sendEventNotificationEmail } from '@/lib/resend'
 import { NextResponse } from 'next/server'
 
@@ -30,15 +34,35 @@ async function getEventImageUrl(supabase: any, imageUrl: string | null): Promise
   }
 }
 
-// GET - Get all events (authenticated users), with rsvp_count and user_rsvped
+// GET - Get all events (authenticated or guest in public org), with rsvp_count and user_rsvped
 export async function GET() {
   try {
-    const user = await requireAuth()
-    const supabase = await createClient()
+    let orgId: string | null = null
+    let isGuest = false
+    let supabase: ReturnType<typeof createServiceRoleClient>
+
+    try {
+      const user = await requireAuth()
+      orgId = user.profile.org_id
+      supabase = await createClient() as any
+    } catch {
+      const orgPublic = await isOrgPublic()
+      if (!orgPublic) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      const h = await headers()
+      orgId = h.get('x-org-id')
+      isGuest = true
+      supabase = createServiceRoleClient() as any
+    }
+
+    const flags = await getFeatureFlags()
+    if (!flags.events) {
+      return NextResponse.json({ error: 'Events are not enabled for this organization' }, { status: 403 })
+    }
 
     const { data, error } = await supabase
       .from('events')
       .select('*')
+      .eq('org_id', orgId)
       .order('start_time', { ascending: true })
 
     if (error) {
@@ -54,13 +78,16 @@ export async function GET() {
         ? supabase
             .from('event_rsvps')
             .select('event_id')
+            .eq('org_id', orgId)
             .in('event_id', eventIds)
         : Promise.resolve({ data: [] }),
-      supabase
-        .from('event_rsvps')
-        .select('event_id')
-        .eq('user_id', user.id)
-        .in('event_id', eventIds.length > 0 ? eventIds : ['00000000-0000-0000-0000-000000000000']),
+      isGuest
+        ? Promise.resolve({ data: [] })
+        : supabase
+            .from('event_rsvps')
+            .select('event_id')
+            .eq('org_id', orgId)
+            .in('event_id', eventIds.length > 0 ? eventIds : ['00000000-0000-0000-0000-000000000000']),
     ])
 
     const countByEvent = new Map<string, number>()
@@ -96,12 +123,24 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const user = await requireAuth()
-    
+    const flags = await getFeatureFlags()
+    if (!flags.events) {
+      return NextResponse.json({ error: 'Events are not enabled for this organization' }, { status: 403 })
+    }
+    const orgId = user.profile.org_id
+
     // Check if user is admin
-    if (user.profile.role !== 'admin') {
+    if (!isOrgManagerRole(user.profile.role)) {
       return NextResponse.json(
         { error: 'Forbidden: Admin access required' },
         { status: 403 }
+      )
+    }
+    const billingStatus = await getOrgBillingActivationStatus(orgId)
+    if (billingStatus.requiresActivation) {
+      return NextResponse.json(
+        { error: 'Add billing details in Billing before publishing events.' },
+        { status: 402 },
       )
     }
 
@@ -126,6 +165,7 @@ export async function POST(request: Request) {
     const { data, error } = await supabase
       .from('events')
       .insert({
+        org_id: orgId,
         title,
         description: description || null,
         location: location || null,
@@ -145,9 +185,10 @@ export async function POST(request: Request) {
     if (send_notifications !== false) {
       try {
         const { data: members } = await supabase
-          .from('user_profiles')
+          .from('member_profiles')
           .select('email, full_name, first_name, last_name')
-          .eq('status', 'approved') // Only send to approved members
+          .eq('org_id', orgId)
+          .eq('status', 'approved')
           .not('email', 'is', null)
 
         if (members && members.length > 0) {
@@ -189,4 +230,3 @@ export async function POST(request: Request) {
     )
   }
 }
-

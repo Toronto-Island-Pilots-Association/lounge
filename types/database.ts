@@ -1,14 +1,38 @@
-export type MembershipLevel = 'Full' | 'Student' | 'Associate' | 'Corporate' | 'Honorary'
+export interface Organization {
+  id: string
+  name: string
+  slug: string
+  plan?: string
+  custom_domain: string | null
+  subdomain: string | null
+  logo_url: string | null
+  favicon_url?: string | null
+  stripe_account_id?: string | null
+  stripe_onboarding_complete?: boolean
+  stripe_charges_enabled?: boolean
+  stripe_payouts_enabled?: boolean
+  stripe_customer_id?: string | null
+  stripe_subscription_id?: string | null
+  created_at: string
+  updated_at: string
+}
 
-// Helper function to get display name for membership level (now just returns the value)
+export const TIPA_ORG_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
+
+// Open string — orgs define their own levels via membership_levels_config setting.
+// The defaults (Full, Student, Associate, Corporate, Honorary) are seeded for all orgs.
+export type MembershipLevel = string
+
 export function getMembershipLevelLabel(level: MembershipLevel): string {
   return level
 }
-export type UserRole = 'member' | 'admin'
+export type UserRole = 'member' | 'editor' | 'admin'
 export type UserStatus = 'pending' | 'approved' | 'rejected' | 'expired'
 
+/** Global identity — one row per user across all orgs. */
 export interface UserProfile {
-  id: string
+  id: string        // surrogate UUID
+  user_id: string   // auth.users.id
   email: string
   full_name: string | null
   first_name: string | null
@@ -20,49 +44,62 @@ export interface UserProfile {
   province_state: string | null
   postal_zip_code: string | null
   country: string | null
-  // Membership
+  profile_picture_url: string | null
+  notify_replies: boolean
+  created_at: string
+  updated_at: string
+}
+
+/** Per-org membership — one row per (user, org) pair. */
+export interface OrgMembership {
+  id: string        // surrogate UUID
+  user_id: string   // auth.users.id
+  org_id: string    // organizations.id
+  role: UserRole
+  status: UserStatus
+  membership_level: MembershipLevel
   membership_class: string | null
+  member_number: string | null
+  membership_expires_at: string | null
+  invited_at: string | null
+  last_reminder_sent_at: string | null
+  reminder_count: number | null
+  stripe_subscription_id: string | null
+  stripe_customer_id: string | null
+  paypal_subscription_id: string | null
+  subscription_cancel_at_period_end: boolean | null
+  // Application fields
+  statement_of_interest: string | null
+  interests: string | null
+  how_did_you_hear: string | null
   // COPA Membership
   is_copa_member: string | null
   join_copa_flight_32: string | null
   copa_membership_number: string | null
-  // Statement of Interest
-  statement_of_interest: string | null
-  // Interests
-  interests: string | null
-  // Aviation Information
+  // Aviation Information (TIPA-specific; other orgs use custom_data)
   pilot_license_type: string | null
   aircraft_type: string | null
   call_sign: string | null
   how_often_fly_from_ytz: string | null
-  how_did_you_hear: string | null
-  role: UserRole
-  membership_level: MembershipLevel
-  status: UserStatus
-  membership_expires_at: string | null
-  paypal_subscription_id: string | null
-  stripe_subscription_id: string | null
-  stripe_customer_id: string | null
-  subscription_cancel_at_period_end: boolean | null
-  profile_picture_url: string | null
-  member_number: string | null
   is_student_pilot: boolean
   flight_school: string | null
   instructor_name: string | null
-  notify_replies: boolean
+  // Org-defined custom signup fields
+  custom_data: Record<string, unknown> | null
   created_at: string
   updated_at: string
-  /** Set when the user was invited (admin or member invite); null for self-signup. */
-  invited_at?: string | null
-  /** When the last invitation reminder was sent; used for 24h cooldown. */
-  last_reminder_sent_at?: string | null
-  /** Number of reminder emails sent (max 3). */
-  reminder_count?: number | null
-  /** Server-computed trial end (ISO string). Set by admin members API from editable trial config. */
+  /** Server-computed trial end. Set by admin members API. */
   trial_end?: string | null
-  /** Latest payment summary from admin members API (amount, currency, payment_method). */
+  /** Latest payment summary from admin members API. */
   payment_summary?: { amount: number; currency: string; payment_method: string } | null
 }
+
+/**
+ * Flattened join of UserProfile + OrgMembership — mirrors the member_profiles view.
+ * Use this everywhere a "full member record" is needed.
+ * `id` refers to org_memberships.id (the org-scoped record).
+ */
+export type MemberProfile = OrgMembership & Omit<UserProfile, 'id' | 'created_at' | 'updated_at'>
 
 export type ResourceType = 'link' | 'document' | 'video' | 'other'
 export type ResourceCategory = 'tipa_newsletters' | 'airport_updates' | 'reminder' | 'other'
@@ -78,6 +115,19 @@ export interface Resource {
   image_url: string | null
   file_url: string | null
   file_name: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface Page {
+  id: string
+  org_id: string
+  title: string
+  slug: string
+  content: string | null
+  image_url: string | null
+  published: boolean
+  status?: 'draft' | 'published'
   created_at: string
   updated_at: string
 }

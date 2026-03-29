@@ -2,8 +2,9 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Suspense } from 'react'
-import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment } from '@/lib/auth'
-import { createClient } from '@/lib/supabase/server'
+import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment, isOrgPublic, isOrgStripeConnected } from '@/lib/auth'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { headers } from 'next/headers'
 import { Thread, Comment, DiscussionCategory } from '@/types/database'
 import CommentForm from './CommentForm'
 import ReactionButton from './ReactionButton'
@@ -12,38 +13,40 @@ import DeleteCommentButton from './DeleteCommentButton'
 import ThreadImages from '@/components/ThreadImages'
 import ContentWithLinkPreviews from '@/components/ContentWithLinkPreviews'
 import Sidebar from '../Sidebar'
-import { CATEGORY_LABELS } from '../constants'
+import { categoryConfigFromDb } from '../constants'
+import { getDiscussionCategories, getFeatureFlags } from '@/lib/settings'
 import { formatDetailDate } from '../utils'
 import MarkThreadNotificationsRead from './MarkThreadNotificationsRead'
+import { isOrgManagerRole } from '@/lib/org-roles'
 
 export default async function DiscussionPage({ params }: { params: Promise<{ id: string }> }) {
-  const user = await getCurrentUser()
+  const [user, orgPublic, orgStripeConnected] = await Promise.all([getCurrentUser(), isOrgPublic(), isOrgStripeConnected()])
 
   if (!user) {
-    redirect('/login')
+    if (!orgPublic) redirect('/login')
+  } else {
+    if (shouldRequireProfileCompletion(user.profile)) redirect('/complete-profile')
+    if (shouldRequirePayment(user.profile) && orgStripeConnected) redirect('/add-payment')
+    if (user.profile.status !== 'approved' && !isOrgManagerRole(user.profile.role)) redirect('/pending-approval')
   }
 
-  if (shouldRequireProfileCompletion(user.profile)) {
-    redirect('/complete-profile')
-  }
+  const isGuest = !user
+  const h = await headers()
+  const orgId = isGuest ? h.get('x-org-id') : user!.profile.org_id
+  const [{ id }, dbCategories, featureFlags] = await Promise.all([
+    params,
+    getDiscussionCategories(orgId ?? undefined),
+    getFeatureFlags(orgId ?? undefined),
+  ])
+  const categoryConfig = categoryConfigFromDb(dbCategories)
+  const supabase = isGuest ? createServiceRoleClient() : await createClient()
 
-  if (shouldRequirePayment(user.profile)) {
-    redirect('/add-payment')
-  }
-
-  // Redirect rejected/pending users to approval page
-  if (user.profile.status !== 'approved' && user.profile.role !== 'admin') {
-    redirect('/pending-approval')
-  }
-
-  const { id } = await params
-  const supabase = await createClient()
-
-  // Get thread
+  // Get thread — scoped to this org so users can't read other orgs' threads by ID
   const { data: thread, error: threadError } = await supabase
     .from('threads')
     .select('*')
     .eq('id', id)
+    .eq('org_id', orgId ?? '')
     .single()
 
   if (threadError || !thread) {
@@ -55,9 +58,9 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
             <p className="text-gray-600 mb-6">The discussion you're looking for doesn't exist.</p>
             <Link
               href="/discussions"
-              className="inline-block px-6 py-2 bg-[#0d1e26] text-white font-semibold rounded-lg hover:bg-[#0a171c] transition-colors"
+              className="inline-block px-6 py-2 bg-[var(--color-primary)] text-white font-semibold rounded-lg hover:bg-[#0a171c] transition-colors"
             >
-              Back to Hangar Talk
+              Back to {featureFlags.discussionsLabel}
             </Link>
           </div>
         </div>
@@ -114,7 +117,7 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
     like: threadReactions?.filter(r => r.reaction_type === 'like').length || 0,
   }
 
-  const userThreadReaction = threadReactions?.find(r => r.user_id === user.id && r.reaction_type === 'like')?.reaction_type || null
+  const userThreadReaction = isGuest ? null : (threadReactions?.find(r => r.user_id === user!.id && r.reaction_type === 'like')?.reaction_type || null)
 
   // Get reactions for comments
   const commentIds = comments?.map(c => c.id) || []
@@ -137,7 +140,7 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
     const reactionCounts = {
       like: reactions.filter(r => r.reaction_type === 'like').length,
     }
-    const userReaction = reactions.find(r => r.user_id === user.id && r.reaction_type === 'like')?.reaction_type || null
+    const userReaction = isGuest ? null : (reactions.find(r => r.user_id === user!.id && r.reaction_type === 'like')?.reaction_type || null)
 
     return {
       ...comment,
@@ -152,18 +155,19 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
   const threadAuthor = threadWithAuthor.author || {}
 
   return (
-    <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
-      <MarkThreadNotificationsRead threadId={id} />
+    <div className="min-h-screen bg-gray-50">
+      {!isGuest && <MarkThreadNotificationsRead threadId={id} />}
+    <div className="py-4 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-4 sm:mb-6">
           <Link
             href="/discussions"
-            className="text-[#0d1e26] hover:text-[#0a171c] text-sm font-medium inline-flex items-center gap-1"
+            className="text-[var(--color-primary)] hover:text-[#0a171c] text-sm font-medium inline-flex items-center gap-1"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to Hangar Talk
+            Back to {featureFlags.discussionsLabel}
           </Link>
         </div>
 
@@ -171,19 +175,19 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
           {/* Sidebar - Hidden on Mobile */}
           <div className="hidden lg:block lg:col-span-1">
-            <Sidebar currentCategory={thread.category as DiscussionCategory} currentSort="latest" />
+            <Sidebar currentCategory={thread.category as DiscussionCategory} currentSort="latest" categoryConfig={categoryConfig} />
           </div>
 
           {/* Main Content */}
           <div className="lg:col-span-3">
             {/* Thread */}
             <div className="bg-white shadow rounded-lg p-4 sm:p-6 mb-4 sm:mb-6 relative">
-          {(thread.created_by === user.id && thread.created_by !== null) || user.profile.role === 'admin' ? (
+          {!isGuest && ((thread.created_by === user!.id && thread.created_by !== null) || isOrgManagerRole(user!.profile.role)) ? (
             <div className="absolute top-4 right-4 sm:top-6 sm:right-6 flex items-center gap-2">
-              {thread.created_by === user.id && thread.created_by !== null ? (
+              {!isGuest && thread.created_by === user!.id && thread.created_by !== null ? (
                 <Link
                   href={`/discussions/${id}/edit`}
-                  className="text-sm text-gray-600 hover:text-[#0d1e26] font-medium"
+                  className="text-sm text-gray-600 hover:text-[var(--color-primary)] font-medium"
                 >
                   Edit
                 </Link>
@@ -191,7 +195,7 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
               <DeleteThreadButton
                 threadId={id}
                 isOwner={thread.created_by === user.id && thread.created_by !== null}
-                isAdmin={user.profile.role === 'admin'}
+                isAdmin={isOrgManagerRole(user.profile.role)}
               />
             </div>
           ) : null}
@@ -279,9 +283,11 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
         {/* Comments Section */}
         <div className="bg-white shadow rounded-lg p-4 sm:p-6">
           {/* Comment Form */}
-          <div className="mb-6 sm:mb-8">
-            <CommentForm threadId={id} />
-          </div>
+          {!isGuest && (
+            <div className="mb-6 sm:mb-8">
+              <CommentForm threadId={id} />
+            </div>
+          )}
 
           {/* Comments List */}
           {commentsWithReactions.length === 0 ? (
@@ -298,12 +304,12 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
                 
                 return (
                   <div key={comment.id} className="border-t border-gray-200 pt-6 first:border-t-0 first:pt-0 relative">
-                    {(comment.created_by === user.id && comment.created_by !== null) || user.profile.role === 'admin' ? (
+                    {!isGuest && ((comment.created_by === user!.id && comment.created_by !== null) || isOrgManagerRole(user!.profile.role)) ? (
                       <div className="absolute top-6 right-0">
                         <DeleteCommentButton
                           commentId={comment.id}
                           isOwner={comment.created_by === user.id && comment.created_by !== null}
-                          isAdmin={user.profile.role === 'admin'}
+                          isAdmin={isOrgManagerRole(user.profile.role)}
                         />
                       </div>
                     ) : null}
@@ -376,6 +382,7 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
           </div>
         </div>
       </div>
+    </div>
     </div>
   )
 }

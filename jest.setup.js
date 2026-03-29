@@ -110,10 +110,41 @@ jest.mock('@/lib/supabase/server', () => ({
   })),
 }))
 
+// Mock org lib
+jest.mock('@/lib/org', () => ({
+  getOrgByHostname: jest.fn(() => Promise.resolve({
+    id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+    name: 'Test Org',
+    slug: 'test',
+    custom_domain: null,
+    subdomain: 'test',
+    logo_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  })),
+}))
+
+// Mock next/headers to return org id
+jest.mock('next/headers', () => ({
+  headers: jest.fn(() => Promise.resolve({
+    get: jest.fn((key) => {
+      if (key === 'x-org-id') return 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
+      if (key === 'x-org-slug') return 'test'
+      if (key === 'authorization') return null
+      return null
+    }),
+  })),
+  cookies: jest.fn(() => Promise.resolve({
+    getAll: jest.fn(() => []),
+    set: jest.fn(),
+  })),
+}))
+
 // Mock environment variables
 process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co'
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key'
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key'
 process.env.RESEND_API_KEY = 'test-resend-key'
 process.env.RESEND_FROM_EMAIL = 'test@example.com'
-process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000'
+process.env.NEXT_PUBLIC_APP_URL = 'http://clublounge.local:3000'
+process.env.NEXT_PUBLIC_ROOT_DOMAIN = 'clublounge.app'

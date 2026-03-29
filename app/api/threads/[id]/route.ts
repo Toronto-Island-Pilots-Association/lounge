@@ -1,5 +1,7 @@
 import { requireAuth } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/settings'
+import { isOrgManagerRole } from '@/lib/org-roles'
 import { NextResponse } from 'next/server'
 
 export async function GET(
@@ -7,7 +9,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAuth()
+    const user = await requireAuth()
+    const flags = await getFeatureFlags()
+    if (!flags.discussions) {
+      return NextResponse.json({ error: 'Discussions are not enabled for this organization' }, { status: 403 })
+    }
+    const orgId = user.profile?.org_id
+    if (!orgId) return NextResponse.json({ error: 'Organization not found' }, { status: 400 })
     const { id } = await params
     const supabase = await createClient()
 
@@ -15,6 +23,7 @@ export async function GET(
       .from('threads')
       .select('*')
       .eq('id', id)
+      .eq('org_id', orgId)
       .single()
 
     if (error) {
@@ -28,8 +37,8 @@ export async function GET(
     // Get author info
     const { data: author } = await supabase
       .from('user_profiles')
-      .select('id, full_name, email, profile_picture_url')
-      .eq('id', data.created_by)
+      .select('user_id, full_name, email, profile_picture_url')
+      .eq('user_id', data.created_by)
       .single()
 
     return NextResponse.json({ thread: { ...data, author } })
@@ -47,6 +56,12 @@ export async function DELETE(
 ) {
   try {
     const user = await requireAuth()
+    const flags = await getFeatureFlags()
+    if (!flags.discussions) {
+      return NextResponse.json({ error: 'Discussions are not enabled for this organization' }, { status: 403 })
+    }
+    const orgId = user.profile?.org_id
+    if (!orgId) return NextResponse.json({ error: 'Organization not found' }, { status: 400 })
     const { id } = await params
     const supabase = await createClient()
 
@@ -55,20 +70,14 @@ export async function DELETE(
       .from('threads')
       .select('created_by')
       .eq('id', id)
+      .eq('org_id', orgId)
       .single()
 
     if (!thread) {
       return NextResponse.json({ error: 'Thread not found' }, { status: 404 })
     }
 
-    // Check if user is admin or owner
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    const isAdmin = profile?.role === 'admin'
+    const isAdmin = isOrgManagerRole(user.profile.role)
     const isOwner = thread.created_by === user.id
 
     if (!isAdmin && !isOwner) {
@@ -82,6 +91,7 @@ export async function DELETE(
       .from('threads')
       .delete()
       .eq('id', id)
+      .eq('org_id', orgId)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 })
@@ -104,6 +114,12 @@ export async function PATCH(
 ) {
   try {
     const user = await requireAuth()
+    const flags = await getFeatureFlags()
+    if (!flags.discussions) {
+      return NextResponse.json({ error: 'Discussions are not enabled for this organization' }, { status: 403 })
+    }
+    const orgId = user.profile?.org_id
+    if (!orgId) return NextResponse.json({ error: 'Organization not found' }, { status: 400 })
     const { id } = await params
     const supabase = await createClient()
 
@@ -111,6 +127,7 @@ export async function PATCH(
       .from('threads')
       .select('created_by')
       .eq('id', id)
+      .eq('org_id', orgId)
       .single()
 
     if (!thread) {
@@ -150,6 +167,7 @@ export async function PATCH(
       .from('threads')
       .update(updatePayload)
       .eq('id', id)
+      .eq('org_id', orgId)
       .select('*')
       .single()
 
@@ -164,4 +182,3 @@ export async function PATCH(
     return NextResponse.json({ error: message }, { status })
   }
 }
-

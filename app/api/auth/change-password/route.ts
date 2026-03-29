@@ -1,9 +1,20 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { headers } from 'next/headers'
 import { appendMemberToSheet } from '@/lib/google-sheets'
+import { syncOrgPlanSubscriptionBilling } from '@/lib/org-plan-subscription'
+import {
+  getTrialConfig,
+  getTrialConfigItemForLevel,
+  computeTrialEndFromConfig,
+} from '@/lib/settings'
+import type { MembershipLevelKey } from '@/lib/settings'
 
 export async function POST(request: Request) {
   try {
+    const h = await headers()
+    const orgId = h.get('x-org-id')
+    if (!orgId) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     const { currentPassword, newPassword } = await request.json()
 
     if (!currentPassword || !newPassword) {
@@ -83,10 +94,11 @@ export async function POST(request: Request) {
         if (wasInvited) {
           // Get full profile to check status and append to Google Sheets
           const { data: profile } = await adminClient
-            .from('user_profiles')
+            .from('org_memberships')
             .select('*')
-            .eq('id', user.id)
-            .single()
+            .eq('user_id', user.id)
+            .eq('org_id', orgId)
+            .maybeSingle()
 
           // Update to approved if still pending
           if (profile && profile.status === 'pending') {
@@ -108,19 +120,14 @@ export async function POST(request: Request) {
             const membershipLevelFromMetadata = authUser?.user?.user_metadata?.membership_level
             const membershipLevel = membershipLevelFromMetadata || 'Associate'
 
-            // If no payments and no active subscription, set membership level and Sept 1st expiration
             if (!hasPayments && !hasActiveSubscription) {
-              // Calculate September 1st - current year if before Sept 1, next year if after Sept 1
-              const now = new Date()
-              const currentYear = now.getFullYear()
-              const sep1ThisYear = new Date(currentYear, 8, 1) // Month is 0-indexed, so 8 = September
-              const sep1NextYear = new Date(currentYear + 1, 8, 1)
-              
-              // Use this year's Sept 1 if we're before it, otherwise next year's
-              const expirationDate = now < sep1ThisYear ? sep1ThisYear : sep1NextYear
-
               updateData.membership_level = membershipLevel
-              updateData.membership_expires_at = expirationDate.toISOString()
+              const trialConfig = await getTrialConfig(orgId)
+              const item = getTrialConfigItemForLevel(trialConfig, membershipLevel as MembershipLevelKey)
+              const trialEnd = computeTrialEndFromConfig(item, profile.created_at ?? null)
+              if (trialEnd) {
+                updateData.membership_expires_at = trialEnd.toISOString()
+              }
             } else {
               // If they have payments/subscriptions, still set the membership level from metadata if provided
               if (membershipLevelFromMetadata) {
@@ -129,16 +136,20 @@ export async function POST(request: Request) {
             }
 
             const { data: updatedProfile } = await adminClient
-              .from('user_profiles')
+              .from('org_memberships')
               .update(updateData)
-              .eq('id', user.id)
+              .eq('user_id', user.id)
+              .eq('org_id', orgId)
               .select()
-              .single()
+              .maybeSingle()
 
             // Append to Google Sheets when status changes from pending to approved
             if (updatedProfile) {
               appendMemberToSheet(updatedProfile).catch(err => {
                 console.error('Failed to append invited user to Google Sheet after password change:', err)
+              })
+              syncOrgPlanSubscriptionBilling(orgId).catch(err => {
+                console.error('Failed to sync org billing after invited member approval:', err)
               })
             }
           }
@@ -171,4 +182,3 @@ export async function POST(request: Request) {
     )
   }
 }
-

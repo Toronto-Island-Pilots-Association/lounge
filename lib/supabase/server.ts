@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies, headers } from 'next/headers'
+import { sanitizeAuthCookies } from '@/lib/supabase/sanitize-auth-cookies'
 
 export async function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -19,15 +20,26 @@ export async function createClient() {
 
   // Default: cookie-based session for web client
   const cookieStore = await cookies()
+  // Set cookies on the root domain so sessions are shared across all subdomains
+  // (required for the centralised platform OAuth callback flow).
+  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'
+  const host = headerStore.get('host') ?? ''
+  const cookieDomain = host.includes(rootDomain) ? `.${rootDomain}` : undefined
+
   return createServerClient(url, anonKey, {
     cookies: {
       getAll() {
-        return cookieStore.getAll()
+        try {
+          return sanitizeAuthCookies(cookieStore.getAll())
+        } catch {
+          // Corrupted or non-UTF-8 cookie value — treat as no session
+          return []
+        }
       },
       setAll(cookiesToSet) {
         try {
           cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
+            cookieStore.set(name, value, cookieDomain ? { ...options, domain: cookieDomain } : options)
           )
         } catch {
           // The `setAll` method was called from a Server Component.

@@ -1,43 +1,55 @@
 import { requireAdmin } from '@/lib/auth'
+import { isPlatformAdminRole } from '@/lib/org-roles'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import * as Sentry from '@sentry/nextjs'
 import { sendMemberApprovalEmail } from '@/lib/resend'
 import { appendMemberToSheet } from '@/lib/google-sheets'
-import { getTrialEndDateAsync, getMembershipFeeForLevel } from '@/lib/settings'
+import {
+  getTrialConfig,
+  getAllMembershipFees,
+  getMembershipFeeForLevel,
+  getTrialConfigItemForLevel,
+  computeTrialEndFromConfig,
+} from '@/lib/settings'
 import type { MembershipLevelKey } from '@/lib/settings'
 import { getStripeInstance, isStripeEnabled } from '@/lib/stripe'
+import { syncOrgPlanSubscriptionBilling } from '@/lib/org-plan-subscription'
 import { NextResponse } from 'next/server'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     await requireAdmin()
+    const orgId = request.headers.get('x-org-id')
+    if (!orgId) {
+      return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
+    }
     const supabase = await createClient()
 
     const { data, error } = await supabase
-      .from('user_profiles')
+      .from('member_profiles')
       .select('*')
+      .eq('org_id', orgId)
       .order('created_at', { ascending: false })
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    const membersWithTrial = await Promise.all(
-      (data ?? []).map(async (member) => {
-        const level = (member.membership_level || 'Full') as MembershipLevelKey
-        const trialEnd = await getTrialEndDateAsync(level, member.created_at ?? null)
-        const expected_fee = await getMembershipFeeForLevel(level)
-        return {
-          ...member,
-          trial_end: trialEnd ? trialEnd.toISOString() : null,
-          expected_fee,
-        }
-      })
-    )
+    // Fetch once, compute per-member inline — avoids N×2 DB round-trips
+    const [trialConfig, allFees] = await Promise.all([getTrialConfig(orgId), getAllMembershipFees()])
+
+    const membersWithTrial = (data ?? []).map((member) => {
+      const level = (member.membership_level || 'Full') as MembershipLevelKey
+      const item = getTrialConfigItemForLevel(trialConfig, level)
+      const trialEnd = computeTrialEndFromConfig(item, member.created_at ?? null)
+      const trial_end = trialEnd ? trialEnd.toISOString() : null
+      return { ...member, trial_end, expected_fee: allFees[level] }
+    })
 
     const { data: payments } = await supabase
       .from('payments')
       .select('user_id, amount, currency, payment_method')
+      .eq('org_id', orgId)
       .order('payment_date', { ascending: false })
 
     const latestPaymentByUser = new Map<string, { amount: number; currency: string; payment_method: string }>()
@@ -53,7 +65,7 @@ export async function GET() {
 
     const membersWithPayment = membersWithTrial.map((member) => ({
       ...member,
-      payment_summary: latestPaymentByUser.get(member.id) ?? null,
+      payment_summary: latestPaymentByUser.get(member.user_id) ?? null,
     }))
 
     return NextResponse.json({ members: membersWithPayment })
@@ -67,11 +79,19 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
-    await requireAdmin()
+    const currentUser = await requireAdmin()
+    const orgId = request.headers.get('x-org-id')
+    if (!orgId) {
+      return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
+    }
     const { id, ...updates } = await request.json()
 
     if (!id) {
       return NextResponse.json({ error: 'Member ID is required' }, { status: 400 })
+    }
+
+    if (updates.role !== undefined && !isPlatformAdminRole(currentUser.profile.role)) {
+      return NextResponse.json({ error: 'Only org admins can change roles' }, { status: 403 })
     }
 
     // Convert empty strings to null for timestamp fields (PostgreSQL doesn't accept empty strings for timestamps)
@@ -84,16 +104,20 @@ export async function PATCH(request: Request) {
 
     const supabase = await createClient()
 
-    // Get current member data to check if status is changing to approved
+    // Get current member data (via member_profiles view — id = org_memberships.id)
     const { data: currentMember } = await supabase
-      .from('user_profiles')
+      .from('member_profiles')
       .select('*')
       .eq('id', id)
+      .eq('org_id', orgId)
       .single()
 
     if (!currentMember) {
       return NextResponse.json({ error: 'Member not found' }, { status: 404 })
     }
+
+    // user_id is the auth.users UUID
+    const authUserId = currentMember.user_id
 
     // If admin is changing email: update Auth first, then profile stays in sync via updates below
     if (typeof updates.email === 'string') {
@@ -108,7 +132,7 @@ export async function PATCH(request: Request) {
       const currentEmail = (currentMember.email || '').trim().toLowerCase()
       if (newEmail !== currentEmail) {
         const adminClient = createServiceRoleClient()
-        const { error: authError } = await adminClient.auth.admin.updateUserById(id, {
+        const { error: authError } = await adminClient.auth.admin.updateUserById(authUserId, {
           email: newEmail,
           email_confirm: true,
         })
@@ -172,40 +196,71 @@ export async function PATCH(request: Request) {
     // Check if status is being changed to 'approved' (from any status)
     const isApproving = updates.status === 'approved' && currentMember.status !== 'approved'
 
-    // If approving a member who hasn't paid yet, set Associate level and Sept 1st expiration
     if (isApproving) {
-      // Check if member has any payments
       const { data: payments } = await supabase
         .from('payments')
         .select('id')
-        .eq('user_id', id)
+        .eq('user_id', authUserId)
         .limit(1)
 
-      // Check if member has active Stripe or PayPal subscription
       const hasActiveSubscription = currentMember.stripe_subscription_id || currentMember.paypal_subscription_id
       const hasPayments = payments && payments.length > 0
 
-      // If no payments and no active subscription, set trial expiration to Sept 1st (keep existing membership_level)
       if (!hasPayments && !hasActiveSubscription) {
-        const now = new Date()
-        const currentYear = now.getFullYear()
-        const sep1ThisYear = new Date(currentYear, 8, 1)
-        const sep1NextYear = new Date(currentYear + 1, 8, 1)
-        const expirationDate = now < sep1ThisYear ? sep1ThisYear : sep1NextYear
-        updates.membership_expires_at = expirationDate.toISOString()
+        const trialConfig = await getTrialConfig(orgId)
+        const level = (currentMember.membership_level || 'Full') as MembershipLevelKey
+        const item = getTrialConfigItemForLevel(trialConfig, level)
+        const trialEnd = computeTrialEndFromConfig(item, currentMember.created_at ?? null)
+        if (trialEnd) {
+          updates.membership_expires_at = trialEnd.toISOString()
+        }
       }
     }
 
-    // Update the member (database trigger will assign member number if status changes to approved)
+    // Split updates into identity fields (user_profiles) and membership fields (org_memberships)
+    const identityFields = ['email', 'full_name', 'first_name', 'last_name', 'phone', 'street', 'city', 'province_state', 'postal_zip_code', 'country', 'profile_picture_url', 'notify_replies']
+    const identityUpdates: Record<string, unknown> = {}
+    const membershipUpdates: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(updates)) {
+      if (identityFields.includes(key)) {
+        identityUpdates[key] = value
+      } else {
+        membershipUpdates[key] = value
+      }
+    }
+
+    if (Object.keys(identityUpdates).length > 0) {
+      const { error: identityError } = await supabase
+        .from('user_profiles')
+        .update(identityUpdates)
+        .eq('user_id', authUserId)
+      if (identityError) {
+        return NextResponse.json({ error: identityError.message }, { status: 400 })
+      }
+    }
+
+    // Update membership fields (database trigger will assign member number if status changes to approved)
+    if (Object.keys(membershipUpdates).length > 0) {
+      const { error: membershipError } = await supabase
+        .from('org_memberships')
+        .update(membershipUpdates)
+        .eq('id', id)
+        .eq('org_id', orgId)
+      if (membershipError) {
+        return NextResponse.json({ error: membershipError.message }, { status: 400 })
+      }
+    }
+
+    // Re-fetch the updated member via member_profiles view
     const { data: updatedMember, error } = await supabase
-      .from('user_profiles')
-      .update(updates)
+      .from('member_profiles')
+      .select('*')
       .eq('id', id)
-      .select()
+      .eq('org_id', orgId)
       .single()
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
+    if (error || !updatedMember) {
+      return NextResponse.json({ error: error?.message || 'Failed to fetch updated member' }, { status: 400 })
     }
 
     // Check if status actually changed to 'approved' (verify after update)
@@ -226,6 +281,12 @@ export async function PATCH(request: Request) {
       })
     }
 
+    if (currentMember.status !== updatedMember.status) {
+      syncOrgPlanSubscriptionBilling(orgId).catch(err => {
+        console.error('Failed to sync org billing after member status change:', err)
+      })
+    }
+
     return NextResponse.json({ member: updatedMember })
   } catch (error: any) {
     return NextResponse.json(
@@ -234,4 +295,3 @@ export async function PATCH(request: Request) {
     )
   }
 }
-

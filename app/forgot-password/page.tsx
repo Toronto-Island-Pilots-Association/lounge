@@ -62,7 +62,7 @@ export default function ForgotPasswordPage() {
               <p className="mt-3 text-sm text-green-700">
                 <Link
                   href="/login"
-                  className="font-medium text-[#0d1e26] hover:text-[#416e82] underline"
+                  className="font-medium text-[var(--color-primary)] hover:text-[#416e82] underline"
                 >
                   Back to sign in
                 </Link>
@@ -88,7 +88,7 @@ export default function ForgotPasswordPage() {
                   type="email"
                   autoComplete="email"
                   required
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   placeholder="Email address"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -99,7 +99,7 @@ export default function ForgotPasswordPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-[#0d1e26] hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0d1e26] disabled:opacity-50"
+                  className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-[var(--color-primary)] hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-primary)] disabled:opacity-50"
                 >
                   {loading ? 'Sending...' : 'Send reset link'}
                 </button>
@@ -111,7 +111,7 @@ export default function ForgotPasswordPage() {
             Remember your password?{' '}
             <Link
               href="/login"
-              className="font-medium text-[#0d1e26] hover:text-[#416e82]"
+              className="font-medium text-[var(--color-primary)] hover:text-[#416e82]"
             >
               Sign in
             </Link>

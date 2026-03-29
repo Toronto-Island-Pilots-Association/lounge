@@ -8,7 +8,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAuth()
+    const user = await requireAuth()
+    const orgId = user.profile.org_id
     const { id: eventId } = await params
 
     if (!eventId) {
@@ -17,10 +18,23 @@ export async function GET(
 
     const supabase = await createClient()
 
+    // Ensure the event belongs to the current org (prevents cross-tenant RSVP snooping).
+    const { data: event, error: eventError } = await supabase
+      .from('events')
+      .select('id')
+      .eq('id', eventId)
+      .eq('org_id', orgId)
+      .maybeSingle()
+
+    if (eventError || !event) {
+      return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+    }
+
     const { data: rsvps, error } = await supabase
       .from('event_rsvps')
       .select('id, user_id, created_at')
       .eq('event_id', eventId)
+      .eq('org_id', orgId)
       .order('created_at', { ascending: true })
 
     if (error) {
@@ -35,12 +49,12 @@ export async function GET(
     const userIds = [...new Set(list.map((r) => r.user_id))]
     const { data: profiles } = await supabase
       .from('user_profiles')
-      .select('id, full_name, first_name, last_name, email, profile_picture_url')
-      .in('id', userIds)
+      .select('user_id, full_name, first_name, last_name, email, profile_picture_url')
+      .in('user_id', userIds)
 
     const profileMap = new Map(
       (profiles || []).map((p) => [
-        p.id,
+        p.user_id,
         {
           display_name:
             p.full_name?.trim() ||

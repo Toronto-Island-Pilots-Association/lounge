@@ -122,14 +122,14 @@ export default function ResetPasswordPage() {
             <p className="text-sm text-gray-600">
               <Link
                 href="/forgot-password"
-                className="font-medium text-[#0d1e26] hover:text-[#416e82]"
+                className="font-medium text-[var(--color-primary)] hover:text-[#416e82]"
               >
                 Request a new reset link
               </Link>
               {' or '}
               <Link
                 href="/login"
-                className="font-medium text-[#0d1e26] hover:text-[#416e82]"
+                className="font-medium text-[var(--color-primary)] hover:text-[#416e82]"
               >
                 sign in
               </Link>
@@ -179,7 +179,7 @@ export default function ResetPasswordPage() {
                   autoComplete="new-password"
                   required
                   minLength={8}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   placeholder="New password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -201,7 +201,7 @@ export default function ResetPasswordPage() {
                   autoComplete="new-password"
                   required
                   minLength={8}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   placeholder="Confirm new password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -212,7 +212,7 @@ export default function ResetPasswordPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-[#0d1e26] hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0d1e26] disabled:opacity-50"
+                  className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-[var(--color-primary)] hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-primary)] disabled:opacity-50"
                 >
                   {loading ? 'Updating...' : 'Update password'}
                 </button>
@@ -223,7 +223,7 @@ export default function ResetPasswordPage() {
           <p className="text-center text-sm text-gray-600">
             <Link
               href="/login"
-              className="font-medium text-[#0d1e26] hover:text-[#416e82]"
+              className="font-medium text-[var(--color-primary)] hover:text-[#416e82]"
             >
               Back to sign in
             </Link>

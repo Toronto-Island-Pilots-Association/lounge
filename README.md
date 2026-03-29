@@ -1,209 +1,149 @@
-# Membership App
+# ClubLounge
 
-[![Tests](https://github.com/YOUR_USERNAME/tipa/actions/workflows/test.yml/badge.svg)](https://github.com/YOUR_USERNAME/tipa/actions/workflows/test.yml)
+ClubLounge is a multi-tenant membership platform for clubs and associations. Each club gets its own lounge on a subdomain like `yourclub.clublounge.app` or a custom domain, while admins manage setup, billing, and org-level settings from the platform host.
 
-A feature-rich membership management application for non-profit organizations built with Next.js, Supabase, Stripe, and Resend.
+This repo is in the middle of the TIPA-to-multi-tenant transition. The codebase already supports:
 
-## Features
+- org-scoped member database
+- membership levels and dues setup
+- discussions, events, and announcements
+- platform-managed org creation and billing
+- Stripe Connect for club dues collection
+- custom domains and branding
 
-- **Two Membership Levels**: Free and Paid memberships
-- **Stripe Integration**: Secure payment processing for paid memberships
-- **Role-Based Access Control**: Member and Admin roles with appropriate permissions
-- **Admin Dashboard**: Manage members and resources
-- **Resources System**: Share resources with all members
-- **Email Notifications**: Automated emails using Resend for welcome and membership upgrades
+## Domains
 
-## Tech Stack
+The app runs in three modes:
 
-- **Framework**: Next.js 16 (App Router)
-- **Database & Auth**: Supabase
-- **Payments**: Stripe
-- **Email**: Resend
-- **Styling**: Tailwind CSS
-- **TypeScript**: Full type safety
+- `clublounge.app` → marketing
+- `platform.clublounge.app` → platform admin
+- `[slug].clublounge.app` or custom domain → club lounge
 
-## Prerequisites
+Middleware in `proxy.ts` sets:
 
-- Node.js 18+ and npm
-- A Supabase account and project
-- A Stripe account (for payments)
-- A Resend account (for emails)
+- `x-domain-type`
+- `x-org-id`
+- `x-org-slug`
 
-## Setup Instructions
+Every tenant query must be scoped by `org_id`.
 
-### 1. Clone and Install
+## Stack
+
+- Next.js 16
+- TypeScript
+- Supabase Auth / Postgres / Storage
+- Stripe
+- Resend
+- Tailwind CSS
+
+## Local setup
+
+### 1. Install
 
 ```bash
 npm install
 ```
 
-### 2. Environment Variables
+### 2. Configure env
 
-Create a `.env.local` file in the root directory:
+Create `.env.local`:
 
 ```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
 
-# Stripe (optional; for paid memberships)
-STRIPE_SECRET_KEY=your_stripe_secret_key
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
-STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+STRIPE_SECRET_KEY=...
+STRIPE_WEBHOOK_SECRET=...
+STRIPE_PLATFORM_SECRET_KEY=...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=...
 
-# Resend
-RESEND_API_KEY=your_resend_api_key
-RESEND_FROM_EMAIL=noreply@yourdomain.com
+RESEND_API_KEY=...
+RESEND_FROM_EMAIL=...
 
-# App
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_APP_URL=http://clublounge.local:3000
+NEXT_PUBLIC_ROOT_DOMAIN=clublounge.app
 ```
 
-### 3. Supabase Setup
+Depending on the flow you are testing, you may also need:
 
-1. Create a new Supabase project at [supabase.com](https://supabase.com)
-2. Go to SQL Editor and run the schema from `supabase/schema.sql`
-3. Copy your project URL and anon key from Settings > API
-4. Copy your service role key from Settings > API (keep this secret!)
+```env
+VERCEL_PROJECT_ID=...
+VERCEL_TEAM_ID=...
+VERCEL_TOKEN=...
+```
 
-### 4. Stripe Setup (optional)
-
-1. Create a Stripe account at [stripe.com](https://stripe.com)
-2. Create products and prices for your membership tiers
-3. Configure the webhook to point to your `/api/stripe/webhook` endpoint
-4. Add your Stripe keys to environment variables
-
-### 5. Resend Setup
-
-1. Sign up at [resend.com](https://resend.com)
-2. Create an API key
-3. Verify your domain (or use the default sender for testing)
-4. Update `RESEND_FROM_EMAIL` with your verified email
-
-### 6. Run the development server
+### 3. Start dev server
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+### 4. Simulate an org locally
 
-### Syncing prod data to lounge-dev (development only)
+Use the query param:
 
-To copy data from the **lounge** (prod) database into **lounge-dev** for local/testing use:
-
-1. **Requirements:** `pg_dump` and `psql` **version 17 or newer** (Supabase uses Postgres 17). Install with `brew install postgresql@17` and ensure `$(brew --prefix postgresql@17)/bin` is on your PATH, or the script will use it from the default Homebrew location if present.
-
-2. **Env vars** (same `.env` / `.env.local` as the rest of the app; do not commit secrets):
-   - `SUPABASE_PROD_DATABASE_URL` – direct Postgres URI for **lounge** (prod). Use the read-only `sync_reader_login` role; see SQL in repo for creating it.
-   - `SUPABASE_DEV_DATABASE_URL` – direct Postgres URI for **lounge-dev** (same project as `NEXT_PUBLIC_SUPABASE_URL`). From Supabase Dashboard → lounge-dev → Settings → Database → Connection string (URI).
-
-   Same format as other Supabase vars (URI string); these are the **database** connection strings for `pg_dump`/`psql`, not the API URL or anon/service role keys. If the password contains special characters (e.g. `)`, `@`, `#`), URL-encode them in the URI or the host will be parsed wrong: `)` → `%29`, `@` → `%40`, `#` → `%23`.
-
-3. **Run the sync:**
-   ```bash
-   source .env.local && npm run db:sync
-   ```
-   Or: `export SUPABASE_PROD_DATABASE_URL=... SUPABASE_DEV_DATABASE_URL=... && npm run db:sync`
-
-This dumps `public` and `auth` data from lounge, truncates lounge-dev, and restores. **Do not** set these URLs in production; this is for developer use only.
-
-## Project Structure
-
-```
-├── app/
-│   ├── api/              # API routes
-│   │   ├── auth/         # Authentication endpoints
-│   │   ├── admin/        # Admin endpoints
-│   │   └── resources/    # Resources endpoints
-│   ├── admin/            # Admin dashboard page
-│   ├── dashboard/        # Member dashboard
-│   ├── login/            # Login page
-│   ├── resources/        # Resources page
-│   └── signup/           # Signup page
-├── components/            # React components
-│   ├── AdminDashboard.tsx
-│   ├── Navbar.tsx
-├── lib/                  # Utility functions
-│   ├── auth.ts           # Authentication helpers
-│   ├── resend.ts         # Email functions
-│   └── supabase/         # Supabase clients
-├── supabase/
-│   └── schema.sql        # Database schema
-└── types/
-    └── database.ts        # TypeScript types
+```txt
+?__domain=tipa
 ```
 
-## Key Features Explained
+That lets you test org-host behavior without real wildcard DNS in local dev.
 
-### Authentication
+## Plans
 
-- Users can sign up and log in
-- Automatic profile creation on signup
-- Session management via Supabase Auth
-- Protected routes with middleware
+Defined in [`lib/plans.ts`](./lib/plans.ts).
 
-### Membership Levels
+Current plan labels:
 
-- **Free**: Default membership level for all new users
-- **Paid**: Upgraded membership with Stripe subscription
-- Membership expiration tracking
-- Automatic downgrade on subscription cancellation
+- `Hobby`
+- `Core`
+- `Growth`
+- `Pro`
 
-### Admin Features
+Important rule:
 
-- View all members
-- Update member information (name, role, membership level)
-- Create, edit, and delete resources
-- Full CRUD operations on resources
+- marketing, billing UI, and in-app feature gating must stay consistent with `lib/plans.ts`
 
-### Resources
+## Onboarding flow
 
-- All authenticated members can view resources
-- Resources can be links, documents, videos, or other types
-- Admin-only creation and management
+Current admin flow:
 
-### Email Notifications
+1. create lounge from platform
+2. land on `/platform/dashboard/[orgId]/onboarding`
+3. set membership levels / dues
+4. choose a plan and add billing details
+5. connect Stripe for dues when ready
+6. invite members
 
-- Welcome email on signup
-- Membership upgrade confirmation
-- Extensible for additional notifications
+Creating a lounge does not immediately charge the admin. Billing is added before operating actions like invites, announcements, events, or dues collection.
 
-## Database Schema
+## Tests
 
-The app uses two main tables:
+Common commands:
 
-- **user_profiles**: Stores user information, roles, and membership details
-- **resources**: Stores resources available to all members
+```bash
+npm run type-check
+npm test -- --runInBand
+npm run test:coverage
+```
 
-See `supabase/schema.sql` for the complete schema with RLS policies.
+See [`TESTING.md`](./TESTING.md) for the current testing guide.
 
-## Security
+## Important docs
 
-- Row Level Security (RLS) enabled on all tables
-- Role-based access control
-- Secure API routes with authentication checks
-- Environment variables for sensitive data
+- [`CLAUDE.md`](./CLAUDE.md) → working rules for this repo
+- [`docs/PRD.md`](./docs/PRD.md) → current product / architecture reference
+- [`TESTING.md`](./TESTING.md) → how to run and write tests
+- [`MOBILE_API_DOCS.md`](./MOBILE_API_DOCS.md) → legacy TIPA mobile notes, not the source of truth for ClubLounge platform behavior
 
-## Deployment
+## Current status
 
-1. Deploy to Vercel, Netlify, or your preferred platform
-2. Set environment variables in your hosting platform
-3. Update `NEXT_PUBLIC_APP_URL` with your production URL
-4. Configure Stripe webhooks to point to your production URL
-5. Run database migrations in Supabase
+This is an actively evolving codebase. If you change:
 
-## Future Enhancements
+- plans
+- pricing
+- onboarding
+- org-vs-platform navigation
+- Stripe flows
 
-- Email verification flow
-- Password reset functionality
-- Member profile editing
-- Advanced resource filtering and search
-- Member directory
-- Event management
-- Newsletter system
-
-## License
-
-MIT
+you need to update both the product behavior and the docs together.

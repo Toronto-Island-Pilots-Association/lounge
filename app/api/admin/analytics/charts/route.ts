@@ -1,5 +1,7 @@
 import { requireAdmin } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
+import { getOrgPlan } from '@/lib/settings'
+import { getPlanDef } from '@/lib/plans'
 import { NextResponse } from 'next/server'
 
 const PERIOD_DAYS = [7, 30, 90, 365] as const
@@ -78,7 +80,15 @@ export interface ChartsPayload {
 export async function GET(request: Request) {
   try {
     await requireAdmin()
+    const plan = await getOrgPlan()
+    if (!getPlanDef(plan).features.analytics) {
+      return NextResponse.json({ error: 'Analytics requires Growth plan or higher' }, { status: 403 })
+    }
     const supabase = await createClient()
+    const orgId = request.headers.get('x-org-id')
+    if (!orgId) {
+      return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
+    }
     const { searchParams } = new URL(request.url)
     const period = parsePeriod(searchParams.get('period'))
 
@@ -89,10 +99,34 @@ export async function GET(request: Request) {
 
     if (period === 'all') {
       const [profilesMin, paymentsMin, eventsMin, threadsMin] = await Promise.all([
-        supabase.from('user_profiles').select('created_at').order('created_at', { ascending: true }).limit(1).single(),
-        supabase.from('payments').select('payment_date').order('payment_date', { ascending: true }).limit(1).single(),
-        supabase.from('events').select('created_at').order('created_at', { ascending: true }).limit(1).single(),
-        supabase.from('threads').select('created_at').order('created_at', { ascending: true }).limit(1).single(),
+        supabase
+          .from('org_memberships')
+          .select('created_at')
+          .eq('org_id', orgId)
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .single(),
+        supabase
+          .from('payments')
+          .select('payment_date')
+          .eq('org_id', orgId)
+          .order('payment_date', { ascending: true })
+          .limit(1)
+          .single(),
+        supabase
+          .from('events')
+          .select('created_at')
+          .eq('org_id', orgId)
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .single(),
+        supabase
+          .from('threads')
+          .select('created_at')
+          .eq('org_id', orgId)
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .single(),
       ])
       const dates: Date[] = []
       for (const row of [profilesMin.data?.created_at, paymentsMin.data?.payment_date, eventsMin.data?.created_at, threadsMin.data?.created_at]) {
@@ -126,13 +160,19 @@ export async function GET(request: Request) {
     // Fetch raw data for the range (no upper bound for 'all' to get all history, then filter)
     const [membersRes, membersBeforeByStatus, paymentsRes, eventsRes, rsvpsRes, threadsRes, commentsRes, reactionsRes] =
       await Promise.all([
-        supabase.from('user_profiles').select('created_at, status').gte('created_at', startIso).lte('created_at', endIso),
+        supabase
+          .from('org_memberships')
+          .select('created_at, status')
+          .eq('org_id', orgId)
+          .gte('created_at', startIso)
+          .lte('created_at', endIso),
         Promise.all(
           MEMBER_STATUSES.map((status) =>
             supabase
-              .from('user_profiles')
+              .from('org_memberships')
               .select('id', { count: 'exact', head: true })
               .eq('status', status)
+              .eq('org_id', orgId)
               .lt('created_at', startIso)
           )
         ).then((results) => ({
@@ -141,12 +181,43 @@ export async function GET(request: Request) {
           rejected: results[2].count ?? 0,
           expired: results[3].count ?? 0,
         })),
-        supabase.from('payments').select('payment_date, amount').eq('status', 'completed').gte('payment_date', startIso).lte('payment_date', endIso),
-        supabase.from('events').select('created_at').gte('created_at', startIso).lte('created_at', endIso),
-        supabase.from('event_rsvps').select('created_at').gte('created_at', startIso).lte('created_at', endIso),
-        supabase.from('threads').select('created_at').gte('created_at', startIso).lte('created_at', endIso),
-        supabase.from('comments').select('created_at').gte('created_at', startIso).lte('created_at', endIso),
-        supabase.from('reactions').select('created_at').gte('created_at', startIso).lte('created_at', endIso),
+        supabase
+          .from('payments')
+          .select('payment_date, amount')
+          .eq('status', 'completed')
+          .eq('org_id', orgId)
+          .gte('payment_date', startIso)
+          .lte('payment_date', endIso),
+        supabase
+          .from('events')
+          .select('created_at')
+          .eq('org_id', orgId)
+          .gte('created_at', startIso)
+          .lte('created_at', endIso),
+        supabase
+          .from('event_rsvps')
+          .select('created_at')
+          .eq('org_id', orgId)
+          .gte('created_at', startIso)
+          .lte('created_at', endIso),
+        supabase
+          .from('threads')
+          .select('created_at')
+          .eq('org_id', orgId)
+          .gte('created_at', startIso)
+          .lte('created_at', endIso),
+        supabase
+          .from('comments')
+          .select('created_at')
+          .eq('org_id', orgId)
+          .gte('created_at', startIso)
+          .lte('created_at', endIso),
+        supabase
+          .from('reactions')
+          .select('created_at')
+          .eq('org_id', orgId)
+          .gte('created_at', startIso)
+          .lte('created_at', endIso),
       ])
 
     type StatusBucket = { approved: number; pending: number; rejected: number; expired: number }

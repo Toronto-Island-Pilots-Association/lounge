@@ -4,6 +4,7 @@ import * as Sentry from '@sentry/nextjs'
 import { sendSubscriptionConfirmationEmail } from '@/lib/resend'
 import { syncSubscriptionBySubscriptionId, syncSubscriptionStatus } from '@/lib/subscription-sync'
 import { getMembershipFeeForLevel, getMembershipExpiresAtFromSubscription, type MembershipLevelKey } from '@/lib/settings'
+import { syncOrgPlanSubscriptionBilling } from '@/lib/org-plan-subscription'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
@@ -60,9 +61,14 @@ export async function POST(request: Request) {
         const subscriptionId = session.subscription as string
         const customerId = session.customer as string
         const userId = session.metadata?.userId
+        const orgId = session.metadata?.orgId
 
         if (!userId || !subscriptionId) {
           console.error('Missing userId or subscriptionId in checkout session')
+          break
+        }
+        if (!orgId) {
+          console.error('Missing orgId in checkout session metadata')
           break
         }
 
@@ -87,9 +93,10 @@ export async function POST(request: Request) {
         }
 
         const { data: existingProfile } = await supabase
-          .from('user_profiles')
+          .from('org_memberships')
           .select('membership_level')
-          .eq('id', userId)
+          .eq('user_id', userId)
+          .eq('org_id', orgId)
           .single()
         const level = (existingProfile?.membership_level || 'Full') as MembershipLevelKey
         const fullMembershipFee = await getMembershipFeeForLevel(level)
@@ -97,39 +104,54 @@ export async function POST(request: Request) {
 
         // Update user profile with subscription info (keep their membership level)
         await supabase
-          .from('user_profiles')
+          .from('org_memberships')
           .update({
             stripe_subscription_id: subscriptionId,
             stripe_customer_id: customerId,
             membership_expires_at: membershipExpiresAt,
           })
-          .eq('id', userId)
+          .eq('user_id', userId)
+          .eq('org_id', orgId)
 
-        // Record payment in payments table
-        await supabase
+        const { data: existingPayment } = await supabase
           .from('payments')
-          .insert({
-            user_id: userId,
-            payment_method: 'stripe',
-            amount: amountPaid,
-            currency: 'CAD',
-            payment_date: new Date().toISOString(),
-            membership_expires_at: membershipExpiresAt,
-            stripe_subscription_id: subscriptionId,
-            stripe_payment_intent_id: paymentIntentId,
-            status: 'completed',
-          })
+          .select('id')
+          .eq('user_id', userId)
+          .eq('org_id', orgId)
+          .eq('stripe_subscription_id', subscriptionId)
+          .limit(1)
+          .maybeSingle()
+
+        if (!existingPayment) {
+          await supabase
+            .from('payments')
+            .insert({
+              user_id: userId,
+              org_id: orgId,
+              payment_method: 'stripe',
+              amount: amountPaid,
+              currency: 'CAD',
+              payment_date: new Date().toISOString(),
+              membership_expires_at: membershipExpiresAt,
+              stripe_subscription_id: subscriptionId,
+              stripe_payment_intent_id: paymentIntentId,
+              status: 'completed',
+            })
+        }
 
         Sentry.metrics.count('payment.subscription_purchased', 1, { attributes: { membership_level: level } })
 
         // Sync subscription status (will update status field based on Stripe subscription state)
-        await syncSubscriptionStatus(userId, subscriptionId)
+        await syncSubscriptionStatus(userId, subscriptionId, orgId)
+        await syncOrgPlanSubscriptionBilling(orgId).catch(err => {
+          console.error('Failed to sync org billing after member checkout:', err)
+        })
 
         // Send upgrade email
         const { data: profile } = await supabase
           .from('user_profiles')
           .select('email, full_name')
-          .eq('id', userId)
+          .eq('user_id', userId)
           .single()
 
         if (profile) {
@@ -161,6 +183,17 @@ export async function POST(request: Request) {
         // Sync subscription status (will update both status and membership_expires_at)
         await syncSubscriptionBySubscriptionId(subscriptionId)
 
+        const { data: membership } = await supabase
+          .from('org_memberships')
+          .select('org_id')
+          .eq('stripe_subscription_id', subscriptionId)
+          .maybeSingle()
+        if (membership?.org_id) {
+          await syncOrgPlanSubscriptionBilling(membership.org_id).catch(err => {
+            console.error('Failed to sync org billing after member subscription update:', err)
+          })
+        }
+
         break
       }
 
@@ -175,8 +208,8 @@ export async function POST(request: Request) {
 
         // Find user by subscription ID
         const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('id, membership_expires_at')
+          .from('org_memberships')
+          .select('id, org_id, membership_expires_at')
           .eq('stripe_subscription_id', subscriptionId)
           .single()
 
@@ -188,13 +221,19 @@ export async function POST(request: Request) {
 
           // Update subscription fields and sync status
           await supabase
-            .from('user_profiles')
+            .from('org_memberships')
             .update({
               stripe_subscription_id: null,
               status: isExpired ? 'expired' : 'approved',
               // Keep membership_expires_at if it's in the future (user paid for the period)
             })
             .eq('id', profile.id)
+        }
+
+        if (profile?.org_id) {
+          await syncOrgPlanSubscriptionBilling(profile.org_id).catch(err => {
+            console.error('Failed to sync org billing after member subscription deletion:', err)
+          })
         }
 
         break

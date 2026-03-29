@@ -1,5 +1,6 @@
 import { requireAuth } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/settings'
 import { NextResponse } from 'next/server'
 import { sendReplyNotificationEmail, sendMentionNotificationEmail } from '@/lib/resend'
 
@@ -8,7 +9,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAuth()
+    const user = await requireAuth()
+    const flags = await getFeatureFlags()
+    if (!flags.discussions) {
+      return NextResponse.json({ error: 'Discussions are not enabled for this organization' }, { status: 403 })
+    }
+    const orgId = user.profile?.org_id
+    if (!orgId) return NextResponse.json({ error: 'Organization not found' }, { status: 400 })
     const { id } = await params
     const supabase = await createClient()
 
@@ -16,6 +23,7 @@ export async function GET(
       .from('comments')
       .select('*')
       .eq('thread_id', id)
+      .eq('org_id', orgId)
       .order('created_at', { ascending: true })
 
     if (error) {
@@ -26,10 +34,10 @@ export async function GET(
     const userIds = [...new Set(comments?.map(c => c.created_by).filter((id): id is string => id !== null) || [])]
     const { data: authors } = userIds.length > 0 ? await supabase
       .from('user_profiles')
-      .select('id, full_name, email, profile_picture_url')
-      .in('id', userIds) : { data: [] }
+      .select('user_id, full_name, email, profile_picture_url')
+      .in('user_id', userIds) : { data: [] }
 
-    const authorsMap = new Map(authors?.map(a => [a.id, a]) || [])
+    const authorsMap = new Map(authors?.map(a => [a.user_id, a]) || [])
 
     // Add author info to comments
     const commentsWithAuthors = comments?.map(comment => ({
@@ -52,6 +60,10 @@ export async function POST(
 ) {
   try {
     const user = await requireAuth()
+    const flags = await getFeatureFlags()
+    if (!flags.discussions) {
+      return NextResponse.json({ error: 'Discussions are not enabled for this organization' }, { status: 403 })
+    }
     const { id } = await params
     const body = await request.json()
     const { content, image_urls } = body
@@ -70,22 +82,28 @@ export async function POST(
 
     const supabase = await createClient()
 
-    // Verify thread exists and get thread details for notifications
+    // Verify thread exists in the user's org (prevents cross-org comments)
     const { data: thread } = await supabase
       .from('threads')
-      .select('id, title, created_by')
+      .select('id, title, created_by, org_id')
       .eq('id', id)
+      .eq('org_id', user.profile.org_id)
       .single()
 
     if (!thread) {
       return NextResponse.json({ error: 'Thread not found' }, { status: 404 })
     }
 
+    const orgId = thread.org_id
+    if (!orgId) {
+      return NextResponse.json({ error: 'Thread org_id not found' }, { status: 400 })
+    }
+
     // Get commenter's profile
     const { data: userProfile } = await supabase
       .from('user_profiles')
       .select('email, full_name')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .single()
 
     const { data, error } = await supabase
@@ -95,6 +113,7 @@ export async function POST(
         content: content.trim(),
         image_urls: imageUrls.length > 0 ? imageUrls : null,
         created_by: user.id,
+        org_id: orgId,
         author_email: userProfile?.email || user.email || null
       })
       .select('*')
@@ -107,13 +126,14 @@ export async function POST(
     // Get author info for response
     const { data: author } = await supabase
       .from('user_profiles')
-      .select('id, full_name, email, profile_picture_url')
-      .eq('id', user.id)
+      .select('user_id, full_name, email, profile_picture_url')
+      .eq('user_id', user.id)
       .single()
 
     // Send reply notifications (non-blocking)
     sendReplyNotifications({
       supabase,
+      orgId,
       threadId: id,
       threadTitle: thread.title,
       threadAuthorId: thread.created_by,
@@ -143,6 +163,7 @@ function extractMentionedUserIds(content: string): string[] {
 
 async function sendReplyNotifications({
   supabase,
+  orgId,
   threadId,
   threadTitle,
   threadAuthorId,
@@ -151,6 +172,7 @@ async function sendReplyNotifications({
   commentContent,
 }: {
   supabase: any
+  orgId: string
   threadId: string
   threadTitle: string
   threadAuthorId: string | null
@@ -174,6 +196,7 @@ async function sendReplyNotifications({
     .from('comments')
     .select('created_by')
     .eq('thread_id', threadId)
+    .eq('org_id', orgId)
     .not('created_by', 'is', null)
     .neq('created_by', commenterId)
 
@@ -189,16 +212,16 @@ async function sendReplyNotifications({
 
   const { data: profiles } = await supabase
     .from('user_profiles')
-    .select('id, email, full_name, notify_replies')
-    .in('id', Array.from(allUserIds))
+    .select('user_id, email, full_name, notify_replies')
+    .in('user_id', Array.from(allUserIds))
     .eq('notify_replies', true)
 
   if (!profiles || profiles.length === 0) return
 
-  const emailPromises = profiles.map((profile: { id: string; email: string; full_name: string | null }) => {
+  const emailPromises = profiles.map((profile: { user_id: string; email: string; full_name: string | null }) => {
     const recipientName = profile.full_name?.split(' ')[0] || profile.email.split('@')[0]
 
-    if (mentionedUserIds.has(profile.id)) {
+    if (mentionedUserIds.has(profile.user_id)) {
       return sendMentionNotificationEmail(
         profile.email,
         recipientName,
@@ -209,7 +232,7 @@ async function sendReplyNotifications({
       )
     }
 
-    const reason = profile.id === threadAuthorId ? 'thread_author' as const : 'participant' as const
+    const reason = profile.user_id === threadAuthorId ? 'thread_author' as const : 'participant' as const
     return sendReplyNotificationEmail(
       profile.email,
       recipientName,

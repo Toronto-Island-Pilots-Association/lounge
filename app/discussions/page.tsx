@@ -2,15 +2,18 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Suspense } from 'react'
-import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment } from '@/lib/auth'
-import { createClient } from '@/lib/supabase/server'
+import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment, isOrgPublic, isOrgStripeConnected } from '@/lib/auth'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { headers } from 'next/headers'
 import { Thread, DiscussionCategory, ThreadWithData, ThreadAuthor } from '@/types/database'
 import Sidebar from './Sidebar'
 import MobileFilters from './MobileFilters'
 import ThreadContentPreview from './ThreadContentPreview'
-import { CATEGORY_LABELS, CATEGORY_DESCRIPTIONS } from './constants'
+import { categoryConfigFromDb } from './constants'
+import { getFeatureFlags, getDiscussionCategories } from '@/lib/settings'
 import { CategoryIconLarge } from './CategoryIcons'
 import { formatRelativeDate } from './utils'
+import { isOrgManagerRole } from '@/lib/org-roles'
 
 const THREADS_PER_PAGE = 25
 
@@ -19,26 +22,28 @@ export default async function DiscussionsPage({
 }: {
   searchParams: Promise<{ sort?: string; category?: string; page?: string }>
 }) {
-  const user = await getCurrentUser()
+  const [user, orgPublic, orgStripeConnected] = await Promise.all([getCurrentUser(), isOrgPublic(), isOrgStripeConnected()])
 
   if (!user) {
-    redirect('/login')
+    if (!orgPublic) redirect('/login')
+  } else {
+    if (shouldRequireProfileCompletion(user.profile)) redirect('/complete-profile')
+    if (shouldRequirePayment(user.profile) && orgStripeConnected) redirect('/add-payment')
+    if (user.profile.status !== 'approved' && !isOrgManagerRole(user.profile.role)) redirect('/pending-approval')
   }
 
-  if (shouldRequireProfileCompletion(user.profile)) {
-    redirect('/complete-profile')
-  }
+  const isGuest = !user
+  const h = await headers()
+  const orgId = isGuest ? h.get('x-org-id') : user!.profile.org_id
 
-  if (shouldRequirePayment(user.profile)) {
-    redirect('/add-payment')
-  }
+  const [featureFlags, dbCategories] = await Promise.all([
+    getFeatureFlags(),
+    getDiscussionCategories(orgId ?? undefined),
+  ])
+  const categoryConfig = categoryConfigFromDb(dbCategories)
 
-  // Redirect pending users to approval page
-  if (user.profile.status !== 'approved' && user.profile.role !== 'admin') {
-    redirect('/pending-approval')
-  }
-
-  const supabase = await createClient()
+  // Guests use service role (bypasses RLS); logged-in users use their session
+  const supabase = isGuest ? createServiceRoleClient() : await createClient()
   const params = await searchParams
   const sortBy = params?.sort || 'latest'
   const categoryParam = params?.category
@@ -52,6 +57,7 @@ export default async function DiscussionsPage({
   let query = supabase
     .from('threads')
     .select('*, comments(count)', { count: 'exact' })
+    .eq('org_id', orgId ?? '')
     .order('created_at', { ascending: false })
     .range(offset, offset + THREADS_PER_PAGE - 1)
 
@@ -140,33 +146,36 @@ export default async function DiscussionsPage({
 
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6 sm:py-8">
+    <div className="min-h-screen bg-gray-50">
+    <div className="py-6 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Hangar Talk</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{featureFlags.discussionsLabel}</h1>
             <div className="flex items-center gap-3 w-full sm:w-auto sm:ml-auto">
               {/* Mobile Filters - Combined Category & Sort */}
               <div className="lg:hidden relative flex-1 sm:flex-initial">
                 <Suspense fallback={<div className="h-10 w-full sm:w-40 bg-gray-100 rounded-lg animate-pulse" />}>
-                  <MobileFilters />
+                  <MobileFilters categoryConfig={categoryConfig} />
                 </Suspense>
               </div>
               
               
-              <Link
-                href={categoryFilter 
-                  ? `/discussions/new?category=${categoryFilter}`
-                  : '/discussions/new'}
-                className="inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-[#0d1e26] text-white text-sm font-medium rounded-lg hover:bg-[#0a171c] transition-colors shadow-sm hover:shadow-md whitespace-nowrap ml-auto sm:ml-0"
-              >
-                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                <span className="hidden sm:inline">Post New</span>
-                <span className="sm:hidden">New</span>
-              </Link>
+              {!isGuest && (
+                <Link
+                  href={categoryFilter
+                    ? `/discussions/new?category=${categoryFilter}`
+                    : '/discussions/new'}
+                  className="inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-[var(--color-primary)] text-white text-sm font-medium rounded-lg hover:bg-[#0a171c] transition-colors shadow-sm hover:shadow-md whitespace-nowrap ml-auto sm:ml-0"
+                >
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span className="hidden sm:inline">Post New</span>
+                  <span className="sm:hidden">New</span>
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -175,7 +184,7 @@ export default async function DiscussionsPage({
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
                   {/* Sidebar - Hidden on Mobile */}
                   <div className="hidden lg:block lg:col-span-1">
-                    <Sidebar currentCategory={categoryFilter} currentSort={sortBy} />
+                    <Sidebar currentCategory={categoryFilter} currentSort={sortBy} categoryConfig={categoryConfig} />
                   </div>
 
           {/* Main Content */}
@@ -184,9 +193,9 @@ export default async function DiscussionsPage({
             {categoryFilter && (
               <div className="mb-4 flex items-start gap-2">
                 <h2 className="text-lg font-semibold text-gray-900">
-                  {CATEGORY_LABELS[categoryFilter]}
+                  {categoryConfig.categoryLabels[categoryFilter]}
                 </h2>
-                {CATEGORY_DESCRIPTIONS[categoryFilter] && (
+                {categoryConfig.categoryDescriptions[categoryFilter] && (
                   <div className="group relative flex-shrink-0">
                     <button
                       type="button"
@@ -199,7 +208,7 @@ export default async function DiscussionsPage({
                     </button>
                     <div className="absolute left-0 top-6 z-10 w-72 p-3 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none">
                       <p className="text-sm text-gray-700 leading-relaxed">
-                        {CATEGORY_DESCRIPTIONS[categoryFilter]}
+                        {categoryConfig.categoryDescriptions[categoryFilter]}
                       </p>
                       <div className="absolute -top-1 left-4 w-2 h-2 bg-white border-l border-t border-gray-200 transform rotate-45"></div>
                     </div>
@@ -212,7 +221,7 @@ export default async function DiscussionsPage({
               <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-8 sm:p-12 text-center">
                 <div className="max-w-md mx-auto">
                   {categoryFilter ? (
-                    <div className="mb-4 text-[#0d1e26] flex justify-center">
+                    <div className="mb-4 text-[var(--color-primary)] flex justify-center">
                       <CategoryIconLarge category={categoryFilter} />
                     </div>
                   ) : (
@@ -220,9 +229,9 @@ export default async function DiscussionsPage({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   )}
-                  {categoryFilter && CATEGORY_DESCRIPTIONS[categoryFilter] && (
+                  {categoryFilter && categoryConfig.categoryDescriptions[categoryFilter] && (
                     <p className="text-sm text-gray-500 mb-6 max-w-lg mx-auto">
-                      {CATEGORY_DESCRIPTIONS[categoryFilter]}
+                      {categoryConfig.categoryDescriptions[categoryFilter]}
                     </p>
                   )}
                   {!categoryFilter && (
@@ -234,7 +243,7 @@ export default async function DiscussionsPage({
                     href={categoryFilter 
                       ? `/discussions/new?category=${categoryFilter}`
                       : '/discussions/new'}
-                    className="inline-flex items-center px-5 py-2.5 bg-[#0d1e26] text-white text-sm font-semibold rounded-lg hover:bg-[#0a171c] transition-colors shadow-sm hover:shadow-md"
+                    className="inline-flex items-center px-5 py-2.5 bg-[var(--color-primary)] text-white text-sm font-semibold rounded-lg hover:bg-[#0a171c] transition-colors shadow-sm hover:shadow-md"
                   >
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -298,8 +307,8 @@ export default async function DiscussionsPage({
                             <h3 className="text-base font-bold text-gray-900 line-clamp-2 leading-snug">
                               {thread.title}
                             </h3>
-                            <span className="px-1.5 py-0.5 text-xs font-medium bg-[#0d1e26]/10 text-[#0d1e26] rounded flex-shrink-0">
-                              {CATEGORY_LABELS[thread.category]}
+                            <span className="px-1.5 py-0.5 text-xs font-medium bg-[var(--color-primary)]/10 text-[var(--color-primary)] rounded flex-shrink-0">
+                              {categoryConfig.categoryLabels[thread.category]}
                             </span>
                           </div>
                           <ThreadContentPreview content={thread.content} maxLength={120} className="block" />
@@ -313,11 +322,11 @@ export default async function DiscussionsPage({
                         <div className="hidden md:flex md:flex-col md:gap-2">
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex flex-wrap items-baseline gap-2 min-w-0">
-                              <h3 className="text-base font-semibold text-gray-900 hover:text-[#0d1e26] line-clamp-2 leading-snug">
+                              <h3 className="text-base font-semibold text-gray-900 hover:text-[var(--color-primary)] line-clamp-2 leading-snug">
                                 {thread.title}
                               </h3>
-                              <span className="px-1.5 py-0.5 text-xs font-medium bg-[#0d1e26]/10 text-[#0d1e26] rounded flex-shrink-0">
-                                {CATEGORY_LABELS[thread.category]}
+                              <span className="px-1.5 py-0.5 text-xs font-medium bg-[var(--color-primary)]/10 text-[var(--color-primary)] rounded flex-shrink-0">
+                                {categoryConfig.categoryLabels[thread.category]}
                               </span>
                             </div>
                             <div className="flex-shrink-0">
@@ -379,6 +388,7 @@ export default async function DiscussionsPage({
           </div>
         </div>
       </div>
+    </div>
     </div>
   )
 }

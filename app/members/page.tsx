@@ -1,9 +1,12 @@
 import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment } from '@/lib/auth'
-import { createClient } from '@/lib/supabase/server'
-import { UserProfile, getMembershipLevelLabel } from '@/types/database'
+import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment, isOrgPublic, isOrgStripeConnected } from '@/lib/auth'
+import { getFeatureFlags, getOrgMemberProfileFieldFlags } from '@/lib/settings'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { headers } from 'next/headers'
+import { MemberProfile, getMembershipLevelLabel } from '@/types/database'
+import { getOrgRoleLabel } from '@/lib/org-roles'
 
 const MEMBERS_PER_PAGE = 25
 
@@ -12,18 +15,23 @@ export default async function MembersPage({
 }: {
   searchParams: Promise<{ page?: string }>
 }) {
-  const user = await getCurrentUser()
+  const [user, orgPublic, orgStripeConnected] = await Promise.all([getCurrentUser(), isOrgPublic(), isOrgStripeConnected()])
 
   if (!user) {
-    redirect('/login')
+    if (!orgPublic) redirect('/login')
+  } else {
+    if (shouldRequireProfileCompletion(user.profile)) redirect('/complete-profile')
+    if (shouldRequirePayment(user.profile) && orgStripeConnected) redirect('/add-payment')
   }
 
-  if (shouldRequireProfileCompletion(user.profile)) {
-    redirect('/complete-profile')
-  }
+  const isGuest = !user
+  const h = await headers()
+  const orgId = isGuest ? h.get('x-org-id') : user!.profile.org_id
+  const profileFieldFlags = await getOrgMemberProfileFieldFlags(orgId ?? undefined)
 
-  if (shouldRequirePayment(user.profile)) {
-    redirect('/add-payment')
+  const features = await getFeatureFlags()
+  if (!features.memberDirectory) {
+    redirect('/dashboard')
   }
 
   const params = await searchParams
@@ -31,26 +39,29 @@ export default async function MembersPage({
   const from = (currentPage - 1) * MEMBERS_PER_PAGE
   const to = from + MEMBERS_PER_PAGE - 1
 
-  const supabase = await createClient()
-  
+  const supabase = isGuest ? createServiceRoleClient() : await createClient()
+
   // Get total count of approved members only
   const { count } = await supabase
-    .from('user_profiles')
+    .from('member_profiles')
     .select('*', { count: 'exact', head: true })
     .eq('status', 'approved')
+    .eq('org_id', orgId ?? '')
 
   // Get paginated members (only approved)
   const { data: members } = await supabase
-    .from('user_profiles')
+    .from('member_profiles')
     .select('*')
     .eq('status', 'approved')
+    .eq('org_id', orgId ?? '')
     .order('created_at', { ascending: false })
     .range(from, to)
 
   const totalPages = Math.ceil((count || 0) / MEMBERS_PER_PAGE)
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50">
+    <div className="py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Members Directory</h1>
@@ -64,7 +75,7 @@ export default async function MembersPage({
           <>
             {/* Mobile Card View */}
             <div className="md:hidden space-y-4">
-              {(members as UserProfile[]).map((member) => (
+              {(members as MemberProfile[]).map((member) => (
                 <div key={member.id} className="bg-white shadow rounded-lg p-4">
                   <div className="flex items-start space-x-4">
                     {member.profile_picture_url ? (
@@ -100,8 +111,8 @@ export default async function MembersPage({
                           <div className="text-base font-medium text-gray-900 truncate">
                             {member.full_name || `${member.first_name || ''} ${member.last_name || ''}`.trim() || 'N/A'}
                           </div>
-                          {member.role === 'admin' && (
-                            <div className="text-xs text-[#0d1e26] mt-0.5">Admin</div>
+                          {member.role !== 'member' && (
+                            <div className="text-xs text-[var(--color-primary)] mt-0.5">{getOrgRoleLabel(member.role)}</div>
                           )}
                         </div>
                         <span className={`ml-2 px-2 py-1 text-xs rounded-full flex-shrink-0 ${
@@ -116,12 +127,12 @@ export default async function MembersPage({
                         <div className="text-sm text-gray-600 truncate">
                           <span className="font-medium">Email:</span> {member.email}
                         </div>
-                        {member.call_sign && (
+                        {profileFieldFlags.showCallSign && member.call_sign && (
                           <div className="text-sm text-gray-600">
                             <span className="font-medium">Call Sign:</span> {member.call_sign}
                           </div>
                         )}
-                        {member.aircraft_type && (
+                        {profileFieldFlags.showAircraftType && member.aircraft_type && (
                           <div className="text-sm text-gray-600">
                             <span className="font-medium">Aircraft:</span> {member.aircraft_type}
                           </div>
@@ -148,19 +159,23 @@ export default async function MembersPage({
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Email
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Call Sign
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Aircraft Type
-                    </th>
+                    {profileFieldFlags.showCallSign && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Call Sign
+                      </th>
+                    )}
+                    {profileFieldFlags.showAircraftType && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Aircraft Type
+                      </th>
+                    )}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Membership
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {(members as UserProfile[]).map((member) => (
+                  {(members as MemberProfile[]).map((member) => (
                     <tr key={member.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         {member.profile_picture_url ? (
@@ -195,19 +210,23 @@ export default async function MembersPage({
                         <div className="text-sm font-medium text-gray-900">
                           {member.full_name || `${member.first_name || ''} ${member.last_name || ''}`.trim() || 'N/A'}
                         </div>
-                        {member.role === 'admin' && (
-                          <div className="text-xs text-[#0d1e26] mt-1">Admin</div>
+                        {member.role !== 'member' && (
+                          <div className="text-xs text-[var(--color-primary)] mt-1">{getOrgRoleLabel(member.role)}</div>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">{member.email}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{member.call_sign || '—'}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{member.aircraft_type || '—'}</div>
-                      </td>
+                      {profileFieldFlags.showCallSign && (
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{member.call_sign || '—'}</div>
+                        </td>
+                      )}
+                      {profileFieldFlags.showAircraftType && (
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{member.aircraft_type || '—'}</div>
+                        </td>
+                      )}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 text-xs rounded-full ${
                           member.membership_level === 'Full' || member.membership_level === 'Corporate' || member.membership_level === 'Honorary'
@@ -294,7 +313,7 @@ export default async function MembersPage({
                           href={`/members?page=${page}`}
                           className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
                             page === currentPage
-                              ? 'z-10 bg-[#0d1e26] text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0d1e26]'
+                              ? 'z-10 bg-[var(--color-primary)] text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]'
                               : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0'
                           }`}
                         >
@@ -336,6 +355,6 @@ export default async function MembersPage({
         )}
       </div>
     </div>
+    </div>
   )
 }
-

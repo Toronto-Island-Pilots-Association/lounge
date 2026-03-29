@@ -31,7 +31,7 @@ export default function RichTextEditor({ content, onChange, placeholder }: RichT
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
-          class: 'text-[#0d1e26] underline hover:text-[#0a171c]',
+          class: 'text-[var(--color-primary)] underline hover:text-[#0a171c]',
         },
       }),
       Image.configure({

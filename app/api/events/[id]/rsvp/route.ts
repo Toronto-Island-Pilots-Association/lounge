@@ -1,5 +1,7 @@
 import { requireAuth } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/settings'
+import { isOrgManagerRole } from '@/lib/org-roles'
 import { NextResponse } from 'next/server'
 
 // POST - RSVP to an event (authenticated, approved members only)
@@ -9,6 +11,11 @@ export async function POST(
 ) {
   try {
     const user = await requireAuth()
+    const flags = await getFeatureFlags()
+    if (!flags.events) {
+      return NextResponse.json({ error: 'Events are not enabled for this organization' }, { status: 403 })
+    }
+    const orgId = user.profile.org_id
     const { id: eventId } = await params
 
     if (!eventId) {
@@ -16,7 +23,7 @@ export async function POST(
     }
 
     // Only approved members (or admins) can RSVP
-    if (user.profile.status !== 'approved' && user.profile.role !== 'admin') {
+    if (user.profile.status !== 'approved' && !isOrgManagerRole(user.profile.role)) {
       return NextResponse.json(
         { error: 'Only approved members can RSVP to events' },
         { status: 403 }
@@ -30,6 +37,7 @@ export async function POST(
       .from('events')
       .select('id')
       .eq('id', eventId)
+      .eq('org_id', orgId)
       .single()
 
     if (eventError || !event) {
@@ -38,7 +46,7 @@ export async function POST(
 
     const { error } = await supabase
       .from('event_rsvps')
-      .insert({ event_id: eventId, user_id: user.id })
+      .insert({ event_id: eventId, user_id: user.id, org_id: orgId })
 
     if (error) {
       if (error.code === '23505') {
@@ -51,7 +59,7 @@ export async function POST(
     }
 
     // Auto-add event to user's Google Calendar if they authorized calendar sync (Gmail sign-in)
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'
     const eventPageUrl = `${appUrl}/events`
     ;(async () => {
       try {
@@ -66,6 +74,7 @@ export async function POST(
           .from('events')
           .select('id, title, description, location, start_time, end_time')
           .eq('id', eventId)
+          .eq('org_id', orgId)
           .single()
         if (!eventData) return
 
@@ -100,6 +109,7 @@ export async function DELETE(
 ) {
   try {
     const user = await requireAuth()
+    const orgId = user.profile.org_id
     const { id: eventId } = await params
 
     if (!eventId) {
@@ -112,6 +122,7 @@ export async function DELETE(
       .from('event_rsvps')
       .delete()
       .eq('event_id', eventId)
+      .eq('org_id', orgId)
       .eq('user_id', user.id)
 
     if (error) {

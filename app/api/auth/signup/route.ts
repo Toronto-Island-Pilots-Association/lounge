@@ -5,39 +5,23 @@ import * as Sentry from '@sentry/nextjs'
 
 export async function POST(request: Request) {
   try {
-    const { 
-      email, 
-      password, 
+    const {
+      email,
+      password,
       fullName,
       firstName,
       lastName,
       phone,
-      // Mailing Address
       street,
       city,
       provinceState,
       postalZipCode,
       country,
-      // Membership Application
       membershipClass,
-      // COPA Membership
-      isCopaMember,
-      joinCopaFlight32,
-      copaMembershipNumber,
-      // Statement of Interest
       statementOfInterest,
-      // Interests
       interests,
-      // Aviation Information
-      pilotLicenseType,
-      aircraftType,
-      callSign,
-      howOftenFlyFromYTZ,
       howDidYouHear,
-      isStudentPilot,
-      flightSchool,
-      instructorName,
-      studentNotes,
+      customFields,
     } = await request.json()
 
     if (!email || !password) {
@@ -46,6 +30,9 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
+
+    const orgId = request.headers.get('x-org-id')
+    if (!orgId) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     const supabase = await createClient()
 
@@ -71,7 +58,7 @@ export async function POST(request: Request) {
 
     // Disable Supabase's default confirmation email by setting emailRedirectTo
     // We'll handle confirmation in our welcome email instead
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'
     const { data, error } = await supabase.auth.signUp({
       email: normalizedEmail,
       password,
@@ -88,29 +75,14 @@ export async function POST(request: Request) {
           provinceState: toNullIfEmpty(provinceState),
           postalZipCode: toNullIfEmpty(postalZipCode),
           country: toNullIfEmpty(country),
-          // Membership Application
           membershipClass: toNullIfEmpty(membershipClass),
-          // COPA Membership
-          isCopaMember: toNullIfEmpty(isCopaMember),
-          joinCopaFlight32: toNullIfEmpty(joinCopaFlight32),
-          copaMembershipNumber: toNullIfEmpty(copaMembershipNumber),
-          // Statement of Interest (append student notes if provided)
-          statementOfInterest: studentNotes 
-            ? `${toNullIfEmpty(statementOfInterest) || ''}\n\nStudent Information:\n${studentNotes}`.trim()
-            : toNullIfEmpty(statementOfInterest),
-          // Interests (store as JSON array string)
-          interests: interests && Array.isArray(interests) && interests.length > 0 
-            ? JSON.stringify(interests) 
-            : null,
-          // Aviation Information
-          pilot_license_type: toNullIfEmpty(pilotLicenseType),
-          aircraft_type: toNullIfEmpty(aircraftType),
-          call_sign: toNullIfEmpty(callSign),
-          how_often_fly_from_ytz: toNullIfEmpty(howOftenFlyFromYTZ),
+          statementOfInterest: toNullIfEmpty(statementOfInterest),
+          interests:
+            interests && Array.isArray(interests) && interests.length > 0
+              ? JSON.stringify(interests)
+              : null,
           how_did_you_hear: toNullIfEmpty(howDidYouHear),
-          is_student_pilot: Boolean(isStudentPilot),
-          flight_school: isStudentPilot ? toNullIfEmpty(flightSchool) : null,
-          instructor_name: isStudentPilot ? toNullIfEmpty(instructorName) : null,
+          org_id: orgId,
           role: 'member',
           membership_level: membershipLevel,
         },
@@ -171,10 +143,11 @@ export async function POST(request: Request) {
           
           try {
             const { data: fetchedProfile, error: fetchedError } = await adminClient
-              .from('user_profiles')
+              .from('member_profiles')
               .select('*')
-              .eq('id', data.user.id)
-              .single()
+              .eq('user_id', data.user.id)
+              .eq('org_id', orgId)
+              .maybeSingle()
             
             if (!fetchedError && fetchedProfile) {
               profile = fetchedProfile
@@ -197,11 +170,12 @@ export async function POST(request: Request) {
             // Ensure membership_level and role match the database constraints exactly
             const membershipLevel = getMembershipLevel(membershipClass)
             const userRole: 'member' | 'admin' = 'member'
-            
-            const { data: createdProfile, error: createError } = await adminClient
+
+            // Upsert identity fields into user_profiles
+            const { error: profileInsertError } = await adminClient
               .from('user_profiles')
-              .insert({
-                id: data.user.id,
+              .upsert({
+                user_id: data.user.id,
                 email: (data.user.email || normalizedEmail).toLowerCase().trim(),
                 full_name: toNullIfEmpty(fullName) || toNullIfEmpty(`${firstName || ''} ${lastName || ''}`.trim()) || null,
                 first_name: toNullIfEmpty(firstName),
@@ -213,40 +187,56 @@ export async function POST(request: Request) {
                 province_state: toNullIfEmpty(provinceState),
                 postal_zip_code: toNullIfEmpty(postalZipCode),
                 country: toNullIfEmpty(country),
+              }, { onConflict: 'user_id' })
+
+            if (profileInsertError) {
+              console.error('Failed to upsert user_profiles row manually:', profileInsertError)
+            }
+
+            // Insert membership fields into org_memberships
+            const { error: membershipInsertError } = await adminClient
+              .from('org_memberships')
+              .insert({
+                user_id: data.user.id,
+                org_id: orgId,
                 // Membership Application
                 membership_class: toNullIfEmpty(membershipClass),
-                // COPA Membership
-                is_copa_member: toNullIfEmpty(isCopaMember),
-                join_copa_flight_32: toNullIfEmpty(joinCopaFlight32),
-                copa_membership_number: toNullIfEmpty(copaMembershipNumber),
-                // Statement of Interest (append student notes if provided)
-                statement_of_interest: studentNotes 
-                  ? `${toNullIfEmpty(statementOfInterest) || ''}\n\nStudent Information:\n${studentNotes}`.trim()
-                  : toNullIfEmpty(statementOfInterest),
-                // Interests (store as JSON array string)
-                interests: interests && Array.isArray(interests) && interests.length > 0 
-                  ? JSON.stringify(interests) 
-                  : null,
-                // Aviation Information
-                pilot_license_type: toNullIfEmpty(pilotLicenseType),
-                aircraft_type: toNullIfEmpty(aircraftType),
-                call_sign: toNullIfEmpty(callSign),
-                how_often_fly_from_ytz: toNullIfEmpty(howOftenFlyFromYTZ),
+                statement_of_interest: toNullIfEmpty(statementOfInterest),
+                interests:
+                  interests && Array.isArray(interests) && interests.length > 0
+                    ? JSON.stringify(interests)
+                    : null,
                 how_did_you_hear: toNullIfEmpty(howDidYouHear),
-                is_student_pilot: Boolean(isStudentPilot),
-                flight_school: isStudentPilot ? toNullIfEmpty(flightSchool) : null,
-                instructor_name: isStudentPilot ? toNullIfEmpty(instructorName) : null,
+                is_copa_member: null,
+                join_copa_flight_32: null,
+                copa_membership_number: null,
+                pilot_license_type: null,
+                aircraft_type: null,
+                call_sign: null,
+                how_often_fly_from_ytz: null,
+                is_student_pilot: false,
+                flight_school: null,
+                instructor_name: null,
                 role: userRole,
                 membership_level: membershipLevel,
                 status: 'pending',
               })
-              .select()
-              .single()
-            
-            if (!createError && createdProfile) {
-              profile = createdProfile
-            } else {
-              console.error('Failed to create user profile manually:', createError)
+
+            if (membershipInsertError) {
+              console.error('Failed to create org_memberships row manually:', membershipInsertError)
+            }
+
+            // Fetch the joined view for downstream use
+            if (!profileInsertError && !membershipInsertError) {
+              const { data: createdProfile } = await adminClient
+                .from('member_profiles')
+                .select('*')
+                .eq('user_id', data.user.id)
+                .eq('org_id', orgId)
+                .maybeSingle()
+              if (createdProfile) {
+                profile = createdProfile
+              }
             }
           } catch (error) {
             console.error('Error creating user profile manually:', error)
@@ -262,6 +252,24 @@ export async function POST(request: Request) {
           })
         }
         
+        // Store custom field values from admin-configured form fields
+        if (profile && customFields && typeof customFields === 'object' && !Array.isArray(customFields)) {
+          const keys = Object.keys(customFields as object)
+          if (keys.length > 0) {
+            const prev =
+              profile.custom_data &&
+              typeof profile.custom_data === 'object' &&
+              !Array.isArray(profile.custom_data)
+                ? (profile.custom_data as Record<string, unknown>)
+                : {}
+            await adminClient
+              .from('org_memberships')
+              .update({ custom_data: { ...prev, ...(customFields as Record<string, unknown>) } })
+              .eq('id', profile.id)
+              .eq('org_id', orgId)
+          }
+        }
+
         // Note: Google Sheets append happens when status changes from 'pending' to 'approved'
         // This ensures users are only added after admin approval
         
@@ -271,10 +279,11 @@ export async function POST(request: Request) {
           const clientForAdmins = adminClient || supabase
           try {
             const { data: admins } = await clientForAdmins
-              .from('user_profiles')
+              .from('member_profiles')
               .select('email')
               .eq('role', 'admin')
               .eq('status', 'approved')
+              .eq('org_id', orgId)
 
             if (admins && admins.length > 0) {
               const adminEmails = admins.map(a => a.email).filter(Boolean)
@@ -326,10 +335,11 @@ export async function POST(request: Request) {
         if (profile) {
           try {
             const { data: admins } = await supabase
-              .from('user_profiles')
+              .from('member_profiles')
               .select('email')
               .eq('role', 'admin')
               .eq('status', 'approved')
+              .eq('org_id', orgId)
 
             if (admins && admins.length > 0) {
               const adminEmails = admins.map(a => a.email).filter(Boolean)

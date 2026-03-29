@@ -1,20 +1,95 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { ROOT_DOMAIN, getDomainType } from '@/lib/org'
+
+/** Returns true if the URL is safe to redirect to after auth. */
+function isTrustedNextUrl(next: string, requestOrigin: string): boolean {
+  try {
+    const url = new URL(next)
+    // Same origin is always fine (relative → absolute already resolved)
+    if (url.origin === requestOrigin) return true
+    // Any subdomain of ROOT_DOMAIN is ours
+    const host = url.hostname
+    if (host === ROOT_DOMAIN || host.endsWith(`.${ROOT_DOMAIN}`)) return true
+    return false
+  } catch {
+    return false
+  }
+}
+
+function getRequestOrigin(request: Request): string {
+  const forwardedProto = request.headers.get('x-forwarded-proto')
+  const forwardedHost = request.headers.get('x-forwarded-host')
+  const host = request.headers.get('host')
+
+  const proto = forwardedProto || (process.env.NODE_ENV === 'development' ? 'http' : 'https')
+  const resolvedHost = (forwardedHost ?? host)?.split(',')[0]?.trim()
+
+  if (resolvedHost) return `${proto}://${resolvedHost}`
+
+  // Fallback: should rarely happen, but ensures we always return a valid origin.
+  const u = new URL(request.url)
+  return u.origin
+}
+
+/** Org subdomains use /discussions; marketing (www / apex / localhost) has no tenant — use platform home. */
+function defaultPostAuthPath(request: Request): string {
+  const host = new URL(getRequestOrigin(request)).hostname
+  return getDomainType(host) === 'marketing' ? '/platform/dashboard' : '/discussions'
+}
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
+  const requestOrigin = getRequestOrigin(request)
   const code = requestUrl.searchParams.get('code')
-  const next = requestUrl.searchParams.get('next') || '/discussions'
+  const fallbackPath = defaultPostAuthPath(request)
+  const rawNext = requestUrl.searchParams.get('next') || fallbackPath
+
+  // `next` can be an absolute URL (e.g. cross-domain redirect from org login via platform callback)
+  // or a relative path. Resolve to absolute for validation, then use appropriately.
+  let resolvedNext: URL
+  try {
+    resolvedNext = new URL(rawNext, requestOrigin)
+  } catch {
+    resolvedNext = new URL(fallbackPath, requestOrigin)
+  }
+  const next = isTrustedNextUrl(resolvedNext.href, requestOrigin)
+    ? resolvedNext.href
+    : new URL(fallbackPath, requestOrigin).href
+  // Determine org context. The proxy sets x-org-id when running on an org subdomain,
+  // but when the callback is centralised on the platform domain the header won't be set.
+  // In that case, derive the org from the `next` URL's subdomain.
+  const nextUrl = new URL(next)
+  const nextHost = nextUrl.hostname.split(':')[0]
+  let orgId = request.headers.get('x-org-id') ?? null
+  if (!orgId && nextHost.endsWith(`.${ROOT_DOMAIN}`)) {
+    // next is an org subdomain URL — look up the org by subdomain
+    const subdomain = nextHost.slice(0, -(ROOT_DOMAIN.length + 1))
+    if (subdomain && subdomain !== 'platform' && subdomain !== 'www') {
+      try {
+        const { getOrgByHostname } = await import('@/lib/org')
+        const org = await getOrgByHostname(nextHost)
+        if (org) orgId = org.id
+      } catch {
+        // non-critical — fall through to default
+      }
+    }
+  }
+  // The origin to use for onboarding redirects (e.g. /become-a-member, /complete-profile).
+  // For cross-domain callbacks, use the org's origin; otherwise use the current request origin.
+  const orgOrigin = nextUrl.origin !== requestOrigin ? nextUrl.origin : requestOrigin
 
   if (code) {
     const supabase = await createClient()
-    
+
     // Exchange the code for a session
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (error) {
       console.error('Error exchanging code for session:', error)
-      return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(error.message)}`, requestUrl.origin))
+      return NextResponse.redirect(
+        new URL(`/login?error=${encodeURIComponent(error.message)}`, requestOrigin),
+      )
     }
 
     // If user signed in with Google and granted calendar scope, store refresh token for RSVP → Calendar sync
@@ -43,7 +118,13 @@ export async function GET(request: Request) {
       }
     }
 
-    if (data.user) {
+    // For platform routes, skip org profile checks and redirect directly
+    const nextPath = nextUrl.pathname
+    if (nextPath.startsWith('/platform')) {
+      return NextResponse.redirect(next)
+    }
+
+    if (data.user && orgId) {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
       let adminClient = null
       
@@ -80,10 +161,11 @@ export async function GET(request: Request) {
           
           try {
             const { data: fetchedProfile, error: fetchedError } = await adminClient
-              .from('user_profiles')
+              .from('member_profiles')
               .select('*')
-              .eq('id', data.user.id)
-              .single()
+              .eq('user_id', data.user.id)
+              .eq('org_id', orgId)
+              .maybeSingle()
             
             if (!fetchedError && fetchedProfile) {
               profile = fetchedProfile
@@ -100,10 +182,11 @@ export async function GET(request: Request) {
       } else {
         // Fallback: try with regular client
         const { data: fetchedProfile, error: fetchedError } = await supabase
-          .from('user_profiles')
+          .from('member_profiles')
           .select('*')
-          .eq('id', data.user.id)
-          .single()
+          .eq('user_id', data.user.id)
+          .eq('org_id', orgId)
+          .maybeSingle()
         
         if (!fetchedError && fetchedProfile) {
           profile = fetchedProfile
@@ -120,19 +203,8 @@ export async function GET(request: Request) {
       )
       
       if (!profile && isProfileNotFound) {
-        // New user signing up via Google - redirect to complete profile page
-        // The profile will be created by the database trigger, but we need to wait a moment
-        // For now, redirect to complete-profile page where they can fill in additional info
-        return NextResponse.redirect(new URL('/complete-profile', requestUrl.origin))
-      }
-      
-      // Check if existing profile is incomplete (missing key fields)
-      // Redirect to complete profile if needed
-      if (profile) {
-        const isIncomplete = !profile.phone && !profile.pilot_license_type && !profile.aircraft_type
-        if (isIncomplete) {
-          return NextResponse.redirect(new URL('/complete-profile', requestUrl.origin))
-        }
+        // New Google user with no profile in this org — redirect to membership application
+        return NextResponse.redirect(new URL('/become-a-member', orgOrigin))
       }
 
       // Track if this is a new user (profile was just created by trigger)
@@ -151,8 +223,7 @@ export async function GET(request: Request) {
         }
       }
 
-      // Send welcome email to new OAuth users
-      // Note: Google Sheets append happens after profile completion, not during OAuth callback
+      // Send welcome email and admin notifications for new org members
       if (profile && isNewUser) {
         try {
           const { sendWelcomeEmail } = await import('@/lib/resend')
@@ -170,8 +241,9 @@ export async function GET(request: Request) {
         const clientForAdmins = adminClient || supabase
         try {
           const { data: admins } = await clientForAdmins
-            .from('user_profiles')
+            .from('member_profiles')
             .select('email')
+            .eq('org_id', orgId)
             .eq('role', 'admin')
             .eq('status', 'approved')
 
@@ -230,11 +302,11 @@ export async function GET(request: Request) {
       }
     }
 
-    // Redirect to the dashboard or the next URL
-    return NextResponse.redirect(new URL(next, requestUrl.origin))
+    // Redirect to the dashboard or the next URL (already absolute)
+    return NextResponse.redirect(next)
   }
 
   // If no code, redirect to login
-  return NextResponse.redirect(new URL('/login', requestUrl.origin))
+  return NextResponse.redirect(new URL('/login', requestOrigin))
 }
 

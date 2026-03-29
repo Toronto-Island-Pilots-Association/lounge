@@ -1,12 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
+import { headers } from 'next/headers'
 
 export default async function SidebarStats() {
   const supabase = await createClient()
+  const orgId = (await headers()).get('x-org-id')
 
   // Get total thread count
   const { data: threads } = await supabase
     .from('threads')
     .select('id', { count: 'exact', head: true })
+    .eq('org_id', orgId ?? '')
 
   const totalCount = threads?.length || 0
 

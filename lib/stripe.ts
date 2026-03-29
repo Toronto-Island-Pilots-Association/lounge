@@ -37,6 +37,14 @@ export function getStripeInstance(): Stripe {
   })
 }
 
+export function getPlatformStripeInstance(): Stripe {
+  const key = process.env.STRIPE_PLATFORM_SECRET_KEY
+  if (!key) throw new Error('STRIPE_PLATFORM_SECRET_KEY is not configured')
+  return new Stripe(key, {
+    apiVersion: '2024-11-20.acacia' as any,
+  })
+}
+
 export function getStripePriceId(): string | null {
   return process.env.STRIPE_PRICE_ID || null
 }

@@ -25,14 +25,20 @@ function arrayToCsv(data: any[], headers: string[]): string {
   return [headers.join(','), ...rows].join('\n')
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     await requireAdmin()
+    // Note: CSV export is tenant-scoped to prevent cross-club leakage.
+    const orgId = request.headers.get('x-org-id') ?? null
+    if (!orgId) {
+      return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
+    }
     const supabase = await createClient()
 
     const { data: profiles, error } = await supabase
-      .from('user_profiles')
+      .from('member_profiles')
       .select('*')
+      .eq('org_id', orgId)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -42,6 +48,7 @@ export async function GET() {
     const { data: payments } = await supabase
       .from('payments')
       .select('user_id, amount, currency, payment_method, payment_date')
+      .eq('org_id', orgId)
       .order('payment_date', { ascending: false })
 
     const latestPaymentByUser = new Map<string, { amount: number; currency: string; payment_method: string; payment_date: string }>()
@@ -59,9 +66,9 @@ export async function GET() {
     const membersWithEnrichment = await Promise.all(
       (profiles ?? []).map(async (member) => {
         const level = (member.membership_level || 'Full') as MembershipLevelKey
-        const trialEnd = await getTrialEndDateAsync(level, member.created_at ?? null)
+        const trialEnd = await getTrialEndDateAsync(level, member.created_at ?? null, orgId)
         const expected_fee = await getMembershipFeeForLevel(level)
-        const payment_summary = latestPaymentByUser.get(member.id) ?? null
+        const payment_summary = latestPaymentByUser.get(member.user_id) ?? null
         return {
           ...member,
           trial_end: trialEnd ? trialEnd.toISOString() : null,
@@ -95,7 +102,7 @@ export async function GET() {
       'Member Number',
       'Membership Expires At',
       'Trial End',
-      'Expected Fee (CAD)',
+      'Expected Fee',
       'Stripe Subscription ID',
       'Stripe Customer ID',
       'Cancellation Scheduled',
@@ -136,7 +143,7 @@ export async function GET() {
         'Member Number': member.member_number || '',
         'Membership Expires At': member.membership_expires_at || '',
         'Trial End': member.trial_end || '',
-        'Expected Fee (CAD)': member.expected_fee ?? '',
+        'Expected Fee': member.expected_fee ?? '',
         'Stripe Subscription ID': member.stripe_subscription_id || '',
         'Stripe Customer ID': member.stripe_customer_id || '',
         'Cancellation Scheduled': member.subscription_cancel_at_period_end ? 'Yes' : 'No',

@@ -12,6 +12,8 @@ interface AdminResourceUploadProps {
   imageUploadEndpoint: string
   fileUploadEndpoint: string
   label?: string
+  /** When true, hides file upload and only allows image uploads. */
+  imageOnly?: boolean
 }
 
 export default function AdminResourceUpload({
@@ -23,6 +25,7 @@ export default function AdminResourceUpload({
   imageUploadEndpoint,
   fileUploadEndpoint,
   label = 'Image & File Upload',
+  imageOnly = false,
 }: AdminResourceUploadProps) {
   const [imageUploading, setImageUploading] = useState(false)
   const [fileUploading, setFileUploading] = useState(false)
@@ -147,13 +150,12 @@ export default function AdminResourceUpload({
   }
 
   const handleFile = useCallback(async (file: File) => {
-    // Determine if it's an image or regular file
     if (file.type.startsWith('image/')) {
       await uploadImage(file)
-    } else {
+    } else if (!imageOnly) {
       await uploadFile(file)
     }
-  }, [imageUploadEndpoint, fileUploadEndpoint])
+  }, [imageUploadEndpoint, fileUploadEndpoint, imageOnly])
 
   const handleDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -219,7 +221,7 @@ export default function AdminResourceUpload({
         onDragLeave={handleDragLeave}
         className={`
           border-2 border-dashed rounded-lg p-6 transition-colors
-          ${isDragging ? 'border-[#0d1e26] bg-[#0d1e26]/5' : 'border-gray-300 bg-gray-50'}
+          ${isDragging ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'border-gray-300 bg-gray-50'}
           ${isUploading ? 'opacity-50 cursor-wait' : 'cursor-pointer hover:border-gray-400 hover:bg-gray-100'}
         `}
         onClick={() => !isUploading && fileInputRef.current?.click()}
@@ -249,18 +251,20 @@ export default function AdminResourceUpload({
             />
           </svg>
           <div className="mt-4 flex text-sm leading-6 text-gray-600">
-            <span className="relative cursor-pointer rounded-md font-semibold text-[#0d1e26] focus-within:outline-none focus-within:ring-2 focus-within:ring-[#0d1e26] focus-within:ring-offset-2">
+            <span className="relative cursor-pointer rounded-md font-semibold text-[var(--color-primary)] focus-within:outline-none focus-within:ring-2 focus-within:ring-[var(--color-primary)] focus-within:ring-offset-2">
               {isUploading ? 'Uploading...' : 'Click to upload'}
             </span>
             <p className="pl-1">or drag and drop</p>
           </div>
           <p className="text-xs leading-5 text-gray-600 mt-2">
-            Images (JPEG, PNG, WebP, GIF) up to 10MB • Files up to 50MB
+            {imageOnly
+              ? 'Images (JPEG, PNG, WebP, GIF) up to 10MB'
+              : 'Images (JPEG, PNG, WebP, GIF) up to 10MB • Files up to 50MB'}
           </p>
         </div>
 
         {/* Current Uploads */}
-        {(imagePreview || currentFileUrl) && (
+        {(imagePreview || (!imageOnly && currentFileUrl)) && (
           <div className="mt-6 pt-6 border-t border-gray-300 space-y-4">
             {/* Image Preview */}
             {imagePreview && (
@@ -295,7 +299,7 @@ export default function AdminResourceUpload({
             )}
 
             {/* File Preview */}
-            {currentFileUrl && currentFileName && (
+            {!imageOnly && currentFileUrl && currentFileName && (
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-md border border-gray-300 flex-shrink-0">
                   <span className="text-2xl">{getFileIcon(currentFileName)}</span>

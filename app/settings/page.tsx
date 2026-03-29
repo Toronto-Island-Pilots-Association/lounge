@@ -3,13 +3,16 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import type { OrgMemberProfileFieldFlags } from '@/lib/settings'
 import { UserProfile } from '@/types/database'
 import ProfilePictureUpload from '@/components/ProfilePictureUpload'
 import Loading from '@/components/Loading'
 import { COUNTRIES, getStatesProvinces } from '@/app/become-a-member/constants'
+import { COMMON_INTEREST_OPTIONS } from '@/lib/club-options'
 
 export default function SettingsPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [profileFieldFlags, setProfileFieldFlags] = useState<OrgMemberProfileFieldFlags | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -53,9 +56,20 @@ export default function SettingsPage() {
 
   const loadProfile = async () => {
     try {
-      const response = await fetch('/api/profile')
-      if (response.ok) {
-        const data = await response.json()
+      const [profileResponse, orgConfigResponse] = await Promise.all([
+        fetch('/api/profile'),
+        fetch('/api/org/config'),
+      ])
+
+      if (orgConfigResponse.ok) {
+        const orgConfig = await orgConfigResponse.json()
+        setProfileFieldFlags(orgConfig.profileFieldFlags || null)
+      } else {
+        setProfileFieldFlags(null)
+      }
+
+      if (profileResponse.ok) {
+        const data = await profileResponse.json()
         setProfile(data.profile)
         setFormData({
           full_name: data.profile.full_name || '',
@@ -92,7 +106,7 @@ export default function SettingsPage() {
           })(),
           notify_replies: data.profile.notify_replies !== false,
         })
-      } else if (response.status === 401) {
+      } else if (profileResponse.status === 401) {
         router.push('/login')
       }
     } catch (error) {
@@ -217,6 +231,14 @@ export default function SettingsPage() {
     }
   }
 
+  const showCopaSection = profileFieldFlags?.showCopaSection ?? false
+  const showAviationSection = profileFieldFlags?.showAviationSection ?? false
+  const showPilotLicenseType = profileFieldFlags?.showPilotLicenseType ?? false
+  const showAircraftType = profileFieldFlags?.showAircraftType ?? false
+  const showCallSign = profileFieldFlags?.showCallSign ?? false
+  const showFlightFrequency = profileFieldFlags?.showFlightFrequency ?? false
+  const showStudentPilotFields = profileFieldFlags?.showStudentPilotFields ?? false
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -309,7 +331,7 @@ export default function SettingsPage() {
                     id="phone"
                     value={formData.phone}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                     placeholder="(555) 123-4567"
                   />
                 </div>
@@ -324,7 +346,7 @@ export default function SettingsPage() {
                     id="first_name"
                     value={formData.first_name}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   />
                 </div>
 
@@ -338,7 +360,7 @@ export default function SettingsPage() {
                     id="last_name"
                     value={formData.last_name}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   />
                 </div>
               </div>
@@ -362,7 +384,7 @@ export default function SettingsPage() {
                   id="street"
                   value={formData.street}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   placeholder="123 Main Street"
                 />
               </div>
@@ -377,7 +399,7 @@ export default function SettingsPage() {
                     id="city"
                     value={formData.city}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   />
                 </div>
                 <div>
@@ -397,7 +419,7 @@ export default function SettingsPage() {
                         province_state: '',
                       }))
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   >
                     {COUNTRIES.map((country) => (
                       <option key={country.value} value={country.value}>
@@ -417,7 +439,7 @@ export default function SettingsPage() {
                     id="province_state"
                     value={formData.province_state}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   >
                     {getStatesProvinces(formData.country).map((option) => (
                       <option key={option.value} value={option.value}>
@@ -436,7 +458,7 @@ export default function SettingsPage() {
                     id="postal_zip_code"
                     value={formData.postal_zip_code}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   />
                 </div>
               </div>
@@ -445,6 +467,7 @@ export default function SettingsPage() {
 
 
           {/* COPA Membership */}
+          {showCopaSection && (
           <div className="bg-white shadow rounded-lg overflow-hidden">
             <div className="px-6 py-5 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">COPA Membership</h2>
@@ -461,7 +484,7 @@ export default function SettingsPage() {
                       type="radio"
                       name="is_copa_member"
                       value="yes"
-                      className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
+                      className="mr-2 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                       checked={formData.is_copa_member === 'yes'}
                       onChange={handleChange}
                     />
@@ -472,7 +495,7 @@ export default function SettingsPage() {
                       type="radio"
                       name="is_copa_member"
                       value="no"
-                      className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
+                      className="mr-2 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                       checked={formData.is_copa_member === 'no'}
                       onChange={handleChange}
                     />
@@ -493,7 +516,7 @@ export default function SettingsPage() {
                           type="radio"
                           name="join_copa_flight_32"
                           value="yes"
-                          className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
+                          className="mr-2 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                           checked={formData.join_copa_flight_32 === 'yes'}
                           onChange={handleChange}
                         />
@@ -504,7 +527,7 @@ export default function SettingsPage() {
                           type="radio"
                           name="join_copa_flight_32"
                           value="no"
-                          className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
+                          className="mr-2 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                           checked={formData.join_copa_flight_32 === 'no'}
                           onChange={handleChange}
                         />
@@ -524,7 +547,7 @@ export default function SettingsPage() {
                         id="copa_membership_number"
                         value={formData.copa_membership_number}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                         placeholder="Enter your COPA membership number"
                       />
                     </div>
@@ -533,6 +556,7 @@ export default function SettingsPage() {
               )}
             </div>
           </div>
+          )}
 
           {/* Notifications */}
           <div className="bg-white shadow rounded-lg overflow-hidden">
@@ -546,7 +570,7 @@ export default function SettingsPage() {
                   type="checkbox"
                   checked={formData.notify_replies}
                   onChange={(e) => setFormData(prev => ({ ...prev, notify_replies: e.target.checked }))}
-                  className="h-4 w-4 mt-0.5 text-[#0d1e26] focus:ring-[#0d1e26] border-gray-300 rounded"
+                  className="h-4 w-4 mt-0.5 text-[var(--color-primary)] focus:ring-[var(--color-primary)] border-gray-300 rounded"
                 />
                 <div>
                   <span className="text-sm font-medium text-gray-900">Reply notifications</span>
@@ -560,25 +584,11 @@ export default function SettingsPage() {
           <div className="bg-white shadow rounded-lg overflow-hidden">
             <div className="px-6 py-5 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Interests</h2>
-              <p className="mt-1 text-sm text-gray-500">Select your main interests within TIPA</p>
+              <p className="mt-1 text-sm text-gray-500">Select the topics you care about most in your club.</p>
             </div>
             <div className="px-6 py-5">
               <div className="space-y-2">
-                {[
-                  { value: 'flying', label: 'Flying' },
-                  { value: 'aircraft-ownership', label: 'Aircraft Ownership' },
-                  { value: 'training', label: 'Training & Education' },
-                  { value: 'safety', label: 'Safety & Proficiency' },
-                  { value: 'community', label: 'Community & Networking' },
-                  { value: 'events', label: 'Events & Social Activities' },
-                  { value: 'advocacy', label: 'Aviation Advocacy' },
-                  { value: 'island-operations', label: 'Island Operations / YTZ' },
-                  { value: 'aircraft-maintenance', label: 'Aircraft Maintenance' },
-                  { value: 'mentoring', label: 'Mentoring' },
-                  { value: 'hangar-storage', label: 'Hangar/Storage' },
-                  { value: 'volunteer-flying-public-benefit', label: 'Volunteer Flying (Public Benefit)' },
-                  { value: 'other', label: 'Other' },
-                ].map((interest) => (
+                {COMMON_INTEREST_OPTIONS.map((interest) => (
                   <label key={interest.value} className="flex items-center">
                     <input
                       type="checkbox"
@@ -586,7 +596,7 @@ export default function SettingsPage() {
                       value={interest.value}
                       checked={Array.isArray(formData.interests) && formData.interests.includes(interest.value)}
                       onChange={(e) => handleInterestChange(interest.value, e.target.checked)}
-                      className="h-4 w-4 text-[#0d1e26] focus:ring-[#0d1e26] border-gray-300 rounded"
+                      className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] border-gray-300 rounded"
                     />
                     <span className="ml-2 text-sm text-gray-700">{interest.label}</span>
                   </label>
@@ -596,6 +606,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Aviation Information */}
+          {showAviationSection && (
           <div className="bg-white shadow rounded-lg overflow-hidden">
             <div className="px-6 py-5 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Aviation Information</h2>
@@ -603,6 +614,7 @@ export default function SettingsPage() {
             </div>
             <div className="px-6 py-5 space-y-6">
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                {showPilotLicenseType && (
                 <div>
                   <label htmlFor="pilot_license_type" className="block text-sm font-medium text-gray-700 mb-1.5">
                     Pilot License Type
@@ -612,7 +624,7 @@ export default function SettingsPage() {
                     id="pilot_license_type"
                     value={formData.pilot_license_type}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   >
                     <option value="">Select...</option>
                     <option value="student">Student Pilot</option>
@@ -622,7 +634,9 @@ export default function SettingsPage() {
                     <option value="other">Other</option>
                   </select>
                 </div>
+                )}
 
+                {showAircraftType && (
                 <div>
                   <label htmlFor="aircraft_type" className="block text-sm font-medium text-gray-700 mb-1.5">
                     Aircraft Type
@@ -634,10 +648,12 @@ export default function SettingsPage() {
                     value={formData.aircraft_type}
                     onChange={handleChange}
                     placeholder="e.g., Cessna 172, Piper Cherokee"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   />
                 </div>
+                )}
 
+                {showCallSign && (
                 <div>
                   <label htmlFor="call_sign" className="block text-sm font-medium text-gray-700 mb-1.5">
                     Call Sign
@@ -649,10 +665,12 @@ export default function SettingsPage() {
                     value={formData.call_sign}
                     onChange={handleChange}
                     placeholder="e.g., C-GABC"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   />
                 </div>
+                )}
 
+                {showFlightFrequency && (
                 <div>
                   <label htmlFor="how_often_fly_from_ytz" className="block text-sm font-medium text-gray-700 mb-1.5">
                     How Often Do You Fly From YTZ?
@@ -662,7 +680,7 @@ export default function SettingsPage() {
                     id="how_often_fly_from_ytz"
                     value={formData.how_often_fly_from_ytz}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   >
                     <option value="">Select...</option>
                     <option value="daily">Daily</option>
@@ -672,10 +690,11 @@ export default function SettingsPage() {
                     <option value="rarely">Rarely</option>
                   </select>
                 </div>
+                )}
               </div>
 
               {/* Student Pilot Fields */}
-              {formData.pilot_license_type === 'student' && (
+              {showStudentPilotFields && formData.pilot_license_type === 'student' && (
                 <div className="pt-4 border-t border-gray-200">
                   <h3 className="text-sm font-semibold text-gray-900 mb-4">Student Pilot Information</h3>
                   <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -690,7 +709,7 @@ export default function SettingsPage() {
                         value={formData.flight_school}
                         onChange={handleChange}
                         placeholder="e.g., Island Air, Freelance"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                       />
                     </div>
                     <div>
@@ -704,7 +723,7 @@ export default function SettingsPage() {
                         value={formData.instructor_name}
                         onChange={handleChange}
                         placeholder="e.g., Jane Smith"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                       />
                     </div>
                   </div>
@@ -713,6 +732,7 @@ export default function SettingsPage() {
 
             </div>
           </div>
+          )}
 
           {/* Account Security */}
           <div className="bg-white shadow rounded-lg overflow-hidden">
@@ -730,7 +750,7 @@ export default function SettingsPage() {
                 </div>
                 <Link
                   href="/change-password"
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#0d1e26] hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0d1e26] transition-colors"
+                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[var(--color-primary)] hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-primary)] transition-colors"
                 >
                   Change Password
                 </Link>
@@ -743,14 +763,14 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={() => router.back()}
-              className="px-6 py-2.5 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0d1e26] transition-colors"
+              className="px-6 py-2.5 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-primary)] transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="px-6 py-2.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#0d1e26] hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0d1e26] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-6 py-2.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[var(--color-primary)] hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {saving ? (
                 <span className="flex items-center">

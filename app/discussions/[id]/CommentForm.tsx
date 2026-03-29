@@ -100,7 +100,7 @@ export default function CommentForm({ threadId }: { threadId: string }) {
       <div
         className={`rounded-lg border transition-all duration-150 ${
           isActive
-            ? 'border-[#0d1e26] shadow-[0_0_0_3px_rgba(13,30,38,0.08)] bg-white'
+            ? 'border-[var(--color-primary)] shadow-[0_0_0_3px_rgba(13,30,38,0.08)] bg-white'
             : 'border-gray-300 bg-white hover:border-gray-400'
         }`}
       >
@@ -202,7 +202,7 @@ export default function CommentForm({ threadId }: { threadId: string }) {
           <button
             type="submit"
             disabled={loading || !content.trim()}
-            className="px-5 py-1.5 bg-[#0d1e26] text-white text-sm font-semibold rounded-lg hover:bg-[#0a171c] transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+            className="px-5 py-1.5 bg-[var(--color-primary)] text-white text-sm font-semibold rounded-lg hover:bg-[#0a171c] transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
           >
             {loading ? 'Posting...' : 'Post'}
           </button>

@@ -3,13 +3,12 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  ArrowLeft,
   Users,
   FileText,
   Calendar,
   CreditCard,
   BarChart3,
-  Settings,
+  BookOpen,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -18,7 +17,7 @@ const NAV_ITEMS = [
   { href: '/admin/events', label: 'Events', icon: Calendar },
   { href: '/admin/payments', label: 'Payments', icon: CreditCard },
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/admin/settings', label: 'Settings', icon: Settings },
+  { href: '/admin/pages', label: 'Pages', icon: BookOpen },
 ] as const
 
 function NavLink({
@@ -37,7 +36,7 @@ function NavLink({
       href={href}
       className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
         isActive
-          ? 'bg-[#0d1e26] text-white font-medium'
+          ? 'bg-[var(--color-primary)] text-white font-medium'
           : 'text-gray-700 hover:bg-gray-100'
       }`}
     >
@@ -49,7 +48,6 @@ function NavLink({
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-
   const isActive = (path: string) => pathname === path
 
   return (
@@ -68,7 +66,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 href={href}
                 className={`flex-shrink-0 rounded-md px-2.5 py-1.5 text-sm font-medium flex items-center justify-center whitespace-nowrap transition-colors ${
                   isActive(href)
-                    ? 'bg-[#0d1e26] text-white'
+                    ? 'bg-[var(--color-primary)] text-white'
                     : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >

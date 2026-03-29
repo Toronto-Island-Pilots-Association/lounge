@@ -2,34 +2,86 @@ import type { Metadata } from "next";
 import { Inter_Tight } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
+import { headers } from "next/headers";
 import "./globals.css";
 import NavbarWrapper from "@/components/NavbarWrapper";
+import PoweredByBadge from "@/components/PoweredByBadge";
+import GuestBanner, {
+  shouldShowOrgGuestBanner,
+} from "@/app/components/GuestBanner";
+import { fetchPublicOrgBranding, iconMimeTypeForUrl } from "@/lib/org-public-branding";
 
 const interTight = Inter_Tight({
   variable: "--font-inter-tight",
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "Toronto Island Pilots Association",
-  description: "TIPA is dedicated to the preservation and promotion of general aviation at Billy Bishop Toronto City Airport (CYTZ).",
-  icons: {
-    icon: '/favicon.ico',
+const platformIcons: Metadata["icons"] = {
+  icon: {
+    url: "/platform-favicon.svg",
+    type: "image/svg+xml",
   },
+  shortcut: "/platform-favicon.svg",
 };
 
-export default function RootLayout({
+export async function generateMetadata(): Promise<Metadata> {
+  const h = await headers();
+  const domainType = h.get("x-domain-type") ?? "org";
+  if (domainType !== "org") {
+    return { icons: platformIcons };
+  }
+  const orgId = h.get("x-org-id");
+  if (!orgId) return { icons: platformIcons };
+  const b = await fetchPublicOrgBranding(orgId);
+  const title = b.displayName || b.name || "ClubLounge";
+  const siteIcon = b.siteIconUrl;
+  const icons: Metadata["icons"] =
+    !siteIcon
+      ? platformIcons
+      : siteIcon.startsWith("/")
+        ? { icon: siteIcon }
+        : {
+            icon: {
+              url: siteIcon,
+              type: iconMimeTypeForUrl(siteIcon),
+            },
+          };
+  return {
+    title,
+    description: `Member portal for ${title}.`,
+    icons,
+  };
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headersList = await headers();
+  const domainType = headersList.get("x-domain-type") ?? "org";
+  const pathname = headersList.get("x-pathname") ?? "/";
+  const isOrg = domainType === "org";
+  const guestPreviewBar = isOrg && (await shouldShowOrgGuestBanner());
+  const hideOrgChrome = isOrg && guestPreviewBar && pathname === "/";
+
+  const orgBodyPad = guestPreviewBar
+    ? "pt-36 sm:pt-40 md:pt-0"
+    : "pt-16 sm:pt-20 md:pt-0";
+
   return (
     <html lang="en">
       <body
-        className={`${interTight.variable} antialiased pt-16 sm:pt-20 md:pt-0`}
+        className={`${interTight.variable} antialiased ${isOrg && !hideOrgChrome ? orgBodyPad : ""}`}
       >
-        <NavbarWrapper />
+        {isOrg && guestPreviewBar && !hideOrgChrome && (
+          <div className="fixed top-0 left-0 right-0 z-[70] md:static">
+            <GuestBanner />
+          </div>
+        )}
+        {isOrg && !hideOrgChrome && <NavbarWrapper guestPreviewBar={guestPreviewBar} />}
         {children}
+        {isOrg && !hideOrgChrome && <PoweredByBadge />}
         <SpeedInsights />
         <Analytics />
       </body>

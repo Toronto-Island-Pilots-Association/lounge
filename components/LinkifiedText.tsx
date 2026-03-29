@@ -123,7 +123,7 @@ export default function LinkifiedText({ text, className = '' }: LinkifiedTextPro
             href={urlData.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#0d1e26] underline hover:text-[#0a171c] break-all"
+            className="text-[var(--color-primary)] underline hover:text-[#0a171c] break-all"
           >
             {urlData.displayUrl}
           </a>

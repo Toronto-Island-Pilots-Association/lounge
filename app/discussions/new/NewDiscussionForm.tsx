@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { DiscussionCategory } from '@/types/database'
 import MentionInput from '@/components/MentionInput'
 import ThreadImageUpload from '@/components/ThreadImageUpload'
-import { CATEGORY_LABELS, CATEGORY_DESCRIPTIONS, ALL_CATEGORIES, CATEGORY_PLACEHOLDERS, CATEGORY_TITLE_PLACEHOLDERS } from '../constants'
+import { CATEGORY_PLACEHOLDERS, CATEGORY_TITLE_PLACEHOLDERS, OrgCategoryConfig } from '../constants'
 
 const MAX_THREAD_IMAGES = 5
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
@@ -44,7 +44,7 @@ interface ClassifiedFields {
   hangarLocation?: string
 }
 
-function NewDiscussionFormContent() {
+function NewDiscussionFormContent({ categoryConfig }: { categoryConfig: OrgCategoryConfig }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [title, setTitle] = useState('')
@@ -101,7 +101,8 @@ function NewDiscussionFormContent() {
   useEffect(() => {
     const categoryParam = searchParams.get('category')
     if (categoryParam) {
-      if (ALL_CATEGORIES.includes(categoryParam as DiscussionCategory)) {
+      const allOrgCategories = [...categoryConfig.discussionCategories, ...categoryConfig.classifiedCategories]
+      if (allOrgCategories.includes(categoryParam as DiscussionCategory)) {
         setCategory(categoryParam as DiscussionCategory)
       }
     }
@@ -218,17 +219,17 @@ function NewDiscussionFormContent() {
           value={category}
           onChange={(e) => setCategory(e.target.value as DiscussionCategory)}
           required
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-transparent"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
         >
-          {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+          {[...categoryConfig.discussionCategories, ...categoryConfig.classifiedCategories].map((value) => (
             <option key={value} value={value}>
-              {label}
+              {categoryConfig.categoryLabels[value]}
             </option>
           ))}
         </select>
-        {CATEGORY_DESCRIPTIONS[category] && CATEGORY_DESCRIPTIONS[category] !== CATEGORY_LABELS[category] && (
+        {categoryConfig.categoryDescriptions[category] && categoryConfig.categoryDescriptions[category] !== categoryConfig.categoryLabels[category] && (
           <p className="mt-2 text-sm text-gray-600">
-            {CATEGORY_DESCRIPTIONS[category]}
+            {categoryConfig.categoryDescriptions[category]}
           </p>
         )}
       </div>
@@ -243,7 +244,7 @@ function NewDiscussionFormContent() {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           required
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-transparent"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
           placeholder={CATEGORY_TITLE_PLACEHOLDERS[category] ?? 'Enter discussion title...'}
         />
       </div>
@@ -252,7 +253,7 @@ function NewDiscussionFormContent() {
       {useStructuredForm && category === 'gear_for_sale' && (
         <div className="mb-6 space-y-4 p-6 bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-xl border border-gray-200 shadow-sm">
           <div className="flex items-center gap-2 mb-5">
-            <div className="w-1 h-6 bg-[#0d1e26] rounded-full"></div>
+            <div className="w-1 h-6 bg-[var(--color-primary)] rounded-full"></div>
             <h3 className="text-base font-semibold text-gray-900">Item Details</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -266,7 +267,7 @@ function NewDiscussionFormContent() {
                 value={classifiedFields.itemName || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, itemName: e.target.value })}
                 required
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
                 placeholder="e.g., Bose A20 Headset"
               />
             </div>
@@ -279,7 +280,7 @@ function NewDiscussionFormContent() {
                 value={classifiedFields.condition || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, condition: e.target.value })}
                 required
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
               >
                 <option value="">Select condition...</option>
                 <option value="New">New</option>
@@ -299,7 +300,7 @@ function NewDiscussionFormContent() {
                 value={classifiedFields.price || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, price: e.target.value })}
                 required
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
                 placeholder="e.g., $500 or Best Offer"
               />
             </div>
@@ -312,7 +313,7 @@ function NewDiscussionFormContent() {
                 id="modelYear"
                 value={classifiedFields.modelYear || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, modelYear: e.target.value })}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
                 placeholder="e.g., A20, 2020"
               />
             </div>
@@ -325,7 +326,7 @@ function NewDiscussionFormContent() {
                 id="hoursUsed"
                 value={classifiedFields.hoursUsed || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, hoursUsed: e.target.value })}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
                 placeholder="e.g., 500 hours"
               />
             </div>
@@ -338,7 +339,7 @@ function NewDiscussionFormContent() {
                 id="location"
                 value={classifiedFields.location || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, location: e.target.value })}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
                 placeholder="e.g., YTZ or Toronto"
               />
             </div>
@@ -350,7 +351,7 @@ function NewDiscussionFormContent() {
                 id="shippingAvailable"
                 value={classifiedFields.shippingAvailable || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, shippingAvailable: e.target.value })}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
               >
                 <option value="">Select...</option>
                 <option value="Yes">Yes</option>
@@ -368,7 +369,7 @@ function NewDiscussionFormContent() {
                 value={classifiedFields.contact || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, contact: e.target.value })}
                 required
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
                 placeholder="Email or phone number"
               />
             </div>
@@ -379,7 +380,7 @@ function NewDiscussionFormContent() {
       {useStructuredForm && category === 'instructor_availability' && (
         <div className="mb-6 space-y-4 p-6 bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-xl border border-gray-200 shadow-sm">
           <div className="flex items-center gap-2 mb-5">
-            <div className="w-1 h-6 bg-[#0d1e26] rounded-full"></div>
+            <div className="w-1 h-6 bg-[var(--color-primary)] rounded-full"></div>
             <h3 className="text-base font-semibold text-gray-900">Instructor Details</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -393,7 +394,7 @@ function NewDiscussionFormContent() {
                 value={classifiedFields.certifications || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, certifications: e.target.value })}
                 required
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
                 placeholder="e.g., CFI, CFII, MEI"
               />
             </div>
@@ -407,7 +408,7 @@ function NewDiscussionFormContent() {
                 value={classifiedFields.availability || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, availability: e.target.value })}
                 required
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
                 placeholder="e.g., Weekends, Evenings"
               />
             </div>
@@ -421,7 +422,7 @@ function NewDiscussionFormContent() {
                 value={classifiedFields.rates || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, rates: e.target.value })}
                 required
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
                 placeholder="e.g., $75/hour"
               />
             </div>
@@ -434,7 +435,7 @@ function NewDiscussionFormContent() {
                 id="experience"
                 value={classifiedFields.experience || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, experience: e.target.value })}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
                 placeholder="e.g., 10+ years, 2000+ hours"
               />
             </div>
@@ -447,7 +448,7 @@ function NewDiscussionFormContent() {
                 id="specializations"
                 value={classifiedFields.specializations || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, specializations: e.target.value })}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
                 placeholder="e.g., IFR, Multi-engine, Tailwheel"
               />
             </div>
@@ -460,7 +461,7 @@ function NewDiscussionFormContent() {
                 id="aircraftTypes"
                 value={classifiedFields.aircraftTypes || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, aircraftTypes: e.target.value })}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
                 placeholder="e.g., C172, PA28, C182"
               />
             </div>
@@ -473,7 +474,7 @@ function NewDiscussionFormContent() {
                 id="baseLocation"
                 value={classifiedFields.baseLocation || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, baseLocation: e.target.value })}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
                 placeholder="e.g., YTZ, CYTZ"
               />
             </div>
@@ -487,7 +488,7 @@ function NewDiscussionFormContent() {
                 value={classifiedFields.contact || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, contact: e.target.value })}
                 required
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
                 placeholder="Email or phone number"
               />
             </div>
@@ -498,7 +499,7 @@ function NewDiscussionFormContent() {
       {useStructuredForm && category === 'aircraft_shares' && (
         <div className="mb-6 space-y-4 p-6 bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-xl border border-gray-200 shadow-sm">
           <div className="flex items-center gap-2 mb-5">
-            <div className="w-1 h-6 bg-[#0d1e26] rounded-full"></div>
+            <div className="w-1 h-6 bg-[var(--color-primary)] rounded-full"></div>
             <h3 className="text-base font-semibold text-gray-900">Aircraft Share Details</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -512,7 +513,7 @@ function NewDiscussionFormContent() {
                 value={classifiedFields.aircraftType || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, aircraftType: e.target.value })}
                 required
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
                 placeholder="e.g., C172, PA28"
               />
             </div>
@@ -526,7 +527,7 @@ function NewDiscussionFormContent() {
                 value={classifiedFields.shareDetails || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, shareDetails: e.target.value })}
                 required
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
                 placeholder="e.g., 1/8 share, Block time available"
               />
             </div>
@@ -539,7 +540,7 @@ function NewDiscussionFormContent() {
                 id="year"
                 value={classifiedFields.year || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, year: e.target.value })}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
                 placeholder="e.g., 2015"
               />
             </div>
@@ -553,7 +554,7 @@ function NewDiscussionFormContent() {
                 value={classifiedFields.price || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, price: e.target.value })}
                 required
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
                 placeholder="e.g., $15,000 or $150/hour"
               />
             </div>
@@ -566,7 +567,7 @@ function NewDiscussionFormContent() {
                 id="totalTime"
                 value={classifiedFields.totalTime || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, totalTime: e.target.value })}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
                 placeholder="e.g., 2500 hours"
               />
             </div>
@@ -579,7 +580,7 @@ function NewDiscussionFormContent() {
                 id="engineTime"
                 value={classifiedFields.engineTime || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, engineTime: e.target.value })}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
                 placeholder="e.g., 500 SMOH"
               />
             </div>
@@ -592,7 +593,7 @@ function NewDiscussionFormContent() {
                 id="avionics"
                 value={classifiedFields.avionics || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, avionics: e.target.value })}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
                 placeholder="e.g., Garmin G1000, IFR equipped"
               />
             </div>
@@ -605,7 +606,7 @@ function NewDiscussionFormContent() {
                 id="annualDue"
                 value={classifiedFields.annualDue || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, annualDue: e.target.value })}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
                 placeholder="e.g., March 2025"
               />
             </div>
@@ -618,7 +619,7 @@ function NewDiscussionFormContent() {
                 id="monthlyFees"
                 value={classifiedFields.monthlyFees || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, monthlyFees: e.target.value })}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
                 placeholder="e.g., $200/month"
               />
             </div>
@@ -631,7 +632,7 @@ function NewDiscussionFormContent() {
                 id="location"
                 value={classifiedFields.location || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, location: e.target.value })}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
                 placeholder="e.g., YTZ or nearby airport"
               />
             </div>
@@ -644,7 +645,7 @@ function NewDiscussionFormContent() {
                 id="hangarLocation"
                 value={classifiedFields.hangarLocation || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, hangarLocation: e.target.value })}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
                 placeholder="e.g., YTZ Hangar 3"
               />
             </div>
@@ -658,7 +659,7 @@ function NewDiscussionFormContent() {
                 value={classifiedFields.contact || ''}
                 onChange={(e) => setClassifiedFields({ ...classifiedFields, contact: e.target.value })}
                 required
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26] transition-all shadow-sm hover:shadow-md"
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
                 placeholder="Email or phone number"
               />
             </div>
@@ -671,7 +672,7 @@ function NewDiscussionFormContent() {
           {useStructuredForm ? 'Additional Details (Optional)' : 'Description'}
         </label>
         {/* Single input-style box: images + content + footer with attach & guidelines */}
-        <div className="rounded-lg border border-gray-300 bg-white hover:border-gray-400 focus-within:border-[#0d1e26] focus-within:shadow-[0_0_0_3px_rgba(13,30,38,0.08)] transition-all duration-150">
+        <div className="rounded-lg border border-gray-300 bg-white hover:border-gray-400 focus-within:border-[var(--color-primary)] focus-within:shadow-[0_0_0_3px_rgba(13,30,38,0.08)] transition-all duration-150">
           {/* Image thumbnails inside the input */}
           {imageUrls.length > 0 && (
             <div className="flex flex-wrap gap-2 px-3 pt-2 pb-1 border-b border-gray-100">
@@ -774,7 +775,7 @@ function NewDiscussionFormContent() {
         <button
           type="submit"
           disabled={loading}
-          className="px-6 py-2 bg-[#0d1e26] text-white font-semibold rounded-lg hover:bg-[#0a171c] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-6 py-2 bg-[var(--color-primary)] text-white font-semibold rounded-lg hover:bg-[#0a171c] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? 'Creating...' : 'Start Discussion'}
         </button>
@@ -790,7 +791,7 @@ function NewDiscussionFormContent() {
   )
 }
 
-export default function NewDiscussionForm() {
+export default function NewDiscussionForm({ categoryConfig }: { categoryConfig: OrgCategoryConfig }) {
   return (
     <Suspense fallback={
       <div className="bg-white shadow rounded-lg p-6">
@@ -802,7 +803,7 @@ export default function NewDiscussionForm() {
         </div>
       </div>
     }>
-      <NewDiscussionFormContent />
+      <NewDiscussionFormContent categoryConfig={categoryConfig} />
     </Suspense>
   )
 }

@@ -6,29 +6,80 @@ import Link from 'next/link'
 import Loading from '@/components/Loading'
 import PasswordInput from '@/components/PasswordInput'
 import { COUNTRIES, getStatesProvinces } from './constants'
-import type { MembershipLevelKey } from '@/lib/settings'
+import type { MembershipLevelKey, SignupField } from '@/lib/settings-shared'
+import { COMMON_INTEREST_OPTIONS } from '@/lib/club-options'
 
-const DEFAULT_FEES: Record<MembershipLevelKey, number> = {
-  Full: 45,
-  Student: 25,
-  Associate: 25,
-  Corporate: 125,
-  Honorary: 0,
+type PublicMembershipLevel = {
+  key: string
+  label: string
+  fee: number
+  enabled: boolean
 }
 
+const DEFAULT_LEVELS: PublicMembershipLevel[] = [
+  { key: 'full', label: 'Regular', fee: 45, enabled: true },
+  { key: 'associate', label: 'Associate', fee: 25, enabled: true },
+  { key: 'honorary', label: 'Honorary', fee: 0, enabled: true },
+]
+
 function BecomeMemberForm() {
-  const [membershipFees, setMembershipFees] = useState<Record<MembershipLevelKey, number>>(DEFAULT_FEES)
+  const [membershipFees, setMembershipFees] = useState<Record<MembershipLevelKey, number>>(
+    Object.fromEntries(DEFAULT_LEVELS.map(level => [level.key, level.fee])),
+  )
+  const [signupFields, setSignupFields] = useState<SignupField[] | null>(null)
+  const [enabledLevels, setEnabledLevels] = useState<Record<MembershipLevelKey, boolean> | null>(null)
+  const [membershipLevels, setMembershipLevels] = useState<PublicMembershipLevel[]>(DEFAULT_LEVELS)
+  const [orgName, setOrgName] = useState<string>('')
+  const [bylawsUrl, setBylawsUrl] = useState<string | null>(null)
+  const [membershipPolicyUrl, setMembershipPolicyUrl] = useState<string | null>(null)
+  const [feedbackUrl, setFeedbackUrl] = useState<string | null>(null)
+  const [orgConfigReady, setOrgConfigReady] = useState(false)
+
+  // Helper: is a signup field section enabled?
+  const fieldEnabled = (key: string) => {
+    if (!signupFields) return false
+    return signupFields.find(f => f.key === key)?.enabled ?? false
+  }
+  const fieldRequired = (key: string) => {
+    if (!signupFields) return false
+    return signupFields.find(f => f.key === key)?.required ?? false
+  }
 
   useEffect(() => {
     let cancelled = false
-    fetch('/api/settings/membership-fees/public')
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('Failed to load fees'))))
-      .then((data: { fees: Record<MembershipLevelKey, number> }) => {
-        if (!cancelled && data.fees) setMembershipFees(data.fees)
+    fetch('/api/org/config')
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => {
+        if (cancelled) return
+        if (data.membership?.fees) setMembershipFees(data.membership.fees)
+        if (data.signupFields)     setSignupFields(data.signupFields)
+        if (data.membership?.enabledLevels) setEnabledLevels(data.membership.enabledLevels)
+        if (Array.isArray(data.membership?.levels) && data.membership.levels.length > 0) {
+          setMembershipLevels(data.membership.levels)
+        }
+        if (data.org?.name)        setOrgName(data.org.displayName || data.org.name)
+        if (data.org?.bylawsUrl)           setBylawsUrl(data.org.bylawsUrl)
+        if (data.org?.membershipPolicyUrl) setMembershipPolicyUrl(data.org.membershipPolicyUrl)
+        if (data.org?.feedbackUrl)         setFeedbackUrl(data.org.feedbackUrl)
+        setOrgConfigReady(true)
       })
-      .catch(() => { /* keep default fees */ })
+      .catch(() => {
+        setOrgConfigReady(true)
+      })
     return () => { cancelled = true }
   }, [])
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string | string[]>>({})
+
+  const handleCustomFieldChange = (key: string, value: string | string[]) =>
+    setCustomFieldValues(p => ({ ...p, [key]: value }))
+
+  const handleCustomCheckboxGroupChange = (key: string, option: string, checked: boolean) => {
+    setCustomFieldValues(p => {
+      const current = Array.isArray(p[key]) ? (p[key] as string[]) : []
+      return { ...p, [key]: checked ? [...current, option] : current.filter(v => v !== option) }
+    })
+  }
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -43,11 +94,6 @@ function BecomeMemberForm() {
     country: '',
     // Membership Application
     membershipClass: '',
-    // COPA Membership
-    isCopaMember: '',
-    joinCopaFlight32: '',
-    copaMembershipNumber: '',
-    // Statement of Interest
     statementOfInterest: '',
     // Interests (array)
     interests: [] as string[],
@@ -56,15 +102,7 @@ function BecomeMemberForm() {
     agreedToGovernancePolicy: false,
     understandsApprovalProcess: false,
     agreedToElectronicInfo: false,
-    // Existing fields
-    pilotLicenseType: '',
-    aircraftType: '',
-    callSign: '',
-    howOftenFlyFromYTZ: '',
     howDidYouHear: '',
-    flightSchool: '',
-    instructorName: '',
-    studentNotes: '',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -72,6 +110,7 @@ function BecomeMemberForm() {
   const [userEmail, setUserEmail] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
+  const visibleMembershipLevels = membershipLevels.filter(level => enabledLevels?.[level.key] ?? level.enabled)
 
   // Check for error in URL params (e.g., from Google OAuth redirect)
   useEffect(() => {
@@ -88,20 +127,10 @@ function BecomeMemberForm() {
     const value = target.type === 'checkbox' ? (target as HTMLInputElement).checked : target.value
     const name = target.name
 
-    // Reset conditional fields when parent field changes
-    if (name === 'isCopaMember' && value !== 'yes') {
-      setFormData(prev => ({
-        ...prev,
-        [name]: String(value),
-        joinCopaFlight32: '',
-        copaMembershipNumber: '',
-      }))
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value,
-      }))
-    }
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+    }))
   }
 
   const handleInterestChange = (interestValue: string, checked: boolean) => {
@@ -123,13 +152,52 @@ function BecomeMemberForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    
-    // Validate interests
-    if (!Array.isArray(formData.interests) || formData.interests.length === 0) {
+    if (!orgConfigReady) {
+      setError('Please wait for the form to finish loading.')
+      return
+    }
+    if (
+      !formData.agreedToBylaws ||
+      !formData.agreedToGovernancePolicy ||
+      !formData.understandsApprovalProcess ||
+      !formData.agreedToElectronicInfo
+    ) {
+      setError('Please accept all acknowledgements')
+      return
+    }
+
+    // Validate interests (only if the field is enabled)
+    if (fieldEnabled('interests') && (!Array.isArray(formData.interests) || formData.interests.length === 0)) {
       setError('Please select at least one interest')
       return
     }
-    
+    if (fieldEnabled('how_did_you_hear') && fieldRequired('how_did_you_hear') && !String(formData.howDidYouHear || '').trim()) {
+      setError('Please tell us how you heard about us')
+      return
+    }
+    const customDefs = signupFields?.filter(f => f.isCustom && f.enabled) ?? []
+    for (const f of customDefs) {
+      if (!f.required) continue
+      const v = customFieldValues[f.key]
+      if (f.type === 'checkbox_group') {
+        if (!Array.isArray(v) || v.length === 0) {
+          setError(`Please complete: ${f.label}`)
+          return
+        }
+      } else if (f.type === 'boolean') {
+        if (v !== 'true') {
+          setError(`Please complete: ${f.label}`)
+          return
+        }
+      } else {
+        const s = v === undefined || v === null ? '' : String(v)
+        if (!s.trim()) {
+          setError(`Please complete: ${f.label}`)
+          return
+        }
+      }
+    }
+
     setLoading(true)
 
     try {
@@ -139,43 +207,26 @@ function BecomeMemberForm() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          customFields: customFieldValues,
           email: formData.email,
           password: formData.password,
           fullName: `${formData.firstName} ${formData.lastName}`.trim(),
           firstName: formData.firstName,
           lastName: formData.lastName,
           phone: formData.phone,
-          // Mailing Address
           street: formData.street,
           city: formData.city,
           provinceState: formData.provinceState,
           postalZipCode: formData.postalZipCode,
           country: formData.country,
-          // Membership Application
           membershipClass: formData.membershipClass,
-          // COPA Membership
-          isCopaMember: formData.isCopaMember,
-          joinCopaFlight32: formData.joinCopaFlight32,
-          copaMembershipNumber: formData.copaMembershipNumber,
-          // Statement of Interest
           statementOfInterest: formData.statementOfInterest,
-          // Interests
           interests: formData.interests,
-          // Acknowledgements
           agreedToBylaws: formData.agreedToBylaws,
           agreedToGovernancePolicy: formData.agreedToGovernancePolicy,
           understandsApprovalProcess: formData.understandsApprovalProcess,
           agreedToElectronicInfo: formData.agreedToElectronicInfo,
-          // Existing fields
-          pilotLicenseType: formData.pilotLicenseType,
-          aircraftType: formData.aircraftType,
-          callSign: formData.callSign,
-          howOftenFlyFromYTZ: formData.howOftenFlyFromYTZ,
           howDidYouHear: formData.howDidYouHear,
-          isStudentPilot: formData.pilotLicenseType === 'student' || formData.membershipClass === 'student',
-          flightSchool: (formData.pilotLicenseType === 'student' || formData.membershipClass === 'student') ? formData.flightSchool : '',
-          instructorName: (formData.pilotLicenseType === 'student' || formData.membershipClass === 'student') ? formData.instructorName : '',
-          studentNotes: formData.studentNotes || '',
         }),
       })
 
@@ -201,24 +252,15 @@ function BecomeMemberForm() {
         postalZipCode: '',
         country: '',
         membershipClass: '',
-        isCopaMember: '',
-        joinCopaFlight32: '',
-        copaMembershipNumber: '',
         statementOfInterest: '',
         interests: [],
         agreedToBylaws: false,
         agreedToGovernancePolicy: false,
         understandsApprovalProcess: false,
         agreedToElectronicInfo: false,
-        pilotLicenseType: '',
-        aircraftType: '',
-        callSign: '',
-        howOftenFlyFromYTZ: '',
         howDidYouHear: '',
-        flightSchool: '',
-        instructorName: '',
-        studentNotes: '',
       })
+      setCustomFieldValues({})
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -233,15 +275,17 @@ function BecomeMemberForm() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Become a Member
           </h1>
-          <p className="text-gray-600">
-            Join the Toronto Island Pilots Association
-          </p>
+          {orgName && (
+            <p className="text-gray-600">
+              Join {orgName}
+            </p>
+          )}
         </div>
 
         {!success && (
           <p className="text-center text-sm text-gray-600 mb-6">
             Already have an account?{' '}
-            <Link href="/login" className="font-medium text-[#0d1e26] hover:text-[#416e82]">
+            <Link href="/login" className="font-medium text-[var(--color-primary)] hover:text-[#416e82]">
               Sign in
             </Link>
           </p>
@@ -266,7 +310,7 @@ function BecomeMemberForm() {
             <div className="mt-6">
               <Link
                 href="/login?redirectTo=%2Fadd-payment"
-                className="inline-block px-6 py-3 bg-[#0d1e26] text-white font-semibold rounded-lg hover:bg-[#0a171c] transition-colors"
+                className="inline-block px-6 py-3 bg-[var(--color-primary)] text-white font-semibold rounded-lg hover:bg-[#0a171c] transition-colors"
               >
                 Log in
               </Link>
@@ -294,7 +338,7 @@ function BecomeMemberForm() {
                   type="text"
                   required
                   autoComplete="given-name"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   value={formData.firstName}
                   onChange={handleChange}
                 />
@@ -309,7 +353,7 @@ function BecomeMemberForm() {
                   type="text"
                   required
                   autoComplete="family-name"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   value={formData.lastName}
                   onChange={handleChange}
                 />
@@ -324,29 +368,32 @@ function BecomeMemberForm() {
                   type="email"
                   required
                   autoComplete="email"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   value={formData.email}
                   onChange={handleChange}
                 />
               </div>
-              <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone Number
-                </label>
-                <input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  autoComplete="tel"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                  value={formData.phone}
-                  onChange={handleChange}
-                />
-              </div>
+              {fieldEnabled('phone') && (
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone Number {fieldRequired('phone') && <span className="text-red-500">*</span>}
+                  </label>
+                  <input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    autoComplete="tel"
+                    required={fieldRequired('phone')}
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
+                    value={formData.phone}
+                    onChange={handleChange}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Mailing Address */}
-            <div className="mt-4 pt-4 border-t border-gray-200">
+            {fieldEnabled('address') && <div className="mt-4 pt-4 border-t border-gray-200">
               <h3 className="text-md font-medium text-gray-900 mb-3">Mailing Address</h3>
               <div className="grid grid-cols-1 gap-4">
                 <div>
@@ -359,7 +406,7 @@ function BecomeMemberForm() {
                     type="text"
                     required
                     autoComplete="street-address"
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                     value={formData.street}
                     onChange={handleChange}
                   />
@@ -375,7 +422,7 @@ function BecomeMemberForm() {
                       type="text"
                       required
                       autoComplete="address-level2"
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                       value={formData.city}
                       onChange={handleChange}
                     />
@@ -389,7 +436,7 @@ function BecomeMemberForm() {
                       name="country"
                       required
                       autoComplete="country"
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                       value={formData.country}
                       onChange={(e) => {
                         handleChange(e)
@@ -419,7 +466,7 @@ function BecomeMemberForm() {
                       name="provinceState"
                       required
                       autoComplete="address-level1"
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                       value={formData.provinceState}
                       onChange={handleChange}
                     >
@@ -440,14 +487,14 @@ function BecomeMemberForm() {
                       type="text"
                       required
                       autoComplete="postal-code"
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                       value={formData.postalZipCode}
                       onChange={handleChange}
                     />
                   </div>
                 </div>
               </div>
-            </div>
+            </div>}
           </div>
 
           {/* Account Information */}
@@ -464,7 +511,7 @@ function BecomeMemberForm() {
                   required
                   minLength={6}
                   autoComplete="new-password"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   value={formData.password}
                   onChange={handleChange}
                 />
@@ -473,250 +520,34 @@ function BecomeMemberForm() {
           </div>
 
           {/* Membership Application */}
+          {fieldEnabled('membership_class') && (
           <div className="bg-gray-50 p-6 rounded-lg">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Membership Application</h2>
             <div>
               <label htmlFor="membershipClass" className="block text-sm font-medium text-gray-700 mb-1">
-                Applying for TIPA Membership Class: <span className="text-red-500">*</span>
+                Membership Class <span className="text-red-500">*</span>
               </label>
               <select
                 id="membershipClass"
                 name="membershipClass"
-                required
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                required={fieldRequired('membership_class')}
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                 value={formData.membershipClass}
                 onChange={handleChange}
               >
-                <option value="">Select...</option>
-                <option value="full">Full — ${membershipFees.Full}/year (free trial until Sept 1)</option>
-                <option value="student">Student — ${membershipFees.Student}/year (first 12-month free)</option>
-                <option value="associate">Associate — ${membershipFees.Associate}/year (free trial until Sept 1)</option>
-                <option value="corporate">Corporate — ${membershipFees.Corporate}/year</option>
+                <option value="">Select…</option>
+                {visibleMembershipLevels.map((level) => (
+                  <option key={level.key} value={level.key}>
+                    {level.label} — ${(membershipFees[level.key] ?? level.fee)}/year
+                  </option>
+                ))}
               </select>
             </div>
-
           </div>
-
-          {/* Aviation Information */}
-          <div className="bg-gray-50 p-6 rounded-lg">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Aviation Information</h2>
-            <p className="text-sm text-gray-600 mb-4">
-              Please provide your aviation background information:
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="pilotLicenseType" className="block text-sm font-medium text-gray-700 mb-1">
-                  Pilot License Type {formData.membershipClass === 'student' && <span className="text-red-500">*</span>}
-                </label>
-                <select
-                  id="pilotLicenseType"
-                  name="pilotLicenseType"
-                  required={formData.membershipClass === 'student'}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                  value={formData.pilotLicenseType}
-                  onChange={handleChange}
-                >
-                  <option value="">Select...</option>
-                  <option value="student">Student Pilot</option>
-                  <option value="private">Private Pilot</option>
-                  <option value="commercial">Commercial Pilot</option>
-                  <option value="atp">Airline Transport Pilot</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div>
-                <label htmlFor="aircraftType" className="block text-sm font-medium text-gray-700 mb-1">
-                  Aircraft Type
-                </label>
-                <input
-                  type="text"
-                  id="aircraftType"
-                  name="aircraftType"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                  value={formData.aircraftType}
-                  onChange={handleChange}
-                  placeholder="e.g., Cessna 172, Piper Cherokee"
-                />
-              </div>
-              <div>
-                <label htmlFor="callSign" className="block text-sm font-medium text-gray-700 mb-1">
-                  Call Sign
-                </label>
-                <input
-                  type="text"
-                  id="callSign"
-                  name="callSign"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                  value={formData.callSign}
-                  onChange={handleChange}
-                  placeholder="e.g., C-GABC"
-                />
-              </div>
-              <div>
-                <label htmlFor="howOftenFlyFromYTZ" className="block text-sm font-medium text-gray-700 mb-1">
-                  How Often Do You Fly From YTZ? {formData.membershipClass === 'student' && <span className="text-red-500">*</span>}
-                </label>
-                <select
-                  id="howOftenFlyFromYTZ"
-                  name="howOftenFlyFromYTZ"
-                  required={formData.membershipClass === 'student'}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                  value={formData.howOftenFlyFromYTZ}
-                  onChange={handleChange}
-                >
-                  <option value="">Select...</option>
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                  <option value="occasionally">Occasionally</option>
-                  <option value="rarely">Rarely</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Student Pilot Fields - Show if student membership class OR student pilot license type */}
-            {(formData.membershipClass === 'student' || formData.pilotLicenseType === 'student') && (
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <h3 className="text-md font-semibold text-gray-900 mb-4">Student Pilot Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="flightSchool" className="block text-sm font-medium text-gray-700 mb-1">
-                      Flight School / Training Organization {formData.membershipClass === 'student' && <span className="text-red-500">*</span>}
-                    </label>
-                    <input
-                      type="text"
-                      id="flightSchool"
-                      name="flightSchool"
-                      required={formData.membershipClass === 'student'}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                      value={formData.flightSchool}
-                      onChange={handleChange}
-                      placeholder="e.g., Island Air, Freelance, etc."
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="instructorName" className="block text-sm font-medium text-gray-700 mb-1">
-                      Instructor Name {formData.membershipClass === 'student' && <span className="text-red-500">*</span>}
-                    </label>
-                    <input
-                      type="text"
-                      id="instructorName"
-                      name="instructorName"
-                      required={formData.membershipClass === 'student'}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                      value={formData.instructorName}
-                      onChange={handleChange}
-                      placeholder="e.g., Jane Smith"
-                    />
-                  </div>
-                </div>
-                {formData.membershipClass === 'student' && (
-                  <div className="mt-4">
-                    <label htmlFor="studentNotes" className="block text-sm font-medium text-gray-700 mb-1">
-                      Additional Student Information (Optional)
-                    </label>
-                    <textarea
-                      id="studentNotes"
-                      name="studentNotes"
-                      rows={3}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                      value={formData.studentNotes || ''}
-                      onChange={handleChange}
-                      placeholder="e.g., Expected graduation date, current training stage, etc."
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* COPA Membership */}
-          <div className="bg-gray-50 p-6 rounded-lg">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">COPA Membership</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Are you a COPA Member? <span className="text-red-500">*</span>
-                </label>
-                <div className="flex gap-6">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="isCopaMember"
-                      value="yes"
-                      required
-                      className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
-                      checked={formData.isCopaMember === 'yes'}
-                      onChange={handleChange}
-                    />
-                    <span className="text-sm text-gray-700">Yes</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="isCopaMember"
-                      value="no"
-                      required
-                      className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
-                      checked={formData.isCopaMember === 'no'}
-                      onChange={handleChange}
-                    />
-                    <span className="text-sm text-gray-700">No</span>
-                  </label>
-                </div>
-              </div>
-
-              {formData.isCopaMember === 'yes' && (
-                <div className="pt-4 border-t border-gray-200 space-y-4">
-                  <div>
-                    <label htmlFor="copaMembershipNumber" className="block text-sm font-medium text-gray-700 mb-1">
-                      Please enter your COPA Membership Number <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="copaMembershipNumber"
-                      name="copaMembershipNumber"
-                      type="text"
-                      required={formData.isCopaMember === 'yes'}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
-                      value={formData.copaMembershipNumber}
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Would you like to join COPA Flight 32? COPA Flight 32 is free to join and a working partner with TIPA.
-                    </label>
-                    <div className="flex gap-6">
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          name="joinCopaFlight32"
-                          value="yes"
-                          className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
-                          checked={formData.joinCopaFlight32 === 'yes'}
-                          onChange={handleChange}
-                        />
-                        <span className="text-sm text-gray-700">Yes</span>
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          name="joinCopaFlight32"
-                          value="no"
-                          className="mr-2 text-[#0d1e26] focus:ring-[#0d1e26]"
-                          checked={formData.joinCopaFlight32 === 'no'}
-                          onChange={handleChange}
-                        />
-                        <span className="text-sm text-gray-700">No</span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          )}
 
           {/* Interests */}
+          {fieldEnabled('interests') && (
           <div className="bg-gray-50 p-6 rounded-lg">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Interests</h2>
             <div>
@@ -725,21 +556,7 @@ function BecomeMemberForm() {
                 <span className="text-xs text-gray-500 font-normal ml-2">(Select all that apply)</span>
               </label>
               <div className="space-y-2">
-                {[
-                  { value: 'flying', label: 'Flying' },
-                  { value: 'aircraft-ownership', label: 'Aircraft Ownership' },
-                  { value: 'training', label: 'Training & Education' },
-                  { value: 'safety', label: 'Safety & Proficiency' },
-                  { value: 'community', label: 'Community & Networking' },
-                  { value: 'events', label: 'Events & Social Activities' },
-                  { value: 'advocacy', label: 'Aviation Advocacy' },
-                  { value: 'island-operations', label: 'Island Operations / YTZ' },
-                  { value: 'aircraft-maintenance', label: 'Aircraft Maintenance' },
-                  { value: 'mentoring', label: 'Mentoring' },
-                  { value: 'hangar-storage', label: 'Hangar/Storage' },
-                  { value: 'volunteer-flying-public-benefit', label: 'Volunteer Flying (Public Benefit)' },
-                  { value: 'other', label: 'Other' },
-                ].map((interest) => (
+                {COMMON_INTEREST_OPTIONS.map((interest) => (
                   <label key={interest.value} className="flex items-center">
                     <input
                       type="checkbox"
@@ -747,7 +564,7 @@ function BecomeMemberForm() {
                       value={interest.value}
                       checked={Array.isArray(formData.interests) && formData.interests.includes(interest.value)}
                       onChange={(e) => handleInterestChange(interest.value, e.target.checked)}
-                      className="h-4 w-4 text-[#0d1e26] focus:ring-[#0d1e26] border-gray-300 rounded"
+                      className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] border-gray-300 rounded"
                     />
                     <span className="ml-2 text-sm text-gray-700">{interest.label}</span>
                   </label>
@@ -758,103 +575,207 @@ function BecomeMemberForm() {
               )}
             </div>
           </div>
+          )}
 
           {/* Statement of Interest */}
+          {fieldEnabled('statement_of_interest') && (
           <div className="bg-gray-50 p-6 rounded-lg">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Statement of Interest</h2>
             <div>
               <label htmlFor="statementOfInterest" className="block text-sm font-medium text-gray-700 mb-1">
-                Briefly describe your connection to YTZ or interest in supporting TIPA.
+                Briefly describe your interest in joining. {fieldRequired('statement_of_interest') && <span className="text-red-500">*</span>}
               </label>
               <textarea
                 id="statementOfInterest"
                 name="statementOfInterest"
                 rows={4}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0d1e26] focus:border-[#0d1e26]"
+                required={fieldRequired('statement_of_interest')}
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                 value={formData.statementOfInterest}
                 onChange={handleChange}
               />
             </div>
           </div>
+          )}
+
+          {/* Custom fields */}
+          {signupFields?.filter(f => f.isCustom && f.enabled).map(field => (
+            <div key={field.key} className="bg-gray-50 p-6 rounded-lg">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {field.label} {field.required && <span className="text-red-500">*</span>}
+                </label>
+                {field.helpText && <p className="text-xs text-gray-500 mb-2">{field.helpText}</p>}
+
+                {(field.type === 'text' || field.type === 'email' || field.type === 'phone' || field.type === 'url' || field.type === 'number' || field.type === 'date') && (
+                  <input
+                    type={field.type === 'phone' ? 'tel' : field.type === 'url' ? 'url' : field.type ?? 'text'}
+                    required={field.required}
+                    placeholder={field.placeholder ?? ''}
+                    value={(customFieldValues[field.key] as string) ?? ''}
+                    onChange={e => handleCustomFieldChange(field.key, e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
+                  />
+                )}
+
+                {field.type === 'textarea' && (
+                  <textarea
+                    required={field.required}
+                    placeholder={field.placeholder ?? ''}
+                    rows={4}
+                    value={(customFieldValues[field.key] as string) ?? ''}
+                    onChange={e => handleCustomFieldChange(field.key, e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
+                  />
+                )}
+
+                {field.type === 'select' && (
+                  <select
+                    required={field.required}
+                    value={(customFieldValues[field.key] as string) ?? ''}
+                    onChange={e => handleCustomFieldChange(field.key, e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
+                  >
+                    <option value="">Select…</option>
+                    {(field.options ?? []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                  </select>
+                )}
+
+                {field.type === 'checkbox_group' && (
+                  <div className="space-y-2">
+                    {(field.options ?? []).map(opt => (
+                      <label key={opt} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          value={opt}
+                          checked={Array.isArray(customFieldValues[field.key]) && (customFieldValues[field.key] as string[]).includes(opt)}
+                          onChange={e => handleCustomCheckboxGroupChange(field.key, opt, e.target.checked)}
+                          className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] border-gray-300 rounded"
+                        />
+                        <span className="ml-2 text-sm text-gray-700">{opt}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+
+                {field.type === 'boolean' && (
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      required={field.required}
+                      checked={(customFieldValues[field.key] as string) === 'true'}
+                      onChange={e => handleCustomFieldChange(field.key, e.target.checked ? 'true' : '')}
+                      className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] border-gray-300 rounded"
+                    />
+                    <span className="text-sm text-gray-700">Yes</span>
+                  </label>
+                )}
+              </div>
+            </div>
+          ))}
 
           {/* Acknowledgements */}
           <div className="bg-gray-50 p-6 rounded-lg">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Acknowledgements</h2>
-            <div className="space-y-3">
-              <label className="flex items-start">
-                <input
-                  type="checkbox"
-                  name="agreedToBylaws"
-                  required
-                  className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]"
-                  checked={formData.agreedToBylaws}
-                  onChange={handleChange}
-                />
-                <span className="text-sm text-gray-700">
-                  I have reviewed and agree to TIPA's{' '}
-                  <Link href="https://tipa.ca/tipa-by-laws/" target="_blank" rel="noopener noreferrer" className="text-[#0d1e26] underline hover:no-underline">
-                    By-Laws
-                  </Link>{' '}
-                  <span className="text-red-500">*</span>
-                </span>
-              </label>
-              <label className="flex items-start">
-                <input
-                  type="checkbox"
-                  name="agreedToGovernancePolicy"
-                  required
-                  className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]"
-                  checked={formData.agreedToGovernancePolicy}
-                  onChange={handleChange}
-                />
-                <span className="text-sm text-gray-700">
-                  I have reviewed and agree to the{' '}
-                  <Link href="https://tipa.ca/membership-policy/" target="_blank" rel="noopener noreferrer" className="text-[#0d1e26] underline hover:no-underline">
-                    Governance & Membership Policy
-                  </Link>{' '}
-                  <span className="text-red-500">*</span>
-                </span>
-              </label>
-              <label className="flex items-start">
-                <input
-                  type="checkbox"
-                  name="understandsApprovalProcess"
-                  required
-                  className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]"
-                  checked={formData.understandsApprovalProcess}
-                  onChange={handleChange}
-                />
-                <span className="text-sm text-gray-700">
-                  I understand my application is subject to approval and does not create membership until approved <span className="text-red-500">*</span>
-                </span>
-              </label>
-              <label className="flex items-start">
-                <input
-                  type="checkbox"
-                  name="agreedToElectronicInfo"
-                  required
-                  className="mt-1 mr-3 text-[#0d1e26] focus:ring-[#0d1e26]"
-                  checked={formData.agreedToElectronicInfo}
-                  onChange={handleChange}
-                />
-                <span className="text-sm text-gray-700">
-                  I agree to receive information electronically (e.g. by email) <span className="text-red-500">*</span>
-                </span>
-              </label>
-            </div>
+            {!orgConfigReady ? (
+              <p className="text-sm text-gray-500">Loading…</p>
+            ) : (
+              <div className="space-y-3">
+                <label className="flex items-start">
+                  <input
+                    type="checkbox"
+                    name="agreedToBylaws"
+                    required
+                    className="mt-1 mr-3 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                    checked={formData.agreedToBylaws}
+                    onChange={handleChange}
+                  />
+                  <span className="text-sm text-gray-700">
+                    {bylawsUrl ? (
+                      <>I have reviewed and agree to the{' '}
+                        <Link href={bylawsUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline hover:no-underline">
+                          {orgName ? `${orgName} by-laws` : 'by-laws'}
+                        </Link>.{' '}
+                      </>
+                    ) : (
+                      <>I have reviewed and agree to this organization&apos;s governing documents (by-laws, constitution, or equivalent).{' '}</>
+                    )}
+                    <span className="text-red-500">*</span>
+                  </span>
+                </label>
+                <label className="flex items-start">
+                  <input
+                    type="checkbox"
+                    name="agreedToGovernancePolicy"
+                    required
+                    className="mt-1 mr-3 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                    checked={formData.agreedToGovernancePolicy}
+                    onChange={handleChange}
+                  />
+                  <span className="text-sm text-gray-700">
+                    {membershipPolicyUrl ? (
+                      <>I have reviewed and agree to the{' '}
+                        <Link href={membershipPolicyUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline hover:no-underline">
+                          {orgName ? `${orgName} membership terms and policies` : 'membership terms and policies'}
+                        </Link>.{' '}
+                      </>
+                    ) : (
+                      <>I have reviewed and agree to this organization&apos;s membership terms and policies.{' '}</>
+                    )}
+                    <span className="text-red-500">*</span>
+                  </span>
+                </label>
+                <label className="flex items-start">
+                  <input
+                    type="checkbox"
+                    name="understandsApprovalProcess"
+                    required
+                    className="mt-1 mr-3 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                    checked={formData.understandsApprovalProcess}
+                    onChange={handleChange}
+                  />
+                  <span className="text-sm text-gray-700">
+                    I understand my application is subject to approval and does not create membership until approved <span className="text-red-500">*</span>
+                  </span>
+                </label>
+                <label className="flex items-start">
+                  <input
+                    type="checkbox"
+                    name="agreedToElectronicInfo"
+                    required
+                    className="mt-1 mr-3 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                    checked={formData.agreedToElectronicInfo}
+                    onChange={handleChange}
+                  />
+                  <span className="text-sm text-gray-700">
+                    I agree to receive information electronically (e.g. by email) <span className="text-red-500">*</span>
+                  </span>
+                </label>
+                {feedbackUrl && (
+                  <p className="text-sm text-gray-600 pt-1">
+                    Questions or feedback about this application?{' '}
+                    <Link href={feedbackUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline hover:no-underline">
+                      Contact the club
+                    </Link>.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Additional Information */}
+          {fieldEnabled('how_did_you_hear') && (
           <div className="bg-gray-50 p-6 rounded-lg">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Additional Information</h2>
             <div>
               <label htmlFor="howDidYouHear" className="block text-sm font-medium text-gray-700 mb-1">
-                How did you hear about TIPA?
+                {orgName ? `How did you hear about ${orgName}?` : 'How did you hear about us?'}
+                {fieldRequired('how_did_you_hear') && <span className="text-red-500"> *</span>}
               </label>
               <select
                 id="howDidYouHear"
                 name="howDidYouHear"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required={fieldRequired('how_did_you_hear')}
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={formData.howDidYouHear}
                 onChange={handleChange}
               >
@@ -867,6 +788,7 @@ function BecomeMemberForm() {
               </select>
             </div>
           </div>
+          )}
 
           <div className="flex items-center justify-between">
             <Link
@@ -877,8 +799,8 @@ function BecomeMemberForm() {
             </Link>
             <button
               type="submit"
-              disabled={loading}
-              className="px-6 py-3 bg-[#0d1e26] text-white font-semibold rounded-lg hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0d1e26] disabled:opacity-50"
+              disabled={loading || !orgConfigReady}
+              className="px-6 py-3 bg-[var(--color-primary)] text-white font-semibold rounded-lg hover:bg-[#0a171c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-primary)] disabled:opacity-50"
             >
               {loading ? 'Creating account...' : 'Become a Member'}
             </button>
@@ -897,4 +819,3 @@ export default function BecomeMemberPage() {
     </Suspense>
   )
 }
-

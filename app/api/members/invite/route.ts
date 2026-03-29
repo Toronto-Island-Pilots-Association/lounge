@@ -1,6 +1,9 @@
 import { requireAuth } from '@/lib/auth'
+import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
+import { isOrgManagerRole } from '@/lib/org-roles'
 import { sendInvitationWithPasswordEmail } from '@/lib/resend'
 import { createClient } from '@/lib/supabase/server'
+import { getFeatureFlags } from '@/lib/settings'
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 
@@ -31,9 +34,24 @@ export async function POST(request: Request) {
   try {
     // Allow any authenticated member to invite
     const user = await requireAuth()
-    
+    const flags = await getFeatureFlags()
+    if (!flags.allowMemberInvitations) {
+      return NextResponse.json({ error: 'Member invitations require Core plan or higher' }, { status: 403 })
+    }
+    const orgId = user.profile?.org_id
+    if (!orgId) {
+      return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
+    }
+    const billingStatus = await getOrgBillingActivationStatus(orgId)
+    if (billingStatus.requiresActivation) {
+      return NextResponse.json(
+        { error: 'Add billing details in Billing before inviting members.' },
+        { status: 402 },
+      )
+    }
+
     // Only allow approved members to invite (not pending/rejected/expired)
-    if (user.profile.status !== 'approved' && user.profile.role !== 'admin') {
+    if (user.profile.status !== 'approved' && !isOrgManagerRole(user.profile.role)) {
       return NextResponse.json(
         { error: 'Only approved members can invite others' },
         { status: 403 }
@@ -113,6 +131,7 @@ export async function POST(request: Request) {
         last_name: lastName || null,
         role: 'member',
         membership_level: membershipLevel,
+        org_id: orgId,
         invited_by_member: true, // Flag to indicate this user was invited by a member
         invited_by: user.id, // Track who invited them
       }
@@ -184,7 +203,7 @@ export async function POST(request: Request) {
     }
 
     // Send invitation email with temporary password
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'
     await sendInvitationWithPasswordEmail(
       normalizedEmail,
       fullName || normalizedEmail,

@@ -11,6 +11,10 @@ import { NextResponse } from 'next/server'
 export async function POST(request: Request) {
   try {
     await requireAdmin()
+    const orgId = request.headers.get('x-org-id')
+    if (!orgId) {
+      return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
+    }
 
     if (!isStripeEnabled()) {
       return NextResponse.json(
@@ -31,9 +35,10 @@ export async function POST(request: Request) {
 
     const supabase = await createClient()
     const { data: member, error: fetchError } = await supabase
-      .from('user_profiles')
+      .from('org_memberships')
       .select('id, stripe_subscription_id')
       .eq('id', userId)
+      .eq('org_id', orgId)
       .single()
 
     if (fetchError || !member) {
@@ -73,9 +78,10 @@ export async function POST(request: Request) {
         }
 
     const { data: updated, error: updateError } = await supabase
-      .from('user_profiles')
+      .from('org_memberships')
       .update(updates)
       .eq('id', userId)
+      .eq('org_id', orgId)
       .select('stripe_subscription_id, subscription_cancel_at_period_end, status, membership_expires_at')
       .single()
 

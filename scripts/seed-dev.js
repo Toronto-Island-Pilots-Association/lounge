@@ -4,7 +4,10 @@
  * Run: node scripts/seed-dev.js  (or npm run db:seed)
  */
 const path = require('path')
-require('dotenv').config({ path: path.resolve(process.cwd(), '.env') })
+const { randomUUID } = require('crypto')
+const root = process.cwd()
+require('dotenv').config({ path: path.resolve(root, '.env.local') })
+require('dotenv').config({ path: path.resolve(root, '.env') })
 const { createClient } = require('@supabase/supabase-js')
 
 const THREAD_CATEGORIES = [
@@ -18,7 +21,8 @@ const THREAD_CATEGORIES = [
 ]
 const REACTION_TYPES = ['like', 'upvote']
 const SEED_PASSWORD = 'DevPassword1!'
-const NUM_USERS = 12
+/** Set SEED_NUM_USERS=0 to only repair profiles + approve memberships (no new auth users). */
+const NUM_USERS = parseInt(process.env.SEED_NUM_USERS ?? '12', 10)
 const NUM_THREADS = 25
 const NUM_COMMENTS_PER_THREAD = [0, 1, 2, 3, 4, 5]
 const NUM_REACTIONS = 40
@@ -26,6 +30,27 @@ const NUM_EVENTS = 6
 
 function pick(arr) {
   return arr[Math.floor(Math.random() * arr.length)]
+}
+
+/** member_profiles = org_memberships ⋈ user_profiles; directory only lists approved. */
+async function ensureApprovedOrgMemberships(supabase, orgId, userIds, levelByUserId) {
+  let ok = 0
+  for (const uid of userIds) {
+    const membershipLevel = levelByUserId.get(uid) || 'Full'
+    const { error } = await supabase.from('org_memberships').upsert(
+      {
+        user_id: uid,
+        org_id: orgId,
+        role: 'member',
+        status: 'approved',
+        membership_level: membershipLevel,
+      },
+      { onConflict: 'user_id,org_id' },
+    )
+    if (error) console.error(`  org_memberships upsert (${uid}):`, error.message)
+    else ok += 1
+  }
+  console.log(`  Approved org_memberships for ${ok}/${userIds.length} users (shows in Members Directory).`)
 }
 
 async function main() {
@@ -40,6 +65,39 @@ async function main() {
     auth: { autoRefreshToken: false, persistSession: false },
   })
 
+  // Use the founding org (TIPA) for all seeded tenant data.
+  const { data: tipaOrg, error: orgErr } = await supabase
+    .from('organizations')
+    .select('id')
+    .eq('slug', 'tipa')
+    .single()
+
+  if (orgErr || !tipaOrg?.id) {
+    console.error('Unable to resolve TIPA org id (expected organizations.slug=tipa):', orgErr?.message)
+    process.exit(1)
+  }
+
+  const orgId = tipaOrg.id
+
+  const { data: listData, error: listErr } = await supabase.auth.admin.listUsers({
+    page: 1,
+    perPage: 1000,
+  })
+  if (listErr) console.error('  listUsers:', listErr.message)
+
+  const devAuthUsers = (listData?.users || []).filter((u) => /@dev\.local$/i.test(u.email || ''))
+  const existingUserIds = [...new Set(devAuthUsers.map((u) => u.id))]
+
+  let existingLevels = []
+  if (existingUserIds.length > 0) {
+    const { data: omRows } = await supabase
+      .from('org_memberships')
+      .select('user_id, membership_level')
+      .eq('org_id', orgId)
+      .in('user_id', existingUserIds)
+    existingLevels = omRows || []
+  }
+
   const firstNames = [
     'Alex', 'Jordan', 'Sam', 'Casey', 'Morgan', 'Riley', 'Quinn', 'Avery',
     'Drew', 'Jamie', 'Skyler', 'Reese', 'Finley', 'Parker', 'Cameron', 'Blair',
@@ -50,15 +108,9 @@ async function main() {
     'Anderson', 'Thomas', 'Jackson', 'White', 'Harris', 'Clark', 'Lewis', 'Robinson',
   ]
 
-  // Existing dev users: find highest index so we only create new ones
-  const { data: existingProfiles } = await supabase
-    .from('user_profiles')
-    .select('id, email')
-    .like('email', 'dev-%@dev.local')
-  const existingUserIds = (existingProfiles || []).map((p) => p.id)
-  const existingIndices = (existingProfiles || [])
-    .map((p) => {
-      const m = p.email?.match(/^dev-(\d+)@dev\.local$/)
+  const existingIndices = devAuthUsers
+    .map((u) => {
+      const m = u.email?.match(/^dev-(\d+)@dev\.local$/i)
       return m ? parseInt(m[1], 10) : 0
     })
     .filter((n) => n > 0)
@@ -66,6 +118,13 @@ async function main() {
 
   console.log(`Found ${existingUserIds.length} existing dev users. Creating ${NUM_USERS} new users (dev-${nextIndex}@dev.local ...)...`)
   const newUserIds = []
+  /** @type {Map<string, string>} user_id -> membership_level */
+  const levelByUserId = new Map()
+  for (const uid of existingUserIds) levelByUserId.set(uid, 'Full')
+  for (const row of existingLevels || []) {
+    if (row.membership_level) levelByUserId.set(row.user_id, row.membership_level)
+  }
+
   /** @type {{ id: string, email: string, fullName: string, firstName: string, lastName: string, membershipLevel: string }[]} */
   const newUserMeta = []
   for (let i = 0; i < NUM_USERS; i++) {
@@ -86,19 +145,26 @@ async function main() {
         last_name: lastName,
         role: 'member',
         membership_level: membershipLevel,
+        org_id: orgId,
       },
     })
     if (error) {
       if (error.message?.toLowerCase().includes('already') || error.message?.toLowerCase().includes('exists')) {
-        const { data: existingProfile } = await supabase.from('user_profiles').select('id').eq('email', email).single()
+        const { data: existingProfile } = await supabase
+          .from('user_profiles')
+          .select('user_id')
+          .eq('email', email)
+          .single()
         if (existingProfile) {
-          newUserIds.push(existingProfile.id)
+          newUserIds.push(existingProfile.user_id)
+          levelByUserId.set(existingProfile.user_id, membershipLevel)
         } else {
           const { data: listData } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
           const authUser = listData?.users?.find((u) => (u.email || '').toLowerCase() === email)
           if (authUser) {
             newUserIds.push(authUser.id)
             newUserMeta.push({ id: authUser.id, email, fullName, firstName, lastName, membershipLevel })
+            levelByUserId.set(authUser.id, membershipLevel)
           } else {
             console.error(`  ${email} exists in auth but could not be found (listUsers).`)
           }
@@ -109,10 +175,11 @@ async function main() {
     } else if (data?.user) {
       newUserIds.push(data.user.id)
       newUserMeta.push({ id: data.user.id, email, fullName, firstName, lastName, membershipLevel })
+      levelByUserId.set(data.user.id, membershipLevel)
     }
   }
 
-  const userIds = [...existingUserIds, ...newUserIds]
+  const userIds = [...new Set([...existingUserIds, ...newUserIds])]
   if (userIds.length === 0) {
     console.error('No users available. Create at least one dev user or fix .env')
     process.exit(1)
@@ -122,34 +189,65 @@ async function main() {
   console.log('  Waiting for profiles (trigger), then ensuring all have user_profiles...')
   await new Promise((r) => setTimeout(r, 2000))
 
-  const { data: profiles } = await supabase.from('user_profiles').select('id').in('id', userIds)
-  const profileIds = (profiles || []).map((p) => p.id)
-  const missingProfileIds = newUserIds.filter((id) => !profileIds.includes(id))
-  if (missingProfileIds.length > 0) {
+  const { data: profiles } = await supabase
+    .from('user_profiles')
+    .select('user_id')
+    .in('user_id', userIds)
+  const profileUserIds = (profiles || []).map((p) => p.user_id)
+  const missingUserIds = userIds.filter((id) => !profileUserIds.includes(id))
+  if (missingUserIds.length > 0) {
     for (const meta of newUserMeta) {
-      if (!missingProfileIds.includes(meta.id)) continue
+      if (!missingUserIds.includes(meta.id)) continue
       const { error: insErr } = await supabase.from('user_profiles').insert({
-        id: meta.id,
+        id: randomUUID(),
+        user_id: meta.id,
         email: meta.email,
         full_name: meta.fullName,
         first_name: meta.firstName,
         last_name: meta.lastName,
-        role: 'member',
-        membership_level: meta.membershipLevel,
-        status: 'approved',
+        notify_replies: true,
       })
       if (insErr) console.error(`  Profile insert for ${meta.email}:`, insErr.message)
     }
-    console.log(`  Created ${missingProfileIds.length} missing user_profiles so they show in Admin Members.`)
+    console.log(`  Created missing user_profiles for ${missingUserIds.length} user(s).`)
   }
-  const { data: profilesAfter } = await supabase.from('user_profiles').select('id').in('id', userIds)
-  const profileIdsAfter = (profilesAfter || []).map((p) => p.id)
-  if (profileIdsAfter.length > 0) {
-    const { error: upErr } = await supabase
-      .from('user_profiles')
-      .update({ status: 'approved' })
-      .in('id', profileIdsAfter)
-    if (!upErr) console.log(`  Approved ${profileIdsAfter.length} profiles.`)
+
+  // Repair: any dev user with org_membership but no user_profiles row (directory view is an INNER JOIN)
+  const { data: profilesRepair } = await supabase.from('user_profiles').select('user_id').in('user_id', userIds)
+  const haveProfile = new Set((profilesRepair || []).map((p) => p.user_id))
+  for (const uid of userIds) {
+    if (haveProfile.has(uid)) continue
+    const meta = newUserMeta.find((m) => m.id === uid)
+    const { data: authRow, error: authErr } = await supabase.auth.admin.getUserById(uid)
+    if (authErr || !authRow?.user) {
+      console.error(`  Repair profile: no auth user ${uid}`, authErr?.message)
+      continue
+    }
+    const u = authRow.user
+    const md = u.user_metadata || {}
+    const email = u.email || meta?.email || ''
+    const fullName = meta?.fullName || md.full_name || email
+    const firstName = meta?.firstName || md.first_name || null
+    const lastName = meta?.lastName || md.last_name || null
+    const { error: insErr } = await supabase.from('user_profiles').insert({
+      id: randomUUID(),
+      user_id: uid,
+      email,
+      full_name: fullName,
+      first_name: firstName,
+      last_name: lastName,
+      notify_replies: true,
+    })
+    if (insErr) console.error(`  Repair profile for ${email}:`, insErr.message)
+    else haveProfile.add(uid)
+  }
+
+  console.log('  Syncing org_memberships (approved) for Members Directory...')
+  await ensureApprovedOrgMemberships(supabase, orgId, userIds, levelByUserId)
+
+  if (NUM_USERS === 0) {
+    console.log('Done. Members directory synced (SEED_NUM_USERS=0 — skipped threads/events).')
+    return
   }
 
   console.log('Creating threads and comments...')
@@ -162,6 +260,7 @@ async function main() {
         content: `This is seed content for thread ${t + 1}. Some **markdown** and real-looking discussion.`,
         created_by: pick(userIds),
         category: pick(THREAD_CATEGORIES),
+        org_id: orgId,
       })
       .select('id')
       .single()
@@ -177,6 +276,7 @@ async function main() {
         thread_id: thread.id,
         content: `Seed comment ${c + 1} on thread ${t + 1}.`,
         created_by: pick(userIds),
+        org_id: orgId,
       })
     }
   }
@@ -198,6 +298,7 @@ async function main() {
       comment_id: targetComment,
       user_id: pick(userIds),
       reaction_type: pick(REACTION_TYPES),
+      org_id: orgId,
     })
     if (!error) reactionsAdded++
     else if (!error.message?.includes('duplicate') && !error.message?.includes('unique')) {
@@ -221,6 +322,7 @@ async function main() {
       start_time: start.toISOString(),
       end_time: end.toISOString(),
       created_by: pick(userIds),
+      org_id: orgId,
     })
   }
 

@@ -1,7 +1,23 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { getCurrentUserIncludingPending, shouldRequireProfileCompletion, shouldRequirePayment } from '@/lib/auth'
-import { getMembershipFeeForLevel, getTrialEndDate, type MembershipLevelKey } from '@/lib/settings'
+import {
+  getCurrentUserIncludingPending,
+  shouldRequireProfileCompletion,
+  shouldRequirePayment,
+  isOrgPublic,
+  isOrgStripeConnected,
+} from '@/lib/auth'
+import {
+  getMembershipFeeForLevel,
+  getTrialEndDateAsync,
+  getTrialConfig,
+  getTrialConfigItemForLevel,
+  computeTrialEndFromConfig,
+  getFeatureFlags,
+  getOrgIdentity,
+  type MembershipLevelKey,
+} from '@/lib/settings'
+import { clubShortFromDisplayName } from '@/lib/org'
 import { createClient } from '@/lib/supabase/server'
 import { Resource, Event, getMembershipLevelLabel } from '@/types/database'
 import { Suspense } from 'react'
@@ -9,6 +25,9 @@ import MembershipCard from '@/components/MembershipCard'
 import SubscriptionSection from '@/components/SubscriptionSection'
 import MembershipPageClient from './MembershipPageClient'
 import StripeSuccessHandler from './StripeSuccessHandler'
+import GuestMembershipDemo from './GuestMembershipDemo'
+import MembershipActivitySidebar from '@/components/membership/MembershipActivitySidebar'
+import { isOrgManagerRole } from '@/lib/org-roles'
 
 export default async function MembershipPage({
   searchParams,
@@ -19,7 +38,10 @@ export default async function MembershipPage({
   const params = await searchParams
 
   if (!user) {
-    redirect('/login')
+    if (!(await isOrgPublic())) {
+      redirect('/login')
+    }
+    return <GuestMembershipDemo />
   }
 
   if (shouldRequireProfileCompletion(user.profile)) {
@@ -30,13 +52,16 @@ export default async function MembershipPage({
   const returningFromStripe =
     params?.subscription === 'success' && typeof params?.session_id === 'string'
 
-  if (shouldRequirePayment(user.profile) && !returningFromStripe) {
+  const orgStripeReady = await isOrgStripeConnected()
+  if (shouldRequirePayment(user.profile) && orgStripeReady && !returningFromStripe) {
     redirect('/add-payment')
   }
 
-  const isPending = user.profile.status === 'pending' && user.profile.role !== 'admin'
-  const isRejected = user.profile.status === 'rejected' && user.profile.role !== 'admin'
-  const isExpiredStatus = user.profile.status === 'expired' && user.profile.role !== 'admin'
+  const featureFlags = await getFeatureFlags()
+
+  const isPending = user.profile.status === 'pending' && !isOrgManagerRole(user.profile.role)
+  const isRejected = user.profile.status === 'rejected' && !isOrgManagerRole(user.profile.role)
+  const isExpiredStatus = user.profile.status === 'expired' && !isOrgManagerRole(user.profile.role)
 
   // Check if user was invited (admin, member, or bulk) and needs to change password
   const wasInvited =
@@ -46,7 +71,11 @@ export default async function MembershipPage({
 
   const membershipLevel = (user.profile.membership_level || 'Full') as MembershipLevelKey
   const membershipFee = await getMembershipFeeForLevel(membershipLevel)
-  const trialEnd = getTrialEndDate(membershipLevel, user.profile.created_at ?? null)
+  const trialEnd = await getTrialEndDateAsync(
+    membershipLevel,
+    user.profile.created_at ?? null,
+    user.profile.org_id,
+  )
   const isOnTrial = trialEnd != null && trialEnd > new Date()
   const hasStripeSubscription = !!user.profile.stripe_subscription_id
   // If already subscribed in Stripe, do not show trial label or trial-based validity
@@ -56,16 +85,18 @@ export default async function MembershipPage({
   let hasMembershipExpiry = !!user.profile.membership_expires_at
   if (!hasMembershipExpiry && user.profile.stripe_subscription_id) {
     const { syncSubscriptionByUserId } = await import('@/lib/subscription-sync')
-    await syncSubscriptionByUserId(user.id)
+    await syncSubscriptionByUserId(user.id, user.profile.org_id)
     const supabase = await createClient()
     const { data: updated } = await supabase
-      .from('user_profiles')
-      .select('membership_expires_at')
-      .eq('id', user.id)
-      .single()
-    if (updated?.membership_expires_at) {
+      .from('member_profiles')
+      .select('membership_expires_at, stripe_subscription_id')
+      .eq('user_id', user.id)
+      .eq('org_id', user.profile.org_id)
+      .maybeSingle()
+    if (updated?.membership_expires_at || updated?.stripe_subscription_id) {
       user.profile.membership_expires_at = updated.membership_expires_at
-      hasMembershipExpiry = true
+      user.profile.stripe_subscription_id = updated.stripe_subscription_id
+      hasMembershipExpiry = !!updated?.membership_expires_at
     }
   }
   const isExpired = hasMembershipExpiry
@@ -75,20 +106,37 @@ export default async function MembershipPage({
       : false
   const validThruDate = hasMembershipExpiry ? null : (showTrial && trialEnd ? trialEnd.toISOString() : null)
 
-  const membershipLevelDisplay =
-    showTrial && membershipLevel !== 'Student'
-      ? `${getMembershipLevelLabel(membershipLevel)} (trial)`
-      : getMembershipLevelLabel(membershipLevel)
+  const membershipLevelDisplay = showTrial
+    ? `${getMembershipLevelLabel(membershipLevel)} (trial)`
+    : getMembershipLevelLabel(membershipLevel)
 
-  // Pending approval copy: level-specific message (Full/Associate trial until Sept 1, etc.)
   const levelLabel = getMembershipLevelLabel(membershipLevel)
   const article = (membershipLevel === 'Associate' || membershipLevel === 'Honorary') ? 'an' : 'a'
+  const trialCfg = await getTrialConfig(user.profile.org_id)
+  const pendingTrialItem = getTrialConfigItemForLevel(trialCfg, membershipLevel)
+  const pendingTrialEnd = computeTrialEndFromConfig(
+    pendingTrialItem,
+    user.profile.created_at ?? null,
+  )
   const pendingTrialCopy =
-    membershipLevel === 'Full' || membershipLevel === 'Associate'
-      ? <>Once approved, you will be registered as {article} <strong>{levelLabel} member</strong> (trial) until <strong>September 1st</strong></>
-      : membershipLevel === 'Student'
-        ? <>Once approved, you will be registered as {article} <strong>{levelLabel} member</strong> with a free 12-months from approval</>
-        : <>Once approved, you will be registered as {article} <strong>{levelLabel} member</strong></>
+    pendingTrialEnd && pendingTrialItem?.type === 'months'
+      ? (
+          <>
+            Once approved, you will be registered as {article} <strong>{levelLabel} member</strong> with a trial
+            until{' '}
+            <strong>
+              {pendingTrialEnd.toLocaleDateString('en-US', {
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric',
+              })}
+            </strong>
+            .
+          </>
+        )
+      : (
+          <>Once approved, you will be registered as {article} <strong>{levelLabel} member</strong>.</>
+        )
 
     // Fetch top resources, events, and threads (only for approved users)
     const supabase = await createClient()
@@ -101,6 +149,7 @@ export default async function MembershipPage({
       const { data: resources } = await supabase
         .from('resources')
         .select('id, title, created_at')
+        .eq('org_id', user.profile.org_id)
         .order('created_at', { ascending: false })
         .limit(5)
 
@@ -108,6 +157,7 @@ export default async function MembershipPage({
       const { data: events } = await supabase
         .from('events')
         .select('id, title, start_time, end_time, location, description')
+        .eq('org_id', user.profile.org_id)
         .gte('start_time', now)
         .order('start_time', { ascending: true })
         .limit(5)
@@ -119,6 +169,7 @@ export default async function MembershipPage({
     const { data: threads } = await supabase
       .from('threads')
       .select('id, title, created_at, created_by')
+      .eq('org_id', user.profile.org_id)
       .order('created_at', { ascending: false })
       .limit(5)
 
@@ -127,10 +178,10 @@ export default async function MembershipPage({
       const threadUserIds = [...new Set(threads.map(t => t.created_by).filter((id): id is string => id !== null))]
       const { data: threadAuthors } = threadUserIds.length > 0 ? await supabase
         .from('user_profiles')
-        .select('id, full_name, email')
-        .in('id', threadUserIds) : { data: [] }
+        .select('user_id, full_name, email')
+        .in('user_id', threadUserIds) : { data: [] }
 
-      const threadAuthorsMap = new Map(threadAuthors?.map(a => [a.id, a]) || [])
+      const threadAuthorsMap = new Map(threadAuthors?.map(a => [a.user_id, a]) || [])
 
       // Get comment counts for threads
       const threadIds = threads.map(t => t.id)
@@ -152,6 +203,23 @@ export default async function MembershipPage({
         author: threadAuthorsMap.get(thread.created_by) || null
       }))
     }
+  }
+
+  const supabaseForBrand = await createClient()
+  const [identity, orgBrandingResult] = await Promise.all([
+    getOrgIdentity(),
+    supabaseForBrand
+      .from('organizations')
+      .select('name, logo_url')
+      .eq('id', user.profile.org_id)
+      .maybeSingle(),
+  ])
+  const orgBranding = orgBrandingResult.data
+  const displayForBrand = identity.displayName?.trim() || orgBranding?.name || 'Club'
+  const clubBrandForCard = {
+    shortName: clubShortFromDisplayName(displayForBrand),
+    tagline: displayForBrand,
+    logoUrl: orgBranding?.logo_url ?? null,
   }
 
   return (
@@ -179,6 +247,7 @@ export default async function MembershipPage({
                       membershipLevelDisplay={membershipLevelDisplay}
                       validThruDate={validThruDate}
                       isOnTrial={showTrial}
+                      clubBrand={clubBrandForCard}
                     />
                   )}
 
@@ -224,7 +293,12 @@ export default async function MembershipPage({
 
                 {/* Subscription Section first - Show for all users except rejected */}
                 {!isRejected && (
-                  <div className="mt-6">
+                  <div className="mt-6 space-y-4">
+                    {shouldRequirePayment(user.profile) && !orgStripeReady && (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                        Online membership payment is not available for this lounge yet. You can still use the site; an administrator will let you know when payment setup is ready.
+                      </div>
+                    )}
                     <SubscriptionSection user={user} />
                   </div>
                 )}
@@ -310,190 +384,12 @@ export default async function MembershipPage({
 
           {/* Sidebar - Hidden on Mobile */}
           {!isPending && !isRejected && !isExpiredStatus && (
-            <div className="hidden lg:block lg:col-span-1 space-y-6 order-1 lg:order-2">
-              {/* Events Section */}
-              <div className="bg-white shadow rounded-lg">
-                <div className="px-4 py-5 sm:p-6">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    Events
-                  </h2>
-                  {upcomingEvents.length > 0 ? (
-                    <>
-                      <div className="space-y-3">
-                        {upcomingEvents.map((event) => {
-                          const eventDate = new Date(event.start_time)
-                          const endDate = event.end_time ? new Date(event.end_time) : null
-                          const dateStr = eventDate.toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                          })
-                          const timeStr = eventDate.toLocaleTimeString('en-US', {
-                            hour: 'numeric',
-                            minute: '2-digit',
-                          })
-                          const endTimeStr = endDate ? endDate.toLocaleTimeString('en-US', {
-                            hour: 'numeric',
-                            minute: '2-digit',
-                          }) : null
-                          return (
-                            <Link
-                              key={event.id}
-                              href="/events"
-                              className="block text-sm text-[#0d1e26] hover:text-[#0a171c] hover:bg-gray-50 rounded-md p-2 -mx-2 transition-colors border-b border-gray-200 last:border-b-0"
-                            >
-                              <div className="font-medium">{event.title}</div>
-                              <div className="text-xs text-gray-500 mt-1 space-y-0.5">
-                                <div className="flex items-center gap-1">
-                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                  </svg>
-                                  {dateStr}
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                  </svg>
-                                  {timeStr}{endTimeStr ? ` - ${endTimeStr}` : ''}
-                                </div>
-                                {event.location && (
-                                  <div className="flex items-center gap-1">
-                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                    <span className="line-clamp-1">{event.location}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </Link>
-                          )
-                        })}
-                      </div>
-                      <Link
-                        href="/events"
-                        className="mt-4 block text-sm font-medium text-[#0d1e26] hover:text-[#0a171c] flex items-center gap-1"
-                      >
-                        See More
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </Link>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-sm text-gray-500 mb-4">No upcoming events scheduled.</p>
-                      <Link
-                        href="/events"
-                        className="block text-sm font-medium text-[#0d1e26] hover:text-[#0a171c] flex items-center gap-1"
-                      >
-                        View All Events
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </Link>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Announcements Section */}
-              {topResources.length > 0 && (
-                <div className="bg-white shadow rounded-lg">
-                  <div className="px-4 py-5 sm:p-6">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      Announcements
-                    </h2>
-                    <div className="space-y-3">
-                      {topResources.map((resource) => (
-                        <Link
-                          key={resource.id}
-                          href={`/resources/${resource.id}`}
-                          className="block text-sm text-[#0d1e26] hover:text-[#0a171c] hover:underline py-2 border-b border-gray-200 last:border-b-0"
-                        >
-                          {resource.title}
-                        </Link>
-                      ))}
-                    </div>
-                    <Link
-                      href="/resources"
-                      className="mt-4 block text-sm font-medium text-[#0d1e26] hover:text-[#0a171c] flex items-center gap-1"
-                    >
-                      See More
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </Link>
-                  </div>
-                </div>
-              )}
-
-              {/* Top Threads Section */}
-              {topThreads.length > 0 && (
-                <div className="bg-white shadow rounded-lg">
-                  <div className="px-4 py-5 sm:p-6">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                      </svg>
-                      Recent Hangar Talk
-                    </h2>
-                    <div className="space-y-3">
-                      {topThreads.map((thread) => {
-                        const formatDate = (dateString: string) => {
-                          const date = new Date(dateString)
-                          const now = new Date()
-                          const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-                          
-                          if (diffInSeconds < 60) return 'just now'
-                          if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`
-                          if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`
-                          if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`
-                          
-                          return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                        }
-                        return (
-                          <Link
-                            key={thread.id}
-                            href={`/discussions/${thread.id}`}
-                            className="block text-sm text-[#0d1e26] hover:text-[#0a171c] hover:underline py-2 border-b border-gray-200 last:border-b-0"
-                          >
-                            <div className="font-medium line-clamp-1">{thread.title}</div>
-                            <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                              <span>{thread.author?.full_name || thread.author?.email || 'Anonymous'}</span>
-                              <span>•</span>
-                              <span>{formatDate(thread.created_at)}</span>
-                              <span>•</span>
-                              <span className="flex items-center gap-1">
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                                </svg>
-                                {thread.comment_count || 0}
-                              </span>
-                            </div>
-                          </Link>
-                        )
-                      })}
-                    </div>
-                    <Link
-                      href="/discussions"
-                      className="mt-4 block text-sm font-medium text-[#0d1e26] hover:text-[#0a171c] flex items-center gap-1"
-                    >
-                      See More
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </Link>
-                  </div>
-                </div>
-              )}
-
-            </div>
+            <MembershipActivitySidebar
+              upcomingEvents={upcomingEvents}
+              topResources={topResources}
+              topThreads={topThreads}
+              discussionsTitle={`Recent ${featureFlags.discussionsLabel}`}
+            />
           )}
         </div>
       </div>

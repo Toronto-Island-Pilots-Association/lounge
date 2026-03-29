@@ -1,4 +1,4 @@
-import { requireAuth, requireAdmin } from '@/lib/auth'
+import { requireAuth, requirePlatformAdmin } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
@@ -32,7 +32,7 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
-    const user = await requireAdmin()
+    const user = await requirePlatformAdmin()
     const { key, value } = await request.json()
 
     if (!key || value === undefined) {
@@ -66,4 +66,3 @@ export async function PATCH(request: Request) {
     )
   }
 }
-

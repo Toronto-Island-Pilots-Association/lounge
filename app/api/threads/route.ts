@@ -1,17 +1,24 @@
 import { requireAuth } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
+import { getFeatureFlags, getDiscussionCategories } from '@/lib/settings'
 import { NextResponse } from 'next/server'
-import { DiscussionCategory } from '@/types/database'
 
 export async function GET() {
   try {
-    await requireAuth()
+    const user = await requireAuth()
+    const flags = await getFeatureFlags()
+    if (!flags.discussions) {
+      return NextResponse.json({ error: 'Discussions are not enabled for this organization' }, { status: 403 })
+    }
+    const orgId = user.profile?.org_id
+    if (!orgId) return NextResponse.json({ error: 'Organization not found' }, { status: 400 })
     const supabase = await createClient()
 
     // Get threads
     const { data: threads, error: threadsError } = await supabase
       .from('threads')
       .select('*')
+      .eq('org_id', orgId)
       .order('created_at', { ascending: false })
 
     if (threadsError) {
@@ -22,16 +29,17 @@ export async function GET() {
     const userIds = [...new Set(threads?.map(t => t.created_by).filter((id): id is string => id !== null) || [])]
     const { data: authors } = userIds.length > 0 ? await supabase
       .from('user_profiles')
-      .select('id, full_name, email, profile_picture_url')
-      .in('id', userIds) : { data: [] }
+      .select('user_id, full_name, email, profile_picture_url')
+      .in('user_id', userIds) : { data: [] }
 
-    const authorsMap = new Map(authors?.map(a => [a.id, a]) || [])
+    const authorsMap = new Map(authors?.map(a => [a.user_id, a]) || [])
 
     // Get comment counts for each thread
     const threadIds = threads?.map(t => t.id) || []
     const { data: commentCounts } = await supabase
       .from('comments')
       .select('thread_id')
+      .eq('org_id', orgId)
       .in('thread_id', threadIds)
 
     const countsMap = new Map<string, number>()
@@ -58,8 +66,17 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const user = await requireAuth()
+    const flags = await getFeatureFlags()
+    if (!flags.discussions) {
+      return NextResponse.json({ error: 'Discussions are not enabled for this organization' }, { status: 403 })
+    }
     const body = await request.json()
     const { title, content, category, image_urls } = body
+
+    const orgId = user.profile?.org_id
+    if (!orgId) {
+      return NextResponse.json({ error: 'Organization not found' }, { status: 400 })
+    }
 
     if (!title || !content) {
       return NextResponse.json(
@@ -68,11 +85,10 @@ export async function POST(request: Request) {
       )
     }
 
-    // Validate category
-    // Import ALL_CATEGORIES from constants (but we can't import from app directory in API routes)
-    // So we keep it here but it should match ALL_CATEGORIES in app/discussions/constants.ts
-    const validCategories: DiscussionCategory[] = ['introduce_yourself', 'aircraft_shares', 'instructor_availability', 'gear_for_sale', 'flying_at_ytz', 'general_aviation', 'training_safety_proficiency', 'wanted', 'building_a_better_tipa', 'other']
-    const threadCategory = category && validCategories.includes(category) ? category : 'other'
+    // Validate category against this org's configured categories
+    const orgCategories = await getDiscussionCategories(orgId)
+    const validSlugs = orgCategories.filter(c => c.enabled).map(c => c.slug)
+    const threadCategory = category && validSlugs.includes(category) ? category : 'other'
 
     // Validate image_urls (should be an array of strings, max 5)
     const imageUrls = Array.isArray(image_urls) 
@@ -85,7 +101,7 @@ export async function POST(request: Request) {
     const { data: userProfile } = await supabase
       .from('user_profiles')
       .select('email')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .single()
 
     const { data, error } = await supabase
@@ -96,6 +112,7 @@ export async function POST(request: Request) {
         category: threadCategory,
         image_urls: imageUrls.length > 0 ? imageUrls : null,
         created_by: user.id,
+        org_id: orgId,
         author_email: userProfile?.email || user.email || null
       })
       .select('*')
@@ -108,8 +125,8 @@ export async function POST(request: Request) {
     // Get author info
     const { data: author } = await supabase
       .from('user_profiles')
-      .select('id, full_name, email, profile_picture_url')
-      .eq('id', user.id)
+      .select('user_id, full_name, email, profile_picture_url')
+      .eq('user_id', user.id)
       .single()
 
     return NextResponse.json({ thread: { ...data, comment_count: 0, author } })
