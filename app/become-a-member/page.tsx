@@ -32,6 +32,7 @@ function BecomeMemberForm() {
   const [orgName, setOrgName] = useState<string>('')
   const [bylawsUrl, setBylawsUrl] = useState<string | null>(null)
   const [membershipPolicyUrl, setMembershipPolicyUrl] = useState<string | null>(null)
+  const [feedbackUrl, setFeedbackUrl] = useState<string | null>(null)
   const [orgConfigReady, setOrgConfigReady] = useState(false)
 
   // Helper: is a signup field section enabled?
@@ -59,6 +60,7 @@ function BecomeMemberForm() {
         if (data.org?.name)        setOrgName(data.org.displayName || data.org.name)
         if (data.org?.bylawsUrl)           setBylawsUrl(data.org.bylawsUrl)
         if (data.org?.membershipPolicyUrl) setMembershipPolicyUrl(data.org.membershipPolicyUrl)
+        if (data.org?.feedbackUrl)         setFeedbackUrl(data.org.feedbackUrl)
         setOrgConfigReady(true)
       })
       .catch(() => {
@@ -691,7 +693,9 @@ function BecomeMemberForm() {
                   <span className="text-sm text-gray-700">
                     {bylawsUrl ? (
                       <>I have reviewed and agree to the{' '}
-                        <Link href={bylawsUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline hover:no-underline">By-Laws</Link>.{' '}
+                        <Link href={bylawsUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline hover:no-underline">
+                          {orgName ? `${orgName} by-laws` : 'by-laws'}
+                        </Link>.{' '}
                       </>
                     ) : (
                       <>I have reviewed and agree to this organization&apos;s governing documents (by-laws, constitution, or equivalent).{' '}</>
@@ -711,7 +715,9 @@ function BecomeMemberForm() {
                   <span className="text-sm text-gray-700">
                     {membershipPolicyUrl ? (
                       <>I have reviewed and agree to the{' '}
-                        <Link href={membershipPolicyUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline hover:no-underline">Governance &amp; Membership Policy</Link>.{' '}
+                        <Link href={membershipPolicyUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline hover:no-underline">
+                          {orgName ? `${orgName} membership terms and policies` : 'membership terms and policies'}
+                        </Link>.{' '}
                       </>
                     ) : (
                       <>I have reviewed and agree to this organization&apos;s membership terms and policies.{' '}</>
@@ -745,6 +751,14 @@ function BecomeMemberForm() {
                     I agree to receive information electronically (e.g. by email) <span className="text-red-500">*</span>
                   </span>
                 </label>
+                {feedbackUrl && (
+                  <p className="text-sm text-gray-600 pt-1">
+                    Questions or feedback about this application?{' '}
+                    <Link href={feedbackUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline hover:no-underline">
+                      Contact the club
+                    </Link>.
+                  </p>
+                )}
               </div>
             )}
           </div>
