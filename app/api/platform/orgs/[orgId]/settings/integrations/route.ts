@@ -88,7 +88,7 @@ export async function POST(
   const billingStatus = await getOrgBillingActivationStatus(orgId)
   if (billingStatus.requiresActivation) {
     return NextResponse.json(
-      { error: `Activate ${billingStatus.planLabel} in Billing before connecting Stripe.` },
+      { error: 'Add billing details in Billing before connecting Stripe.' },
       { status: 402 },
     )
   }

@@ -117,7 +117,7 @@ export default async function BillingPage({
           {billingStatus.requiresActivation ? (
             <div className="flex items-center gap-1.5 text-sm text-amber-900 bg-amber-50 px-3 py-1.5 rounded-full">
               <div className="w-2 h-2 rounded-full bg-amber-500" />
-              Activation required
+              Billing setup needed
             </div>
           ) : org.stripe_subscription_id ? (
             <div className="flex items-center gap-1.5 text-sm text-green-700 bg-green-50 px-3 py-1.5 rounded-full">
@@ -249,7 +249,7 @@ export default async function BillingPage({
               </div>
               {billingStatus.requiresActivation ? (
                 <div className="mt-4 pt-4 border-t text-sm text-amber-700 bg-amber-50 rounded-lg px-4 py-3">
-                  Activate your plan from billing before connecting Stripe and collecting dues.
+                  Add billing details before connecting Stripe and collecting dues.
                 </div>
               ) : (stripeStatus === 'not_connected' || stripeStatus === 'pending') && (
                 <ConnectStripeButton orgId={orgId} isPending={stripeStatus === 'pending'} />

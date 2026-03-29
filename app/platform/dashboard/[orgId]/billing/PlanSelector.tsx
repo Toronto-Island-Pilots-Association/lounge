@@ -52,7 +52,7 @@ export default function PlanSelector({
           const planIdx = PLAN_KEYS.indexOf(planKey)
           const isUpgrade = planIdx > currentIdx
           const isDowngrade = planIdx < currentIdx
-          const canActivateCurrent = isCurrent && !billingActivated && planPrices[planKey] > 0
+          const needsBillingSetup = isCurrent && !billingActivated && planPrices[planKey] > 0
 
           return (
             <div
@@ -102,17 +102,17 @@ export default function PlanSelector({
                   {isProcessing ? 'Processing…' : isUpgrade ? `Upgrade to ${plan.label}` : `Downgrade to ${plan.label}`}
                 </button>
               )}
-              {canActivateCurrent && (
+              {needsBillingSetup && (
                 <button
                   type="button"
                   disabled={!!processing}
                   onClick={() => handleSelect(planKey)}
                   className="w-full py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-[var(--color-primary)] text-white hover:bg-[#0a171c]"
                 >
-                  {isProcessing ? 'Processing…' : `Activate ${plan.label}`}
+                  {isProcessing ? 'Processing…' : 'Add billing details'}
                 </button>
               )}
-              {isCurrent && !canActivateCurrent && <div className="h-8" />}
+              {isCurrent && !needsBillingSetup && <div className="h-8" />}
             </div>
           )
         })}

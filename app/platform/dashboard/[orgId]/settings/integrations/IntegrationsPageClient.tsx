@@ -193,7 +193,7 @@ export default function IntegrationsPageClient({ orgId }: { orgId: string }) {
 
         {!org?.billing_activated ? (
           <div className="rounded-md bg-amber-50 p-3 text-sm text-amber-900">
-            Activate your plan in billing before connecting Stripe and collecting dues.
+            Add billing details before connecting Stripe and collecting dues.
             {' '}
             <a href={`/platform/dashboard/${orgId}/billing`} className="font-medium underline underline-offset-2">
               Open billing

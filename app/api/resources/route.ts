@@ -104,7 +104,7 @@ export async function POST(request: Request) {
     const billingStatus = await getOrgBillingActivationStatus(orgId)
     if (billingStatus.requiresActivation) {
       return NextResponse.json(
-        { error: `Activate ${billingStatus.planLabel} in Billing before publishing announcements.` },
+        { error: 'Add billing details in Billing before publishing announcements.' },
         { status: 402 },
       )
     }

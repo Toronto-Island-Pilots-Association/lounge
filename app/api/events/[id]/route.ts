@@ -28,7 +28,7 @@ export async function PATCH(
     const billingStatus = await getOrgBillingActivationStatus(orgId)
     if (billingStatus.requiresActivation) {
       return NextResponse.json(
-        { error: `Activate ${billingStatus.planLabel} in Billing before publishing events.` },
+        { error: 'Add billing details in Billing before publishing events.' },
         { status: 402 },
       )
     }
@@ -120,7 +120,7 @@ export async function DELETE(
     const billingStatus = await getOrgBillingActivationStatus(orgId)
     if (billingStatus.requiresActivation) {
       return NextResponse.json(
-        { error: `Activate ${billingStatus.planLabel} in Billing before publishing events.` },
+        { error: 'Add billing details in Billing before publishing events.' },
         { status: 402 },
       )
     }

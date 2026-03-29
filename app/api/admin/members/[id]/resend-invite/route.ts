@@ -36,7 +36,7 @@ export async function POST(
     const billingStatus = await getOrgBillingActivationStatus(orgId)
     if (billingStatus.requiresActivation) {
       return NextResponse.json(
-        { error: `Activate ${billingStatus.planLabel} in Billing before sending invite reminders.` },
+        { error: 'Add billing details in Billing before sending invite reminders.' },
         { status: 402 },
       )
     }
