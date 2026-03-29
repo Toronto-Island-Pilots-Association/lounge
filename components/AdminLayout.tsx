@@ -8,6 +8,7 @@ import {
   Calendar,
   CreditCard,
   BarChart3,
+  BookOpen,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -16,6 +17,7 @@ const NAV_ITEMS = [
   { href: '/admin/events', label: 'Events', icon: Calendar },
   { href: '/admin/payments', label: 'Payments', icon: CreditCard },
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
+  { href: '/admin/pages', label: 'Pages', icon: BookOpen },
 ] as const
 
 function NavLink({
