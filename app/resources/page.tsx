@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Resource, ResourceCategory } from '@/types/database'
 import Loading from '@/components/Loading'
+import { isOrgManagerRole } from '@/lib/org-roles'
 
 // All announcement categories available for filtering
 const ANNOUNCEMENT_CATEGORIES: ResourceCategory[] = ['tipa_newsletters', 'airport_updates', 'reminder', 'other']
@@ -25,7 +26,7 @@ function truncateText(html: string | null, maxLength: number = 150): string {
 export default function ResourcesPage() {
   const [resources, setResources] = useState<Resource[]>([])
   const [loading, setLoading] = useState(true)
-  const [isAdmin, setIsAdmin] = useState(false)
+  const [canManageAnnouncements, setCanManageAnnouncements] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<Resource['category'] | 'all'>('all')
   const router = useRouter()
@@ -46,8 +47,8 @@ export default function ResourcesPage() {
       const data = await response.json()
       if (data.isGuest) return
       const profile = data.profile
-      if (profile?.role === 'admin') setIsAdmin(true)
-      if (profile && profile.status !== 'approved' && profile.role !== 'admin') {
+      if (isOrgManagerRole(profile?.role)) setCanManageAnnouncements(true)
+      if (profile && profile.status !== 'approved' && !isOrgManagerRole(profile.role)) {
         router.push('/pending-approval')
         return
       }
@@ -195,9 +196,9 @@ export default function ResourcesPage() {
             </svg>
             <h3 className="text-base font-semibold text-gray-900 mb-1">No announcements yet</h3>
             <p className="text-sm text-gray-500 mb-6 max-w-xs mx-auto">
-              {isAdmin ? 'Post your first announcement to keep members in the loop.' : 'Nothing posted yet. Check back soon.'}
+              {canManageAnnouncements ? 'Post your first announcement to keep members in the loop.' : 'Nothing posted yet. Check back soon.'}
             </p>
-            {isAdmin && (
+            {canManageAnnouncements && (
               <a
                 href="/admin/resources"
                 className="inline-flex items-center px-5 py-2.5 bg-[var(--color-primary)] text-white text-sm font-semibold rounded-lg hover:bg-[#0a171c] transition-colors"
@@ -349,4 +350,3 @@ export default function ResourcesPage() {
     </div>
   )
 }
-

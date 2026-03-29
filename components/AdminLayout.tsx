@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import {
   ArrowLeft,
   Users,
@@ -11,6 +12,7 @@ import {
   BarChart3,
   Settings,
 } from 'lucide-react'
+import { isPlatformAdminRole } from '@/lib/org-roles'
 
 const NAV_ITEMS = [
   { href: '/admin/members', label: 'Members', icon: Users },
@@ -49,8 +51,31 @@ function NavLink({
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const [canAccessPlatformSettings, setCanAccessPlatformSettings] = useState(false)
+
+  useEffect(() => {
+    let active = true
+
+    fetch('/api/profile')
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (!active) return
+        setCanAccessPlatformSettings(isPlatformAdminRole(data?.profile?.role))
+      })
+      .catch(() => {
+        if (!active) return
+        setCanAccessPlatformSettings(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [])
 
   const isActive = (path: string) => pathname === path
+  const navItems = canAccessPlatformSettings
+    ? NAV_ITEMS
+    : NAV_ITEMS.filter(({ href }) => href !== '/admin/settings')
 
   return (
     <div className="min-h-screen bg-gray-50 py-6 sm:py-8">
@@ -62,7 +87,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             className="mt-3 flex overflow-x-auto overscroll-x-contain gap-1.5 pb-1 -mx-1"
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
-            {NAV_ITEMS.map(({ href, label }) => (
+            {navItems.map(({ href, label }) => (
               <Link
                 key={href}
                 href={href}
@@ -87,7 +112,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 Admin
               </h3>
               <nav className="space-y-1">
-                {NAV_ITEMS.map(({ href, label, icon }) => (
+                {navItems.map(({ href, label, icon }) => (
                   <NavLink
                     key={href}
                     href={href}

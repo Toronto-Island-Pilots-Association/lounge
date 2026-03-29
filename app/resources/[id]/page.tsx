@@ -11,6 +11,7 @@ import {
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
 import { Resource } from '@/types/database'
+import { isOrgManagerRole } from '@/lib/org-roles'
 
 // Helper function to get signed URL for resource file/image
 async function getResourceFileUrl(supabase: any, fileUrl: string | null): Promise<string | null> {
@@ -55,7 +56,7 @@ export default async function ResourceDetailPage({
   } else {
     if (shouldRequireProfileCompletion(user.profile)) redirect('/complete-profile')
     if (shouldRequirePayment(user.profile) && orgStripeConnected) redirect('/add-payment')
-    if (user.profile.status !== 'approved' && user.profile.role !== 'admin') {
+    if (user.profile.status !== 'approved' && !isOrgManagerRole(user.profile.role)) {
       redirect('/pending-approval')
     }
   }

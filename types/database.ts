@@ -26,7 +26,7 @@ export type MembershipLevel = string
 export function getMembershipLevelLabel(level: MembershipLevel): string {
   return level
 }
-export type UserRole = 'member' | 'admin'
+export type UserRole = 'member' | 'editor' | 'admin'
 export type UserStatus = 'pending' | 'approved' | 'rejected' | 'expired'
 
 /** Global identity — one row per user across all orgs. */

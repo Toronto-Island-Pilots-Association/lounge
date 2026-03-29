@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react'
 import { MemberProfile, MembershipLevel, getMembershipLevelLabel, Payment } from '@/types/database'
 import Loading from '@/components/Loading'
 import MemberDetailModal from './MemberDetailModal'
+import { getOrgRoleBadgeClass, getOrgRoleLabel, isPlatformAdminRole } from '@/lib/org-roles'
 import {
   Drawer,
   DrawerContent,
@@ -90,6 +91,7 @@ export default function MembersPageClient() {
   const [page, setPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'expired' | 'rejected'>('all')
+  const [canManageRoles, setCanManageRoles] = useState(false)
   const pageSize = PAGE_SIZE
 
   const loadData = useCallback(async () => {
@@ -107,6 +109,13 @@ export default function MembersPageClient() {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  useEffect(() => {
+    fetch('/api/profile')
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => setCanManageRoles(isPlatformAdminRole(data?.profile?.role)))
+      .catch(() => setCanManageRoles(false))
+  }, [])
 
   const sortedMembers = useMemo(() => {
     const list = [...members] as MemberWithPayment[]
@@ -473,9 +482,9 @@ export default function MembersPageClient() {
                     )}
                   </div>
                   <div className="flex flex-wrap gap-2 text-xs">
-                    {member.role === 'admin' && (
-                      <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded font-medium">
-                        Admin
+                    {member.role !== 'member' && (
+                      <span className={`px-2 py-1 rounded font-medium ${getOrgRoleBadgeClass(member.role)}`}>
+                        {getOrgRoleLabel(member.role)}
                       </span>
                     )}
                     <span className={`px-2 py-1 rounded font-medium ${
@@ -596,9 +605,9 @@ export default function MembersPageClient() {
                         >
                           {member.full_name || '-'}
                         </button>
-                        {member.role === 'admin' && (
-                          <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded font-medium shrink-0">
-                            Admin
+                        {member.role !== 'member' && (
+                          <span className={`px-2 py-0.5 text-xs rounded font-medium shrink-0 ${getOrgRoleBadgeClass(member.role)}`}>
+                            {getOrgRoleLabel(member.role)}
                           </span>
                         )}
                         {member.status === 'pending' && member.invited_at && (
@@ -740,6 +749,7 @@ export default function MembersPageClient() {
           onSave={handleUpdateMember}
           onResendReminder={handleResendReminder}
           resendingMemberId={resendingMemberId}
+          canManageRoles={canManageRoles}
         />
       )}
 

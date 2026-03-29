@@ -1,11 +1,11 @@
-import { requireAdmin } from '@/lib/auth'
+import { requirePlatformAdmin } from '@/lib/auth'
 import { getFeatureFlags, setFeatureFlags, getOrgPlan, type OrgFeatureFlags } from '@/lib/settings'
 import { getPlanDef, getRequiredPlan, type PlanFeatures } from '@/lib/plans'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
-    await requireAdmin()
+    await requirePlatformAdmin()
     const [features, plan] = await Promise.all([getFeatureFlags(), getOrgPlan()])
     const planDef = getPlanDef(plan)
     return NextResponse.json({ features, plan, planLabel: planDef.label, planFeatures: planDef.features })
@@ -18,7 +18,7 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
-    await requireAdmin()
+    await requirePlatformAdmin()
     const body = await request.json()
     const boolKeys: (keyof OrgFeatureFlags)[] = [
       'discussions', 'events', 'resources', 'memberDirectory',

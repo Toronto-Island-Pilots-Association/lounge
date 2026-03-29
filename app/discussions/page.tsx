@@ -13,6 +13,7 @@ import { categoryConfigFromDb } from './constants'
 import { getFeatureFlags, getDiscussionCategories } from '@/lib/settings'
 import { CategoryIconLarge } from './CategoryIcons'
 import { formatRelativeDate } from './utils'
+import { isOrgManagerRole } from '@/lib/org-roles'
 
 const THREADS_PER_PAGE = 25
 
@@ -28,7 +29,7 @@ export default async function DiscussionsPage({
   } else {
     if (shouldRequireProfileCompletion(user.profile)) redirect('/complete-profile')
     if (shouldRequirePayment(user.profile) && orgStripeConnected) redirect('/add-payment')
-    if (user.profile.status !== 'approved' && user.profile.role !== 'admin') redirect('/pending-approval')
+    if (user.profile.status !== 'approved' && !isOrgManagerRole(user.profile.role)) redirect('/pending-approval')
   }
 
   const isGuest = !user

@@ -1,10 +1,10 @@
-import { requireAdmin } from '@/lib/auth'
+import { requirePlatformAdmin } from '@/lib/auth'
 import { getSignupFieldsApiPayload, setSignupFieldsConfig, type SignupField } from '@/lib/settings'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
-    await requireAdmin()
+    await requirePlatformAdmin()
     const payload = await getSignupFieldsApiPayload()
     return NextResponse.json(payload)
   } catch (error: unknown) {
@@ -16,7 +16,7 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
-    await requireAdmin()
+    await requirePlatformAdmin()
     const body = await request.json()
     if (!Array.isArray(body.fields)) {
       return NextResponse.json({ error: 'fields must be an array' }, { status: 400 })

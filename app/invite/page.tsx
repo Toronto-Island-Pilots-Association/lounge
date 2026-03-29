@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUserIncludingPending, shouldRequireProfileCompletion, shouldRequirePayment, isOrgStripeConnected } from '@/lib/auth'
 import InviteMemberForm from './InviteMemberForm'
+import { isOrgManagerRole } from '@/lib/org-roles'
 
 export default async function InvitePage() {
   const [user, orgStripeConnected] = await Promise.all([getCurrentUserIncludingPending(), isOrgStripeConnected()])
@@ -18,9 +19,9 @@ export default async function InvitePage() {
   }
 
   // Only approved members can invite
-  const isPending = user.profile.status === 'pending' && user.profile.role !== 'admin'
-  const isRejected = user.profile.status === 'rejected' && user.profile.role !== 'admin'
-  const isExpiredStatus = user.profile.status === 'expired' && user.profile.role !== 'admin'
+  const isPending = user.profile.status === 'pending' && !isOrgManagerRole(user.profile.role)
+  const isRejected = user.profile.status === 'rejected' && !isOrgManagerRole(user.profile.role)
+  const isExpiredStatus = user.profile.status === 'expired' && !isOrgManagerRole(user.profile.role)
 
   if (isPending || isRejected || isExpiredStatus) {
     redirect('/membership')

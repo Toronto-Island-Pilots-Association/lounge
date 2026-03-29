@@ -1,6 +1,7 @@
 import { createClient } from './supabase/server'
 import { headers } from 'next/headers'
 import { MemberProfile, UserProfile } from '@/types/database'
+import { isOrgManagerRole, isPlatformAdminRole } from '@/lib/org-roles'
 import { isStripeEnabled } from '@/lib/stripe'
 
 /** Read the org id injected by middleware from request headers. */
@@ -174,7 +175,7 @@ export async function getCurrentUser() {
     }
 
     // Block non-approved members (admins always pass)
-    if (profile.role !== 'admin' && profile.status !== 'approved') {
+    if (!isOrgManagerRole(profile.role) && profile.status !== 'approved') {
       return null
     }
 
@@ -218,7 +219,7 @@ export async function requireAuthIncludingPending() {
 
 export function shouldRequireProfileCompletion(profile: MemberProfile): boolean {
   if (!profile) return false
-  if (profile.role === 'admin') return false
+  if (isOrgManagerRole(profile.role)) return false
   if (profile.status !== 'pending' && profile.status !== 'approved') return false
   return (
     !profile.first_name?.trim() ||
@@ -233,7 +234,7 @@ export function shouldRequireProfileCompletion(profile: MemberProfile): boolean 
 
 export function shouldRequirePayment(profile: MemberProfile): boolean {
   if (!profile) return false
-  if (profile.role === 'admin') return false
+  if (isOrgManagerRole(profile.role)) return false
   if (profile.membership_level === 'Honorary') return false
   if (profile.status === 'rejected' || profile.status === 'expired') return false
   if (profile.stripe_subscription_id || profile.paypal_subscription_id) return false
@@ -243,6 +244,12 @@ export function shouldRequirePayment(profile: MemberProfile): boolean {
 
 export async function requireAdmin() {
   const user = await requireAuth()
-  if (user.profile.role !== 'admin') throw new Error('Forbidden: Admin access required')
+  if (!isOrgManagerRole(user.profile.role)) throw new Error('Forbidden: Admin access required')
+  return user
+}
+
+export async function requirePlatformAdmin() {
+  const user = await requireAuth()
+  if (!isPlatformAdminRole(user.profile.role)) throw new Error('Forbidden: Admin access required')
   return user
 }

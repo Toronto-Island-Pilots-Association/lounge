@@ -7,6 +7,7 @@ import {
   computeTrialEndFromConfig,
   type MembershipLevelKey,
 } from '@/lib/settings'
+import { isOrgManagerRole } from '@/lib/org-roles'
 import SignOutButton from './SignOutButton'
 
 export default async function PendingApprovalPage() {
@@ -18,7 +19,7 @@ export default async function PendingApprovalPage() {
   }
 
   // If user is approved or is admin, redirect to membership
-  if (user.profile.status === 'approved' || user.profile.role === 'admin') {
+  if (user.profile.status === 'approved' || isOrgManagerRole(user.profile.role)) {
     redirect('/membership')
   }
 
@@ -128,4 +129,3 @@ export default async function PendingApprovalPage() {
     </div>
   )
 }
-

@@ -972,10 +972,11 @@ function MemberEditModal({
             <label className="block text-sm font-medium text-gray-900 mb-1">Role</label>
             <select
               value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value as 'member' | 'admin' })}
+              onChange={(e) => setFormData({ ...formData, role: e.target.value as MemberProfile['role'] })}
               className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
             >
               <option value="member">Member</option>
+              <option value="editor">Editor</option>
               <option value="admin">Admin</option>
             </select>
           </div>

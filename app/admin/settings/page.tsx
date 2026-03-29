@@ -1,6 +1,6 @@
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { requireAdmin } from '@/lib/auth'
+import { requireAdmin, requirePlatformAdmin } from '@/lib/auth'
 import { syncOrgStripeOnboardingFromStripe } from '@/lib/platform-stripe-onboarding'
 
 const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'
@@ -35,9 +35,9 @@ export default async function SettingsPage({
 }) {
   let user: Awaited<ReturnType<typeof requireAdmin>>
   try {
-    user = await requireAdmin()
+    user = await requirePlatformAdmin()
   } catch {
-    redirect('/membership')
+    redirect('/admin')
   }
 
   const sp = await searchParams

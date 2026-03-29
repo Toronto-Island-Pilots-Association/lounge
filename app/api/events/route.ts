@@ -1,5 +1,6 @@
 import { requireAuth, isOrgPublic } from '@/lib/auth'
 import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
+import { isOrgManagerRole } from '@/lib/org-roles'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { getFeatureFlags } from '@/lib/settings'
 import { headers } from 'next/headers'
@@ -129,7 +130,7 @@ export async function POST(request: Request) {
     const orgId = user.profile.org_id
 
     // Check if user is admin
-    if (user.profile.role !== 'admin') {
+    if (!isOrgManagerRole(user.profile.role)) {
       return NextResponse.json(
         { error: 'Forbidden: Admin access required' },
         { status: 403 }

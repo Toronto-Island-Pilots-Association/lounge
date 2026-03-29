@@ -1,5 +1,6 @@
 import { requireAuth } from '@/lib/auth'
 import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
+import { isOrgManagerRole } from '@/lib/org-roles'
 import { sendInvitationWithPasswordEmail } from '@/lib/resend'
 import { createClient } from '@/lib/supabase/server'
 import { getFeatureFlags } from '@/lib/settings'
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
     }
 
     // Only allow approved members to invite (not pending/rejected/expired)
-    if (user.profile.status !== 'approved' && user.profile.role !== 'admin') {
+    if (user.profile.status !== 'approved' && !isOrgManagerRole(user.profile.role)) {
       return NextResponse.json(
         { error: 'Only approved members can invite others' },
         { status: 403 }

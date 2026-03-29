@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { buildOrgUrl, ROOT_DOMAIN } from '@/lib/org'
+import { getOrgRoleLabel } from '@/lib/org-roles'
 import { getPlanDef } from '@/lib/plans'
 import SignOutButton from './SignOutButton'
 
@@ -42,7 +43,8 @@ export default async function PlatformDashboard() {
     .filter(Boolean) as { org: Record<string, unknown> & { id: string; name: string; subdomain: string; logo_url?: string | null; custom_domain?: string | null; plan?: string | null }; role: string }[]
 
   const adminOrgs = memberships.filter(m => m.role === 'admin').map(m => m.org)
-  const memberOrgs = memberships.filter(m => m.role !== 'admin').map(m => ({ ...m.org, memberRole: m.role }))
+  const editorOrgs = memberships.filter(m => m.role === 'editor').map(m => ({ ...m.org, memberRole: m.role }))
+  const memberOrgs = memberships.filter(m => m.role === 'member').map(m => ({ ...m.org, memberRole: m.role }))
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -83,7 +85,7 @@ export default async function PlatformDashboard() {
           <div className="space-y-10">
             {adminOrgs.length > 0 && (
               <section className="space-y-4">
-                {memberOrgs.length > 0 && (
+                {(editorOrgs.length > 0 || memberOrgs.length > 0) && (
                   <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">You administer</h2>
                 )}
                 <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -147,9 +149,65 @@ export default async function PlatformDashboard() {
               </section>
             )}
 
-            {memberOrgs.length > 0 && (
+            {editorOrgs.length > 0 && (
               <section className="space-y-4">
                 {adminOrgs.length > 0 && (
+                  <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">You edit</h2>
+                )}
+                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {editorOrgs.map(org => {
+                    const url = buildOrgUrl(org)
+                    const address = loungeAddressLabel(org)
+                    const initial = (org.name || '?').slice(0, 1).toUpperCase()
+                    const logo = org.logo_url as string | null | undefined
+
+                    return (
+                      <li
+                        key={org.id}
+                        className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col gap-4 shadow-sm hover:border-gray-300 transition-colors"
+                      >
+                        <div className="flex gap-3 min-w-0">
+                          <div className="relative h-11 w-11 shrink-0 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center text-sm font-semibold text-gray-500">
+                            {logo ? (
+                              <Image
+                                src={logo}
+                                alt=""
+                                width={44}
+                                height={44}
+                                className="object-cover w-full h-full"
+                              />
+                            ) : (
+                              initial
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-gray-900 truncate">{org.name}</p>
+                            <p className="text-xs text-gray-500 truncate font-mono">{address}</p>
+                            <span className="inline-block text-[10px] px-1.5 py-0.5 rounded-md bg-sky-100 text-sky-700 capitalize mt-2">
+                              {getOrgRoleLabel(org.memberRole)}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="pt-1 border-t border-gray-100">
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            Open lounge
+                          </a>
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </section>
+            )}
+
+            {memberOrgs.length > 0 && (
+              <section className="space-y-4">
+                {(adminOrgs.length > 0 || editorOrgs.length > 0) && (
                   <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Member</h2>
                 )}
                 <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -182,7 +240,7 @@ export default async function PlatformDashboard() {
                             <p className="font-semibold text-gray-900 truncate">{org.name}</p>
                             <p className="text-xs text-gray-500 truncate font-mono">{address}</p>
                             <span className="inline-block text-[10px] px-1.5 py-0.5 rounded-md bg-gray-100 text-gray-600 capitalize mt-2">
-                              {org.memberRole}
+                              {getOrgRoleLabel(org.memberRole)}
                             </span>
                           </div>
                         </div>

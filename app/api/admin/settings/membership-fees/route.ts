@@ -1,10 +1,10 @@
-import { requireAdmin } from '@/lib/auth'
+import { requirePlatformAdmin } from '@/lib/auth'
 import { getMembershipLevels, setMembershipLevels } from '@/lib/settings'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
-    await requireAdmin()
+    await requirePlatformAdmin()
     const levels = await getMembershipLevels()
     const fees: Record<string, number> = Object.fromEntries(levels.map(l => [l.key, l.fee]))
     return NextResponse.json({ fees })
@@ -17,7 +17,7 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
-    await requireAdmin()
+    await requirePlatformAdmin()
     const body = await request.json()
     if (typeof body !== 'object' || body === null) {
       return NextResponse.json({ error: 'Invalid body' }, { status: 400 })

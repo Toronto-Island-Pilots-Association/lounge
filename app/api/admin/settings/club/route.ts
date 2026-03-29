@@ -1,10 +1,10 @@
-import { requireAdmin } from '@/lib/auth'
+import { requirePlatformAdmin } from '@/lib/auth'
 import { getOrgIdentity, setOrgIdentity, type OrgIdentity } from '@/lib/settings'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
-    await requireAdmin()
+    await requirePlatformAdmin()
     const identity = await getOrgIdentity()
     return NextResponse.json({ identity })
   } catch (error: unknown) {
@@ -16,7 +16,7 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
-    await requireAdmin()
+    await requirePlatformAdmin()
     const body = await request.json()
     const validKeys: (keyof OrgIdentity)[] = [
       'description', 'contactEmail', 'websiteUrl', 'accentColor', 'displayName', 'timezone',

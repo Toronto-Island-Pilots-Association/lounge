@@ -1,4 +1,4 @@
-import { requireAdmin } from '@/lib/auth'
+import { requirePlatformAdmin } from '@/lib/auth'
 import {
   getMembershipLevels,
   getTrialConfig,
@@ -11,7 +11,7 @@ const TRIAL_TYPES: TrialType[] = ['none', 'months']
 
 export async function GET() {
   try {
-    await requireAdmin()
+    await requirePlatformAdmin()
     const trial = await getTrialConfig()
     return NextResponse.json({ trial })
   } catch (error: unknown) {
@@ -23,7 +23,7 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
-    await requireAdmin()
+    await requirePlatformAdmin()
     const body = await request.json()
     if (typeof body !== 'object' || body === null) {
       return NextResponse.json({ error: 'Invalid body' }, { status: 400 })

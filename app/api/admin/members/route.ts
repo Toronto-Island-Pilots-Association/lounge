@@ -1,4 +1,5 @@
 import { requireAdmin } from '@/lib/auth'
+import { isPlatformAdminRole } from '@/lib/org-roles'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import * as Sentry from '@sentry/nextjs'
 import { sendMemberApprovalEmail } from '@/lib/resend'
@@ -78,7 +79,7 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    await requireAdmin()
+    const currentUser = await requireAdmin()
     const orgId = request.headers.get('x-org-id')
     if (!orgId) {
       return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
@@ -87,6 +88,10 @@ export async function PATCH(request: Request) {
 
     if (!id) {
       return NextResponse.json({ error: 'Member ID is required' }, { status: 400 })
+    }
+
+    if (updates.role !== undefined && !isPlatformAdminRole(currentUser.profile.role)) {
+      return NextResponse.json({ error: 'Only org admins can change roles' }, { status: 403 })
     }
 
     // Convert empty strings to null for timestamp fields (PostgreSQL doesn't accept empty strings for timestamps)

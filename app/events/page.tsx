@@ -8,6 +8,7 @@ import { Event, EventRsvp } from '@/types/database'
 import Loading from '@/components/Loading'
 import ImagePreviewModal from '@/components/ImagePreviewModal'
 import { useMediaQuery } from '@/hooks/use-media-query'
+import { isOrgManagerRole } from '@/lib/org-roles'
 import {
   Drawer,
   DrawerContent,
@@ -31,7 +32,7 @@ type GroupedEvents = {
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
-  const [isAdmin, setIsAdmin] = useState(false)
+  const [canManageEvents, setCanManageEvents] = useState(false)
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
   const [rsvpsByEvent, setRsvpsByEvent] = useState<Record<string, EventRsvp[]>>({})
   const [expandedRsvpsEventId, setExpandedRsvpsEventId] = useState<string | null>(null)
@@ -62,8 +63,8 @@ export default function EventsPage() {
       setIsGuest(false)
 
       const profile = data.profile
-      if (profile?.role === 'admin') setIsAdmin(true)
-      if (profile && profile.status !== 'approved' && profile.role !== 'admin') {
+      if (isOrgManagerRole(profile?.role)) setCanManageEvents(true)
+      if (profile && profile.status !== 'approved' && !isOrgManagerRole(profile.role)) {
         router.push('/pending-approval')
         return
       }
@@ -300,9 +301,9 @@ export default function EventsPage() {
             </svg>
             <h3 className="text-base font-semibold text-gray-900 mb-1">No events yet</h3>
             <p className="text-sm text-gray-500 mb-6 max-w-xs mx-auto">
-              {isAdmin ? 'Create your first event and invite members to RSVP.' : 'No events have been scheduled yet. Check back soon.'}
+              {canManageEvents ? 'Create your first event and invite members to RSVP.' : 'No events have been scheduled yet. Check back soon.'}
             </p>
-            {isAdmin && (
+            {canManageEvents && (
               <a
                 href="/admin/events"
                 className="inline-flex items-center px-5 py-2.5 bg-[var(--color-primary)] text-white text-sm font-semibold rounded-lg hover:bg-[#0a171c] transition-colors"

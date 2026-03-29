@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react'
 import { MemberProfile, getMembershipLevelLabel } from '@/types/database'
 import { createClient } from '@/lib/supabase/client'
 import { getPlatformSignupAbsoluteUrl, isClubLoungeDemoOrgSlug } from '@/lib/org'
+import { isOrgManagerRole, isPlatformAdminRole } from '@/lib/org-roles'
 
 /** Navbar persona for unauthenticated visitors on the public demo org (demo.* / Lakeside). */
 const DEMO_GUEST_PREVIEW = {
@@ -78,12 +79,12 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
           setProfile(data.profile)
           setUser({ id: data.profile.id, email: data.profile.email })
 
-          if (shouldFetchPendingCount && data.profile?.role === 'admin') {
+          if (shouldFetchPendingCount && isOrgManagerRole(data.profile?.role)) {
             fetchPendingCount()
-          } else if (data.profile?.role !== 'admin') {
+          } else if (!isOrgManagerRole(data.profile?.role)) {
             setPendingCount(0)
           }
-          if (data.profile?.status === 'approved' || data.profile?.role === 'admin') {
+          if (data.profile?.status === 'approved' || isOrgManagerRole(data.profile?.role)) {
             fetchNotificationCount()
           } else {
             setNotificationCount(0)
@@ -206,7 +207,7 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
   }
 
   const showMemberBrowse =
-    isGuest || (!!profile && (profile.status === 'approved' || profile.role === 'admin'))
+    isGuest || (!!profile && (profile.status === 'approved' || isOrgManagerRole(profile.role)))
 
   const isDemoLoungeGuest =
     isGuest && isClubLoungeDemoOrgSlug(orgConfig?.org.slug ?? undefined)
@@ -346,7 +347,7 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
                   </svg>
                   Membership
                 </Link>
-                {profile && (profile.status === 'approved' || profile.role === 'admin') && (
+                {profile && (profile.status === 'approved' || isOrgManagerRole(profile.role)) && (
                   <div className="ml-1 pl-1 -mr-[14px] border-l border-gray-200 self-stretch flex items-center">
                     <Link
                       href="/notifications"
@@ -433,7 +434,7 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
                         </svg>
                         Settings
                       </Link>
-                      {profile && (profile.status === 'approved' || profile.role === 'admin') && (orgConfig?.features.allowMemberInvitations ?? true) && (
+                      {profile && (profile.status === 'approved' || isOrgManagerRole(profile.role)) && (orgConfig?.features.allowMemberInvitations ?? true) && (
                         <Link
                           href="/invite"
                           onClick={() => setUserMenuOpen(false)}
@@ -459,7 +460,7 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
                           Feedback
                         </a>
                       )}
-                      {profile?.role === 'admin' && (
+                      {isOrgManagerRole(profile?.role) && (
                         <Link
                           href="/admin"
                           onClick={() => setUserMenuOpen(false)}
@@ -476,7 +477,7 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
                           )}
                         </Link>
                       )}
-                      {profile?.role === 'admin' && (
+                      {isPlatformAdminRole(profile?.role) && (
                         <a
                           href={`${process.env.NODE_ENV === 'development' ? 'http' : 'https'}://${process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'}${process.env.NODE_ENV === 'development' ? ':3000' : ''}/platform/dashboard`}
                           onClick={() => setUserMenuOpen(false)}
@@ -693,7 +694,7 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
               )}
               {user && (
                 <>
-                  {profile && (profile.status === 'approved' || profile.role === 'admin') && (
+                  {profile && (profile.status === 'approved' || isOrgManagerRole(profile.role)) && (
                     <Link
                       href="/notifications"
                       onClick={handleLinkClick}
@@ -731,7 +732,7 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
                     </svg>
                     Settings
                   </Link>
-                  {profile && (profile.status === 'approved' || profile.role === 'admin') && (orgConfig?.features.allowMemberInvitations ?? true) && (
+                  {profile && (profile.status === 'approved' || isOrgManagerRole(profile.role)) && (orgConfig?.features.allowMemberInvitations ?? true) && (
                     <Link
                       href="/invite"
                       onClick={handleLinkClick}
@@ -757,7 +758,7 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
                       Feedback
                     </a>
                   )}
-                  {profile?.role === 'admin' && (
+                  {isOrgManagerRole(profile?.role) && (
                     <Link
                       href="/admin"
                       onClick={handleLinkClick}
@@ -774,7 +775,7 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
                       )}
                     </Link>
                   )}
-                  {profile?.role === 'admin' && (
+                  {isPlatformAdminRole(profile?.role) && (
                     <a
                       href={`${process.env.NODE_ENV === 'development' ? 'http' : 'https'}://${process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'}${process.env.NODE_ENV === 'development' ? ':3000' : ''}/platform/dashboard`}
                       onClick={handleLinkClick}
@@ -860,4 +861,3 @@ export default function Navbar({ guestPreviewBar = false }: { guestPreviewBar?: 
     </>
   )
 }
-

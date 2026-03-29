@@ -40,7 +40,7 @@ export async function GET(request: Request) {
       .from('member_profiles')
       .select('id, org_id, email, full_name, membership_expires_at, status')
       .eq('status', 'approved')
-      .neq('role', 'admin')
+      .eq('role', 'member')
       .not('membership_expires_at', 'is', null)
       .lt('membership_expires_at', nowISO)
 

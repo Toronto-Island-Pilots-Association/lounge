@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { DiscussionCategory } from '@/types/database'
 import { getFeatureFlags } from '@/lib/settings'
 import EditDiscussionForm from '../EditDiscussionForm'
+import { isOrgManagerRole } from '@/lib/org-roles'
 
 export default async function EditThreadPage({
   params,
@@ -15,7 +16,7 @@ export default async function EditThreadPage({
   if (!user) redirect('/login')
   if (shouldRequireProfileCompletion(user.profile)) redirect('/complete-profile')
   if (shouldRequirePayment(user.profile) && orgStripeConnected) redirect('/add-payment')
-  if (user.profile.status !== 'approved' && user.profile.role !== 'admin') {
+  if (user.profile.status !== 'approved' && !isOrgManagerRole(user.profile.role)) {
     redirect('/pending-approval')
   }
 

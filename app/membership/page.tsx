@@ -27,6 +27,7 @@ import MembershipPageClient from './MembershipPageClient'
 import StripeSuccessHandler from './StripeSuccessHandler'
 import GuestMembershipDemo from './GuestMembershipDemo'
 import MembershipActivitySidebar from '@/components/membership/MembershipActivitySidebar'
+import { isOrgManagerRole } from '@/lib/org-roles'
 
 export default async function MembershipPage({
   searchParams,
@@ -58,9 +59,9 @@ export default async function MembershipPage({
 
   const featureFlags = await getFeatureFlags()
 
-  const isPending = user.profile.status === 'pending' && user.profile.role !== 'admin'
-  const isRejected = user.profile.status === 'rejected' && user.profile.role !== 'admin'
-  const isExpiredStatus = user.profile.status === 'expired' && user.profile.role !== 'admin'
+  const isPending = user.profile.status === 'pending' && !isOrgManagerRole(user.profile.role)
+  const isRejected = user.profile.status === 'rejected' && !isOrgManagerRole(user.profile.role)
+  const isExpiredStatus = user.profile.status === 'expired' && !isOrgManagerRole(user.profile.role)
 
   // Check if user was invited (admin, member, or bulk) and needs to change password
   const wasInvited =

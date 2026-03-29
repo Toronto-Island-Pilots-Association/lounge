@@ -1,5 +1,6 @@
 import { requireAuth } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
+import { isOrgManagerRole } from '@/lib/org-roles'
 import { NextResponse } from 'next/server'
 
 export async function DELETE(
@@ -25,7 +26,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Comment not found' }, { status: 404 })
     }
 
-    const isAdmin = user.profile.role === 'admin'
+    const isAdmin = isOrgManagerRole(user.profile.role)
     const isOwner = comment.created_by === user.id
 
     if (!isAdmin && !isOwner) {
@@ -53,4 +54,3 @@ export async function DELETE(
     )
   }
 }
-

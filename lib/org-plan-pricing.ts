@@ -24,7 +24,7 @@ export async function getBillableOrgMemberCount(orgId: string): Promise<number> 
     .select('id', { count: 'exact', head: true })
     .eq('org_id', orgId)
     .eq('status', 'approved')
-    .neq('role', 'admin')
+    .eq('role', 'member')
 
   if (error) throw new Error(error.message)
   return count ?? 0

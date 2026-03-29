@@ -1,4 +1,4 @@
-import { requireAdmin } from '@/lib/auth'
+import { requirePlatformAdmin } from '@/lib/auth'
 import { parseMembershipLevelsBody } from '@/lib/membership-levels-body'
 import { getMembershipLevels, getOrgPlan, setMembershipLevels } from '@/lib/settings'
 import { getPlanDef } from '@/lib/plans'
@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
-    await requireAdmin()
+    await requirePlatformAdmin()
     const [levels, plan] = await Promise.all([getMembershipLevels(), getOrgPlan()])
     const memberTrialsEnabled = getPlanDef(plan).features.memberTrials
     return NextResponse.json({ levels, memberTrialsEnabled })
@@ -19,7 +19,7 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
-    await requireAdmin()
+    await requirePlatformAdmin()
     const body = await request.json()
     const levels = parseMembershipLevelsBody(body)
     if (!levels) {
@@ -37,7 +37,7 @@ export async function PUT(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    await requireAdmin()
+    await requirePlatformAdmin()
     const body = await request.json()
     if (typeof body !== 'object' || body === null || Array.isArray(body)) {
       return NextResponse.json({ error: 'Invalid body' }, { status: 400 })

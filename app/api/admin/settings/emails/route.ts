@@ -1,10 +1,10 @@
-import { requireAdmin } from '@/lib/auth'
+import { requirePlatformAdmin } from '@/lib/auth'
 import { getEmailTemplates, setEmailTemplates } from '@/lib/settings'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
-    await requireAdmin()
+    await requirePlatformAdmin()
     const templates = await getEmailTemplates()
     return NextResponse.json({ templates })
   } catch (error: unknown) {
@@ -16,7 +16,7 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
-    await requireAdmin()
+    await requirePlatformAdmin()
     const body = await request.json()
     const update: { subject?: string; body?: string } = {}
     if (typeof body.subject === 'string') update.subject = body.subject

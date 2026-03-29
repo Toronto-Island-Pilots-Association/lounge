@@ -1,5 +1,6 @@
 import { requireAuth } from '@/lib/auth'
 import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
+import { isOrgManagerRole } from '@/lib/org-roles'
 import { createClient } from '@/lib/supabase/server'
 import { getFeatureFlags } from '@/lib/settings'
 import { NextResponse } from 'next/server'
@@ -19,7 +20,7 @@ export async function PATCH(
     const { id } = await params
 
     // Check if user is admin
-    if (user.profile.role !== 'admin') {
+    if (!isOrgManagerRole(user.profile.role)) {
       return NextResponse.json(
         { error: 'Forbidden: Admin access required' },
         { status: 403 }
@@ -111,7 +112,7 @@ export async function DELETE(
     const { id } = await params
 
     // Check if user is admin
-    if (user.profile.role !== 'admin') {
+    if (!isOrgManagerRole(user.profile.role)) {
       return NextResponse.json(
         { error: 'Forbidden: Admin access required' },
         { status: 403 }

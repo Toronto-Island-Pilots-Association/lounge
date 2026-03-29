@@ -6,6 +6,7 @@ import { getFeatureFlags } from '@/lib/settings'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
 import { MemberProfile, TIPA_ORG_ID, getMembershipLevelLabel } from '@/types/database'
+import { getOrgRoleLabel } from '@/lib/org-roles'
 
 const MEMBERS_PER_PAGE = 25
 
@@ -110,8 +111,8 @@ export default async function MembersPage({
                           <div className="text-base font-medium text-gray-900 truncate">
                             {member.full_name || `${member.first_name || ''} ${member.last_name || ''}`.trim() || 'N/A'}
                           </div>
-                          {member.role === 'admin' && (
-                            <div className="text-xs text-[var(--color-primary)] mt-0.5">Admin</div>
+                          {member.role !== 'member' && (
+                            <div className="text-xs text-[var(--color-primary)] mt-0.5">{getOrgRoleLabel(member.role)}</div>
                           )}
                         </div>
                         <span className={`ml-2 px-2 py-1 text-xs rounded-full flex-shrink-0 ${
@@ -209,8 +210,8 @@ export default async function MembersPage({
                         <div className="text-sm font-medium text-gray-900">
                           {member.full_name || `${member.first_name || ''} ${member.last_name || ''}`.trim() || 'N/A'}
                         </div>
-                        {member.role === 'admin' && (
-                          <div className="text-xs text-[var(--color-primary)] mt-1">Admin</div>
+                        {member.role !== 'member' && (
+                          <div className="text-xs text-[var(--color-primary)] mt-1">{getOrgRoleLabel(member.role)}</div>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

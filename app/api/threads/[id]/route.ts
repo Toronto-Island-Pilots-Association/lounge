@@ -1,6 +1,7 @@
 import { requireAuth } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { getFeatureFlags } from '@/lib/settings'
+import { isOrgManagerRole } from '@/lib/org-roles'
 import { NextResponse } from 'next/server'
 
 export async function GET(
@@ -76,7 +77,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Thread not found' }, { status: 404 })
     }
 
-    const isAdmin = user.profile.role === 'admin'
+    const isAdmin = isOrgManagerRole(user.profile.role)
     const isOwner = thread.created_by === user.id
 
     if (!isAdmin && !isOwner) {
@@ -181,4 +182,3 @@ export async function PATCH(
     return NextResponse.json({ error: message }, { status })
   }
 }
-

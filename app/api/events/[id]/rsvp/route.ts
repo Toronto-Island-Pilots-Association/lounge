@@ -1,6 +1,7 @@
 import { requireAuth } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { getFeatureFlags } from '@/lib/settings'
+import { isOrgManagerRole } from '@/lib/org-roles'
 import { NextResponse } from 'next/server'
 
 // POST - RSVP to an event (authenticated, approved members only)
@@ -22,7 +23,7 @@ export async function POST(
     }
 
     // Only approved members (or admins) can RSVP
-    if (user.profile.status !== 'approved' && user.profile.role !== 'admin') {
+    if (user.profile.status !== 'approved' && !isOrgManagerRole(user.profile.role)) {
       return NextResponse.json(
         { error: 'Only approved members can RSVP to events' },
         { status: 403 }

@@ -17,6 +17,7 @@ import { categoryConfigFromDb } from '../constants'
 import { getDiscussionCategories, getFeatureFlags } from '@/lib/settings'
 import { formatDetailDate } from '../utils'
 import MarkThreadNotificationsRead from './MarkThreadNotificationsRead'
+import { isOrgManagerRole } from '@/lib/org-roles'
 
 export default async function DiscussionPage({ params }: { params: Promise<{ id: string }> }) {
   const [user, orgPublic, orgStripeConnected] = await Promise.all([getCurrentUser(), isOrgPublic(), isOrgStripeConnected()])
@@ -26,7 +27,7 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
   } else {
     if (shouldRequireProfileCompletion(user.profile)) redirect('/complete-profile')
     if (shouldRequirePayment(user.profile) && orgStripeConnected) redirect('/add-payment')
-    if (user.profile.status !== 'approved' && user.profile.role !== 'admin') redirect('/pending-approval')
+    if (user.profile.status !== 'approved' && !isOrgManagerRole(user.profile.role)) redirect('/pending-approval')
   }
 
   const isGuest = !user
@@ -181,7 +182,7 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
           <div className="lg:col-span-3">
             {/* Thread */}
             <div className="bg-white shadow rounded-lg p-4 sm:p-6 mb-4 sm:mb-6 relative">
-          {!isGuest && ((thread.created_by === user!.id && thread.created_by !== null) || user!.profile.role === 'admin') ? (
+          {!isGuest && ((thread.created_by === user!.id && thread.created_by !== null) || isOrgManagerRole(user!.profile.role)) ? (
             <div className="absolute top-4 right-4 sm:top-6 sm:right-6 flex items-center gap-2">
               {!isGuest && thread.created_by === user!.id && thread.created_by !== null ? (
                 <Link
@@ -194,7 +195,7 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
               <DeleteThreadButton
                 threadId={id}
                 isOwner={thread.created_by === user.id && thread.created_by !== null}
-                isAdmin={user.profile.role === 'admin'}
+                isAdmin={isOrgManagerRole(user.profile.role)}
               />
             </div>
           ) : null}
@@ -303,12 +304,12 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
                 
                 return (
                   <div key={comment.id} className="border-t border-gray-200 pt-6 first:border-t-0 first:pt-0 relative">
-                    {!isGuest && ((comment.created_by === user!.id && comment.created_by !== null) || user!.profile.role === 'admin') ? (
+                    {!isGuest && ((comment.created_by === user!.id && comment.created_by !== null) || isOrgManagerRole(user!.profile.role)) ? (
                       <div className="absolute top-6 right-0">
                         <DeleteCommentButton
                           commentId={comment.id}
                           isOwner={comment.created_by === user.id && comment.created_by !== null}
-                          isAdmin={user.profile.role === 'admin'}
+                          isAdmin={isOrgManagerRole(user.profile.role)}
                         />
                       </div>
                     ) : null}

@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { MemberProfile, MembershipLevel, TIPA_ORG_ID, getMembershipLevelLabel, Payment } from '@/types/database'
 import { isOnTrialFromTrialEnd, trialUntilLabel } from '@/lib/trial'
 import { COMMON_INTEREST_OPTIONS } from '@/lib/club-options'
+import { getOrgRoleBadgeClass, getOrgRoleLabel } from '@/lib/org-roles'
 import { COUNTRIES, getStatesProvinces } from '@/app/become-a-member/constants'
 import {
   Drawer,
@@ -64,12 +65,14 @@ export default function MemberDetailModal({
   onSave,
   onResendReminder,
   resendingMemberId,
+  canManageRoles = false,
 }: {
   member: MemberProfile
   onClose: () => void
   onSave: (member: MemberProfile, updates: Partial<MemberProfile>) => void
   onResendReminder?: (memberId: string) => void
   resendingMemberId?: string | null
+  canManageRoles?: boolean
 }) {
   const [activeTab, setActiveTab] = useState<'overview' | 'edit' | 'membership' | 'activity'>('overview')
   const [cancellingStripe, setCancellingStripe] = useState(false)
@@ -327,32 +330,36 @@ export default function MemberDetailModal({
                   <h4 className="text-xs font-semibold text-gray-700 mb-2">Role</h4>
                   <div className="flex items-center gap-3">
                     <span className={`inline-flex px-2 py-0.5 text-xs rounded font-medium ${
-                      member.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'
+                      getOrgRoleBadgeClass(member.role)
                     }`}>
-                      {member.role === 'admin' ? 'Admin' : 'Member'}
+                      {getOrgRoleLabel(member.role)}
                     </span>
-                    {member.role === 'admin' ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!confirm('Remove admin role from this member?')) return
-                          onSave(member, { role: 'member' })
-                        }}
-                        className="px-3 py-1 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100"
-                      >
-                        Remove admin
-                      </button>
+                    {canManageRoles ? (
+                      member.role === 'admin' ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!confirm('Change this admin to editor?')) return
+                            onSave(member, { role: 'editor' })
+                          }}
+                          className="px-3 py-1 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-md hover:bg-purple-100"
+                        >
+                          Make editor
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!confirm('Grant admin role to this member?')) return
+                            onSave(member, { role: 'admin' })
+                          }}
+                          className="px-3 py-1 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-md hover:bg-purple-100"
+                        >
+                          Make admin
+                        </button>
+                      )
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!confirm('Grant admin role to this member?')) return
-                          onSave(member, { role: 'admin' })
-                        }}
-                        className="px-3 py-1 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-md hover:bg-purple-100"
-                      >
-                        Make admin
-                      </button>
+                      <span className="text-xs text-gray-500">Only org admins can change roles.</span>
                     )}
                   </div>
                 </div>
@@ -656,12 +663,17 @@ export default function MemberDetailModal({
                         <label className="block text-sm font-medium text-gray-900 mb-1">Role</label>
                         <select
                           value={formData.role}
-                          onChange={(e) => setFormData({ ...formData, role: e.target.value as 'member' | 'admin' })}
+                          onChange={(e) => setFormData({ ...formData, role: e.target.value as MemberProfile['role'] })}
+                          disabled={!canManageRoles}
                           className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] cursor-pointer"
                         >
                           <option value="member">Member</option>
+                          <option value="editor">Editor</option>
                           <option value="admin">Admin</option>
                         </select>
+                        {!canManageRoles && (
+                          <p className="mt-1 text-xs text-gray-500">Only org admins can change roles.</p>
+                        )}
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-900 mb-1">Membership Level</label>

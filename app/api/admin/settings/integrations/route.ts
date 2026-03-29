@@ -1,4 +1,4 @@
-import { requireAdmin } from '@/lib/auth'
+import { requirePlatformAdmin } from '@/lib/auth'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getPlatformStripeInstance } from '@/lib/stripe'
 import { addDomainToProject } from '@/lib/vercel'
@@ -16,7 +16,7 @@ async function getOrgId(): Promise<string | null> {
 
 export async function GET() {
   try {
-    await requireAdmin()
+    await requirePlatformAdmin()
     const orgId = await getOrgId()
     if (!orgId) return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
 
@@ -40,7 +40,7 @@ export async function GET() {
 
 export async function POST() {
   try {
-    await requireAdmin()
+    await requirePlatformAdmin()
     const orgId = await getOrgId()
     if (!orgId) return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
 
@@ -89,7 +89,7 @@ export async function POST() {
 
 export async function PATCH(request: Request) {
   try {
-    await requireAdmin()
+    await requirePlatformAdmin()
     const orgId = await getOrgId()
     if (!orgId) return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
 
