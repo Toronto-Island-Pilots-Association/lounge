@@ -127,6 +127,7 @@ export interface Page {
   content: string | null
   image_url: string | null
   published: boolean
+  status?: 'draft' | 'published'
   created_at: string
   updated_at: string
 }

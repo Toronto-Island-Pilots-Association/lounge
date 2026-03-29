@@ -1,38 +1,11 @@
 import { requireAdmin } from '@/lib/auth'
 import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
-import { createServiceRoleClient, createClient } from '@/lib/supabase/server'
+import { pagePublishedFromInput, pageStatusFromPublished, slugifyPageSlug, validatePageSlug } from '@/lib/pages'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 
-function slugify(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 80) || 'page'
-}
-
-async function uniqueSlug(supabase: ReturnType<typeof createServiceRoleClient>, orgId: string, baseSlug: string): Promise<string> {
-  let slug = baseSlug
-  let counter = 2
-  while (true) {
-    const { data } = await supabase
-      .from('pages')
-      .select('id')
-      .eq('org_id', orgId)
-      .eq('slug', slug)
-      .maybeSingle()
-    if (!data) return slug
-    slug = `${baseSlug}-${counter++}`
-    if (counter > 99) return `${baseSlug}-${Date.now()}`
-  }
-}
-
-// GET — list pages. Always uses service role (pages are public content).
-// Admins see all (draft + published); unauthenticated callers see published only.
+// GET — list pages. Admins see drafts; everyone else sees published only.
 export async function GET() {
   try {
     const h = await headers()
@@ -41,12 +14,13 @@ export async function GET() {
 
     const supabase = createServiceRoleClient()
 
-    // Determine if caller is an admin to decide whether to show drafts
     let isAdmin = false
     try {
       await requireAdmin()
       isAdmin = true
-    } catch { /* public / non-admin */ }
+    } catch {
+      // public / non-admin caller
+    }
 
     let query = supabase
       .from('pages')
@@ -59,17 +33,14 @@ export async function GET() {
     }
 
     const { data, error } = await query
-
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 
-    const pages = await Promise.all(
-      (data || []).map(async (page) => ({
+    return NextResponse.json({
+      pages: (data || []).map((page) => ({
         ...page,
-        image_url: await resolveImageUrl(supabase, page.image_url),
-      }))
-    )
-
-    return NextResponse.json({ pages })
+        status: pageStatusFromPublished(page.published),
+      })),
+    })
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'An error occurred' }, { status: 500 })
   }
@@ -91,48 +62,59 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { title, content, image_url, published } = body
+    const title = typeof body.title === 'string' ? body.title.trim() : ''
+    const slug = typeof body.slug === 'string' && body.slug.trim()
+      ? body.slug.trim()
+      : slugifyPageSlug(title)
+    const content = typeof body.content === 'string' ? body.content : null
+    const published = pagePublishedFromInput(body.status ?? body.published)
 
-    if (!title?.trim()) {
-      return NextResponse.json({ error: 'Title is required.' }, { status: 400 })
+    if (!title) {
+      return NextResponse.json({ error: 'Nav name is required.' }, { status: 400 })
+    }
+
+    const slugValidation = validatePageSlug(slug)
+    if (!slugValidation.valid) {
+      return NextResponse.json({ error: slugValidation.error }, { status: 400 })
     }
 
     const supabase = createServiceRoleClient()
-    const baseSlug = slugify(title.trim())
-    const slug = await uniqueSlug(supabase, orgId, baseSlug)
+    const { data: existingPage } = await supabase
+      .from('pages')
+      .select('id')
+      .eq('org_id', orgId)
+      .eq('slug', slug)
+      .maybeSingle()
+
+    if (existingPage) {
+      return NextResponse.json({ error: 'That slug is already in use.' }, { status: 409 })
+    }
 
     const { data, error } = await supabase
       .from('pages')
       .insert({
         org_id: orgId,
-        title: title.trim(),
+        title,
         slug,
-        content: content ?? null,
-        image_url: image_url ?? null,
-        published: published === true,
+        content,
+        image_url: null,
+        published,
       })
       .select()
       .single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 
-    return NextResponse.json({ page: data })
+    return NextResponse.json({
+      page: {
+        ...data,
+        status: pageStatusFromPublished(data.published),
+      },
+    })
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || 'An error occurred' },
       { status: error.message === 'Forbidden: Admin access required' ? 403 : 500 },
     )
-  }
-}
-
-async function resolveImageUrl(supabase: ReturnType<typeof createServiceRoleClient>, imageUrl: string | null): Promise<string | null> {
-  if (!imageUrl) return null
-  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) return imageUrl
-  try {
-    const { data, error } = await supabase.storage.from('resources').createSignedUrl(imageUrl, 3600)
-    if (error || !data) return null
-    return data.signedUrl
-  } catch {
-    return null
   }
 }

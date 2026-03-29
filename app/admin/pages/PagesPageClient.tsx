@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState, useCallback, Suspense } from 'react'
-import dynamic from 'next/dynamic'
 import { Page } from '@/types/database'
+import { PageStatus, slugifyPageSlug } from '@/lib/pages'
 import Loading from '@/components/Loading'
 import {
   Drawer,
@@ -13,15 +13,7 @@ import {
   DrawerClose,
 } from '@/components/ui/drawer'
 
-const RichTextEditor = dynamic(() => import('@/components/RichTextEditor'), {
-  ssr: false,
-  loading: () => <div className="h-32 bg-gray-100 animate-pulse rounded" />,
-})
-
-const AdminResourceUpload = dynamic(() => import('@/components/AdminResourceUpload'), {
-  ssr: false,
-  loading: () => <div className="h-24 bg-gray-100 animate-pulse rounded" />,
-})
+type PageFormValues = Partial<Page> & { status?: PageStatus }
 
 export default function PagesPageClient() {
   const [pages, setPages] = useState<Page[]>([])
@@ -45,7 +37,7 @@ export default function PagesPageClient() {
     loadData()
   }, [loadData])
 
-  const handleCreate = async (pageData: Partial<Page>) => {
+  const handleCreate = async (pageData: PageFormValues) => {
     const response = await fetch('/api/pages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -60,7 +52,7 @@ export default function PagesPageClient() {
     }
   }
 
-  const handleUpdate = async (page: Page, updates: Partial<Page>) => {
+  const handleUpdate = async (page: Page, updates: PageFormValues) => {
     const response = await fetch(`/api/pages/${page.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -107,7 +99,7 @@ export default function PagesPageClient() {
             </svg>
             <h3 className="text-base font-semibold text-gray-900 mb-1">No pages yet</h3>
             <p className="text-sm text-gray-500 mb-6 max-w-xs mx-auto">
-              Create your first public page — About, Member Benefits, FAQ, and more.
+              Create your first public page from HTML content and publish it when it is ready.
             </p>
           </div>
         )}
@@ -120,64 +112,53 @@ export default function PagesPageClient() {
           return (
             <div key={page.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
               <div className="p-4 sm:p-6">
-                <div className="flex gap-4">
-                  {page.image_url && (
-                    <div className="relative w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0 rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
-                      <img src={page.image_url} alt={page.title} className="w-full h-full object-cover" />
-                    </div>
-                  )}
+                <div className="flex items-start justify-between gap-3 mb-2">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-3 mb-2">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-lg sm:text-xl font-semibold text-gray-900">{page.title}</h3>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded ${
-                            page.published
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-gray-100 text-gray-600'
-                          }`}>
-                            {page.published ? 'Published' : 'Draft'}
-                          </span>
-                          <span className="text-xs text-gray-400 font-mono">/{page.slug}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {page.published && (
-                          <a
-                            href={`/pages/${page.slug}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[var(--color-primary)] hover:text-[#0a171c] text-sm font-medium"
-                          >
-                            View
-                          </a>
-                        )}
-                        {page.published && <span className="text-gray-300">|</span>}
-                        <button
-                          onClick={() => setEditingPage(page)}
-                          className="text-[var(--color-primary)] hover:text-[#0a171c] text-sm font-medium"
-                        >
-                          Edit
-                        </button>
-                        <span className="text-gray-300">|</span>
-                        <button
-                          onClick={() => handleDelete(page.id)}
-                          className="text-red-600 hover:text-red-900 text-sm font-medium"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                    {excerpt && (
-                      <p className="text-sm text-gray-600 line-clamp-2">{excerpt}</p>
-                    )}
-                    <div className="mt-2 text-xs text-gray-400">
-                      {page.updated_at && page.updated_at !== page.created_at
-                        ? `Updated ${new Date(page.updated_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}`
-                        : `Created ${new Date(page.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}`
-                      }
+                    <h3 className="text-lg sm:text-xl font-semibold text-gray-900">{page.title}</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded ${
+                        page.published ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {page.published ? 'Published' : 'Draft'}
+                      </span>
+                      <span className="text-xs text-gray-400 font-mono">/{page.slug}</span>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {page.published && (
+                      <a
+                        href={`/pages/${page.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[var(--color-primary)] hover:text-[#0a171c] text-sm font-medium"
+                      >
+                        View
+                      </a>
+                    )}
+                    {page.published && <span className="text-gray-300">|</span>}
+                    <button
+                      onClick={() => setEditingPage(page)}
+                      className="text-[var(--color-primary)] hover:text-[#0a171c] text-sm font-medium"
+                    >
+                      Edit
+                    </button>
+                    <span className="text-gray-300">|</span>
+                    <button
+                      onClick={() => handleDelete(page.id)}
+                      className="text-red-600 hover:text-red-900 text-sm font-medium"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+                {excerpt && (
+                  <p className="text-sm text-gray-600 line-clamp-2">{excerpt}</p>
+                )}
+                <div className="mt-2 text-xs text-gray-400">
+                  {page.updated_at && page.updated_at !== page.created_at
+                    ? `Updated ${new Date(page.updated_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}`
+                    : `Created ${new Date(page.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}`
+                  }
                 </div>
               </div>
             </div>
@@ -208,13 +189,13 @@ function PageFormDrawer({
 }: {
   page: Page | null
   onClose: () => void
-  onSave: (page: Page | null, updates: Partial<Page>) => Promise<void>
+  onSave: (page: Page | null, updates: PageFormValues) => Promise<void>
 }) {
   const [formData, setFormData] = useState({
     title: page?.title || '',
+    slug: page?.slug || '',
     content: page?.content || '',
-    image_url: page?.image_url || null as string | null,
-    published: page?.published ?? false,
+    status: (page?.published ? 'published' : 'draft') as PageStatus,
   })
 
   return (
@@ -225,57 +206,58 @@ function PageFormDrawer({
         </DrawerHeader>
         <div className="px-4 pb-4 space-y-4 overflow-y-auto">
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">Title *</label>
+            <label className="block text-sm font-medium text-gray-900 mb-1">Nav Name *</label>
             <input
               type="text"
               value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              onChange={(e) => {
+                const nextTitle = e.target.value
+                setFormData((current) => ({
+                  ...current,
+                  title: nextTitle,
+                  slug: !page && current.slug === slugifyPageSlug(current.title) ? slugifyPageSlug(nextTitle) : current.slug,
+                }))
+              }}
               className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
-              placeholder="e.g. About Us, Member Benefits, FAQ"
+              placeholder="e.g. About TIPA"
               required
             />
           </div>
 
-          <div className="flex items-center gap-3">
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.published}
-                onChange={(e) => setFormData({ ...formData, published: e.target.checked })}
-                className="sr-only peer"
-              />
-              <div className="w-10 h-6 bg-gray-200 rounded-full peer peer-checked:bg-[var(--color-primary)] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-4" />
-            </label>
-            <span className="text-sm font-medium text-gray-700">
-              {formData.published ? 'Published — visible to all visitors' : 'Draft — not publicly visible'}
-            </span>
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-1">Slug *</label>
+            <input
+              type="text"
+              value={formData.slug}
+              onChange={(e) => setFormData({ ...formData, slug: slugifyPageSlug(e.target.value) })}
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md font-mono text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
+              placeholder="about"
+              required
+            />
+            <p className="mt-1 text-xs text-gray-500">Public URL: `/pages/your-slug`</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">Content</label>
-            <Suspense fallback={<div className="h-32 bg-gray-100 animate-pulse rounded" />}>
-              <RichTextEditor
-                content={formData.content}
-                onChange={(content) => setFormData({ ...formData, content })}
-                placeholder="Write your page content here..."
-              />
-            </Suspense>
+            <label className="block text-sm font-medium text-gray-900 mb-1">Status</label>
+            <select
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value as PageStatus })}
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
+            >
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+            </select>
           </div>
 
           <div>
-            <Suspense fallback={<div className="h-24 bg-gray-100 animate-pulse rounded" />}>
-              <AdminResourceUpload
-                currentImageUrl={formData.image_url}
-                currentFileUrl={null}
-                currentFileName={null}
-                onImageChange={(url) => setFormData({ ...formData, image_url: url })}
-                onFileChange={() => {}}
-                imageUploadEndpoint="/api/pages/upload-image"
-                fileUploadEndpoint=""
-                label="Cover Image"
-                imageOnly
-              />
-            </Suspense>
+            <label className="block text-sm font-medium text-gray-900 mb-1">HTML Content</label>
+            <textarea
+              value={formData.content}
+              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+              className="min-h-[320px] w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
+              placeholder="<h1>About</h1>&#10;<p>Your page HTML goes here.</p>"
+            />
+            <p className="mt-1 text-xs text-gray-500">Rendered as raw HTML on the public page.</p>
           </div>
         </div>
         <DrawerFooter>
@@ -287,8 +269,14 @@ function PageFormDrawer({
             </DrawerClose>
             <button
               onClick={async () => {
-                if (!formData.title.trim()) { alert('Title is required'); return }
-                await onSave(page, formData)
+                if (!formData.title.trim()) { alert('Nav name is required'); return }
+                if (!formData.slug.trim()) { alert('Slug is required'); return }
+                await onSave(page, {
+                  title: formData.title.trim(),
+                  slug: formData.slug.trim(),
+                  content: formData.content,
+                  status: formData.status,
+                })
                 onClose()
               }}
               className="px-4 py-2 text-sm font-medium text-white bg-[var(--color-primary)] rounded-md hover:bg-[#0a171c]"

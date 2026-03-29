@@ -1,19 +1,8 @@
 import { requireAdmin } from '@/lib/auth'
 import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
+import { pagePublishedFromInput, pageStatusFromPublished, validatePageSlug } from '@/lib/pages'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-
-async function resolveImageUrl(supabase: ReturnType<typeof createServiceRoleClient>, imageUrl: string | null): Promise<string | null> {
-  if (!imageUrl) return null
-  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) return imageUrl
-  try {
-    const { data, error } = await supabase.storage.from('resources').createSignedUrl(imageUrl, 3600)
-    if (error || !data) return null
-    return data.signedUrl
-  } catch {
-    return null
-  }
-}
 
 export async function GET(
   _request: Request,
@@ -37,7 +26,10 @@ export async function GET(
     if (error || !data) return NextResponse.json({ error: 'Page not found' }, { status: 404 })
 
     return NextResponse.json({
-      page: { ...data, image_url: await resolveImageUrl(supabase, data.image_url) },
+      page: {
+        ...data,
+        status: pageStatusFromPublished(data.published),
+      },
     })
   } catch (error: any) {
     return NextResponse.json(
@@ -66,17 +58,54 @@ export async function PATCH(
 
     const { id } = await params
     const body = await request.json()
-
-    // Prevent cross-tenant writes
-    if ('org_id' in body) delete (body as any).org_id
-    // Slug is immutable after creation
-    if ('slug' in body) delete (body as any).slug
-
     const supabase = createServiceRoleClient()
+    const updates: Record<string, unknown> = {}
+
+    if ('title' in body) {
+      const title = typeof body.title === 'string' ? body.title.trim() : ''
+      if (!title) {
+        return NextResponse.json({ error: 'Nav name is required.' }, { status: 400 })
+      }
+      updates.title = title
+    }
+
+    if ('slug' in body) {
+      const slug = typeof body.slug === 'string' ? body.slug.trim() : ''
+      const slugValidation = validatePageSlug(slug)
+      if (!slugValidation.valid) {
+        return NextResponse.json({ error: slugValidation.error }, { status: 400 })
+      }
+
+      const { data: existingPage } = await supabase
+        .from('pages')
+        .select('id')
+        .eq('org_id', orgId)
+        .eq('slug', slug)
+        .neq('id', id)
+        .maybeSingle()
+
+      if (existingPage) {
+        return NextResponse.json({ error: 'That slug is already in use.' }, { status: 409 })
+      }
+
+      updates.slug = slug
+    }
+
+    if ('content' in body) {
+      updates.content = typeof body.content === 'string' ? body.content : null
+    }
+
+    if ('status' in body || 'published' in body) {
+      updates.published = pagePublishedFromInput(body.status ?? body.published)
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'No valid page fields provided.' }, { status: 400 })
+    }
 
     const { data, error } = await supabase
       .from('pages')
-      .update(body)
+      .update(updates)
       .eq('id', id)
       .eq('org_id', orgId)
       .select()
@@ -84,7 +113,12 @@ export async function PATCH(
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 
-    return NextResponse.json({ page: data })
+    return NextResponse.json({
+      page: {
+        ...data,
+        status: pageStatusFromPublished(data.published),
+      },
+    })
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || 'An error occurred' },
