@@ -22,10 +22,10 @@ export async function PATCH(request: Request) {
     const body = await request.json()
     const boolKeys: (keyof OrgFeatureFlags)[] = [
       'discussions', 'events', 'resources', 'memberDirectory',
-      'requireMemberApproval', 'allowMemberInvitations',
+      'requireMemberApproval', 'allowMemberInvitations', 'pages',
     ]
     const stringKeys: (keyof OrgFeatureFlags)[] = [
-      'discussionsLabel', 'eventsLabel', 'resourcesLabel',
+      'discussionsLabel', 'eventsLabel', 'resourcesLabel', 'pagesLabel',
     ]
     const validKeys = [...boolKeys, ...stringKeys]
     const update: Partial<OrgFeatureFlags> = {}

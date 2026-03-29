@@ -119,6 +119,18 @@ export interface Resource {
   updated_at: string
 }
 
+export interface Page {
+  id: string
+  org_id: string
+  title: string
+  slug: string
+  content: string | null
+  image_url: string | null
+  published: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface Event {
   id: string
   title: string

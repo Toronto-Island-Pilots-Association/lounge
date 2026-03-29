@@ -137,6 +137,7 @@ const FEATURE_META: FeatureMeta[] = [
   { key: 'discussions',            label: 'Discussions',       description: 'Forum-style discussion board for members.',       labelKey: 'discussionsLabel', labelPlaceholder: 'Discussions' },
   { key: 'events',                 label: 'Events',            description: 'Event calendar with RSVP.',                       labelKey: 'eventsLabel',      labelPlaceholder: 'Events' },
   { key: 'resources',              label: 'Announcements',     description: 'Document library and announcements.',              labelKey: 'resourcesLabel',   labelPlaceholder: 'Announcements' },
+  { key: 'pages',                  label: 'Pages',             description: 'Public pages (About, Benefits, FAQ) visible before login.', labelKey: 'pagesLabel', labelPlaceholder: 'Pages' },
   { key: 'memberDirectory',        label: 'Member directory',  description: 'Approved members can browse the member list.' },
   { key: 'requireMemberApproval',  label: 'Require admin approval', description: 'New signups must be approved before accessing the portal.' },
   { key: 'allowMemberInvitations', label: 'Member invitations',     description: 'Approved members can invite new members.' },
@@ -150,8 +151,8 @@ const PLAN_LABELS: Record<string, string> = {
 function FeaturesTab() {
   const [draft, setDraft] = useState<OrgFeatureFlags>({
     discussions: true, events: true, resources: true, memberDirectory: true,
-    requireMemberApproval: true, allowMemberInvitations: true,
-    discussionsLabel: 'Discussions', eventsLabel: 'Events', resourcesLabel: 'Announcements',
+    requireMemberApproval: true, allowMemberInvitations: true, pages: true,
+    discussionsLabel: 'Discussions', eventsLabel: 'Events', resourcesLabel: 'Announcements', pagesLabel: 'Pages',
   })
   const [planKey, setPlanKey] = useState<string>('hobby')
   const [planLabel, setPlanLabel] = useState<string>('Hobby')

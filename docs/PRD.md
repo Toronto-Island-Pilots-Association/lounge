@@ -189,10 +189,12 @@ signup → pending → admin approves → approved
 
 | Plan | Price | Members | Features added |
 |------|-------|---------|----------------|
-| **Hobby** | $5/mo | Up to 20 | Discussions, Events, Announcements, Member directory |
+| **Hobby** | $5/mo | Up to 20 | Discussions, Events, Announcements, Member directory, **Pages** |
 | **Starter** | $49/mo | Unlimited | + Stripe dues, custom domain, remove branding, member invitations |
 | **Community** | $99/mo | Unlimited | + Digest emails, analytics |
 | **Club Pro** | $199/mo | Unlimited | + Membership tiers |
+
+**Pages** are available on all plans. They are always publicly accessible (before login / paywall) and are intended for pre-join content: About the club, membership benefits, FAQ, etc.
 
 All new orgs get a **14-day free trial at Starter level**. No credit card required.
 
@@ -215,6 +217,7 @@ Stored in the `settings` table per org. Each flag is gated by both the org's pla
 | `feature_events` | Events + RSVP |
 | `feature_resources` | Announcements / documents |
 | `feature_member_directory` | Member directory page |
+| `feature_pages` | Public pages (About, Benefits, etc.) — always on; available on all plans |
 | `require_member_approval` | New signups need admin approval |
 | `allow_member_invitations` | Members can invite others |
 | `discussions_label` | Nav label (default "Discussions"; TIPA = "Hangar Talk") |
@@ -224,7 +227,62 @@ Stored in the `settings` table per org. Each flag is gated by both the org's pla
 
 ---
 
-## 10. Public / Guest Mode
+## 10. Pages
+
+**Pages** are admin-authored, publicly accessible content pages — always visible before login or the paywall. They are the org's pre-join storefront: an About page, membership benefits overview, FAQ, or anything an admin wants prospective members to see without requiring sign-up.
+
+**Available on all plans** (`pages: true` in `lib/plans.ts`).
+
+### Behaviour
+
+- Pages live at `/{slug}` (or `/pages/[slug]`) on the org subdomain.
+- They are **always public** — no auth check, no `public_access` setting required.
+- Admins create/edit via **Admin → Pages** using the same drawer + rich-text form as Resources.
+- Content model mirrors Resources: title, rich HTML content, optional cover image, optional external URL.
+- A `pages_label` setting overrides the nav label (default: "Pages").
+
+### Data model
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | UUID | PK |
+| `org_id` | UUID | FK → organizations |
+| `title` | text | Required |
+| `slug` | text | URL-safe, unique per org |
+| `content` | text | HTML (rich editor) |
+| `image_url` | text | Optional cover image (storage path → signed URL) |
+| `published` | boolean | Draft/published toggle |
+| `created_at` | timestamptz | |
+| `updated_at` | timestamptz | |
+
+### Feature flag
+
+| Settings key | Default | What it controls |
+|-------------|---------|-----------------|
+| `feature_pages` | `true` | Show/hide Pages in nav and admin panel |
+| `pages_label` | `"Pages"` | Nav label override |
+
+### API routes
+
+| Method | Route | Auth | Purpose |
+|--------|-------|------|---------|
+| GET | `/api/pages` | Public | List published pages |
+| GET | `/api/pages/[id]` | Public | Fetch single page |
+| POST | `/api/pages` | Admin | Create page |
+| PATCH | `/api/pages/[id]` | Admin | Update page |
+| DELETE | `/api/pages/[id]` | Admin | Delete page |
+| POST | `/api/pages/upload-image` | Admin | Upload cover image |
+
+Same tenant isolation, org_id filtering, and billing-activation gate as Resources.
+
+### UI
+
+- **Admin**: `app/admin/pages/` — card list with create/edit drawer (same pattern as `app/admin/resources/`); uses `AdminResourceUpload` for image uploads.
+- **Public**: `app/(org)/pages/[slug]/` — full-page render, cover image, HTML content. No auth required.
+
+---
+
+## 12. Public / Guest Mode
 
 Set `public_access = 'true'` in the org's `settings` table to make it publicly readable.
 
@@ -236,7 +294,7 @@ Set `public_access = 'true'` in the org's `settings` table to make it publicly r
 
 ---
 
-## 11. Email
+## 13. Email
 
 Handled by Resend via `lib/resend.ts`. Templates customisable per org at **Admin → Settings → Emails**.
 
@@ -250,7 +308,7 @@ Handled by Resend via `lib/resend.ts`. Templates customisable per org at **Admin
 
 ---
 
-## 12. Payments
+## 14. Payments
 
 ### Member dues (Stripe Connect)
 - Each org connects their own Stripe Express account via **Admin → Settings → Integrations**
@@ -268,7 +326,7 @@ Handled by Resend via `lib/resend.ts`. Templates customisable per org at **Admin
 
 ---
 
-## 13. Admin Panel
+## 15. Admin Panel
 
 Located at `/admin/*` within each org. `role = 'admin'` required.
 
@@ -278,6 +336,7 @@ Located at `/admin/*` within each org. `role = 'admin'` required.
 | `/admin/members` | Approve, invite, manage, export members |
 | `/admin/events` | Create and manage events |
 | `/admin/resources` | Post and manage announcements |
+| `/admin/pages` | Create and manage public pages (About, Benefits, etc.) |
 | `/admin/payments` | View payment history |
 | `/admin/analytics` | Member growth, engagement (Community+ plan) |
 | `/admin/settings` | Full org config |
@@ -286,7 +345,7 @@ Located at `/admin/*` within each org. `role = 'admin'` required.
 
 ---
 
-## 14. Key File Reference
+## 16. Key File Reference
 
 ```
 proxy.ts                        # Middleware: domain routing, org context headers
@@ -310,7 +369,8 @@ app/
     resources/                  # Announcements
     members/                    # Member directory
     membership/                 # Membership status + payment
-    admin/                      # Admin panel (members, events, resources, settings…)
+    pages/[slug]/               # Public pages (About, Benefits — no auth required)
+    admin/                      # Admin panel (members, events, resources, pages, settings…)
   platform/
     dashboard/                  # Org list, setup checklist, trial badge
     dashboard/[orgId]/billing/  # Plan selector + Stripe Connect status
@@ -324,6 +384,7 @@ app/
     events/                     # Events CRUD + RSVP
     threads/                    # Discussions CRUD
     resources/                  # Announcements CRUD
+    pages/                      # Pages CRUD (public — no auth required for reads)
     profile/                    # Member profile CRUD
     stripe/                     # Stripe webhooks + checkout (member dues)
     platform/                   # Platform API (org creation, plan upgrade)
@@ -344,7 +405,7 @@ docs/PRD.md                     # This file
 
 ---
 
-## 15. Environments & Infrastructure
+## 17. Environments & Infrastructure
 
 ### Supabase projects
 
@@ -381,7 +442,7 @@ Apply migrations: `supabase db push`
 
 ---
 
-## 16. Current State
+## 18. Current State
 
 ### Built and working ✅
 - Multi-tenant architecture: domain routing, org isolation, header-based auth
@@ -402,6 +463,7 @@ Apply migrations: `supabase db push`
 - Plan-based feature gating
 
 ### Known gaps 🟡
+- **Pages** — feature defined and enabled on all plans; UI and API routes not yet built (see §9 and §17)
 - **Feature gating audit** — plan flags defined; not confirmed enforced in all API routes
 - **Analytics** — `/admin/analytics` placeholder, not fully built
 - **Digest emails** — in plan definitions but sending logic not confirmed
@@ -418,12 +480,13 @@ Apply migrations: `supabase db push`
 
 ---
 
-## 17. Roadmap
+## 19. Roadmap
 
 ### Must-ship for v1
 - [ ] Feature gating audit (confirm plan limits enforced in all API routes)
 - [ ] Org deletion (admin self-serve + GDPR)
 - [ ] Analytics page (at minimum: member count over time chart)
+- [ ] **Pages** — DB migration, API routes, admin UI, public `/(org)/pages/[slug]` view (mirrors Resources pattern)
 
 ### v1.1
 - [ ] Invoice / receipt download for org admins

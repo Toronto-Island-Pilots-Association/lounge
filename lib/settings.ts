@@ -279,9 +279,12 @@ export type OrgFeatureFlags = {
   memberDirectory: boolean
   requireMemberApproval: boolean
   allowMemberInvitations: boolean
+  /** Public pages (About, Benefits, etc.) — always public, all plans. */
+  pages: boolean
   discussionsLabel: string
   eventsLabel: string
   resourcesLabel: string
+  pagesLabel: string
 }
 
 const DEFAULT_FEATURE_FLAGS: OrgFeatureFlags = {
@@ -291,9 +294,11 @@ const DEFAULT_FEATURE_FLAGS: OrgFeatureFlags = {
   memberDirectory: true,
   requireMemberApproval: true,
   allowMemberInvitations: true,
+  pages: true,
   discussionsLabel: 'Discussions',
   eventsLabel: 'Events',
   resourcesLabel: 'Announcements',
+  pagesLabel: 'Pages',
 }
 
 export async function getFeatureFlags(orgIdOverride?: string): Promise<OrgFeatureFlags> {
@@ -302,7 +307,8 @@ export async function getFeatureFlags(orgIdOverride?: string): Promise<OrgFeatur
   const keys = [
     'feature_discussions', 'feature_events', 'feature_resources',
     'feature_member_directory', 'require_member_approval', 'allow_member_invitations',
-    'discussions_label', 'events_label', 'resources_label',
+    'feature_pages',
+    'discussions_label', 'events_label', 'resources_label', 'pages_label',
   ]
   const [{ data: rows }, plan] = await Promise.all([
     supabase.from('settings').select('key, value').in('key', keys).eq('org_id', orgId),
@@ -322,9 +328,11 @@ export async function getFeatureFlags(orgIdOverride?: string): Promise<OrgFeatur
     memberDirectory:        b('feature_member_directory', DEFAULT_FEATURE_FLAGS.memberDirectory,        planFeatures.memberDirectory),
     requireMemberApproval:  b('require_member_approval',  DEFAULT_FEATURE_FLAGS.requireMemberApproval,  planFeatures.requireMemberApproval),
     allowMemberInvitations: b('allow_member_invitations', DEFAULT_FEATURE_FLAGS.allowMemberInvitations, planFeatures.allowMemberInvitations),
+    pages:                  b('feature_pages',            DEFAULT_FEATURE_FLAGS.pages,                  planFeatures.pages),
     discussionsLabel:       s('discussions_label', DEFAULT_FEATURE_FLAGS.discussionsLabel),
     eventsLabel:            s('events_label',      DEFAULT_FEATURE_FLAGS.eventsLabel),
     resourcesLabel:         s('resources_label',   DEFAULT_FEATURE_FLAGS.resourcesLabel),
+    pagesLabel:             s('pages_label',       DEFAULT_FEATURE_FLAGS.pagesLabel),
   }
 }
 
@@ -338,9 +346,11 @@ export async function setFeatureFlags(flags: Partial<OrgFeatureFlags>, orgIdOver
     memberDirectory:        'feature_member_directory',
     requireMemberApproval:  'require_member_approval',
     allowMemberInvitations: 'allow_member_invitations',
+    pages:                  'feature_pages',
     discussionsLabel:       'discussions_label',
     eventsLabel:            'events_label',
     resourcesLabel:         'resources_label',
+    pagesLabel:             'pages_label',
   }
   const rows = (Object.keys(flags) as (keyof OrgFeatureFlags)[])
     .filter(k => flags[k] !== undefined)
