@@ -9,11 +9,11 @@ import { COUNTRIES, getStatesProvinces } from './constants'
 import type { MembershipLevelKey, SignupField } from '@/lib/settings-shared'
 
 const DEFAULT_FEES: Record<MembershipLevelKey, number> = {
-  Full: 45,
-  Student: 25,
-  Associate: 25,
-  Corporate: 125,
-  Honorary: 0,
+  full: 45,
+  student: 25,
+  associate: 25,
+  corporate: 125,
+  honorary: 0,
 }
 
 function BecomeMemberForm() {
@@ -521,10 +521,10 @@ function BecomeMemberForm() {
                 onChange={handleChange}
               >
                 <option value="">Select…</option>
-                {(enabledLevels?.Full     ?? true) && <option value="full">Full — ${membershipFees.Full}/year</option>}
-                {(enabledLevels?.Student  ?? true) && <option value="student">Student — ${membershipFees.Student}/year</option>}
-                {(enabledLevels?.Associate ?? true) && <option value="associate">Associate — ${membershipFees.Associate}/year</option>}
-                {(enabledLevels?.Corporate ?? true) && <option value="corporate">Corporate — ${membershipFees.Corporate}/year</option>}
+                {(enabledLevels?.full     ?? true) && <option value="full">Full — ${membershipFees.full}/year</option>}
+                {(enabledLevels?.student  ?? true) && <option value="student">Student — ${membershipFees.student}/year</option>}
+                {(enabledLevels?.associate ?? true) && <option value="associate">Associate — ${membershipFees.associate}/year</option>}
+                {(enabledLevels?.corporate ?? true) && <option value="corporate">Corporate — ${membershipFees.corporate}/year</option>}
               </select>
             </div>
           </div>
