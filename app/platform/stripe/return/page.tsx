@@ -5,9 +5,9 @@ import { syncOrgStripeOnboardingFromStripe } from '@/lib/platform-stripe-onboard
 export default async function StripeReturnPage({
   searchParams,
 }: {
-  searchParams: Promise<{ org_id?: string }>
+  searchParams: Promise<{ org_id?: string; return_to?: string }>
 }) {
-  const { org_id } = await searchParams
+  const { org_id, return_to } = await searchParams
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -26,5 +26,10 @@ export default async function StripeReturnPage({
     await syncOrgStripeOnboardingFromStripe(org_id)
   }
 
-  redirect('/platform/dashboard')
+  const nextPath =
+    typeof return_to === 'string' && return_to.startsWith('/platform/')
+      ? return_to
+      : '/platform/dashboard'
+
+  redirect(nextPath)
 }

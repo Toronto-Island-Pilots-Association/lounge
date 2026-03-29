@@ -2,13 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { slugify, ROOT_DOMAIN } from '@/lib/org'
 import { GoogleButton } from '@/components/platform/GoogleButton'
-import { CnameRecord } from '@/components/platform/CnameRecord'
 
-type Step = 1 | 2 | 3
+type Step = 1 | 2
 
 interface AccountForm {
   firstName: string
@@ -20,26 +19,25 @@ interface AccountForm {
 interface ClubForm {
   name: string
   slug: string
-  customDomain: string
-}
-
-interface Result {
-  orgUrl: string
-  cname: { host: string; value: string } | null
 }
 
 export default function PlatformSignup() {
+  const router = useRouter()
   const searchParams = useSearchParams()
+  const [checkingSession, setCheckingSession] = useState(true)
   const [step, setStep] = useState<Step>(1)
   const [account, setAccount] = useState<AccountForm>({ firstName: '', lastName: '', email: '', password: '' })
+  const [club, setClub] = useState<ClubForm>({ name: '', slug: '' })
+  const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null)
+  const [slugError, setSlugError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const email = searchParams.get('email')
     if (email) setAccount(a => ({ ...a, email }))
   }, [searchParams])
 
-  // If the platform user is already logged in, skip the "Your account" step
-  // and jump straight to club setup.
   useEffect(() => {
     const loadExistingSession = async () => {
       try {
@@ -48,29 +46,19 @@ export default function PlatformSignup() {
           data: { session },
         } = await supabase.auth.getSession()
 
-        if (!session?.user) return
-
-        const md = (session.user.user_metadata ?? {}) as any
-        setAccount(prev => ({
-          ...prev,
-          firstName: md.first_name ?? md.firstName ?? prev.firstName,
-          lastName: md.last_name ?? md.lastName ?? prev.lastName,
-        }))
-
-        setStep(2)
+        if (session?.user) {
+          router.replace('/platform/create')
+          return
+        }
       } catch {
         // no-op
+      } finally {
+        setCheckingSession(false)
       }
     }
 
     loadExistingSession()
-  }, [])
-  const [club, setClub] = useState<ClubForm>({ name: '', slug: '', customDomain: '' })
-  const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null)
-  const [slugError, setSlugError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<Result | null>(null)
+  }, [router])
 
   const checkSlug = async (slug: string) => {
     setSlugAvailable(null)
@@ -110,11 +98,8 @@ export default function PlatformSignup() {
       lastName: account.lastName || undefined,
       orgName: club.name,
       slug: club.slug,
-      customDomain: club.customDomain || undefined,
     }
 
-    // If the user is not already logged in, Step 1 collects email/password for
-    // creating the auth user. When logged in, we omit them.
     if (account.email && account.password) {
       body.email = account.email
       body.password = account.password
@@ -134,87 +119,17 @@ export default function PlatformSignup() {
       return
     }
 
-    // Sign in automatically with the new credentials
     const supabase = createClient()
     await supabase.auth.signInWithPassword({ email: account.email, password: account.password })
 
     setLoading(false)
-    setResult({ orgUrl: data.orgUrl, cname: data.cname })
-    setStep(3)
+    router.replace(`/platform/dashboard/${data.orgId}/onboarding?created=1`)
   }
 
-  // Step 3: Success + onboarding checklist
-  if (step === 3 && result) {
-    const joinLink = `${result.orgUrl}/become-a-member`
+  if (checkingSession) {
     return (
-      <main className="min-h-screen flex flex-col items-center justify-center p-8 bg-gray-50">
-        <div className="max-w-lg w-full space-y-4">
-          {/* Header */}
-          <div className="text-center space-y-1">
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 text-xl font-bold mx-auto">✓</div>
-            <h1 className="text-2xl font-bold tracking-tight mt-3">Your lounge is live, {account.firstName}.</h1>
-            <p className="text-sm text-gray-500">
-              <a href={result.orgUrl} target="_blank" className="font-mono text-blue-600 hover:underline">{result.orgUrl}</a>
-            </p>
-          </div>
-
-          {/* 3-step checklist */}
-          <div className="bg-white rounded-xl border divide-y">
-            {/* Step 1 */}
-            <div className="p-5 flex items-start gap-4">
-              <div className="w-7 h-7 rounded-full bg-black text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">1</div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm">Set your membership fees</p>
-                <p className="text-xs text-gray-500 mt-0.5">Define your annual dues for each membership level.</p>
-              </div>
-              <a
-                href={`${result.orgUrl}/admin/settings`}
-                className="shrink-0 text-xs font-medium bg-black text-white rounded-lg px-3 py-1.5 hover:bg-gray-800 transition-colors"
-              >
-                Set fees →
-              </a>
-            </div>
-
-            {/* Step 2 */}
-            <div className="p-5 flex items-start gap-4">
-              <div className="w-7 h-7 rounded-full bg-black text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">2</div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm">Connect Stripe to collect dues</p>
-                <p className="text-xs text-gray-500 mt-0.5">Payments go directly to your bank. Takes about 5 minutes.</p>
-              </div>
-              <a
-                href={`${result.orgUrl}/admin/payments`}
-                className="shrink-0 text-xs font-medium border rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors"
-              >
-                Connect →
-              </a>
-            </div>
-
-            {/* Step 3 */}
-            <div className="p-5 flex items-start gap-4">
-              <div className="w-7 h-7 rounded-full bg-black text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">3</div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm">Invite your first members</p>
-                <p className="text-xs text-gray-500 mt-0.5 font-mono truncate">{joinLink}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => navigator.clipboard.writeText(joinLink)}
-                className="shrink-0 text-xs font-medium border rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors"
-              >
-                Copy link
-              </button>
-            </div>
-          </div>
-
-          {result.cname && <CnameRecord host={result.cname.host} />}
-
-          <p className="text-center text-xs text-gray-400">
-            You can also{' '}
-            <Link href="/platform/dashboard" className="underline hover:text-gray-600">go to your platform dashboard</Link>
-            {' '}to manage billing and settings.
-          </p>
-        </div>
+      <main className="min-h-screen flex items-center justify-center p-8 bg-gray-50">
+        <div className="text-sm text-gray-500">Loading…</div>
       </main>
     )
   }
@@ -226,7 +141,6 @@ export default function PlatformSignup() {
           <Link href="/platform" className="text-sm text-gray-500 hover:text-gray-700">← ClubLounge</Link>
           <h1 className="text-2xl font-bold tracking-tight mt-2">Create your lounge</h1>
 
-          {/* Step indicator */}
           <div className="flex items-center gap-1.5 mt-3">
             {(['Your account', 'Club setup'] as const).map((label, i) => (
               <div key={i} className="flex items-center gap-1.5">
@@ -247,11 +161,10 @@ export default function PlatformSignup() {
         </div>
 
         <div className="bg-white rounded-xl border p-6 space-y-4">
-          {/* Step 1: Account */}
           {step === 1 && (
             <>
               <p className="text-xs text-center text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-                Your lounge starts on Hobby. You can change plans later from billing.
+                Your lounge starts on Hobby. You can choose a different plan during setup.
               </p>
               <GoogleButton
                 redirectTo="/platform/dashboard"
@@ -320,7 +233,6 @@ export default function PlatformSignup() {
             </>
           )}
 
-          {/* Step 2: Club setup */}
           {step === 2 && (
             <>
               <div className="space-y-1">
@@ -354,6 +266,9 @@ export default function PlatformSignup() {
                   </p>
                 )}
               </div>
+              <p className="text-xs text-gray-400">
+                After creation, you&apos;ll set membership fees, choose a plan, and connect Stripe from one onboarding flow.
+              </p>
               {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
               <div className="flex gap-3">
                 <button

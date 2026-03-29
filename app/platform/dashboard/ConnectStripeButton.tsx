@@ -2,7 +2,15 @@
 
 import { useState } from 'react'
 
-export default function ConnectStripeButton({ orgId, isPending }: { orgId: string; isPending: boolean }) {
+export default function ConnectStripeButton({
+  orgId,
+  isPending,
+  returnTo,
+}: {
+  orgId: string
+  isPending: boolean
+  returnTo?: string
+}) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -13,7 +21,7 @@ export default function ConnectStripeButton({ orgId, isPending }: { orgId: strin
     const res = await fetch('/api/platform/stripe/connect', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orgId }),
+      body: JSON.stringify({ orgId, returnTo }),
     })
 
     const data = await res.json()

@@ -62,7 +62,7 @@ export default async function PlatformDashboard() {
             </p>
           </div>
           <Link
-            href="/platform/signup"
+            href="/platform/create"
             className="shrink-0 bg-gray-900 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-800 transition-colors text-center"
           >
             + New lounge
@@ -73,7 +73,7 @@ export default async function PlatformDashboard() {
           <div className="bg-white rounded-xl border border-gray-200 p-12 text-center space-y-4">
             <p className="text-gray-500">You don&apos;t have any lounges yet.</p>
             <Link
-              href="/platform/signup"
+              href="/platform/create"
               className="inline-block bg-gray-900 text-white rounded-lg px-6 py-2.5 text-sm font-medium hover:bg-gray-800 transition-colors"
             >
               Create your first lounge

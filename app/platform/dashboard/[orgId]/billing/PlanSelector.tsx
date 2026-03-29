@@ -8,11 +8,13 @@ export default function PlanSelector({
   currentPlan,
   planPrices,
   billingActivated,
+  returnTo,
 }: {
   orgId: string
   currentPlan: string
   planPrices: Record<PlanKey, number>
   billingActivated: boolean
+  returnTo?: string
 }) {
   const [processing, setProcessing] = useState<PlanKey | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -25,7 +27,7 @@ export default function PlanSelector({
       const res = await fetch(`/api/platform/orgs/${orgId}/plan/upgrade`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: targetPlan }),
+        body: JSON.stringify({ plan: targetPlan, returnTo }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error ?? 'Failed to change plan')

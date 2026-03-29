@@ -12,6 +12,13 @@ import { getPlanPriceMonthly } from '@/lib/settings'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
+function resolvePlatformPath(value: unknown, fallback: string) {
+  if (typeof value !== 'string') return fallback
+  const trimmed = value.trim()
+  if (!trimmed.startsWith('/platform/')) return fallback
+  return trimmed
+}
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ orgId: string }> }
@@ -25,6 +32,10 @@ export async function POST(
 
     const body = await request.json().catch(() => ({}))
     const requestedPlan = body?.plan
+    const returnTo = resolvePlatformPath(
+      body?.returnTo,
+      `/platform/dashboard/${encodeURIComponent(orgId)}/billing`,
+    )
 
     if (typeof requestedPlan !== 'string' || !PLAN_KEYS.includes(requestedPlan as PlanKey)) {
       return NextResponse.json(
@@ -126,16 +137,20 @@ export async function POST(
       const host = request.headers.get('host') ?? 'clublounge.local:3000'
       const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
       const baseUrl = `${protocol}://${host}`
-
-      const successUrl = `${baseUrl}/platform/dashboard/${encodeURIComponent(orgId)}/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}&plan=${encodeURIComponent(planKey)}`
-      const cancelUrl = `${baseUrl}/platform/dashboard/${encodeURIComponent(orgId)}/billing?checkout=cancelled&plan=${encodeURIComponent(planKey)}`
+      const successUrl = new URL(returnTo, baseUrl)
+      successUrl.searchParams.set('checkout', 'success')
+      successUrl.searchParams.set('session_id', '{CHECKOUT_SESSION_ID}')
+      successUrl.searchParams.set('plan', planKey)
+      const cancelUrl = new URL(returnTo, baseUrl)
+      cancelUrl.searchParams.set('checkout', 'cancelled')
+      cancelUrl.searchParams.set('plan', planKey)
 
       const checkoutSession = await stripe.checkout.sessions.create({
         mode: 'subscription',
         customer: customerId,
         line_items: [{ price: price.id, quantity: 1 }],
-        success_url: successUrl,
-        cancel_url: cancelUrl,
+        success_url: successUrl.toString(),
+        cancel_url: cancelUrl.toString(),
         metadata: { orgId, planKey },
         subscription_data: {
           metadata: { orgId, planKey },

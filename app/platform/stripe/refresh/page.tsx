@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation'
 export default function StripeRefreshPage() {
   const searchParams = useSearchParams()
   const orgId = searchParams.get('org_id')
+  const returnTo = searchParams.get('return_to')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -15,7 +16,7 @@ export default function StripeRefreshPage() {
     fetch('/api/platform/stripe/connect', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orgId }),
+      body: JSON.stringify({ orgId, returnTo }),
     })
       .then(r => r.json())
       .then(data => {
@@ -23,7 +24,7 @@ export default function StripeRefreshPage() {
         else setError(data.error ?? 'Failed to refresh link')
       })
       .catch(() => setError('Something went wrong'))
-  }, [orgId])
+  }, [orgId, returnTo])
 
   if (error) {
     return (

@@ -170,6 +170,7 @@ export async function POST(request: Request) {
       : `https://${subdomain}`
 
     return NextResponse.json({
+      orgId: org.id,
       orgUrl,
       cname: customDomain?.trim()
         ? { host: customDomain.trim(), value: 'cname.vercel-dns.com' }

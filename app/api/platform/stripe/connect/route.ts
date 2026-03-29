@@ -3,6 +3,13 @@ import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { getPlatformStripeInstance } from '@/lib/stripe'
 
+function resolvePlatformPath(value: unknown, fallback: string) {
+  if (typeof value !== 'string') return fallback
+  const trimmed = value.trim()
+  if (!trimmed.startsWith('/platform/')) return fallback
+  return trimmed
+}
+
 /**
  * POST /api/platform/stripe/connect
  * Creates a Stripe Express account for the org (if not already created)
@@ -18,7 +25,8 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { orgId } = await request.json()
+    const body = await request.json()
+    const { orgId } = body
     if (!orgId) return NextResponse.json({ error: 'orgId is required' }, { status: 400 })
 
     const db = createServiceRoleClient()
@@ -77,12 +85,13 @@ export async function POST(request: Request) {
     const host = request.headers.get('host') ?? (process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app')
     const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
     const base = `${protocol}://${host}`
+    const returnTo = resolvePlatformPath(body?.returnTo, `/platform/dashboard/${orgId}/billing`)
 
     const accountLink = await stripe.accountLinks.create({
       account: stripeAccountId,
       type: 'account_onboarding',
-      return_url: `${base}/platform/stripe/return?org_id=${orgId}`,
-      refresh_url: `${base}/platform/stripe/refresh?org_id=${orgId}`,
+      return_url: `${base}/platform/stripe/return?org_id=${orgId}&return_to=${encodeURIComponent(returnTo)}`,
+      refresh_url: `${base}/platform/stripe/refresh?org_id=${orgId}&return_to=${encodeURIComponent(returnTo)}`,
     })
 
     return NextResponse.json({ url: accountLink.url })
