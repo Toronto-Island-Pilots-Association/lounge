@@ -17,6 +17,13 @@ const ibmPlex = IBM_Plex_Sans({
 export const metadata: Metadata = {
   title: 'Club Lounge — Platform',
   description: 'Create and manage your club lounge.',
+  icons: {
+    icon: {
+      url: '/platform-favicon.svg',
+      type: 'image/svg+xml',
+    },
+    shortcut: '/platform-favicon.svg',
+  },
 }
 
 export default function PlatformLayout({ children }: { children: React.ReactNode }) {

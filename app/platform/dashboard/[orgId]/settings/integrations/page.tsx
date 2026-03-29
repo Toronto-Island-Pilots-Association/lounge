@@ -49,7 +49,7 @@ export default async function PlatformIntegrationsSettingsPage({
       <div className="max-w-2xl min-w-0">
         <div className="mb-6 md:mb-8">
           <h1 className="text-xl font-semibold text-gray-900">Integrations</h1>
-          <p className="mt-1 text-sm text-gray-500">Stripe Connect and custom domain for your lounge.</p>
+          <p className="mt-1 text-sm text-gray-500">Subdomain and custom domain settings for your lounge.</p>
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
           <IntegrationsPageClient orgId={orgId} />

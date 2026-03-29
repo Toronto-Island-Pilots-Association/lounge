@@ -14,7 +14,7 @@ import ThreadImages from '@/components/ThreadImages'
 import ContentWithLinkPreviews from '@/components/ContentWithLinkPreviews'
 import Sidebar from '../Sidebar'
 import { categoryConfigFromDb } from '../constants'
-import { getDiscussionCategories } from '@/lib/settings'
+import { getDiscussionCategories, getFeatureFlags } from '@/lib/settings'
 import { formatDetailDate } from '../utils'
 import MarkThreadNotificationsRead from './MarkThreadNotificationsRead'
 
@@ -32,9 +32,10 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
   const isGuest = !user
   const h = await headers()
   const orgId = isGuest ? h.get('x-org-id') : user!.profile.org_id
-  const [{ id }, dbCategories] = await Promise.all([
+  const [{ id }, dbCategories, featureFlags] = await Promise.all([
     params,
     getDiscussionCategories(orgId ?? undefined),
+    getFeatureFlags(orgId ?? undefined),
   ])
   const categoryConfig = categoryConfigFromDb(dbCategories)
   const supabase = isGuest ? createServiceRoleClient() : await createClient()
@@ -58,7 +59,7 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
               href="/discussions"
               className="inline-block px-6 py-2 bg-[var(--color-primary)] text-white font-semibold rounded-lg hover:bg-[#0a171c] transition-colors"
             >
-              Back to Hangar Talk
+              Back to {featureFlags.discussionsLabel}
             </Link>
           </div>
         </div>
@@ -165,7 +166,7 @@ export default async function DiscussionPage({ params }: { params: Promise<{ id:
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to Hangar Talk
+            Back to {featureFlags.discussionsLabel}
           </Link>
         </div>
 

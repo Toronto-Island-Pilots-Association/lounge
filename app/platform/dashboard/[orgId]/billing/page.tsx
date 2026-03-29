@@ -2,12 +2,10 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { confirmOrgPlanCheckoutSession } from '@/lib/platform-org-billing'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
-import { orgStripeDuesUiStatus } from '@/lib/org-stripe-dues-status'
 import { syncOrgStripeOnboardingFromStripe } from '@/lib/platform-stripe-onboarding'
 import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
 import { PLANS, PLAN_KEYS, type PlanKey } from '@/lib/plans'
 import { getPlanPriceMonthly } from '@/lib/settings'
-import ConnectStripeButton from '../../ConnectStripeButton'
 import ManageOrgBillingButton from './ManageOrgBillingButton'
 import PlanSelector from './PlanSelector'
 import DeleteOrgButton from './DeleteOrgButton'
@@ -94,8 +92,6 @@ export default async function BillingPage({
     ),
   ) as Record<PlanKey, number>
 
-  const stripeStatus = orgStripeDuesUiStatus(org)
-
   return (
     <main className="min-h-screen bg-gray-50">
       <nav className="bg-white border-b px-8 py-4 flex items-center justify-between">
@@ -160,6 +156,14 @@ export default async function BillingPage({
           {org.stripe_customer_id && planPrices[currentPlan] > 0 && (
             <ManageOrgBillingButton orgId={orgId} />
           )}
+          <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+            Manage member dues and Stripe Connect from
+            {' '}
+            <Link href={`/platform/dashboard/${orgId}/settings/membership`} className="font-medium underline underline-offset-2">
+              Membership
+            </Link>
+            .
+          </div>
         </div>
 
         {/* Feature comparison */}
@@ -232,58 +236,6 @@ export default async function BillingPage({
           </div>
         </div>
 
-        {/* Stripe Connect */}
-        <div className="space-y-4">
-          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Member dues (Stripe Connect)</h2>
-          <div className="bg-white rounded-xl border p-6">
-            <div className="flex items-center justify-between gap-4">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <div
-                    className={`w-2 h-2 rounded-full ${
-                      stripeStatus === 'not_connected'
-                        ? 'bg-gray-300'
-                        : stripeStatus === 'pending'
-                          ? 'bg-yellow-400'
-                          : stripeStatus === 'payments_active_payouts_pending'
-                            ? 'bg-amber-500'
-                            : 'bg-green-500'
-                    }`}
-                  />
-                  <span className="font-medium text-sm">
-                    {stripeStatus === 'fully_ready' && 'Stripe connected — accepting payments'}
-                    {stripeStatus === 'payments_active_payouts_pending' &&
-                      'Member payments on — finish Stripe setup for payouts'}
-                    {stripeStatus === 'pending' && 'Stripe onboarding incomplete'}
-                    {stripeStatus === 'not_connected' && 'Stripe not connected'}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-500 pl-4">
-                  {stripeStatus === 'fully_ready'
-                    ? 'You can collect member dues directly through your lounge, and payouts are enabled on your Stripe account.'
-                    : stripeStatus === 'payments_active_payouts_pending'
-                      ? 'Members can pay membership dues. Complete any required steps in your Stripe Dashboard so funds can be paid out to your bank.'
-                      : stripeStatus === 'pending'
-                        ? 'Complete Stripe onboarding so members can pay membership dues online.'
-                        : 'Connect Stripe to collect membership dues from your members.'}
-                </p>
-              </div>
-              {billingStatus.requiresActivation ? (
-                <div className="mt-4 pt-4 border-t text-sm text-amber-700 bg-amber-50 rounded-lg px-4 py-3">
-                  Add billing details before connecting Stripe and collecting dues.
-                </div>
-              ) : (stripeStatus === 'not_connected' || stripeStatus === 'pending') && (
-                <ConnectStripeButton orgId={orgId} isPending={stripeStatus === 'pending'} />
-              )}
-            </div>
-            {(stripeStatus === 'not_connected' || stripeStatus === 'pending') &&
-              !currentPlanDef.features.stripeDues && (
-              <div className="mt-4 pt-4 border-t text-sm text-amber-700 bg-amber-50 rounded-lg px-4 py-3">
-                Stripe dues collection requires the <strong>Core</strong> plan or higher.
-              </div>
-            )}
-          </div>
-        </div>
         {/* Danger zone */}
         <div className="space-y-4">
           <h2 className="text-sm font-semibold text-red-600 uppercase tracking-wide">Danger zone</h2>

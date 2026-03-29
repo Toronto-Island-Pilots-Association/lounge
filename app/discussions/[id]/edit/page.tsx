@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment, isOrgStripeConnected } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { DiscussionCategory } from '@/types/database'
+import { getFeatureFlags } from '@/lib/settings'
 import EditDiscussionForm from '../EditDiscussionForm'
 
 export default async function EditThreadPage({
@@ -17,6 +18,8 @@ export default async function EditThreadPage({
   if (user.profile.status !== 'approved' && user.profile.role !== 'admin') {
     redirect('/pending-approval')
   }
+
+  const featureFlags = await getFeatureFlags(user.profile.org_id)
 
   const { id } = await params
   const supabase = await createClient()
@@ -37,7 +40,7 @@ export default async function EditThreadPage({
               href="/discussions"
               className="inline-block px-6 py-2 bg-[var(--color-primary)] text-white font-semibold rounded-lg"
             >
-              Back to Hangar Talk
+              Back to {featureFlags.discussionsLabel}
             </Link>
           </div>
         </div>

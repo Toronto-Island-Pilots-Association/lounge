@@ -1,6 +1,8 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
+import { getRequiredPlan } from '@/lib/plans'
 import type { OrgFeatureFlags } from '@/lib/settings'
 
 type FeatureMeta = {
@@ -9,6 +11,13 @@ type FeatureMeta = {
   description: string
   labelKey?: keyof OrgFeatureFlags
   labelPlaceholder?: string
+}
+
+type CapabilityMeta = {
+  key: string
+  label: string
+  description: string
+  href?: 'membership' | 'integrations'
 }
 
 const FEATURE_META: FeatureMeta[] = [
@@ -20,7 +29,37 @@ const FEATURE_META: FeatureMeta[] = [
   { key: 'allowMemberInvitations', label: 'Member invitations',     description: 'Approved members can invite new members.' },
 ]
 
-const PLAN_ORDER = ['hobby', 'starter', 'community', 'club_pro']
+const CAPABILITY_META: CapabilityMeta[] = [
+  {
+    key: 'stripeDues',
+    label: 'Online dues collection',
+    description: 'Collect membership dues through Stripe from the Membership page.',
+    href: 'membership',
+  },
+  {
+    key: 'customDomain',
+    label: 'Custom domain',
+    description: 'Serve your lounge on your own domain name.',
+    href: 'integrations',
+  },
+  {
+    key: 'memberTrials',
+    label: 'Member trial periods',
+    description: 'Offer time-limited trial periods on membership levels.',
+    href: 'membership',
+  },
+  {
+    key: 'analytics',
+    label: 'Analytics dashboard',
+    description: 'View club-level analytics and reporting.',
+  },
+  {
+    key: 'hideBranding',
+    label: 'Remove ClubLounge branding',
+    description: 'Hide ClubLounge branding on the member-facing lounge.',
+  },
+] as const
+
 const PLAN_LABELS: Record<string, string> = {
   hobby: 'Hobby', starter: 'Core', community: 'Growth', club_pro: 'Pro',
 }
@@ -35,21 +74,20 @@ export default function FeaturesForm({
   initial: OrgFeatureFlags
   initialPlan: string
   initialPlanLabel: string
-  initialPlanFeatures: Partial<Record<keyof OrgFeatureFlags, boolean>>
+  initialPlanFeatures: Partial<Record<string, boolean>>
   orgId: string
 }) {
   const [draft, setDraft] = useState<OrgFeatureFlags>(initial)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const billingHref = `/platform/dashboard/${orgId}/billing`
 
-  const requiredPlanLabel = (key: keyof OrgFeatureFlags): string | null => {
+  const requiredPlanLabel = (key: string): string | null => {
     if (initialPlanFeatures[key]) return null
-    const idx = PLAN_ORDER.indexOf(initialPlan)
-    for (let i = idx + 1; i < PLAN_ORDER.length; i++) {
-      return PLAN_LABELS[PLAN_ORDER[i]] ?? 'a higher plan'
-    }
-    return 'a higher plan'
+    const requiredPlan = getRequiredPlan(key as Parameters<typeof getRequiredPlan>[0])
+    if (!requiredPlan) return 'a higher plan'
+    return PLAN_LABELS[requiredPlan] ?? 'a higher plan'
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,7 +122,16 @@ export default function FeaturesForm({
       {error   && <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">{error}</div>}
       {success && <div className="rounded-md bg-green-50 p-3 text-sm text-green-800">Saved.</div>}
 
-      <div className="divide-y divide-gray-100">
+      <div className="space-y-2">
+        <div>
+          <h2 className="text-sm font-semibold text-gray-900">Portal sections</h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Toggle the sections your members can access. Unavailable features stay visible so you can see what unlocks on higher plans.
+          </p>
+        </div>
+      </div>
+
+      <div className="divide-y divide-gray-100 border-y border-gray-100">
         {FEATURE_META.map(({ key, label, description, labelKey, labelPlaceholder }) => {
           const blocked = !initialPlanFeatures[key as keyof typeof initialPlanFeatures]
           const upgradeTo = requiredPlanLabel(key)
@@ -108,6 +155,16 @@ export default function FeaturesForm({
                     )}
                   </div>
                   <p className="text-sm text-gray-500 mt-0.5">{description}</p>
+                  {blocked && (
+                    <div className="mt-2">
+                      <Link
+                        href={billingHref}
+                        className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 underline underline-offset-2 hover:text-gray-900"
+                      >
+                        Upgrade in billing
+                      </Link>
+                    </div>
+                  )}
                   {labelKey && !blocked && (draft[key] as boolean) && (
                     <div className="mt-2 flex items-center gap-2">
                       <span className="text-xs text-gray-500">Nav label:</span>
@@ -121,6 +178,73 @@ export default function FeaturesForm({
                       />
                     </div>
                   )}
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="space-y-2 pt-2">
+        <div>
+          <h2 className="text-sm font-semibold text-gray-900">Plan capabilities</h2>
+          <p className="text-sm text-gray-500 mt-1">
+            These are available automatically based on your current plan.
+          </p>
+        </div>
+      </div>
+
+      <div className="divide-y divide-gray-100 border-y border-gray-100">
+        {CAPABILITY_META.map(({ key, label, description, href }) => {
+          const available = !!initialPlanFeatures[key]
+          const upgradeTo = requiredPlanLabel(key)
+          const destination =
+            href === 'membership'
+              ? `/platform/dashboard/${orgId}/settings/membership`
+              : href === 'integrations'
+                ? `/platform/dashboard/${orgId}/settings/integrations`
+                : null
+
+          return (
+            <div key={key} className={`py-4 ${available ? '' : 'opacity-60'}`}>
+              <div className="flex items-start gap-3">
+                <div
+                  className={`mt-0.5 h-4 w-4 rounded-full border ${
+                    available ? 'border-green-600 bg-green-600' : 'border-gray-300 bg-gray-100'
+                  }`}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-medium text-gray-900">{label}</span>
+                    <span
+                      className={`text-xs rounded px-1.5 py-0.5 border ${
+                        available
+                          ? 'bg-green-50 text-green-700 border-green-200'
+                          : 'bg-amber-50 text-amber-700 border-amber-200'
+                      }`}
+                    >
+                      {available ? 'Included' : `Requires ${upgradeTo}`}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-500 mt-0.5">{description}</p>
+                  <div className="mt-2 flex items-center gap-3 flex-wrap">
+                    {destination && available && (
+                      <Link
+                        href={destination}
+                        className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 underline underline-offset-2 hover:text-gray-900"
+                      >
+                        Open settings
+                      </Link>
+                    )}
+                    {!available && (
+                      <Link
+                        href={billingHref}
+                        className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 underline underline-offset-2 hover:text-gray-900"
+                      >
+                        Upgrade in billing
+                      </Link>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

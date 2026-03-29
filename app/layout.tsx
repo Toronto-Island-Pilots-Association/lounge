@@ -16,20 +16,28 @@ const interTight = Inter_Tight({
   subsets: ["latin"],
 });
 
+const platformIcons: Metadata["icons"] = {
+  icon: {
+    url: "/platform-favicon.svg",
+    type: "image/svg+xml",
+  },
+  shortcut: "/platform-favicon.svg",
+};
+
 export async function generateMetadata(): Promise<Metadata> {
   const h = await headers();
   const domainType = h.get("x-domain-type") ?? "org";
   if (domainType !== "org") {
-    return { icons: { icon: "/favicon.ico" } };
+    return { icons: platformIcons };
   }
   const orgId = h.get("x-org-id");
-  if (!orgId) return { icons: { icon: "/favicon.ico" } };
+  if (!orgId) return { icons: platformIcons };
   const b = await fetchPublicOrgBranding(orgId);
   const title = b.displayName || b.name || "ClubLounge";
   const siteIcon = b.siteIconUrl;
   const icons: Metadata["icons"] =
     !siteIcon
-      ? { icon: "/favicon.ico" }
+      ? platformIcons
       : siteIcon.startsWith("/")
         ? { icon: siteIcon }
         : {

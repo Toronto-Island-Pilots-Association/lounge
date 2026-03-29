@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { CnameRecord } from '@/components/platform/CnameRecord'
-import { orgStripeDuesUiStatus } from '@/lib/org-stripe-dues-status'
 import { buildOrgUrl, ROOT_DOMAIN } from '@/lib/org'
 
 function inputCls() {
@@ -31,15 +30,10 @@ function SaveButton({ saving, label = 'Save changes' }: { saving: boolean; label
 }
 
 type OrgIntegrations = {
-  billing_activated: boolean
   custom_domain: string | null
   custom_domain_enabled: boolean
   custom_domain_verified: boolean | null
   subdomain: string
-  stripe_account_id: string | null
-  stripe_onboarding_complete: boolean | null
-  stripe_charges_enabled: boolean | null
-  stripe_payouts_enabled: boolean | null
 }
 
 export default function IntegrationsPageClient({ orgId }: { orgId: string }) {
@@ -47,13 +41,10 @@ export default function IntegrationsPageClient({ orgId }: { orgId: string }) {
   const [subdomain, setSubdomain] = useState('')
   const [customDomain, setCustomDomain] = useState('')
   const [loading, setLoading] = useState(true)
-  const [stripeConnecting, setStripeConnecting] = useState(false)
-  const [stripeDashboardLoading, setStripeDashboardLoading] = useState(false)
   const [subdomainSaving, setSubdomainSaving] = useState(false)
   const [domainSaving, setDomainSaving] = useState(false)
   const [domainChecking, setDomainChecking] = useState(false)
   const [domainVerification, setDomainVerification] = useState<'verified' | 'pending' | 'invalid' | 'misconfigured' | null>(null)
-  const [stripeError, setStripeError] = useState<string | null>(null)
   const [subdomainError, setSubdomainError] = useState<string | null>(null)
   const [subdomainSuccess, setSubdomainSuccess] = useState(false)
   const [domainError, setDomainError] = useState<string | null>(null)
@@ -78,34 +69,6 @@ export default function IntegrationsPageClient({ orgId }: { orgId: string }) {
       cancelled = true
     }
   }, [orgId])
-
-  const connectStripe = async () => {
-    setStripeConnecting(true)
-    setStripeError(null)
-    try {
-      const res = await fetch(`/api/platform/orgs/${orgId}/settings/integrations`, { method: 'POST' })
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Failed')
-      const { url } = await res.json()
-      window.location.href = url
-    } catch (e) {
-      setStripeError(e instanceof Error ? e.message : 'Failed to connect Stripe')
-      setStripeConnecting(false)
-    }
-  }
-
-  const openStripeDashboard = async () => {
-    setStripeDashboardLoading(true)
-    try {
-      const res = await fetch(`/api/platform/orgs/${orgId}/settings/integrations`, { method: 'PUT' })
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Failed')
-      const { url } = await res.json()
-      window.open(url, '_blank')
-    } catch (e) {
-      setStripeError(e instanceof Error ? e.message : 'Failed to open Stripe Dashboard')
-    } finally {
-      setStripeDashboardLoading(false)
-    }
-  }
 
   const checkDomain = async () => {
     setDomainChecking(true)
@@ -174,13 +137,6 @@ export default function IntegrationsPageClient({ orgId }: { orgId: string }) {
     }
   }
 
-  const stripeUi = org
-    ? orgStripeDuesUiStatus(org)
-    : 'not_connected'
-  const stripePending = stripeUi === 'pending'
-  const stripePayoutsPending = stripeUi === 'payments_active_payouts_pending'
-  const stripeFullyReady = stripeUi === 'fully_ready'
-
   if (loading) {
     return (
       <div className="flex py-16 justify-center">
@@ -191,78 +147,6 @@ export default function IntegrationsPageClient({ orgId }: { orgId: string }) {
 
   return (
     <div className="space-y-10 max-w-xl">
-      <div className="space-y-4">
-        <SectionHeader
-          title="Member dues (Stripe Connect)"
-          description="Accept membership payments through your lounge. Stripe processing fees apply, plus a 2% ClubLounge platform fee on dues payments."
-        />
-
-        <div className="flex items-center gap-3">
-          <span
-            className={`inline-block h-2.5 w-2.5 rounded-full ${
-              stripeFullyReady
-                ? 'bg-green-500'
-                : stripePayoutsPending
-                  ? 'bg-amber-500'
-                  : stripePending
-                    ? 'bg-yellow-400'
-                    : 'bg-gray-300'
-            }`}
-          />
-          <span className="text-sm text-gray-700">
-            {stripeFullyReady
-              ? 'Stripe connected — accepting payments'
-              : stripePayoutsPending
-                ? 'Member payments on — finish Stripe setup for payouts'
-                : stripePending
-                  ? 'Setup in progress'
-                  : 'Not connected'}
-          </span>
-        </div>
-
-        {!org?.billing_activated ? (
-          <div className="rounded-md bg-amber-50 p-3 text-sm text-amber-900">
-            Add billing details before connecting Stripe and collecting dues.
-            {' '}
-            <a href={`/platform/dashboard/${orgId}/billing`} className="font-medium underline underline-offset-2">
-              Open billing
-            </a>
-            .
-          </div>
-        ) : stripeFullyReady ? (
-          <div className="rounded-md bg-green-50 p-3 text-sm text-green-800">
-            You can collect member dues directly through your lounge, and payouts are enabled on your Stripe account.
-          </div>
-        ) : stripePayoutsPending ? (
-          <div className="space-y-3">
-            <div className="rounded-md bg-amber-50 p-3 text-sm text-amber-900">
-              Members can pay online. Complete any required information in your Stripe account so payouts can reach your bank.
-            </div>
-            {stripeError && <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">{stripeError}</div>}
-            <button
-              type="button"
-              onClick={openStripeDashboard}
-              disabled={stripeDashboardLoading}
-              className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {stripeDashboardLoading ? 'Opening…' : 'Open Stripe Dashboard'}
-            </button>
-          </div>
-        ) : (
-          <>
-            {stripeError && <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">{stripeError}</div>}
-            <button
-              type="button"
-              onClick={connectStripe}
-              disabled={stripeConnecting}
-              className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {stripeConnecting ? 'Redirecting…' : stripePending ? 'Resume Stripe setup' : 'Connect Stripe'}
-            </button>
-          </>
-        )}
-      </div>
-
       <form onSubmit={saveSubdomain} className="space-y-4 pt-6 border-t border-gray-200">
         <SectionHeader
           title="Default subdomain"
