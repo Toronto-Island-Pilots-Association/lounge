@@ -18,7 +18,7 @@ export default function PlanSelector({
   const [error, setError] = useState<string | null>(null)
 
   const handleSelect = async (targetPlan: PlanKey) => {
-    if (targetPlan === currentPlan) return
+    if (targetPlan === currentPlan && billingActivated) return
     setProcessing(targetPlan)
     setError(null)
     try {

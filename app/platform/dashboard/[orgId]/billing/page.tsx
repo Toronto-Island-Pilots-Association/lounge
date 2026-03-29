@@ -7,6 +7,7 @@ import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
 import { PLANS, PLAN_KEYS, type PlanKey } from '@/lib/plans'
 import { getPlanPriceMonthly } from '@/lib/settings'
 import ConnectStripeButton from '../../ConnectStripeButton'
+import ManageOrgBillingButton from './ManageOrgBillingButton'
 import PlanSelector from './PlanSelector'
 import DeleteOrgButton from './DeleteOrgButton'
 
@@ -65,7 +66,7 @@ export default async function BillingPage({
   const { data: org } = await db
     .from('organizations')
     .select(
-      'id, name, plan, stripe_account_id, stripe_onboarding_complete, stripe_charges_enabled, stripe_payouts_enabled, stripe_subscription_id',
+      'id, name, plan, stripe_account_id, stripe_customer_id, stripe_onboarding_complete, stripe_charges_enabled, stripe_payouts_enabled, stripe_subscription_id',
     )
     .eq('id', orgId)
     .maybeSingle()
@@ -135,6 +136,9 @@ export default async function BillingPage({
             planPrices={planPrices}
             billingActivated={billingStatus.activated}
           />
+          {org.stripe_customer_id && planPrices[currentPlan] > 0 && (
+            <ManageOrgBillingButton orgId={orgId} />
+          )}
         </div>
 
         {/* Feature comparison */}
