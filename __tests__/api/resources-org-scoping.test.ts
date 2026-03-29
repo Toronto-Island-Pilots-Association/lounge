@@ -20,6 +20,13 @@ jest.mock('@/lib/settings', () => ({
   getFeatureFlags: jest.fn().mockResolvedValue({ resources: true }),
 }))
 
+jest.mock('@/lib/org-billing-activation', () => ({
+  getOrgBillingActivationStatus: jest.fn().mockResolvedValue({
+    activated: true,
+    requiresActivation: false,
+  }),
+}))
+
 describe('Resources org scoping', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -201,4 +208,3 @@ describe('Resources org scoping', () => {
     expect(resourcesDeleteFrom.eq).toHaveBeenCalledWith('org_id', 'org-1')
   })
 })
-

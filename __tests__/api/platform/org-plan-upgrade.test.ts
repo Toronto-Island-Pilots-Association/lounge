@@ -9,6 +9,15 @@ jest.mock('@/lib/stripe', () => ({
   getPlatformStripeInstance: jest.fn(),
 }))
 
+jest.mock('@/lib/settings', () => ({
+  getPlanPriceMonthly: jest.fn(),
+}))
+
+jest.mock('@/lib/org-plan-subscription', () => ({
+  buildOrgPlanCheckoutLineItems: jest.fn(),
+  syncOrgPlanSubscriptionBilling: jest.fn(),
+}))
+
 describe('/api/platform/orgs/[orgId]/plan/upgrade', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -18,6 +27,8 @@ describe('/api/platform/orgs/[orgId]/plan/upgrade', () => {
   it('creates a Stripe Checkout subscription when org has no subscription yet', async () => {
     const { createClient, createServiceRoleClient } = require('@/lib/supabase/server')
     const { getPlatformStripeInstance } = require('@/lib/stripe')
+    const { getPlanPriceMonthly } = require('@/lib/settings')
+    const { buildOrgPlanCheckoutLineItems } = require('@/lib/org-plan-subscription')
 
     createClient.mockResolvedValue({
       auth: {
@@ -78,13 +89,14 @@ describe('/api/platform/orgs/[orgId]/plan/upgrade', () => {
     }
 
     createServiceRoleClient.mockReturnValue(db)
+    getPlanPriceMonthly.mockResolvedValue(49)
+    buildOrgPlanCheckoutLineItems.mockResolvedValue({
+      lineItems: [{ price: 'price_1', quantity: 1 }],
+    })
 
     const stripe = {
       customers: {
         create: jest.fn().mockResolvedValue({ id: 'cus_1' }),
-      },
-      prices: {
-        create: jest.fn().mockResolvedValue({ id: 'price_1' }),
       },
       checkout: {
         sessions: {
@@ -106,14 +118,9 @@ describe('/api/platform/orgs/[orgId]/plan/upgrade', () => {
     expect(res.status).toBe(200)
     expect(data.url).toBe('https://stripe.example/checkout/sess_1')
 
-    expect(stripe.prices.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        recurring: { interval: 'month' },
-      })
-    )
-
     expect(stripe.checkout.sessions.create).toHaveBeenCalledWith(
       expect.objectContaining({
+        line_items: [{ price: 'price_1', quantity: 1 }],
         metadata: { orgId, planKey: 'starter' },
         subscription_data: { metadata: { orgId, planKey: 'starter' } },
       })
@@ -123,6 +130,8 @@ describe('/api/platform/orgs/[orgId]/plan/upgrade', () => {
   it('updates existing subscription in-place when org already has a platform subscription', async () => {
     const { createClient, createServiceRoleClient } = require('@/lib/supabase/server')
     const { getPlatformStripeInstance } = require('@/lib/stripe')
+    const { getPlanPriceMonthly } = require('@/lib/settings')
+    const { syncOrgPlanSubscriptionBilling } = require('@/lib/org-plan-subscription')
 
     createClient.mockResolvedValue({
       auth: {
@@ -171,18 +180,11 @@ describe('/api/platform/orgs/[orgId]/plan/upgrade', () => {
     }
 
     createServiceRoleClient.mockReturnValue(db)
+    getPlanPriceMonthly.mockResolvedValue(99)
+    syncOrgPlanSubscriptionBilling.mockResolvedValue({})
 
     const stripe = {
-      prices: {
-        create: jest.fn().mockResolvedValue({ id: 'price_2' }),
-      },
-      subscriptions: {
-        retrieve: jest.fn().mockResolvedValue({
-          id: 'sub_123',
-          items: { data: [{ id: 'si_1', price: { id: 'price_old' } }] },
-        }),
-        update: jest.fn().mockResolvedValue({}),
-      },
+      subscriptions: {},
     }
     getPlatformStripeInstance.mockReturnValue(stripe)
 
@@ -198,17 +200,8 @@ describe('/api/platform/orgs/[orgId]/plan/upgrade', () => {
     expect(res.status).toBe(200)
     expect(data.ok).toBe(true)
 
-    expect(stripe.subscriptions.retrieve).toHaveBeenCalledWith('sub_123', { expand: ['items.data.price'] })
-    expect(stripe.subscriptions.update).toHaveBeenCalledWith(
-      'sub_123',
-      expect.objectContaining({
-        items: [{ id: 'si_1', price: 'price_2' }],
-        proration_behavior: 'create_prorations',
-        metadata: { orgId, planKey: 'community' },
-      })
-    )
+    expect(syncOrgPlanSubscriptionBilling).toHaveBeenCalledWith(orgId, { planKey: 'community' })
 
     expect(updateCall).toHaveBeenCalled()
   })
 })
-

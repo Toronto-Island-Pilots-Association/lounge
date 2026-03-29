@@ -10,6 +10,7 @@ jest.mock('@/lib/org', () => ({
 
 jest.mock('@/lib/settings', () => ({
   getMembershipFeeForLevel: jest.fn(),
+  getStripeBillingMode: jest.fn(),
   getTrialEndDateAsync: jest.fn(),
 }))
 
@@ -31,7 +32,7 @@ describe('/api/stripe/create-checkout-session', () => {
 
   it('uses the org name for the checkout product (and connect account when configured)', async () => {
     const { requireAuthIncludingPending } = require('@/lib/auth')
-    const { getMembershipFeeForLevel, getTrialEndDateAsync } = require('@/lib/settings')
+    const { getMembershipFeeForLevel, getStripeBillingMode, getTrialEndDateAsync } = require('@/lib/settings')
     const { getPlatformStripeInstance, isStripeEnabled } = require('@/lib/stripe')
     const { createServiceRoleClient, createClient } = require('@/lib/supabase/server')
     const { getOrgByHostname } = require('@/lib/org')
@@ -39,6 +40,7 @@ describe('/api/stripe/create-checkout-session', () => {
     isStripeEnabled.mockReturnValue(true)
 
     getMembershipFeeForLevel.mockResolvedValue(45)
+    getStripeBillingMode.mockResolvedValue('connect')
     getTrialEndDateAsync.mockResolvedValue(new Date(Date.now() - 60_000)) // no trial, easier assertions
 
     requireAuthIncludingPending.mockResolvedValue({
@@ -145,4 +147,3 @@ describe('/api/stripe/create-checkout-session', () => {
     )
   })
 })
-

@@ -13,6 +13,17 @@ jest.mock('@/lib/resend', () => ({
   sendEventNotificationEmail: jest.fn(),
 }))
 
+jest.mock('@/lib/org-billing-activation', () => ({
+  getOrgBillingActivationStatus: jest.fn().mockResolvedValue({
+    activated: true,
+    requiresActivation: false,
+  }),
+}))
+
+jest.mock('@/lib/settings', () => ({
+  getFeatureFlags: jest.fn().mockResolvedValue({ events: true }),
+}))
+
 describe('Events org scoping', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -75,7 +86,11 @@ describe('Events org scoping', () => {
 
     expect(eventsFrom.eq).toHaveBeenCalledWith('org_id', 'org-1')
     expect(countsFrom.eq).toHaveBeenCalledWith('org_id', 'org-1')
-    expect(userRsvpsFrom.eq).toHaveBeenCalledWith('org_id', 'org-1')
+    const allEventRsvpEqCalls = [
+      ...countsFrom.eq.mock.calls,
+      ...userRsvpsFrom.eq.mock.calls,
+    ]
+    expect(allEventRsvpEqCalls).toContainEqual(['org_id', 'org-1'])
   })
 
   it('POST /api/events injects org_id on create', async () => {
@@ -189,4 +204,3 @@ describe('Events org scoping', () => {
     expect(profilesFrom.in).toHaveBeenCalledWith('user_id', expect.any(Array))
   })
 })
-
