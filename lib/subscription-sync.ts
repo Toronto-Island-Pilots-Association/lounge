@@ -1,7 +1,34 @@
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getMembershipExpiresAtFromSubscription } from '@/lib/settings'
-import { getStripeInstance, isStripeEnabled } from '@/lib/stripe'
+import { getPlatformStripeInstance, getStripeInstance, isStripeEnabled } from '@/lib/stripe'
 import Stripe from 'stripe'
+
+type StripeContext = {
+  stripe: Stripe
+  requestOptions?: { stripeAccount: string }
+}
+
+export async function resolveMemberStripeContext(orgId?: string): Promise<StripeContext> {
+  if (!orgId) {
+    return { stripe: getStripeInstance() }
+  }
+
+  const supabase = createServiceRoleClient()
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('stripe_account_id')
+    .eq('id', orgId)
+    .maybeSingle()
+
+  if (org?.stripe_account_id) {
+    return {
+      stripe: getPlatformStripeInstance(),
+      requestOptions: { stripeAccount: org.stripe_account_id },
+    }
+  }
+
+  return { stripe: getStripeInstance() }
+}
 
 /**
  * Syncs a user's subscription status from Stripe to the database
@@ -67,7 +94,7 @@ export async function syncSubscriptionStatus(
     }
   }
 
-  const stripe = getStripeInstance()
+  const { stripe, requestOptions } = await resolveMemberStripeContext(orgId)
   const activeSubscriptionId = subscriptionId || profile.stripe_subscription_id
 
   if (!activeSubscriptionId) {
@@ -76,7 +103,7 @@ export async function syncSubscriptionStatus(
 
   try {
     // Fetch subscription from Stripe
-    const subscription = await stripe.subscriptions.retrieve(activeSubscriptionId)
+    const subscription = await stripe.subscriptions.retrieve(activeSubscriptionId, requestOptions as any)
     const currentPeriodEnd = new Date((subscription as any).current_period_end * 1000)
     const currentPeriodStart = new Date((subscription as any).current_period_start * 1000)
     const now = new Date()
@@ -118,13 +145,15 @@ export async function syncSubscriptionStatus(
     const expiresAtChanged = profile.membership_expires_at !== newExpiresAt
     const cancelAtPeriodEndChanged = (profile as any).subscription_cancel_at_period_end !== cancelAtPeriodEnd
     const needsBackfillExpires = !profile.membership_expires_at && newExpiresAt
+    const subscriptionIdChanged = profile.stripe_subscription_id !== activeSubscriptionId
 
-    if (statusChanged || expiresAtChanged || cancelAtPeriodEndChanged || needsBackfillExpires) {
+    if (statusChanged || expiresAtChanged || cancelAtPeriodEndChanged || needsBackfillExpires || subscriptionIdChanged) {
       let updateQuery = supabase
         .from('org_memberships')
         .update({
           status: newStatus,
           membership_expires_at: newExpiresAt,
+          stripe_subscription_id: activeSubscriptionId,
           subscription_cancel_at_period_end: cancelAtPeriodEnd,
         })
         .eq('user_id', userId)

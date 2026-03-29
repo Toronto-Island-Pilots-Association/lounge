@@ -236,7 +236,8 @@ export function shouldRequirePayment(profile: MemberProfile): boolean {
   if (profile.role === 'admin') return false
   if (profile.membership_level === 'Honorary') return false
   if (profile.status === 'rejected' || profile.status === 'expired') return false
-  if (profile.stripe_subscription_id) return false
+  if (profile.stripe_subscription_id || profile.paypal_subscription_id) return false
+  if (profile.membership_expires_at && new Date(profile.membership_expires_at) >= new Date()) return false
   return profile.status === 'pending' || profile.status === 'approved'
 }
 

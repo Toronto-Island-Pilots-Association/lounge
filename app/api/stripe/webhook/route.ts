@@ -112,21 +112,31 @@ export async function POST(request: Request) {
           .eq('user_id', userId)
           .eq('org_id', orgId)
 
-        // Record payment in payments table
-        await supabase
+        const { data: existingPayment } = await supabase
           .from('payments')
-          .insert({
-            user_id: userId,
-            org_id: orgId,
-            payment_method: 'stripe',
-            amount: amountPaid,
-            currency: 'CAD',
-            payment_date: new Date().toISOString(),
-            membership_expires_at: membershipExpiresAt,
-            stripe_subscription_id: subscriptionId,
-            stripe_payment_intent_id: paymentIntentId,
-            status: 'completed',
-          })
+          .select('id')
+          .eq('user_id', userId)
+          .eq('org_id', orgId)
+          .eq('stripe_subscription_id', subscriptionId)
+          .limit(1)
+          .maybeSingle()
+
+        if (!existingPayment) {
+          await supabase
+            .from('payments')
+            .insert({
+              user_id: userId,
+              org_id: orgId,
+              payment_method: 'stripe',
+              amount: amountPaid,
+              currency: 'CAD',
+              payment_date: new Date().toISOString(),
+              membership_expires_at: membershipExpiresAt,
+              stripe_subscription_id: subscriptionId,
+              stripe_payment_intent_id: paymentIntentId,
+              status: 'completed',
+            })
+        }
 
         Sentry.metrics.count('payment.subscription_purchased', 1, { attributes: { membership_level: level } })
 

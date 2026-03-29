@@ -107,8 +107,15 @@ describe('Stripe webhook org scoping', () => {
     }
 
     const paymentInsert = jest.fn().mockResolvedValue({})
+    const paymentsSelectChain = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({ data: null }),
+    }
 
     const paymentsFrom = {
+      select: jest.fn(() => paymentsSelectChain),
       insert: paymentInsert,
     }
 
@@ -152,4 +159,3 @@ describe('Stripe webhook org scoping', () => {
     expect(syncSubscriptionStatus).toHaveBeenCalledWith(userId, subscriptionId, orgId)
   })
 })
-

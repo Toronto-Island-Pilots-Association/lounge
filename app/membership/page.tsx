@@ -84,16 +84,18 @@ export default async function MembershipPage({
   let hasMembershipExpiry = !!user.profile.membership_expires_at
   if (!hasMembershipExpiry && user.profile.stripe_subscription_id) {
     const { syncSubscriptionByUserId } = await import('@/lib/subscription-sync')
-    await syncSubscriptionByUserId(user.id)
+    await syncSubscriptionByUserId(user.id, user.profile.org_id)
     const supabase = await createClient()
     const { data: updated } = await supabase
-      .from('user_profiles')
-      .select('membership_expires_at')
-      .eq('id', user.id)
-      .single()
-    if (updated?.membership_expires_at) {
+      .from('member_profiles')
+      .select('membership_expires_at, stripe_subscription_id')
+      .eq('user_id', user.id)
+      .eq('org_id', user.profile.org_id)
+      .maybeSingle()
+    if (updated?.membership_expires_at || updated?.stripe_subscription_id) {
       user.profile.membership_expires_at = updated.membership_expires_at
-      hasMembershipExpiry = true
+      user.profile.stripe_subscription_id = updated.stripe_subscription_id
+      hasMembershipExpiry = !!updated?.membership_expires_at
     }
   }
   const isExpired = hasMembershipExpiry

@@ -18,7 +18,10 @@ export default async function AddPaymentPage() {
     redirect('/complete-profile')
   }
 
-  const hasSubscription = !!user.profile.stripe_subscription_id
+  const hasSubscription =
+    !!user.profile.stripe_subscription_id ||
+    !!user.profile.paypal_subscription_id ||
+    !!(user.profile.membership_expires_at && new Date(user.profile.membership_expires_at) >= new Date())
   const isHonorary = user.profile.membership_level === 'Honorary'
 
   if (hasSubscription || isHonorary) {

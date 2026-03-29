@@ -1,6 +1,8 @@
 import { requireAuthIncludingPending } from '@/lib/auth'
-import { getStripeInstance, isStripeEnabled } from '@/lib/stripe'
+import { isStripeEnabled } from '@/lib/stripe'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { resolveMemberStripeContext, syncSubscriptionStatus } from '@/lib/subscription-sync'
 
 export async function GET() {
   try {
@@ -20,19 +22,41 @@ export async function GET() {
       })
     }
 
-    if (!user.profile.stripe_subscription_id) {
+    let subscriptionId = user.profile.stripe_subscription_id
+
+    if (!subscriptionId) {
+      const supabase = createServiceRoleClient()
+      const { data: latestPayment } = await supabase
+        .from('payments')
+        .select('stripe_subscription_id')
+        .eq('user_id', user.id)
+        .eq('org_id', user.profile.org_id)
+        .not('stripe_subscription_id', 'is', null)
+        .order('payment_date', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      subscriptionId = latestPayment?.stripe_subscription_id ?? null
+    }
+
+    if (!subscriptionId) {
       return NextResponse.json({
         hasSubscription: false,
       })
     }
 
-    const stripe = getStripeInstance()
+    const { stripe, requestOptions } = await resolveMemberStripeContext(user.profile.org_id)
     const subscription = await stripe.subscriptions.retrieve(
-      user.profile.stripe_subscription_id,
+      subscriptionId,
       {
         expand: ['items.data.price'],
-      }
+        ...(requestOptions ?? {}),
+      } as any
     )
+
+    if (user.profile.stripe_subscription_id !== subscriptionId) {
+      await syncSubscriptionStatus(user.id, subscriptionId, user.profile.org_id)
+    }
 
     // Get the amount from the subscription
     let amount: number | null = null
