@@ -20,15 +20,15 @@ export const ARTICLES: Article[] = [
     sections: [
       {
         heading: 'Create your lounge',
-        body: 'Sign up at clublounge.app/platform/signup. Choose a subdomain (e.g. ottawacycling.clublounge.app) — this is your club\'s permanent address. New lounges start on Hobby at $5/month.',
+        body: 'Sign up at clublounge.app/platform/signup and choose your club name and subdomain (for example, ottawacycling.clublounge.app). That becomes your lounge\'s permanent address. New lounges start on Hobby at $5/month, then continue into guided onboarding to set membership fees, choose a plan, and add billing details before inviting members or collecting dues.',
       },
       {
         heading: 'Configure your club identity',
-        body: 'From your platform dashboard, go to Settings → General. Set your club\'s display name, description, contact email, and accent colour. Upload a logo — it appears in the navbar and on member-facing pages. You can also upload a favicon so your lounge has its own browser tab icon.',
+        body: 'From your platform dashboard, go to Settings → General. Set your club\'s display name, description, contact email, and accent colour. Upload a logo so it appears in the navbar and on member-facing pages. You can also upload a favicon so your lounge has its own browser tab icon.',
       },
       {
         heading: 'Set up membership levels',
-        body: 'Go to Settings → Membership to define your tiers (e.g. Full Member, Associate, Student, Honorary). Each tier can have a different monthly or annual dues amount. Honorary members are never charged. You can enable or disable tiers at any time.',
+        body: 'Go to Settings → Membership to define your tiers (for example, Full Member, Associate, Student, or Honorary). Each tier has its own annual fee, and you can enable or disable tiers at any time. On Growth and Pro, you can also add optional trial periods to membership levels.',
       },
       {
         heading: 'Customise the signup form',
@@ -36,11 +36,11 @@ export const ARTICLES: Article[] = [
       },
       {
         heading: 'Invite your first members',
-        body: 'Share your lounge URL directly, or use the member invite feature (Core plan and above) to send email invitations. New signups land in a pending queue — review and approve them from the Members section of your admin panel. You can also turn off approval if you want open registration.',
+        body: 'Share your lounge URL directly, or use member invitations on Core and above to send email invites. New signups land in a pending queue. Review and approve them from the Members area in your lounge admin, or turn approval off under Settings → Features if you want open registration.',
       },
       {
         heading: 'Go live',
-        body: 'Your lounge is live from day one. Members can access it at your subdomain immediately. When you\'re ready, connect a custom domain under Settings → Integrations (Growth plan and above).',
+        body: 'Your lounge is live from day one at its ClubLounge subdomain. When you are ready to operate it, add billing details, connect Stripe under Settings → Membership to collect dues, and connect a custom domain under Settings → Integrations if you are on Growth or Pro.',
       },
     ],
   },
@@ -68,7 +68,7 @@ export const ARTICLES: Article[] = [
       },
       {
         heading: 'Dues and payments',
-        body: 'Existing Wild Apricot payment records are not transferred. If you collect dues through Club Lounge (Core plan and above), members will set up a new payment method the first time dues are collected. Annual dues cycles can be configured to align with your existing renewal dates.',
+        body: 'Existing Wild Apricot payment records are not transferred. If you collect dues through Club Lounge, members will add a new card the first time they pay through Stripe. Before inviting members, recreate your membership levels and annual fees under Settings → Membership so your new setup is ready to go.',
       },
       {
         heading: 'After migration',
@@ -84,27 +84,27 @@ export const ARTICLES: Article[] = [
     sections: [
       {
         heading: 'How it works',
-        body: 'Club Lounge uses Stripe Connect Express. Your club gets its own Stripe account connected through Club Lounge — money goes directly to your bank account, never through us. Stripe processes the payment, and Club Lounge applies a 2% platform fee on dues payments.',
+        body: 'Club Lounge uses Stripe Connect Express. Your club connects its own Stripe account, members pay through Stripe, and payouts go to your club\'s connected bank account. Stripe processes the payment, and Club Lounge applies a 2% platform fee on dues payments.',
       },
       {
         heading: 'Setting up payments',
-        body: 'Go to Settings → Integrations and click "Connect with Stripe". You\'ll be guided through Stripe\'s onboarding — this takes about 5 minutes and requires your club\'s bank details and a representative\'s identity verification. Once approved, you can set dues amounts per membership tier.',
+        body: 'Go to Settings → Membership and use the Member dues section to connect Stripe. Add billing details for your Club Lounge plan first, then complete Stripe\'s onboarding. It usually takes about 5 minutes and requires your club\'s bank details plus identity verification for a representative.',
       },
       {
         heading: 'Dues amounts',
-        body: 'Set a monthly or annual amount for each membership tier under Settings → Membership. Honorary members are never charged regardless of the amount set. You can offer both monthly and annual options, and optionally give a discount for annual payment.',
+        body: 'Set an annual amount for each membership tier under Settings → Membership. If a tier should be free, set its fee to $0. Growth and Pro clubs can also add trial periods to membership levels.',
       },
       {
         heading: 'Member payment experience',
-        body: 'Members pay directly on their profile page using a credit or debit card. Payments are processed by Stripe and renewed automatically. Members receive a receipt by email. They can update their payment method at any time from their account settings.',
+        body: 'Members pay from the Membership page using a credit or debit card through Stripe Checkout. Membership renews annually unless it is cancelled. Members receive Stripe receipts by email and can update their payment method from Stripe\'s customer portal.',
       },
       {
         heading: 'Tracking payments',
-        body: 'Your admin dashboard shows who has paid, when their next renewal is, and flags anyone whose payment has failed. You can manually mark a member as paid (e.g. for cheque payments) or waive dues for specific members.',
+        body: 'Your lounge admin shows payment history, renewal dates, and failed payments. If someone pays offline, admins can record manual payments such as cash, PayPal, or wire transfer so the member record stays accurate.',
       },
       {
         heading: 'Stripe fees',
-        body: 'Stripe charges their standard processing fee (typically 2.9% + 30¢ per transaction in Canada/US). Club Lounge also applies a 2% platform fee on dues payments. You can choose to absorb these fees or pass them on to members.',
+        body: 'Stripe charges its normal processing fees based on your Stripe account and country. Club Lounge also applies a 2% platform fee on dues payments.',
       },
     ],
   },
@@ -144,19 +144,19 @@ export const ARTICLES: Article[] = [
     sections: [
       {
         heading: 'Approval flow',
-        body: 'By default, new signups are placed in a pending queue and must be approved by an admin before they can access the lounge. You can review pending members from your admin dashboard — approve, reject, or request more information. If you prefer open access, you can disable approval under Settings → Features.',
+        body: 'By default, new signups are placed in a pending queue and must be approved by an admin before they can access the lounge. You can review pending members from the Members area in your lounge admin: approve them, reject them, or request more information. If you prefer open access, you can disable approval under Settings → Features.',
       },
       {
         heading: 'Member roles',
-        body: 'Every member is either a standard Member or an Admin. Admins can approve members, manage settings, post announcements, and access the admin dashboard. Standard members can read and post in discussions, RSVP to events, view the member directory, and manage their own profile. Larger clubs on Growth and above can support broader admin teams.',
+        body: 'Every member is either a standard Member or an Admin. Admins can approve members, manage settings, post announcements, and use the lounge admin tools. Standard members can read and post in discussions, RSVP to events, view the member directory, and manage their own profile.',
       },
       {
         heading: 'Membership tiers',
-        body: 'Tiers (e.g. Full, Associate, Student, Honorary) are defined under Settings → Membership. Each member is assigned a tier at signup or by an admin. Tiers control dues amounts and can be used to differentiate access in the future. Honorary members are never charged dues regardless of tier settings.',
+        body: 'Tiers such as Full, Associate, Student, or Honorary are defined under Settings → Membership. Each member is assigned a tier at signup or by an admin. Tiers control annual dues amounts, and Growth and Pro clubs can also add trial periods for specific membership levels.',
       },
       {
         heading: 'Editing member profiles',
-        body: 'Admins can edit any member\'s profile from the Members section of the admin panel — update their tier, contact details, custom field values, or membership status. Members can also edit their own profile at any time.',
+        body: 'Admins can edit any member\'s profile from the Members area in the lounge admin. Update their tier, contact details, custom field values, or membership status there. Members can also edit their own profile at any time.',
       },
       {
         heading: 'Suspending or removing members',
