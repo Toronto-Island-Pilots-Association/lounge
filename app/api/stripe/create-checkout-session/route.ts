@@ -4,6 +4,7 @@ import { getPlatformStripeInstance, getStripeInstance, isStripeEnabled } from '@
 import * as Sentry from '@sentry/nextjs'
 import {
   getMembershipFeeForLevel,
+  getStripeBillingMode,
   getTrialEndDateAsync,
   type MembershipLevelKey,
 } from '@/lib/settings'
@@ -71,11 +72,16 @@ export async function POST(request: Request) {
       // Non-critical: if host lookup fails, fall back to x-org-id if present.
     }
 
-    let resolvedOrgBilling: { stripe_account_id?: string | null; stripe_charges_enabled?: boolean | null } | null = null
+    let resolvedOrgBilling: {
+      stripe_billing_mode?: 'direct' | 'connect'
+      stripe_account_id?: string | null
+      stripe_charges_enabled?: boolean | null
+    } | null = null
 
     if (resolvedOrgId) {
       const { createServiceRoleClient } = await import('@/lib/supabase/server')
       const db = createServiceRoleClient()
+      const stripeBillingMode = await getStripeBillingMode(resolvedOrgId)
       const { data: org } = await db
         .from('organizations')
         .select('stripe_account_id, stripe_charges_enabled, name')
@@ -84,7 +90,7 @@ export async function POST(request: Request) {
       if (org?.stripe_charges_enabled && org?.stripe_account_id) {
         connectedAccountId = org.stripe_account_id
       }
-      resolvedOrgBilling = org ?? null
+      resolvedOrgBilling = org ? { ...org, stripe_billing_mode: stripeBillingMode } : null
       orgName = org?.name?.trim() || orgName
     }
 

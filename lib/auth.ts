@@ -4,6 +4,7 @@ import { MemberProfile, UserProfile } from '@/types/database'
 import { isOrgManagerRole, isPlatformAdminRole } from '@/lib/org-roles'
 import { isStripeEnabled } from '@/lib/stripe'
 import { canOrgAcceptMemberStripePayments } from '@/lib/org-dues-billing'
+import { getStripeBillingMode } from '@/lib/settings'
 
 /** Read the org id injected by middleware from request headers. */
 async function getOrgId(): Promise<string | null> {
@@ -33,7 +34,8 @@ export async function isOrgStripeConnected(): Promise<boolean> {
       .eq('id', orgId)
       .maybeSingle()
     if (!data) return false
-    return canOrgAcceptMemberStripePayments({ id: orgId, ...data })
+    const stripeBillingMode = await getStripeBillingMode(orgId)
+    return canOrgAcceptMemberStripePayments({ stripe_billing_mode: stripeBillingMode, ...data })
   } catch {
     return false
   }

@@ -4,6 +4,7 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { getOrgDuesBillingMode, getOrgDuesUiStatus } from '@/lib/org-dues-billing'
 import { syncOrgStripeOnboardingFromStripe } from '@/lib/platform-stripe-onboarding'
 import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
+import { getStripeBillingMode } from '@/lib/settings'
 import ConnectStripeButton from '../../../ConnectStripeButton'
 import StripeDashboardButton from '../../../StripeDashboardButton'
 import MembershipLevelsForm from './MembershipLevelsForm'
@@ -41,8 +42,11 @@ export default async function PlatformMembershipSettingsPage({
     .maybeSingle()
 
   const billingStatus = await getOrgBillingActivationStatus(orgId)
-  const duesBillingMode = getOrgDuesBillingMode(org)
-  const stripeStatus = org ? getOrgDuesUiStatus(org) : 'not_connected'
+  const stripeBillingMode = await getStripeBillingMode(orgId)
+  const duesBillingMode = getOrgDuesBillingMode({ stripe_billing_mode: stripeBillingMode })
+  const stripeStatus = org
+    ? getOrgDuesUiStatus({ ...org, stripe_billing_mode: stripeBillingMode })
+    : 'not_connected'
   const returnTo = `/platform/dashboard/${orgId}/settings/membership`
 
   return (

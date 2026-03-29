@@ -1,3 +1,5 @@
+import type { StripeBillingMode } from '@/lib/settings'
+
 export type OrgDuesBillingMode = 'direct' | 'connect'
 
 export type OrgDuesUiStatus =
@@ -8,7 +10,7 @@ export type OrgDuesUiStatus =
   | 'fully_ready'
 
 type OrgDuesBillingShape = {
-  id?: string | null
+  stripe_billing_mode?: StripeBillingMode | null
   stripe_account_id?: string | null
   stripe_charges_enabled?: boolean | null
   stripe_payouts_enabled?: boolean | null
@@ -16,6 +18,8 @@ type OrgDuesBillingShape = {
 
 export function getOrgDuesBillingMode(org: OrgDuesBillingShape | null | undefined): OrgDuesBillingMode {
   if (!org) return 'connect'
+  if (org.stripe_billing_mode === 'direct') return 'direct'
+  if (org.stripe_billing_mode === 'connect') return 'connect'
   if (org.stripe_account_id) return 'connect'
   if (org.stripe_charges_enabled) return 'direct'
   return 'connect'

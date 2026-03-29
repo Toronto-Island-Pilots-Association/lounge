@@ -7,7 +7,7 @@ import { confirmOrgPlanCheckoutSession } from '@/lib/platform-org-billing'
 import { syncOrgStripeOnboardingFromStripe } from '@/lib/platform-stripe-onboarding'
 import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
 import { PLAN_KEYS, PLANS, type PlanKey } from '@/lib/plans'
-import { getOrgIdentity, getPlanPriceMonthly } from '@/lib/settings'
+import { getOrgIdentity, getPlanPriceMonthly, getStripeBillingMode } from '@/lib/settings'
 import { getBillableOrgMemberCount, getOrgPlanPricingBreakdown } from '@/lib/org-plan-pricing'
 import MembershipLevelsForm from '../settings/membership/MembershipLevelsForm'
 import PlanSelector from '../billing/PlanSelector'
@@ -101,8 +101,9 @@ export default async function OrgOnboardingPage({
     ),
   ) as Record<PlanKey, Awaited<ReturnType<typeof getOrgPlanPricingBreakdown>>>
   const billingStatus = await getOrgBillingActivationStatus(orgId)
-  const duesBillingMode = getOrgDuesBillingMode(org)
-  const stripeStatus = getOrgDuesUiStatus(org)
+  const stripeBillingMode = await getStripeBillingMode(orgId)
+  const duesBillingMode = getOrgDuesBillingMode({ stripe_billing_mode: stripeBillingMode })
+  const stripeStatus = getOrgDuesUiStatus({ ...org, stripe_billing_mode: stripeBillingMode })
   const orgUrl = buildOrgUrl(org)
   const joinLink = `${orgUrl}/become-a-member`
   const onboardingPath = `/platform/dashboard/${orgId}/onboarding`
