@@ -35,6 +35,7 @@ export async function proxy(request: NextRequest) {
   // Build request headers for downstream (API routes, server components)
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-domain-type', domainType)
+  requestHeaders.set('x-pathname', pathname)
   if (org) {
     requestHeaders.set('x-org-id', org.id)
     requestHeaders.set('x-org-slug', org.slug)
@@ -135,6 +136,7 @@ export async function proxy(request: NextRequest) {
   }
 
   response.headers.set('x-domain-type', domainType)
+  response.headers.set('x-pathname', pathname)
   if (org) {
     response.headers.set('x-org-id', org.id)
     response.headers.set('x-org-slug', org.slug)

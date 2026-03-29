@@ -60,8 +60,10 @@ export default async function RootLayout({
 }>) {
   const headersList = await headers();
   const domainType = headersList.get("x-domain-type") ?? "org";
+  const pathname = headersList.get("x-pathname") ?? "/";
   const isOrg = domainType === "org";
   const guestPreviewBar = isOrg && (await shouldShowOrgGuestBanner());
+  const hideOrgChrome = isOrg && guestPreviewBar && pathname === "/";
 
   const orgBodyPad = guestPreviewBar
     ? "pt-36 sm:pt-40 md:pt-0"
@@ -70,16 +72,16 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${interTight.variable} antialiased ${isOrg ? orgBodyPad : ""}`}
+        className={`${interTight.variable} antialiased ${isOrg && !hideOrgChrome ? orgBodyPad : ""}`}
       >
-        {isOrg && guestPreviewBar && (
+        {isOrg && guestPreviewBar && !hideOrgChrome && (
           <div className="fixed top-0 left-0 right-0 z-[70] md:static">
             <GuestBanner />
           </div>
         )}
-        {isOrg && <NavbarWrapper guestPreviewBar={guestPreviewBar} />}
+        {isOrg && !hideOrgChrome && <NavbarWrapper guestPreviewBar={guestPreviewBar} />}
         {children}
-        {isOrg && <PoweredByBadge />}
+        {isOrg && !hideOrgChrome && <PoweredByBadge />}
         <SpeedInsights />
         <Analytics />
       </body>
