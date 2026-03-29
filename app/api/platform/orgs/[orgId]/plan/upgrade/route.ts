@@ -127,8 +127,8 @@ export async function POST(
       const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
       const baseUrl = `${protocol}://${host}`
 
-      const successUrl = `${baseUrl}/platform/dashboard?billing=success&orgId=${encodeURIComponent(orgId)}&plan=${encodeURIComponent(planKey)}`
-      const cancelUrl = `${baseUrl}/platform/dashboard?billing=cancelled&orgId=${encodeURIComponent(orgId)}&plan=${encodeURIComponent(planKey)}`
+      const successUrl = `${baseUrl}/platform/dashboard/${encodeURIComponent(orgId)}/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}&plan=${encodeURIComponent(planKey)}`
+      const cancelUrl = `${baseUrl}/platform/dashboard/${encodeURIComponent(orgId)}/billing?checkout=cancelled&plan=${encodeURIComponent(planKey)}`
 
       const checkoutSession = await stripe.checkout.sessions.create({
         mode: 'subscription',

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { confirmOrgPlanCheckoutSession } from '@/lib/platform-org-billing'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { orgStripeDuesUiStatus } from '@/lib/org-stripe-dues-status'
 import { syncOrgStripeOnboardingFromStripe } from '@/lib/platform-stripe-onboarding'
@@ -29,10 +30,13 @@ const FEATURE_ROWS: { label: string; key: keyof (typeof PLANS)[PlanKey]['feature
 
 export default async function BillingPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ orgId: string }>
+  searchParams: Promise<{ checkout?: string; session_id?: string }>
 }) {
   const { orgId } = await params
+  const sp = await searchParams
 
   const supabase = await createClient()
   const {
@@ -53,6 +57,14 @@ export default async function BillingPage({
     .maybeSingle()
 
   if (!membership) redirect('/platform/dashboard')
+
+  let checkoutNotice: string | null = null
+  if (sp.checkout === 'success' && typeof sp.session_id === 'string' && sp.session_id.trim()) {
+    await confirmOrgPlanCheckoutSession(orgId, sp.session_id.trim())
+    checkoutNotice = 'Billing details saved.'
+  } else if (sp.checkout === 'cancelled') {
+    checkoutNotice = 'Billing setup was cancelled.'
+  }
 
   const { data: orgStripeRow } = await db
     .from('organizations')
@@ -102,6 +114,15 @@ export default async function BillingPage({
           <h1 className="text-2xl font-bold tracking-tight">{org.name}</h1>
           <p className="text-sm text-gray-500 mt-0.5">Billing & plan</p>
         </div>
+        {checkoutNotice && (
+          <div className={`rounded-xl border px-4 py-3 text-sm ${
+            sp.checkout === 'success'
+              ? 'border-green-200 bg-green-50 text-green-900'
+              : 'border-amber-200 bg-amber-50 text-amber-900'
+          }`}>
+            {checkoutNotice}
+          </div>
+        )}
 
         {/* Current plan summary */}
         <div className="bg-white rounded-xl border p-6 flex items-center justify-between gap-6">
