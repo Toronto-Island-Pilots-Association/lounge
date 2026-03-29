@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import { MemberProfile, UserProfile } from '@/types/database'
 import { isOrgManagerRole, isPlatformAdminRole } from '@/lib/org-roles'
 import { isStripeEnabled } from '@/lib/stripe'
+import { canOrgAcceptMemberStripePayments } from '@/lib/org-dues-billing'
 
 /** Read the org id injected by middleware from request headers. */
 async function getOrgId(): Promise<string | null> {
@@ -16,8 +17,8 @@ async function getOrgId(): Promise<string | null> {
 
 /**
  * True when this org can run member-facing Stripe Checkout on the current hostname.
- * Connect orgs require live `stripe_charges_enabled` (synced from Stripe).
- * TIPA legacy uses the platform Stripe account when Connect is not used.
+ * Connect orgs require live `stripe_charges_enabled` on a connected account.
+ * Legacy direct-Stripe orgs are modeled separately and do not require Connect.
  */
 export async function isOrgStripeConnected(): Promise<boolean> {
   if (!isStripeEnabled()) return false
@@ -32,9 +33,7 @@ export async function isOrgStripeConnected(): Promise<boolean> {
       .eq('id', orgId)
       .maybeSingle()
     if (!data) return false
-    // Connect orgs: account id + charges enabled
-    // Direct Stripe orgs (e.g. TIPA legacy): no account id, but charges_enabled = true signals Stripe is live
-    return data.stripe_charges_enabled === true
+    return canOrgAcceptMemberStripePayments({ id: orgId, ...data })
   } catch {
     return false
   }

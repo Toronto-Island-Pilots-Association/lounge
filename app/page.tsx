@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import PublicOrgHome from '@/components/PublicOrgHome'
 import { getCurrentUserIncludingPending, isOrgPublic } from '@/lib/auth'
 import { fetchPublicOrgBranding } from '@/lib/org-public-branding'
-import { getOrgIdentity } from '@/lib/settings'
+import { getOrgIdentity, getPublicHomeTemplate } from '@/lib/settings'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export default async function Home() {
@@ -26,7 +26,7 @@ export default async function Home() {
     redirect('/login')
   }
 
-  const [branding, identity, pagesResult] = await Promise.all([
+  const [branding, identity, pagesResult, homeTemplate] = await Promise.all([
     fetchPublicOrgBranding(orgId),
     getOrgIdentity(orgId),
     createServiceRoleClient()
@@ -35,6 +35,7 @@ export default async function Home() {
       .eq('org_id', orgId)
       .eq('published', true)
       .order('created_at', { ascending: false }),
+    getPublicHomeTemplate(orgId),
   ])
 
   return (
@@ -47,6 +48,7 @@ export default async function Home() {
       contactEmail={identity.contactEmail}
       websiteUrl={identity.websiteUrl}
       feedbackUrl={identity.feedbackUrl}
+      homeTemplate={homeTemplate}
       pages={pagesResult.data ?? []}
     />
   )

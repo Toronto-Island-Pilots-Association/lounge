@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import type { OrgMemberProfileFieldFlags } from '@/lib/settings'
 import { UserProfile } from '@/types/database'
 import ProfilePictureUpload from '@/components/ProfilePictureUpload'
 import Loading from '@/components/Loading'
@@ -11,6 +12,7 @@ import { COMMON_INTEREST_OPTIONS } from '@/lib/club-options'
 
 export default function SettingsPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [profileFieldFlags, setProfileFieldFlags] = useState<OrgMemberProfileFieldFlags | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -54,9 +56,20 @@ export default function SettingsPage() {
 
   const loadProfile = async () => {
     try {
-      const response = await fetch('/api/profile')
-      if (response.ok) {
-        const data = await response.json()
+      const [profileResponse, orgConfigResponse] = await Promise.all([
+        fetch('/api/profile'),
+        fetch('/api/org/config'),
+      ])
+
+      if (orgConfigResponse.ok) {
+        const orgConfig = await orgConfigResponse.json()
+        setProfileFieldFlags(orgConfig.profileFieldFlags || null)
+      } else {
+        setProfileFieldFlags(null)
+      }
+
+      if (profileResponse.ok) {
+        const data = await profileResponse.json()
         setProfile(data.profile)
         setFormData({
           full_name: data.profile.full_name || '',
@@ -93,7 +106,7 @@ export default function SettingsPage() {
           })(),
           notify_replies: data.profile.notify_replies !== false,
         })
-      } else if (response.status === 401) {
+      } else if (profileResponse.status === 401) {
         router.push('/login')
       }
     } catch (error) {
@@ -217,6 +230,14 @@ export default function SettingsPage() {
       default: return value
     }
   }
+
+  const showCopaSection = profileFieldFlags?.showCopaSection ?? false
+  const showAviationSection = profileFieldFlags?.showAviationSection ?? false
+  const showPilotLicenseType = profileFieldFlags?.showPilotLicenseType ?? false
+  const showAircraftType = profileFieldFlags?.showAircraftType ?? false
+  const showCallSign = profileFieldFlags?.showCallSign ?? false
+  const showFlightFrequency = profileFieldFlags?.showFlightFrequency ?? false
+  const showStudentPilotFields = profileFieldFlags?.showStudentPilotFields ?? false
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -446,6 +467,7 @@ export default function SettingsPage() {
 
 
           {/* COPA Membership */}
+          {showCopaSection && (
           <div className="bg-white shadow rounded-lg overflow-hidden">
             <div className="px-6 py-5 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">COPA Membership</h2>
@@ -534,6 +556,7 @@ export default function SettingsPage() {
               )}
             </div>
           </div>
+          )}
 
           {/* Notifications */}
           <div className="bg-white shadow rounded-lg overflow-hidden">
@@ -583,6 +606,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Aviation Information */}
+          {showAviationSection && (
           <div className="bg-white shadow rounded-lg overflow-hidden">
             <div className="px-6 py-5 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Aviation Information</h2>
@@ -590,6 +614,7 @@ export default function SettingsPage() {
             </div>
             <div className="px-6 py-5 space-y-6">
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                {showPilotLicenseType && (
                 <div>
                   <label htmlFor="pilot_license_type" className="block text-sm font-medium text-gray-700 mb-1.5">
                     Pilot License Type
@@ -609,7 +634,9 @@ export default function SettingsPage() {
                     <option value="other">Other</option>
                   </select>
                 </div>
+                )}
 
+                {showAircraftType && (
                 <div>
                   <label htmlFor="aircraft_type" className="block text-sm font-medium text-gray-700 mb-1.5">
                     Aircraft Type
@@ -624,7 +651,9 @@ export default function SettingsPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   />
                 </div>
+                )}
 
+                {showCallSign && (
                 <div>
                   <label htmlFor="call_sign" className="block text-sm font-medium text-gray-700 mb-1.5">
                     Call Sign
@@ -639,7 +668,9 @@ export default function SettingsPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   />
                 </div>
+                )}
 
+                {showFlightFrequency && (
                 <div>
                   <label htmlFor="how_often_fly_from_ytz" className="block text-sm font-medium text-gray-700 mb-1.5">
                     How Often Do You Fly From YTZ?
@@ -659,10 +690,11 @@ export default function SettingsPage() {
                     <option value="rarely">Rarely</option>
                   </select>
                 </div>
+                )}
               </div>
 
               {/* Student Pilot Fields */}
-              {formData.pilot_license_type === 'student' && (
+              {showStudentPilotFields && formData.pilot_license_type === 'student' && (
                 <div className="pt-4 border-t border-gray-200">
                   <h3 className="text-sm font-semibold text-gray-900 mb-4">Student Pilot Information</h3>
                   <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -700,6 +732,7 @@ export default function SettingsPage() {
 
             </div>
           </div>
+          )}
 
           {/* Account Security */}
           <div className="bg-white shadow rounded-lg overflow-hidden">

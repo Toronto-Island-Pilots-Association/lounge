@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { TIPA_ORG_ID } from '@/types/database'
+import type { PublicHomeTemplate } from '@/lib/settings'
 
 type PublishedPage = {
   id: string
@@ -13,6 +13,7 @@ type PublicOrgHomeProps = {
   orgId: string
   orgName: string
   displayName: string
+  homeTemplate?: PublicHomeTemplate
   description?: string | null
   logoUrl?: string | null
   contactEmail?: string | null
@@ -277,7 +278,7 @@ function TipaPublicHome({
 }
 
 export default function PublicOrgHome(props: PublicOrgHomeProps) {
-  if (props.orgId === TIPA_ORG_ID) {
+  if (props.homeTemplate === 'tipa_legacy') {
     return (
       <TipaPublicHome
         displayName={props.displayName || props.orgName}

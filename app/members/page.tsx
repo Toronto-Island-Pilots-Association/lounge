@@ -2,10 +2,10 @@ import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { getCurrentUser, shouldRequireProfileCompletion, shouldRequirePayment, isOrgPublic, isOrgStripeConnected } from '@/lib/auth'
-import { getFeatureFlags } from '@/lib/settings'
+import { getFeatureFlags, getOrgMemberProfileFieldFlags } from '@/lib/settings'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
-import { MemberProfile, TIPA_ORG_ID, getMembershipLevelLabel } from '@/types/database'
+import { MemberProfile, getMembershipLevelLabel } from '@/types/database'
 import { getOrgRoleLabel } from '@/lib/org-roles'
 
 const MEMBERS_PER_PAGE = 25
@@ -27,7 +27,7 @@ export default async function MembersPage({
   const isGuest = !user
   const h = await headers()
   const orgId = isGuest ? h.get('x-org-id') : user!.profile.org_id
-  const showTipaMemberDirectoryFields = orgId === TIPA_ORG_ID
+  const profileFieldFlags = await getOrgMemberProfileFieldFlags(orgId ?? undefined)
 
   const features = await getFeatureFlags()
   if (!features.memberDirectory) {
@@ -127,12 +127,12 @@ export default async function MembersPage({
                         <div className="text-sm text-gray-600 truncate">
                           <span className="font-medium">Email:</span> {member.email}
                         </div>
-                        {showTipaMemberDirectoryFields && member.call_sign && (
+                        {profileFieldFlags.showCallSign && member.call_sign && (
                           <div className="text-sm text-gray-600">
                             <span className="font-medium">Call Sign:</span> {member.call_sign}
                           </div>
                         )}
-                        {showTipaMemberDirectoryFields && member.aircraft_type && (
+                        {profileFieldFlags.showAircraftType && member.aircraft_type && (
                           <div className="text-sm text-gray-600">
                             <span className="font-medium">Aircraft:</span> {member.aircraft_type}
                           </div>
@@ -159,12 +159,12 @@ export default async function MembersPage({
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Email
                     </th>
-                    {showTipaMemberDirectoryFields && (
+                    {profileFieldFlags.showCallSign && (
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Call Sign
                       </th>
                     )}
-                    {showTipaMemberDirectoryFields && (
+                    {profileFieldFlags.showAircraftType && (
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Aircraft Type
                       </th>
@@ -217,12 +217,12 @@ export default async function MembersPage({
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">{member.email}</div>
                       </td>
-                      {showTipaMemberDirectoryFields && (
+                      {profileFieldFlags.showCallSign && (
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">{member.call_sign || '—'}</div>
                         </td>
                       )}
-                      {showTipaMemberDirectoryFields && (
+                      {profileFieldFlags.showAircraftType && (
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">{member.aircraft_type || '—'}</div>
                         </td>

@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { MemberProfile, MembershipLevel, TIPA_ORG_ID, getMembershipLevelLabel, Payment } from '@/types/database'
+import type { OrgMemberProfileFieldFlags } from '@/lib/settings'
+import { MemberProfile, MembershipLevel, getMembershipLevelLabel, Payment } from '@/types/database'
 import { isOnTrialFromTrialEnd, trialUntilLabel } from '@/lib/trial'
 import { COMMON_INTEREST_OPTIONS } from '@/lib/club-options'
 import { getOrgRoleBadgeClass, getOrgRoleLabel } from '@/lib/org-roles'
@@ -61,6 +62,7 @@ interface ActivityData {
 
 export default function MemberDetailModal({
   member,
+  profileFieldFlags,
   onClose,
   onSave,
   onResendReminder,
@@ -68,6 +70,7 @@ export default function MemberDetailModal({
   canManageRoles = false,
 }: {
   member: MemberProfile
+  profileFieldFlags: OrgMemberProfileFieldFlags
   onClose: () => void
   onSave: (member: MemberProfile, updates: Partial<MemberProfile>) => void
   onResendReminder?: (memberId: string) => void
@@ -76,7 +79,6 @@ export default function MemberDetailModal({
 }) {
   const [activeTab, setActiveTab] = useState<'overview' | 'edit' | 'membership' | 'activity'>('overview')
   const [cancellingStripe, setCancellingStripe] = useState(false)
-  const showTipaProfileFields = member.org_id === TIPA_ORG_ID
   const [formData, setFormData] = useState({
     email: member.email || '',
     full_name: member.full_name || '',
@@ -391,65 +393,77 @@ export default function MemberDetailModal({
                   </div>
                 </div>
 
-                {showTipaProfileFields && (
+                {(profileFieldFlags.showAviationSection || profileFieldFlags.showCopaSection) && (
                   <>
                     {/* Aviation Information */}
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <h4 className="text-xs font-semibold text-gray-700 mb-2">Aviation Information</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                        <div>
-                          <span className="text-gray-500">Pilot License Type:</span>
-                          <div className="font-medium text-gray-900">{member.pilot_license_type || '-'}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Aircraft Type:</span>
-                          <div className="font-medium text-gray-900">{member.aircraft_type || '-'}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Call Sign:</span>
-                          <div className="font-medium text-gray-900">{member.call_sign || '-'}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">How Often Fly from YTZ:</span>
-                          <div className="font-medium text-gray-900">{member.how_often_fly_from_ytz || '-'}</div>
-                        </div>
-                        {member.is_student_pilot && (
-                          <>
+                    {profileFieldFlags.showAviationSection && (
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <h4 className="text-xs font-semibold text-gray-700 mb-2">Aviation Information</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                          {profileFieldFlags.showPilotLicenseType && (
                             <div>
-                              <span className="text-gray-500">Flight School:</span>
-                              <div className="font-medium text-gray-900">{member.flight_school || '-'}</div>
+                              <span className="text-gray-500">Pilot License Type:</span>
+                              <div className="font-medium text-gray-900">{member.pilot_license_type || '-'}</div>
                             </div>
+                          )}
+                          {profileFieldFlags.showAircraftType && (
                             <div>
-                              <span className="text-gray-500">Instructor Name:</span>
-                              <div className="font-medium text-gray-900">{member.instructor_name || '-'}</div>
+                              <span className="text-gray-500">Aircraft Type:</span>
+                              <div className="font-medium text-gray-900">{member.aircraft_type || '-'}</div>
                             </div>
-                          </>
-                        )}
+                          )}
+                          {profileFieldFlags.showCallSign && (
+                            <div>
+                              <span className="text-gray-500">Call Sign:</span>
+                              <div className="font-medium text-gray-900">{member.call_sign || '-'}</div>
+                            </div>
+                          )}
+                          {profileFieldFlags.showFlightFrequency && (
+                            <div>
+                              <span className="text-gray-500">How Often Fly from YTZ:</span>
+                              <div className="font-medium text-gray-900">{member.how_often_fly_from_ytz || '-'}</div>
+                            </div>
+                          )}
+                          {profileFieldFlags.showStudentPilotFields && member.is_student_pilot && (
+                            <>
+                              <div>
+                                <span className="text-gray-500">Flight School:</span>
+                                <div className="font-medium text-gray-900">{member.flight_school || '-'}</div>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Instructor Name:</span>
+                                <div className="font-medium text-gray-900">{member.instructor_name || '-'}</div>
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* COPA Membership */}
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <h4 className="text-xs font-semibold text-gray-700 mb-2">COPA Membership</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                        <div>
-                          <span className="text-gray-500">COPA Member:</span>
-                          <div className="font-medium text-gray-900">
-                            {member.is_copa_member === 'yes' ? 'Yes' : member.is_copa_member === 'no' ? 'No' : '-'}
+                    {profileFieldFlags.showCopaSection && (
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <h4 className="text-xs font-semibold text-gray-700 mb-2">COPA Membership</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <span className="text-gray-500">COPA Member:</span>
+                            <div className="font-medium text-gray-900">
+                              {member.is_copa_member === 'yes' ? 'Yes' : member.is_copa_member === 'no' ? 'No' : '-'}
+                            </div>
                           </div>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Join COPA Flight 32:</span>
-                          <div className="font-medium text-gray-900">
-                            {member.join_copa_flight_32 === 'yes' ? 'Yes' : member.join_copa_flight_32 === 'no' ? 'No' : '-'}
+                          <div>
+                            <span className="text-gray-500">Join COPA Flight 32:</span>
+                            <div className="font-medium text-gray-900">
+                              {member.join_copa_flight_32 === 'yes' ? 'Yes' : member.join_copa_flight_32 === 'no' ? 'No' : '-'}
+                            </div>
                           </div>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">COPA Membership Number:</span>
-                          <div className="font-medium text-gray-900">{member.copa_membership_number || '-'}</div>
+                          <div>
+                            <span className="text-gray-500">COPA Membership Number:</span>
+                            <div className="font-medium text-gray-900">{member.copa_membership_number || '-'}</div>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
                   </>
                 )}
 
@@ -700,7 +714,7 @@ export default function MemberDetailModal({
                         />
                       </div>
                     </div>
-                    {showTipaProfileFields && formData.membership_level === 'Student' && (
+                    {profileFieldFlags.showStudentPilotFields && formData.membership_level === 'Student' && (
                       <div className="pt-2 border-t border-gray-200 space-y-3">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Flight school / club</label>
@@ -726,9 +740,10 @@ export default function MemberDetailModal({
                     )}
                   </div>
 
-                  {showTipaProfileFields && (
+                  {(profileFieldFlags.showAviationSection || profileFieldFlags.showCopaSection) && (
                     <>
                       {/* COPA Membership */}
+                      {profileFieldFlags.showCopaSection && (
                       <div className="pt-4 border-t border-gray-200 space-y-4">
                         <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">COPA Membership</h4>
                         <div>
@@ -802,11 +817,14 @@ export default function MemberDetailModal({
                           </div>
                         )}
                       </div>
+                      )}
 
                       {/* Aviation Information */}
+                      {profileFieldFlags.showAviationSection && (
                       <div className="pt-4 border-t border-gray-200 space-y-4">
                         <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Aviation Information</h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {profileFieldFlags.showPilotLicenseType && (
                           <div>
                             <label className="block text-sm font-medium text-gray-900 mb-1">Pilot License Type</label>
                             <select
@@ -822,6 +840,8 @@ export default function MemberDetailModal({
                               <option value="other">Other</option>
                             </select>
                           </div>
+                          )}
+                          {profileFieldFlags.showAircraftType && (
                           <div>
                             <label className="block text-sm font-medium text-gray-900 mb-1">Aircraft Type</label>
                             <input
@@ -832,6 +852,8 @@ export default function MemberDetailModal({
                               className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                             />
                           </div>
+                          )}
+                          {profileFieldFlags.showCallSign && (
                           <div>
                             <label className="block text-sm font-medium text-gray-900 mb-1">Call Sign</label>
                             <input
@@ -842,6 +864,8 @@ export default function MemberDetailModal({
                               className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                             />
                           </div>
+                          )}
+                          {profileFieldFlags.showFlightFrequency && (
                           <div>
                             <label className="block text-sm font-medium text-gray-900 mb-1">How Often Fly from YTZ</label>
                             <select
@@ -857,8 +881,10 @@ export default function MemberDetailModal({
                               <option value="rarely">Rarely</option>
                             </select>
                           </div>
+                          )}
                         </div>
                       </div>
+                      )}
                     </>
                   )}
 

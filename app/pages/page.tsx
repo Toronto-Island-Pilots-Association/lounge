@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
-import { TIPA_ORG_ID } from '@/types/database'
+import { getHiddenPublicPageSlugs } from '@/lib/settings'
 
 export default async function PagesListPage() {
   const h = await headers()
@@ -10,6 +10,7 @@ export default async function PagesListPage() {
   if (!orgId) notFound()
 
   const supabase = createServiceRoleClient()
+  const hiddenPageSlugs = await getHiddenPublicPageSlugs(orgId)
 
   const { data, error } = await supabase
     .from('pages')
@@ -20,7 +21,7 @@ export default async function PagesListPage() {
 
   if (error) notFound()
 
-  const pages = (data || []).filter((page) => !(orgId === TIPA_ORG_ID && page.slug === 'about'))
+  const pages = (data || []).filter((page) => !hiddenPageSlugs.includes(page.slug))
 
   return (
     <div className="min-h-screen bg-gray-50 py-6 sm:py-8">

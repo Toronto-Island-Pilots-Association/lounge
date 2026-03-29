@@ -1,7 +1,6 @@
 import { createClient, createServiceRoleClient } from './supabase/server'
 import { headers } from 'next/headers'
 import { getPlanDef, DEFAULT_PLAN } from './plans'
-import { TIPA_ORG_ID } from '@/types/database'
 import {
   DEFAULT_SIGNUP_FIELDS,
   LEGACY_SIGNUP_FIELD_KEYS,
@@ -10,6 +9,29 @@ import {
 } from './settings-shared'
 
 export type { MembershipLevelKey, SignupField, SignupFieldType } from './settings-shared'
+
+export type PublicHomeTemplate = 'default' | 'tipa_legacy'
+export type StripeBillingMode = 'connect' | 'direct'
+
+export type OrgMemberProfileFieldFlags = {
+  showAviationSection: boolean
+  showCopaSection: boolean
+  showPilotLicenseType: boolean
+  showAircraftType: boolean
+  showCallSign: boolean
+  showFlightFrequency: boolean
+  showStudentPilotFields: boolean
+}
+
+const DEFAULT_MEMBER_PROFILE_FIELD_FLAGS: OrgMemberProfileFieldFlags = {
+  showAviationSection: false,
+  showCopaSection: false,
+  showPilotLicenseType: false,
+  showAircraftType: false,
+  showCallSign: false,
+  showFlightFrequency: false,
+  showStudentPilotFields: false,
+}
 
 async function getOrgId(override?: string): Promise<string | null> {
   if (override) return override
@@ -140,6 +162,31 @@ export async function getSetting(key: string, orgIdOverride?: string): Promise<s
   return data.value
 }
 
+function parseStringArraySetting(raw: string | null): string[] {
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+  } catch {
+    return []
+  }
+}
+
+export async function getPublicHomeTemplate(orgIdOverride?: string): Promise<PublicHomeTemplate> {
+  const raw = await getSetting('public_home_template', orgIdOverride)
+  return raw === 'tipa_legacy' ? 'tipa_legacy' : 'default'
+}
+
+export async function getHiddenPublicPageSlugs(orgIdOverride?: string): Promise<string[]> {
+  return parseStringArraySetting(await getSetting('hidden_public_page_slugs', orgIdOverride))
+}
+
+export async function getStripeBillingMode(orgIdOverride?: string): Promise<StripeBillingMode> {
+  const raw = await getSetting('stripe_billing_mode', orgIdOverride)
+  return raw === 'direct' ? 'direct' : 'connect'
+}
+
 /** Fee for a specific membership level. Reads from levels config first, falls back to legacy per-key settings. */
 export async function getMembershipFeeForLevel(level: string): Promise<number> {
   const levels = await getMembershipLevels()
@@ -256,10 +303,6 @@ export async function getPlanPriceMonthly(plan: string, orgIdOverride?: string):
   if (rawOverride !== null) {
     const parsed = Number(rawOverride)
     if (!Number.isNaN(parsed) && parsed >= 0) return parsed
-  }
-
-  if (orgIdOverride === TIPA_ORG_ID && plan === 'club_pro') {
-    return 0
   }
 
   return getPlanDef(plan).priceMonthly
@@ -500,6 +543,41 @@ export async function getSignupFieldsApiPayload(orgIdOverride?: string): Promise
 }> {
   const fields = await getSignupFieldsConfig(orgIdOverride)
   return { fields }
+}
+
+export function memberProfileFieldFlagsFromSignupFields(fields: SignupField[]): OrgMemberProfileFieldFlags {
+  const enabledKeys = new Set(fields.filter((field) => field.enabled).map((field) => field.key))
+  const showPilotLicenseType = enabledKeys.has('pilot_license_type')
+  const showAircraftType = enabledKeys.has('aircraft_type')
+  const showCallSign = enabledKeys.has('call_sign')
+  const showFlightFrequency = enabledKeys.has('fly_frequency')
+  const showStudentPilotFields = enabledKeys.has('student_pilot') || showPilotLicenseType
+  const showCopaSection = enabledKeys.has('copa_membership')
+  const showAviationSection =
+    showPilotLicenseType ||
+    showAircraftType ||
+    showCallSign ||
+    showFlightFrequency ||
+    showStudentPilotFields
+
+  return {
+    showAviationSection,
+    showCopaSection,
+    showPilotLicenseType,
+    showAircraftType,
+    showCallSign,
+    showFlightFrequency,
+    showStudentPilotFields,
+  }
+}
+
+export async function getOrgMemberProfileFieldFlags(orgIdOverride?: string): Promise<OrgMemberProfileFieldFlags> {
+  try {
+    const signupFields = await getSignupFieldsConfig(orgIdOverride)
+    return memberProfileFieldFlagsFromSignupFields(signupFields)
+  } catch {
+    return DEFAULT_MEMBER_PROFILE_FIELD_FLAGS
+  }
 }
 
 // ─── Discussion Categories ────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
+import { getOrgDuesBillingMode } from '@/lib/org-dues-billing'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { getPlatformStripeInstance } from '@/lib/stripe'
 
@@ -58,11 +59,17 @@ export async function POST(request: Request) {
     // Get the org
     const { data: org } = await db
       .from('organizations')
-      .select('id, name, stripe_account_id')
+      .select('id, name, stripe_account_id, stripe_charges_enabled')
       .eq('id', orgId)
       .single()
 
     if (!org) return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
+    if (getOrgDuesBillingMode(org) === 'direct') {
+      return NextResponse.json(
+        { error: 'This organization uses its existing Stripe account for dues and does not use Stripe Connect here.' },
+        { status: 400 },
+      )
+    }
 
     const stripe = getPlatformStripeInstance()
     let stripeAccountId = org.stripe_account_id

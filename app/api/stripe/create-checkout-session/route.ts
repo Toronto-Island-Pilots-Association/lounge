@@ -8,7 +8,7 @@ import {
   type MembershipLevelKey,
 } from '@/lib/settings'
 import { getOrgByHostname } from '@/lib/org'
-import { TIPA_ORG_ID } from '@/types/database'
+import { getOrgDuesBillingMode } from '@/lib/org-dues-billing'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
@@ -71,6 +71,8 @@ export async function POST(request: Request) {
       // Non-critical: if host lookup fails, fall back to x-org-id if present.
     }
 
+    let resolvedOrgBilling: { stripe_account_id?: string | null; stripe_charges_enabled?: boolean | null } | null = null
+
     if (resolvedOrgId) {
       const { createServiceRoleClient } = await import('@/lib/supabase/server')
       const db = createServiceRoleClient()
@@ -82,13 +84,12 @@ export async function POST(request: Request) {
       if (org?.stripe_charges_enabled && org?.stripe_account_id) {
         connectedAccountId = org.stripe_account_id
       }
+      resolvedOrgBilling = org ?? null
       orgName = org?.name?.trim() || orgName
     }
 
-    // TIPA is the legacy tenant with a direct Stripe account (pre-Connect).
-    // All other orgs must have completed Stripe Connect onboarding.
-    const isTipa = resolvedOrgId === TIPA_ORG_ID
-    if (!connectedAccountId && !isTipa) {
+    const duesBillingMode = getOrgDuesBillingMode(resolvedOrgBilling)
+    if (!connectedAccountId && duesBillingMode !== 'direct') {
       return NextResponse.json(
         { error: 'Payment is not configured for this organization. Please contact your administrator.' },
         { status: 503 }

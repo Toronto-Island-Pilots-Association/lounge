@@ -14,6 +14,8 @@ import {
   getSignupFieldsConfig,
   getAllMembershipFees,
   getPlanPriceMonthly,
+  getOrgMemberProfileFieldFlags,
+  getPublicHomeTemplate,
 } from '@/lib/settings'
 import { getPlanDef, DEFAULT_PLAN } from '@/lib/plans'
 import { NextResponse } from 'next/server'
@@ -30,13 +32,15 @@ export async function GET() {
     const planDef = getPlanDef(plan)
     const priceMonthly = await getPlanPriceMonthly(plan, orgId)
 
-    const [features, identity, levels, signupFields, fees, membershipLevels] = await Promise.all([
+    const [features, identity, levels, signupFields, fees, membershipLevels, profileFieldFlags, publicHomeTemplate] = await Promise.all([
       getFeatureFlags(),
       getOrgIdentity(),
       getEnabledLevels(),
       getSignupFieldsConfig(),
       getAllMembershipFees(),
       getMembershipLevels(),
+      getOrgMemberProfileFieldFlags(),
+      getPublicHomeTemplate(),
     ])
 
     return NextResponse.json({
@@ -56,6 +60,7 @@ export async function GET() {
         membershipPolicyUrl: identity.membershipPolicyUrl || null,
         feedbackUrl:         identity.feedbackUrl || null,
       },
+      publicHomeTemplate,
       plan,
       planDef: {
         label:        planDef.label,
@@ -64,6 +69,7 @@ export async function GET() {
         features:     planDef.features,
       },
       features,
+      profileFieldFlags,
       membership: { enabledLevels: levels, fees, levels: membershipLevels },
       signupFields,
     })

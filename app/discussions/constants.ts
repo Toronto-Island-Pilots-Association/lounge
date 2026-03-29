@@ -1,4 +1,4 @@
-import { DiscussionCategory, TIPA_ORG_ID } from '@/types/database'
+import { DiscussionCategory } from '@/types/database'
 import type { OrgDiscussionCategory } from '@/lib/settings'
 
 // ─── Per-org category config ──────────────────────────────────────────────────
@@ -46,11 +46,6 @@ export const DEFAULT_CATEGORY_CONFIG: OrgCategoryConfig = {
   categoryDescriptions: GENERIC_DESCRIPTIONS,
 }
 
-export function getCategoryConfig(orgId: string | null): OrgCategoryConfig {
-  if (orgId === TIPA_ORG_ID) return TIPA_CATEGORY_CONFIG
-  return DEFAULT_CATEGORY_CONFIG
-}
-
 /**
  * Build an OrgCategoryConfig from the org's stored discussion categories.
  * Used when categories are fetched from the DB rather than hardcoded.
@@ -74,9 +69,6 @@ export function categoryConfigFromDb(dbCategories: OrgDiscussionCategory[]): Org
 
   return { discussionCategories, classifiedCategories, categoryLabels, categoryDescriptions }
 }
-
-// ─── TIPA-specific config (defined after the label maps below) ────────────────
-// (exported as TIPA_CATEGORY_CONFIG at the bottom of this file)
 
 export const CATEGORY_LABELS: Record<DiscussionCategory, string> = {
   introduce_yourself: 'Introduce Yourself',
@@ -170,12 +162,4 @@ export const CATEGORY_PLACEHOLDERS: Record<DiscussionCategory, string> = {
   wanted: 'Describe what you\'re looking for: aircraft access, instruction, gear, or other aviation-related needs...',
   building_a_better_tipa: 'Share ideas, feedback, or suggestions for improving TIPA...',
   other: 'Describe your discussion...',
-}
-
-// TIPA-specific config (uses all categories with original TIPA labels/descriptions)
-export const TIPA_CATEGORY_CONFIG: OrgCategoryConfig = {
-  discussionCategories: DISCUSSION_CATEGORIES,
-  classifiedCategories: CLASSIFIED_CATEGORIES,
-  categoryLabels: CATEGORY_LABELS,
-  categoryDescriptions: CATEGORY_DESCRIPTIONS,
 }

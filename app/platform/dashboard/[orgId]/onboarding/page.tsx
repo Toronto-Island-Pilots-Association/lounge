@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { buildOrgUrl } from '@/lib/org'
-import { orgStripeDuesUiStatus } from '@/lib/org-stripe-dues-status'
+import { getOrgDuesBillingMode, getOrgDuesUiStatus } from '@/lib/org-dues-billing'
 import { confirmOrgPlanCheckoutSession } from '@/lib/platform-org-billing'
 import { syncOrgStripeOnboardingFromStripe } from '@/lib/platform-stripe-onboarding'
 import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
@@ -101,7 +101,8 @@ export default async function OrgOnboardingPage({
     ),
   ) as Record<PlanKey, Awaited<ReturnType<typeof getOrgPlanPricingBreakdown>>>
   const billingStatus = await getOrgBillingActivationStatus(orgId)
-  const stripeStatus = orgStripeDuesUiStatus(org)
+  const duesBillingMode = getOrgDuesBillingMode(org)
+  const stripeStatus = getOrgDuesUiStatus(org)
   const orgUrl = buildOrgUrl(org)
   const joinLink = `${orgUrl}/become-a-member`
   const onboardingPath = `/platform/dashboard/${orgId}/onboarding`
@@ -217,15 +218,25 @@ export default async function OrgOnboardingPage({
         <section className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6 space-y-5">
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Step 4</div>
-            <h2 className="mt-1 text-lg font-semibold text-gray-900">Connect Stripe for dues</h2>
+            <h2 className="mt-1 text-lg font-semibold text-gray-900">
+              {duesBillingMode === 'direct' ? 'Review dues payments' : 'Connect Stripe for dues'}
+            </h2>
             <p className="mt-1 text-sm text-gray-500">
-              Do this when you&apos;re ready to collect dues online. Stripe processing fees apply, plus a 2% ClubLounge platform fee on dues payments.
+              {duesBillingMode === 'direct'
+                ? 'This lounge uses its existing Stripe account for member dues. No Stripe Connect setup is needed here.'
+                : 'Do this when you&apos;re ready to collect dues online. Stripe processing fees apply, plus a 2% ClubLounge platform fee on dues payments.'}
             </p>
           </div>
 
           {billingStatus.requiresActivation ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-              Add billing details first. After that, you can connect your club&apos;s Stripe account for dues.
+              {duesBillingMode === 'direct'
+                ? 'Add billing details first. After that, member dues can use the lounge\'s existing Stripe setup.'
+                : 'Add billing details first. After that, you can connect your club’s Stripe account for dues.'}
+            </div>
+          ) : stripeStatus === 'direct_ready' ? (
+            <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900">
+              Member dues are using this lounge&apos;s existing Stripe account. Stripe Connect is not required.
             </div>
           ) : stripeStatus === 'fully_ready' ? (
             <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900">
@@ -241,11 +252,13 @@ export default async function OrgOnboardingPage({
             </div>
           ) : (
             <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
-              Stripe isn&apos;t connected yet.
+              {duesBillingMode === 'direct'
+                ? 'This lounge is set to use a direct Stripe setup for dues, but payments are not marked as ready yet.'
+                : 'Stripe isn&apos;t connected yet.'}
             </div>
           )}
 
-          {!billingStatus.requiresActivation && stripeStatus !== 'fully_ready' && (
+          {!billingStatus.requiresActivation && duesBillingMode === 'connect' && stripeStatus !== 'fully_ready' && (
             <ConnectStripeButton
               orgId={orgId}
               isPending={stripeStatus === 'pending' || stripeStatus === 'payments_active_payouts_pending'}

@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
-import { TIPA_ORG_ID } from '@/types/database'
+import { getHiddenPublicPageSlugs } from '@/lib/settings'
 
 // Pages are always public — no auth check required.
 
@@ -16,7 +16,8 @@ export default async function PageDetailPage({
   if (!orgId) notFound()
 
   const { slug } = await params
-  if (orgId === TIPA_ORG_ID && slug === 'about') {
+  const hiddenPageSlugs = await getHiddenPublicPageSlugs(orgId)
+  if (hiddenPageSlugs.includes(slug)) {
     redirect('/')
   }
 

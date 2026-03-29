@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { MemberProfile, MembershipLevel, getMembershipLevelLabel, Payment } from '@/types/database'
+import type { OrgMemberProfileFieldFlags } from '@/lib/settings'
 import Loading from '@/components/Loading'
 import MemberDetailModal from './MemberDetailModal'
 import { getOrgRoleBadgeClass, getOrgRoleLabel, isPlatformAdminRole } from '@/lib/org-roles'
@@ -78,7 +79,11 @@ function compareMembers(
   }
 }
 
-export default function MembersPageClient() {
+export default function MembersPageClient({
+  profileFieldFlags,
+}: {
+  profileFieldFlags: OrgMemberProfileFieldFlags
+}) {
   const [members, setMembers] = useState<MemberProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [editingMember, setEditingMember] = useState<MemberProfile | null>(null)
@@ -745,6 +750,7 @@ export default function MembersPageClient() {
       {editingMember && (
         <MemberDetailModal
           member={editingMember}
+          profileFieldFlags={profileFieldFlags}
           onClose={() => setEditingMember(null)}
           onSave={handleUpdateMember}
           onResendReminder={handleResendReminder}

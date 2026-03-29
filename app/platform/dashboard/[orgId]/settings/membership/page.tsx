@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
-import { orgStripeDuesUiStatus } from '@/lib/org-stripe-dues-status'
+import { getOrgDuesBillingMode, getOrgDuesUiStatus } from '@/lib/org-dues-billing'
 import { syncOrgStripeOnboardingFromStripe } from '@/lib/platform-stripe-onboarding'
 import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
 import ConnectStripeButton from '../../../ConnectStripeButton'
@@ -41,7 +41,8 @@ export default async function PlatformMembershipSettingsPage({
     .maybeSingle()
 
   const billingStatus = await getOrgBillingActivationStatus(orgId)
-  const stripeStatus = org ? orgStripeDuesUiStatus(org) : 'not_connected'
+  const duesBillingMode = getOrgDuesBillingMode(org)
+  const stripeStatus = org ? getOrgDuesUiStatus(org) : 'not_connected'
   const returnTo = `/platform/dashboard/${orgId}/settings/membership`
 
   return (
@@ -61,18 +62,28 @@ export default async function PlatformMembershipSettingsPage({
           <div>
             <h2 className="text-base font-semibold text-gray-900">Member dues</h2>
             <p className="text-sm text-gray-500 mt-1">
-              Connect Stripe here when you are ready to collect dues online. Stripe processing fees apply, plus a 2% ClubLounge platform fee on dues payments.
+              {duesBillingMode === 'direct'
+                ? 'This lounge uses its existing Stripe account for member dues. No Stripe Connect setup is needed here.'
+                : 'Connect Stripe here when you are ready to collect dues online. Stripe processing fees apply, plus a 2% ClubLounge platform fee on dues payments.'}
             </p>
           </div>
 
           {billingStatus.requiresActivation ? (
             <div className="rounded-md bg-amber-50 p-3 text-sm text-amber-900">
-              Add billing details before connecting Stripe and collecting dues.
+              {duesBillingMode === 'direct'
+                ? 'Add billing details before collecting dues.'
+                : 'Add billing details before connecting Stripe and collecting dues.'}
               {' '}
               <Link href={`/platform/dashboard/${orgId}/billing`} className="font-medium underline underline-offset-2">
                 Open billing
               </Link>
               .
+            </div>
+          ) : stripeStatus === 'direct_ready' ? (
+            <div className="space-y-3">
+              <div className="rounded-md bg-green-50 p-3 text-sm text-green-800">
+                Member dues are using this lounge&apos;s existing Stripe account. Stripe Connect is not required.
+              </div>
             </div>
           ) : stripeStatus === 'fully_ready' ? (
             <div className="space-y-3">
@@ -98,9 +109,13 @@ export default async function PlatformMembershipSettingsPage({
           ) : (
             <div className="space-y-3">
               <div className="rounded-md bg-gray-50 p-3 text-sm text-gray-700">
-                Stripe isn&apos;t connected yet.
+                {duesBillingMode === 'direct'
+                  ? 'This lounge is set to use a direct Stripe setup for dues, but payments are not marked as ready yet.'
+                  : 'Stripe isn&apos;t connected yet.'}
               </div>
-              <ConnectStripeButton orgId={orgId} isPending={false} returnTo={returnTo} />
+              {duesBillingMode === 'connect' ? (
+                <ConnectStripeButton orgId={orgId} isPending={false} returnTo={returnTo} />
+              ) : null}
             </div>
           )}
         </div>
