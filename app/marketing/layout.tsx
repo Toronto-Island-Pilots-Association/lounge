@@ -1,12 +1,19 @@
 import type { Metadata } from 'next'
+import { Space_Grotesk } from 'next/font/google'
 import '@/app/styles/club-lounge-landing.css'
+
+const spaceGrotesk = Space_Grotesk({
+  variable: '--font-space-grotesk',
+  subsets: ['latin'],
+  weight: ['600', '700'],
+})
 
 const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'
 const BASE_URL = `https://${ROOT_DOMAIN}`
 
 const TITLE = 'Club Lounge — Private Community Software for Clubs & Associations'
 const DESCRIPTION =
-  'Give your members a private home — directory, discussions, events, and Stripe-powered dues. Your own URL, 14-day free trial, from $5/month. Used by flying clubs, yacht clubs, cycling clubs, and more.'
+  'Give your members a private home — directory, discussions, events, and Stripe-powered dues. Your own URL, from $5/month. Used by flying clubs, yacht clubs, cycling clubs, and more.'
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
@@ -44,5 +51,5 @@ export const metadata: Metadata = {
 }
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
+  return <div className={spaceGrotesk.variable}>{children}</div>
 }

@@ -22,7 +22,7 @@ const FEATURE_META: FeatureMeta[] = [
 
 const PLAN_ORDER = ['hobby', 'starter', 'community', 'club_pro']
 const PLAN_LABELS: Record<string, string> = {
-  hobby: 'Hobby', starter: 'Starter', community: 'Community', club_pro: 'Club Pro',
+  hobby: 'Hobby', starter: 'Core', community: 'Growth', club_pro: 'Pro',
 }
 
 export default function FeaturesForm({

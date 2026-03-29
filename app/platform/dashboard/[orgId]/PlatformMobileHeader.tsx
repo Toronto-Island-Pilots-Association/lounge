@@ -14,13 +14,11 @@ export default function PlatformMobileHeader({
   orgId,
   orgName,
   planLabel,
-  trialActive,
   orgUrl,
 }: {
   orgId: string
   orgName: string
   planLabel: string
-  trialActive: boolean
   orgUrl: string
 }) {
   const [open, setOpen] = useState(false)
@@ -77,11 +75,6 @@ export default function PlatformMobileHeader({
           <span className="hidden shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-xs capitalize text-gray-500 sm:inline">
             {planLabel}
           </span>
-          {trialActive && (
-            <span className="hidden shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700 sm:inline">
-              Trial
-            </span>
-          )}
         </div>
         <button
           type="button"
@@ -128,9 +121,6 @@ export default function PlatformMobileHeader({
             <p className="font-semibold text-sm text-gray-900 truncate">{orgName}</p>
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 capitalize">{planLabel}</span>
-              {trialActive && (
-                <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">Trial</span>
-              )}
             </div>
           </div>
           <button

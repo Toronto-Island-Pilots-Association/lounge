@@ -1,4 +1,5 @@
 import { requireAuth } from '@/lib/auth'
+import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
 import { sendInvitationWithPasswordEmail } from '@/lib/resend'
 import { createClient } from '@/lib/supabase/server'
 import { getFeatureFlags } from '@/lib/settings'
@@ -34,11 +35,18 @@ export async function POST(request: Request) {
     const user = await requireAuth()
     const flags = await getFeatureFlags()
     if (!flags.allowMemberInvitations) {
-      return NextResponse.json({ error: 'Member invitations require Starter plan or higher' }, { status: 403 })
+      return NextResponse.json({ error: 'Member invitations require Core plan or higher' }, { status: 403 })
     }
     const orgId = user.profile?.org_id
     if (!orgId) {
       return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
+    }
+    const billingStatus = await getOrgBillingActivationStatus(orgId)
+    if (billingStatus.requiresActivation) {
+      return NextResponse.json(
+        { error: `Activate ${billingStatus.planLabel} in Billing before inviting members.` },
+        { status: 402 },
+      )
     }
 
     // Only allow approved members to invite (not pending/rejected/expired)

@@ -1,4 +1,5 @@
 import { requireAdmin } from '@/lib/auth'
+import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
 import { sendInvitationWithPasswordEmail } from '@/lib/resend'
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
@@ -81,6 +82,13 @@ export async function POST(request: Request) {
     const orgId = request.headers.get('x-org-id')
     if (!orgId) {
       return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
+    }
+    const billingStatus = await getOrgBillingActivationStatus(orgId)
+    if (billingStatus.requiresActivation) {
+      return NextResponse.json(
+        { error: `Activate ${billingStatus.planLabel} in Billing before inviting members.` },
+        { status: 402 },
+      )
     }
     
     const formData = await request.formData()
@@ -295,4 +303,3 @@ export async function POST(request: Request) {
     )
   }
 }
-

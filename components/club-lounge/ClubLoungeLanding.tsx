@@ -1,5 +1,8 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
+import MembershipCard from '@/components/MembershipCard'
+import type { MemberProfile } from '@/types/database'
 
 const MARQUEE_ITEMS = [
   'Flying clubs',
@@ -17,7 +20,7 @@ const MARQUEE_ITEMS = [
 const FAQS = [
   {
     q: 'How much does Club Lounge cost?',
-    a: 'Plans start at $5/month for small clubs (up to 20 members). Starter is $49/month for unlimited members with dues collection. Community is $99/month and adds digest emails and an analytics dashboard. All plans include a 14-day free trial — no credit card required.',
+    a: 'Plans start at $5/month for clubs of up to 20 members. Core is $49/month and is best for clubs with up to 200 members and up to 2 admins. Growth is $99/month and is best for clubs with up to 500 members and up to 5 admins. Pro is $199/month for larger clubs that need higher-touch support.',
   },
   {
     q: 'Can I migrate from Wild Apricot?',
@@ -25,11 +28,15 @@ const FAQS = [
   },
   {
     q: "Do members get a URL that's actually ours?",
-    a: 'Every club gets its own subdomain (yourclub.clublounge.app). Starter plan and above support a fully custom domain like lounge.yourclub.com — your DNS, your brand.',
+    a: 'Every club gets its own subdomain (yourclub.clublounge.app). Growth plan and above support a fully custom domain like lounge.yourclub.com — your DNS, your brand.',
   },
   {
     q: 'How does dues collection work?',
-    a: 'Club Lounge uses Stripe Connect. Set your annual or monthly dues amount and members pay directly. Automatic renewals, instant payment records, and a real-time view of who has paid — all from your admin dashboard. Available on Starter and above.',
+    a: 'Club Lounge uses Stripe Connect. Set your annual or monthly dues amount and members pay directly. Automatic renewals, instant payment records, and a real-time view of who has paid — all from your admin dashboard. Stripe processing fees apply, plus a 2% ClubLounge platform fee on dues payments.',
+  },
+  {
+    q: 'Do you support clubs in the US and Canada?',
+    a: 'Yes. Club Lounge supports clubs in both the US and Canada. Payments go directly to your club through Stripe, and we can onboard clubs in either market.',
   },
   {
     q: 'What types of clubs use Club Lounge?',
@@ -38,13 +45,64 @@ const FAQS = [
 ] as const
 
 const VERTICALS = [
-  { icon: '✈️', title: 'Flying clubs & airports', body: 'A community layer alongside your scheduling software. Where pilots actually talk to each other.' },
+  {
+    icon: '✈️',
+    title: 'Flying clubs & airports',
+    body: 'A community layer alongside your scheduling software. Where pilots actually talk to each other.',
+  },
   { icon: '⛵', title: 'Yacht & sailing clubs', body: 'Complex membership tiers, social calendars, fleet communications — all in one private space.' },
   { icon: '⛳', title: 'Golf clubs', body: "The community layer your booking app doesn't have. Member retention starts with members knowing each other." },
   { icon: '🚴', title: 'Cycling & triathlon clubs', body: 'Replace the Facebook group and the spreadsheet. Ride sign-ups, kit votes, and route sharing — all in one place.' },
   { icon: '🚣', title: 'Rowing & paddling clubs', body: 'Junior, masters, and university programs all in one lounge. Parents, coaches, and members on the same page.' },
   { icon: '🏛️', title: 'Professional chapters', body: "Engineering, legal, medical, real estate association chapters. The private hub your national body doesn't provide." },
 ] as const
+
+const LANDING_MEMBER_PROFILE: MemberProfile = {
+  id: '00000000-0000-4000-8000-000000000101',
+  user_id: '00000000-0000-4000-8000-000000000102',
+  org_id: '00000000-0000-4000-8000-000000000103',
+  role: 'member',
+  status: 'approved',
+  membership_level: 'Full',
+  membership_class: null,
+  member_number: '001042',
+  membership_expires_at: '2026-09-01T00:00:00.000Z',
+  invited_at: null,
+  last_reminder_sent_at: null,
+  reminder_count: 0,
+  stripe_subscription_id: 'sub_clublounge_demo',
+  stripe_customer_id: null,
+  paypal_subscription_id: null,
+  subscription_cancel_at_period_end: false,
+  statement_of_interest: null,
+  interests: null,
+  how_did_you_hear: null,
+  is_copa_member: null,
+  join_copa_flight_32: null,
+  copa_membership_number: null,
+  pilot_license_type: null,
+  aircraft_type: null,
+  call_sign: null,
+  how_often_fly_from_ytz: null,
+  is_student_pilot: false,
+  flight_school: null,
+  instructor_name: null,
+  custom_data: null,
+  created_at: '2019-01-15T00:00:00.000Z',
+  updated_at: '2019-01-15T00:00:00.000Z',
+  email: 'sarah.mitchell@example.com',
+  full_name: 'Sarah Mitchell',
+  first_name: 'Sarah',
+  last_name: 'Mitchell',
+  phone: null,
+  street: null,
+  city: 'Toronto',
+  province_state: 'ON',
+  postal_zip_code: null,
+  country: 'Canada',
+  profile_picture_url: null,
+  notify_replies: true,
+}
 
 export type ClubLoungeLandingProps = {
   rootDomain: string
@@ -61,35 +119,47 @@ function NavLink({ href, className, children, internalLinks }: {
   return <a href={href} className={className}>{children}</a>
 }
 
-function AppWindow({ url, children }: { url: string; children: ReactNode }) {
+function AppWindow({
+  url,
+  children,
+  showChrome = true,
+}: {
+  url: string
+  children: ReactNode
+  showChrome?: boolean
+}) {
   return (
     <div className="cl-app-window">
-      <div className="cl-app-topbar">
-        <div className="cl-mock-dots">
-          <div className="cl-mock-dot cl-r" /><div className="cl-mock-dot cl-y" /><div className="cl-mock-dot cl-g" />
+      {showChrome ? (
+        <div className="cl-app-topbar">
+          <div className="cl-mock-dots">
+            <div className="cl-mock-dot cl-r" /><div className="cl-mock-dot cl-y" /><div className="cl-mock-dot cl-g" />
+          </div>
+          <div className="cl-mock-url">{url}</div>
         </div>
-        <div className="cl-mock-url">{url}</div>
-      </div>
+      ) : null}
       <div className="cl-app-body">{children}</div>
     </div>
   )
 }
 
-function MembershipVisual({ rootDomain }: { rootDomain: string }) {
+function MembershipVisual() {
   return (
-    <AppWindow url={`tipa.${rootDomain}`}>
-      {/* Membership card */}
-      <div className="cl-mc-card">
-        <div className="cl-mc-top">
-          <div className="cl-mc-org">TORONTO ISLAND PILOTS ASSOC.</div>
-          <div className="cl-mc-badge">✈</div>
-        </div>
-        <div className="cl-mc-name">Sarah Mitchell</div>
-        <div className="cl-mc-level-row">
-          <span className="cl-mc-level">Full Member</span>
-          <span className="cl-mc-since">Member since 2019</span>
-        </div>
-        <div className="cl-mc-id">#1042</div>
+    <div className="cl-membership-visual">
+      <div className="cl-membership-card-wrap">
+        <MembershipCard
+          user={{ profile: LANDING_MEMBER_PROFILE, user_metadata: {} }}
+          isPending={false}
+          isRejected={false}
+          isPaid
+          isExpired={false}
+          clubBrand={{
+            shortName: 'TIPA',
+            tagline: 'Toronto Island Pilots Assoc.',
+            logoUrl: null,
+          }}
+          preferTipaMarkWhenNoLogo
+        />
       </div>
       {/* Directory rows */}
       <div className="cl-mini-dir">
@@ -113,13 +183,13 @@ function MembershipVisual({ rootDomain }: { rootDomain: string }) {
           </div>
         ))}
       </div>
-    </AppWindow>
+    </div>
   )
 }
 
 function DuesVisual({ rootDomain }: { rootDomain: string }) {
   return (
-    <AppWindow url={`admin.${rootDomain}`}>
+    <AppWindow url={`admin.${rootDomain}`} showChrome={false}>
       {/* Revenue summary */}
       <div className="cl-dues-summary">
         <div className="cl-dues-stat">
@@ -161,7 +231,7 @@ function DuesVisual({ rootDomain }: { rootDomain: string }) {
 
 function DiscussionsVisual({ rootDomain }: { rootDomain: string }) {
   return (
-    <AppWindow url={`ottawacycling.${rootDomain}`}>
+    <AppWindow url={`ottawacycling.${rootDomain}`} showChrome={false}>
       <div className="cl-disc-header">
         <span className="cl-disc-title">Discussions</span>
         <button className="cl-disc-new" type="button">+ New post</button>
@@ -202,7 +272,7 @@ function DiscussionsVisual({ rootDomain }: { rootDomain: string }) {
 
 function EventsVisual({ rootDomain }: { rootDomain: string }) {
   return (
-    <AppWindow url={`ottawacycling.${rootDomain}`}>
+    <AppWindow url={`ottawacycling.${rootDomain}`} showChrome={false}>
       <div className="cl-events-header">
         <span className="cl-disc-title">Events</span>
         <span className="cl-events-sub">3 upcoming</span>
@@ -266,15 +336,14 @@ export function ClubLoungeLanding({
       {/* ── Hero ── */}
       <div className="cl-hero">
         <div className="cl-hero-left">
-          <div className="cl-hero-eyebrow">For clubs, associations &amp; facilities</div>
+          <div className="cl-hero-eyebrow">Membership ops for clubs &amp; associations</div>
           <h1 className="cl-hero-h1">
-            The lounge that makes
-            <br />your club <em>official.</em>
+            Run your club without
+            <br />chasing <em>payments.</em>
           </h1>
           <p className="cl-hero-sub">
-            Member directory, dues collection, private discussions, and events —
-            in one private home your members will actually use.{' '}
-            <strong>From $5/month.</strong>
+            Member directory, dues collection, private discussions, and events — in one private home
+            your members will actually use. <strong>From $5/month.</strong>
           </p>
           <div className="cl-hero-actions">
             <NavLink href={signupHref} className="cl-btn-primary" internalLinks={internalLinks}>
@@ -288,11 +357,6 @@ export function ClubLoungeLanding({
             <div>
               <div className="cl-proof-num">$5</div>
               <div className="cl-proof-label">Per month · small clubs</div>
-            </div>
-            <div className="cl-proof-divider" aria-hidden />
-            <div>
-              <div className="cl-proof-num">48h</div>
-              <div className="cl-proof-label">Migration from Wild Apricot</div>
             </div>
             <div className="cl-proof-divider" aria-hidden />
             <div>
@@ -386,7 +450,7 @@ export function ClubLoungeLanding({
       <div id="features">
 
         {/* 1 — Membership & Member Card */}
-        <section className="cl-feat-section">
+        <section id="membership" className="cl-feat-section">
           <div className="cl-feat-text">
             <div className="cl-section-eyebrow">Membership</div>
             <h2 className="cl-feat-h2">
@@ -407,12 +471,12 @@ export function ClubLoungeLanding({
             </NavLink>
           </div>
           <div className="cl-feat-visual">
-            <MembershipVisual rootDomain={rootDomain} />
+            <MembershipVisual />
           </div>
         </section>
 
         {/* 2 — Dues Collection (flipped) */}
-        <section className="cl-feat-section cl-feat-flip cl-feat-alt">
+        <section id="dues" className="cl-feat-section cl-feat-flip cl-feat-alt">
           <div className="cl-feat-text">
             <div className="cl-section-eyebrow">Dues collection</div>
             <h2 className="cl-feat-h2">
@@ -438,7 +502,7 @@ export function ClubLoungeLanding({
         </section>
 
         {/* 3 — Discussions */}
-        <section className="cl-feat-section">
+        <section id="discussions" className="cl-feat-section">
           <div className="cl-feat-text">
             <div className="cl-section-eyebrow">Private discussions</div>
             <h2 className="cl-feat-h2">
@@ -459,12 +523,26 @@ export function ClubLoungeLanding({
             </NavLink>
           </div>
           <div className="cl-feat-visual">
-            <DiscussionsVisual rootDomain={rootDomain} />
+            <div className="cl-feature-scene">
+              <div className="cl-photo-card cl-feature-photo-card">
+                <Image
+                  src="/marketing/fat-lads-c1m8s783C0s-unsplash.jpg"
+                  alt="Group of cyclists riding together on a country road"
+                  width={1600}
+                  height={1096}
+                  className="cl-photo-image"
+                />
+                <div className="cl-photo-card-overlay" />
+              </div>
+              <div className="cl-feature-scene-window">
+                <DiscussionsVisual rootDomain={rootDomain} />
+              </div>
+            </div>
           </div>
         </section>
 
         {/* 4 — Events (flipped) */}
-        <section className="cl-feat-section cl-feat-flip cl-feat-alt">
+        <section id="events" className="cl-feat-section cl-feat-flip cl-feat-alt">
           <div className="cl-feat-text">
             <div className="cl-section-eyebrow">Events &amp; RSVP</div>
             <h2 className="cl-feat-h2">
@@ -485,7 +563,21 @@ export function ClubLoungeLanding({
             </NavLink>
           </div>
           <div className="cl-feat-visual">
-            <EventsVisual rootDomain={rootDomain} />
+            <div className="cl-feature-scene">
+              <div className="cl-photo-card cl-feature-photo-card">
+                <Image
+                  src="/marketing/kawe-rodrigues-u67yO7onlOQ-unsplash.jpg"
+                  alt="Golfer celebrating beside the hole on a green"
+                  width={1200}
+                  height={1800}
+                  className="cl-photo-image"
+                />
+                <div className="cl-photo-card-overlay" />
+              </div>
+              <div className="cl-feature-scene-window">
+                <EventsVisual rootDomain={rootDomain} />
+              </div>
+            </div>
           </div>
         </section>
 
@@ -498,37 +590,39 @@ export function ClubLoungeLanding({
           Flat rate.<br /><em>Grow all you want.</em>
         </h2>
         <p className="cl-section-sub">
-          No per-contact fees. No surprise bills when your membership drive works. Plans from $5/month;
-          unlimited members on Starter and above. <strong>14-day free trial on all plans.</strong>
+          No per-contact fees. No surprise bills when your membership drive works. Dues collection on every plan.
+          <strong> Starts at $5/month.</strong>
         </p>
         <div className="cl-pricing-grid">
           <div className="cl-price-col">
             <div className="cl-price-tier">Hobby</div>
             <div className="cl-price-amount">$5</div>
-            <div className="cl-price-period">per month · up to 20 members</div>
+            <div className="cl-price-billed">per month</div>
+            <div className="cl-price-period">best for up to 20 members · 1 admin</div>
             <ul className="cl-price-features">
               <li><span className="cl-check">✓</span>Your own {rootDomain} URL</li>
               <li><span className="cl-check">✓</span>Member directory + approvals</li>
+              <li><span className="cl-check">✓</span>1 admin seat</li>
               <li><span className="cl-check">✓</span>Events + RSVP</li>
               <li><span className="cl-check">✓</span>Announcements</li>
               <li><span className="cl-check">✓</span>Discussions</li>
-              <li><span className="cl-cross">—</span>Dues collection via Stripe</li>
+              <li><span className="cl-check">✓</span>Dues collection via Stripe</li>
               <li><span className="cl-cross">—</span>Digest emails</li>
               <li><span className="cl-cross">—</span>Analytics</li>
             </ul>
-            <NavLink href={signupHref} className="cl-price-btn" internalLinks={internalLinks}>Start free trial</NavLink>
+            <NavLink href={signupHref} className="cl-price-btn" internalLinks={internalLinks}>Get started</NavLink>
           </div>
           <div className="cl-price-col">
-            <div className="cl-price-tier">Starter</div>
+            <div className="cl-price-tier">Core</div>
             <div className="cl-price-amount">$49</div>
-            <div className="cl-price-period">per month · unlimited members</div>
+            <div className="cl-price-billed">per month</div>
+            <div className="cl-price-period">best for up to 200 members · 2 admins</div>
             <ul className="cl-price-features">
               <li><span className="cl-check">✓</span>Everything in Hobby</li>
-              <li><span className="cl-check">✓</span>Dues collection via Stripe</li>
-              <li><span className="cl-check">✓</span>Unlimited members</li>
-              <li><span className="cl-check">✓</span>2 admin seats</li>
-              <li><span className="cl-check">✓</span>Custom domain</li>
-              <li><span className="cl-check">✓</span>Remove ClubLounge branding</li>
+              <li><span className="cl-check">✓</span>Member invitations</li>
+              <li><span className="cl-check">✓</span>Recommended for up to 2 admins</li>
+              <li><span className="cl-cross">—</span>Custom domain</li>
+              <li><span className="cl-cross">—</span>Remove ClubLounge branding</li>
               <li><span className="cl-cross">—</span>Digest emails</li>
               <li><span className="cl-cross">—</span>Analytics</li>
             </ul>
@@ -536,39 +630,58 @@ export function ClubLoungeLanding({
           </div>
           <div className="cl-price-col cl-featured">
             <div className="cl-featured-badge">Most popular</div>
-            <div className="cl-price-tier">Community</div>
+            <div className="cl-price-tier">Growth</div>
             <div className="cl-price-amount">$99</div>
-            <div className="cl-price-period">per month · unlimited everything</div>
+            <div className="cl-price-billed">per month</div>
+            <div className="cl-price-period">best for up to 500 members · 5 admins</div>
             <ul className="cl-price-features">
-              <li><span className="cl-check">✓</span>Everything in Starter</li>
-              <li><span className="cl-check">✓</span>Unlimited admins</li>
-              <li><span className="cl-check">✓</span>Private discussions + @mentions</li>
+              <li><span className="cl-check">✓</span>Everything in Core</li>
+              <li><span className="cl-check">✓</span>Recommended for up to 5 admins</li>
+              <li><span className="cl-check">✓</span>Custom domain</li>
+              <li><span className="cl-check">✓</span>Remove ClubLounge branding</li>
               <li><span className="cl-check">✓</span>Weekly digest emails</li>
               <li><span className="cl-check">✓</span>Analytics dashboard</li>
-              <li><span className="cl-check">✓</span>Google Calendar sync</li>
-              <li><span className="cl-check">✓</span>Member invites</li>
-              <li><span className="cl-check">✓</span>Priority support</li>
+              <li><span className="cl-check">✓</span>Multiple membership tiers</li>
+              <li><span className="cl-check">✓</span>Member trial periods</li>
             </ul>
             <NavLink href={signupHref} className="cl-price-btn" internalLinks={internalLinks}>Get started</NavLink>
           </div>
           <div className="cl-price-col">
-            <div className="cl-price-tier">Club Pro</div>
+            <div className="cl-price-tier">Pro</div>
             <div className="cl-price-amount">$199</div>
-            <div className="cl-price-period">per month · white-label</div>
+            <div className="cl-price-billed">per month</div>
+            <div className="cl-price-period">larger clubs · higher-touch support</div>
             <ul className="cl-price-features">
-              <li><span className="cl-check">✓</span>Everything in Community</li>
-              <li><span className="cl-check">✓</span>Multiple membership tiers</li>
-              <li><span className="cl-check">✓</span>API access + data export</li>
-              <li><span className="cl-check">✓</span>SSO / custom auth</li>
-              <li><span className="cl-check">✓</span>Onboarding call</li>
-              <li><span className="cl-check">✓</span>Annual contract option</li>
+              <li><span className="cl-check">✓</span>Everything in Growth</li>
+              <li><span className="cl-check">✓</span>White-glove migration help</li>
+              <li><span className="cl-check">✓</span>Admin onboarding + team training</li>
+              <li><span className="cl-check">✓</span>Priority support</li>
+              <li><span className="cl-check">✓</span>Custom billing / invoicing</li>
             </ul>
-            <a href={mailto} className="cl-price-btn">Book a demo</a>
+            <NavLink href={signupHref} className="cl-price-btn" internalLinks={internalLinks}>Get started</NavLink>
           </div>
         </div>
         <p className="cl-pricing-footnote">
-          14-day free trial, no credit card required. Save 2 months with annual billing. Canadian dollars. No hidden fees.
+          Monthly pricing shown. New lounges start on Hobby, and plan changes happen from your billing settings. Stripe fees apply, plus a 2% ClubLounge platform fee on dues payments.
         </p>
+        <a
+          href="https://tipa.ca"
+          target="_blank"
+          rel="noreferrer"
+          className="cl-bottom-trust"
+        >
+          <span className="cl-bottom-trust-logo">
+            <Image
+              src="/logo.png"
+              alt="Toronto Island Pilots Association logo"
+              width={493}
+              height={329}
+            />
+          </span>
+          <span className="cl-bottom-trust-copy">
+            Trusted by <strong>Toronto Island Pilots Association</strong>
+          </span>
+        </a>
       </section>
 
       {/* ── Verticals ── */}

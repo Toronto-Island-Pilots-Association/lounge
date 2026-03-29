@@ -82,7 +82,7 @@ export async function GET(request: Request) {
     await requireAdmin()
     const plan = await getOrgPlan()
     if (!getPlanDef(plan).features.analytics) {
-      return NextResponse.json({ error: 'Analytics requires Community plan or higher' }, { status: 403 })
+      return NextResponse.json({ error: 'Analytics requires Growth plan or higher' }, { status: 403 })
     }
     const supabase = await createClient()
     const orgId = request.headers.get('x-org-id')

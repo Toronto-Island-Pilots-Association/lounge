@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { buildOrgUrl, ROOT_DOMAIN } from '@/lib/org'
+import { getPlanDef } from '@/lib/plans'
 import SignOutButton from './SignOutButton'
 
 function loungeAddressLabel(org: { subdomain: string; custom_domain?: string | null; custom_domain_verified?: boolean | null }) {
@@ -38,7 +39,7 @@ export default async function PlatformDashboard() {
       const org = orgById.get(m.org_id)
       return org ? { org, role: m.role as string } : null
     })
-    .filter(Boolean) as { org: Record<string, unknown> & { id: string; name: string; subdomain: string; logo_url?: string | null; custom_domain?: string | null; plan?: string | null; trial_ends_at?: string | null }; role: string }[]
+    .filter(Boolean) as { org: Record<string, unknown> & { id: string; name: string; subdomain: string; logo_url?: string | null; custom_domain?: string | null; plan?: string | null }; role: string }[]
 
   const adminOrgs = memberships.filter(m => m.role === 'admin').map(m => m.org)
   const memberOrgs = memberships.filter(m => m.role !== 'admin').map(m => ({ ...m.org, memberRole: m.role }))
@@ -89,9 +90,8 @@ export default async function PlatformDashboard() {
                   {adminOrgs.map(org => {
                     const url = buildOrgUrl(org)
                     const address = loungeAddressLabel(org)
-                    const trialEndsAt = org.trial_ends_at ? new Date(org.trial_ends_at as string) : null
-                    const trialActive = trialEndsAt && trialEndsAt > new Date()
                     const plan = (org.plan ?? 'hobby') as string
+                    const planLabel = getPlanDef(plan).label
                     const initial = (org.name || '?').slice(0, 1).toUpperCase()
                     const logo = org.logo_url as string | null | undefined
 
@@ -119,13 +119,8 @@ export default async function PlatformDashboard() {
                             <p className="text-xs text-gray-500 truncate font-mono">{address}</p>
                             <div className="flex flex-wrap gap-1.5 mt-2">
                               <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-gray-100 text-gray-600 capitalize">
-                                {plan.replace('_', ' ')}
+                                {planLabel}
                               </span>
-                              {trialActive && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800">
-                                  Trial
-                                </span>
-                              )}
                             </div>
                           </div>
                         </div>

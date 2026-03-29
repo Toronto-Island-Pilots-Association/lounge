@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { buildOrgUrl } from '@/lib/org'
+import { getPlanDef } from '@/lib/plans'
+import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
 import PlatformSideNav from './PlatformSideNav'
 import PlatformMobileHeader from './PlatformMobileHeader'
 
@@ -31,16 +33,15 @@ export default async function OrgAdminLayout({
 
   const { data: org } = await db
     .from('organizations')
-    .select('id, name, plan, subdomain, custom_domain, custom_domain_verified, trial_ends_at')
+    .select('id, name, plan, subdomain, custom_domain, custom_domain_verified')
     .eq('id', orgId)
     .maybeSingle()
 
   if (!org) redirect('/platform/dashboard')
 
-  const trialEndsAt = org.trial_ends_at ? new Date(org.trial_ends_at) : null
-  const trialActive = trialEndsAt && trialEndsAt > new Date()
   const orgUrl = buildOrgUrl(org)
-  const planLabel = (org.plan ?? 'hobby').replace('_', ' ')
+  const planLabel = getPlanDef((org.plan ?? 'hobby') as string).label
+  const billingStatus = await getOrgBillingActivationStatus(orgId)
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-gray-50 min-w-0">
@@ -63,11 +64,6 @@ export default async function OrgAdminLayout({
               <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 capitalize">
                 {planLabel}
               </span>
-              {trialActive && (
-                <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">
-                  Trial
-                </span>
-              )}
             </div>
           </div>
         </div>
@@ -96,12 +92,29 @@ export default async function OrgAdminLayout({
         orgId={orgId}
         orgName={org.name}
         planLabel={planLabel}
-        trialActive={!!trialActive}
         orgUrl={orgUrl}
       />
 
       {/* Content */}
       <div className="md:ml-56 flex-1 min-h-screen min-w-0 flex flex-col">
+        {billingStatus.requiresActivation && (
+          <div className="px-4 pt-4 md:px-8 md:pt-6">
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="font-medium">Activate {billingStatus.planLabel} to start operating your lounge.</p>
+                <p className="text-amber-800">
+                  You can finish setup for free, but invites and dues collection stay locked until billing is activated.
+                </p>
+              </div>
+              <Link
+                href={`/platform/dashboard/${orgId}/billing`}
+                className="inline-flex items-center justify-center rounded-lg bg-amber-950 px-3 py-2 text-sm font-medium text-white hover:bg-amber-900 transition-colors"
+              >
+                Activate plan
+              </Link>
+            </div>
+          </div>
+        )}
         {children}
       </div>
     </div>

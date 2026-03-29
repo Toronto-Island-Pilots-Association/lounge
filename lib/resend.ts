@@ -105,7 +105,7 @@ export function generateICal({
     return new Date(date).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
   }
 
-  const uid = `${Date.now()}-${Math.random().toString(36).substring(7)}@tipa.ca`
+  const uid = `${Date.now()}-${Math.random().toString(36).substring(7)}@clublounge.app`
   const now = formatDate(new Date().toISOString())
   const dtstart = formatDate(startTime)
   const dtend = endTime ? formatDate(endTime) : formatDate(new Date(new Date(startTime).getTime() + 60 * 60 * 1000).toISOString())
@@ -122,7 +122,7 @@ export function generateICal({
   const ical = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//TIPA//Event Calendar//EN',
+    'PRODID:-//ClubLounge//Event Calendar//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'BEGIN:VEVENT',
@@ -164,17 +164,17 @@ export function generateICal({
   return ical.join('\r\n')
 }
 
-export async function sendWelcomeEmail(email: string, name: string) {
+export async function sendWelcomeEmail(email: string, name: string, orgName: string = 'Your Club') {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'
-  
+
   return sendEmail({
     to: email,
-    subject: 'Welcome to Toronto Island Pilots Association!',
+    subject: `Welcome to ${orgName}!`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h1 style="color: #1f2937; margin-bottom: 20px;">Welcome to TIPA, ${name}!</h1>
+        <h1 style="color: #1f2937; margin-bottom: 20px;">Welcome to ${orgName}, ${name}!</h1>
         <p style="color: #374151; line-height: 1.6;">
-          Thank you for joining the Toronto Island Pilots Association. We're excited to have you as a member of our community.
+          Thank you for joining ${orgName}. We're excited to have you as a member of our community.
         </p>
         <div style="background-color: #f0f9ff; border-left: 4px solid #0d1e26; padding: 16px; margin: 20px 0; border-radius: 4px;">
           <p style="color: #374151; line-height: 1.6; margin: 0;">
@@ -187,23 +187,14 @@ export async function sendWelcomeEmail(email: string, name: string) {
           </a>
         </div>
         <p style="color: #374151; line-height: 1.6;">
-          Once your account is approved by an admin, you'll have access to:
+          Once your account is approved by an admin, you'll have access to member resources, community events, and everything ${orgName} has to offer.
         </p>
-        <ul style="color: #374151; line-height: 1.8; margin-left: 20px;">
-          <li>Member resources and exclusive content</li>
-          <li>Community events and networking opportunities</li>
-          <li>Advocacy efforts for GA at CYTZ</li>
-          <li>Connection with other GA pilots in Toronto</li>
-        </ul>
         <p style="margin-top: 30px; color: #374151; line-height: 1.6;">
-          <strong>What's next?</strong> Your membership application is currently pending admin approval. You'll receive an email notification once your account has been approved and you'll have full access to all member features.
-        </p>
-        <p style="margin-top: 20px; color: #374151; line-height: 1.6;">
-          We look forward to seeing you at our events and working together to support general aviation at Billy Bishop Toronto City Airport.
+          <strong>What's next?</strong> Your membership application is currently pending admin approval. You'll receive an email notification once your account has been approved.
         </p>
         <p style="margin-top: 20px; color: #374151; line-height: 1.6;">
           Best regards,<br>
-          <strong>The TIPA Team</strong>
+          <strong>The ${orgName} Team</strong>
         </p>
       </div>
     `,
@@ -235,7 +226,8 @@ function formatDate(d: Date): string {
 export async function sendSubscriptionConfirmationEmail(
   email: string,
   name: string,
-  details: SubscriptionConfirmationDetails
+  details: SubscriptionConfirmationDetails,
+  orgName: string = 'Your Club'
 ) {
   const { amountPaid, nextAmount, currency, nextChargeDate, validUntil, paymentMethod } = details
   const fmt = (v: number) =>
@@ -260,7 +252,7 @@ export async function sendSubscriptionConfirmationEmail(
 
   return sendEmail({
     to: email,
-    subject: 'Your TIPA subscription confirmation',
+    subject: `Your ${orgName} subscription confirmation`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h1 style="color: #1f2937; margin-bottom: 20px;">Subscription confirmed</h1>
@@ -278,11 +270,11 @@ export async function sendSubscriptionConfirmationEmail(
           ${nextChargeSection}
         </div>
         <p style="color: #374151; line-height: 1.6;">
-          You can manage your subscription and view your membership details anytime from your <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://tipa.ca'}/membership" style="color: #0d1e26;">membership page</a>.
+          You can manage your subscription and view your membership details anytime from your <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'}/membership" style="color: #0d1e26;">membership page</a>.
         </p>
         <p style="margin-top: 20px; color: #374151; line-height: 1.6;">
           Best regards,<br>
-          <strong>The TIPA Team</strong>
+          <strong>The ${orgName} Team</strong>
         </p>
       </div>
     `,
@@ -308,48 +300,40 @@ export async function sendMembershipUpgradeEmail(email: string, name: string) {
 export async function sendInvitationEmail(
   email: string,
   name: string,
-  landingPageUrl: string
+  landingPageUrl: string,
+  orgName: string = 'Your Club'
 ) {
   return sendEmail({
     to: email,
-    subject: 'Invitation to Join Toronto Island Pilots Association',
+    subject: `Invitation to Join ${orgName}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h1 style="color: #1f2937; margin-bottom: 20px;">You're Invited to Join TIPA!</h1>
+        <h1 style="color: #1f2937; margin-bottom: 20px;">You're Invited to Join ${orgName}!</h1>
         <p style="color: #374151; line-height: 1.6;">
           Hi ${name},
         </p>
         <p style="color: #374151; line-height: 1.6;">
-          You've been invited to join the Toronto Island Pilots Association (TIPA). We're excited to have you as part of our community!
+          You've been invited to join ${orgName}. We're excited to have you as part of our community!
         </p>
         <p style="color: #374151; line-height: 1.6;">
-          As a member, you'll have access to:
+          As a member, you'll have access to member resources, community events, and everything ${orgName} has to offer.
         </p>
-        <ul style="color: #374151; line-height: 1.8; margin-left: 20px;">
-          <li>Member resources and exclusive content</li>
-          <li>Community events and networking opportunities</li>
-          <li>Advocacy efforts for GA at CYTZ</li>
-          <li>Connection with other GA pilots in Toronto</li>
-        </ul>
         <p style="margin: 30px 0;">
-          <strong>To learn more and join our community, please visit our website:</strong>
+          <strong>Click below to learn more and join:</strong>
         </p>
         <p style="margin: 20px 0;">
-          <a href="${landingPageUrl}" 
-             style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
-            Visit TIPA Website
+          <a href="${landingPageUrl}"
+             style="display: inline-block; padding: 12px 24px; background-color: #0d1e26; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
+            Join ${orgName}
           </a>
         </p>
         <p style="margin: 20px 0; color: #666; font-size: 14px;">
           Or copy and paste this link into your browser:<br>
           <span style="word-break: break-all; color: #2563eb;">${landingPageUrl}</span>
         </p>
-        <p style="margin-top: 30px; color: #374151; line-height: 1.6;">
-          We look forward to seeing you at our events and working together to support general aviation at Billy Bishop Toronto City Airport.
-        </p>
         <p style="margin-top: 20px; color: #374151; line-height: 1.6;">
           Best regards,<br>
-          <strong>The TIPA Team</strong>
+          <strong>The ${orgName} Team</strong>
         </p>
       </div>
     `,
@@ -411,19 +395,20 @@ export async function sendInvitationWithPasswordEmail(
   })
 }
 
-/** Password reset email sent from TIPA (not Supabase). Uses Resend so the email is from your domain. */
+/** Password reset email. Uses Resend so the email is from your domain. */
 export async function sendPasswordResetEmail(
   email: string,
-  resetLink: string
+  resetLink: string,
+  orgName: string = 'Your Club'
 ) {
   return sendEmail({
     to: email,
-    subject: 'Reset your TIPA password',
+    subject: `Reset your ${orgName} password`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h1 style="color: #1f2937; margin-bottom: 20px;">Reset your password</h1>
         <p style="color: #374151; line-height: 1.6;">
-          You requested a password reset for your Toronto Island Pilots Association (TIPA) account.
+          You requested a password reset for your ${orgName} account.
         </p>
         <p style="color: #374151; line-height: 1.6;">
           Click the button below to set a new password. This link expires in about an hour.
@@ -439,7 +424,7 @@ export async function sendPasswordResetEmail(
         </p>
         <p style="margin-top: 20px; color: #374151; line-height: 1.6;">
           Best regards,<br>
-          <strong>The TIPA Team</strong>
+          <strong>The ${orgName} Team</strong>
         </p>
       </div>
     `,
@@ -451,21 +436,22 @@ export async function sendInvitationReminderEmail(
   email: string,
   name: string,
   newTempPassword: string,
-  appUrl: string
+  appUrl: string,
+  orgName: string = 'Your Club'
 ) {
   const loginUrl = `${appUrl}/login`
 
   return sendEmail({
     to: email,
-    subject: 'Reminder: Complete Your TIPA Registration',
+    subject: `Reminder: Complete Your ${orgName} Registration`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h1 style="color: #1f2937; margin-bottom: 20px;">Reminder: Complete Your TIPA Registration</h1>
+        <h1 style="color: #1f2937; margin-bottom: 20px;">Reminder: Complete Your ${orgName} Registration</h1>
         <p style="color: #374151; line-height: 1.6;">
           Hi ${name},
         </p>
         <p style="color: #374151; line-height: 1.6;">
-          You were invited to join the Toronto Island Pilots Association (TIPA), but we haven't seen you log in yet. Here's a fresh way to get started:
+          You were invited to join ${orgName}, but we haven't seen you log in yet. Here's a fresh way to get started:
         </p>
         <div style="background-color: #f0f9ff; border-left: 4px solid #0d1e26; padding: 16px; margin: 20px 0; border-radius: 4px;">
           <p style="color: #374151; line-height: 1.6; margin: 0 0 12px 0;">
@@ -493,7 +479,7 @@ export async function sendInvitationReminderEmail(
         </div>
         <p style="margin-top: 20px; color: #374151; line-height: 1.6;">
           Best regards,<br>
-          <strong>The TIPA Team</strong>
+          <strong>The ${orgName} Team</strong>
         </p>
       </div>
     `,
@@ -593,7 +579,7 @@ export async function sendNewMemberNotificationToAdmins(
           <p style="margin: 6px 0; color: #374151;">
             <strong>Membership Class:</strong> ${formatMembershipClass(memberDetails.membership_level, memberDetails.membership_class)}
           </p>
-          ${memberDetails.how_did_you_hear ? `<p style="margin: 6px 0; color: #374151;"><strong>How they heard about TIPA:</strong> ${memberDetails.how_did_you_hear}</p>` : ''}
+          ${memberDetails.how_did_you_hear ? `<p style="margin: 6px 0; color: #374151;"><strong>How they heard about us:</strong> ${memberDetails.how_did_you_hear}</p>` : ''}
         </div>
 
         <!-- Aviation Information -->
@@ -644,59 +630,55 @@ export async function sendNewMemberNotificationToAdmins(
         </p>
         <p style="margin-top: 20px; color: #374151; line-height: 1.6;">
           Best regards,<br>
-          <strong>TIPA System</strong>
+          <strong>ClubLounge System</strong>
         </p>
       </div>
     `,
   })
 }
 
-export async function sendMemberApprovalEmail(email: string, name: string | null) {
+export async function sendMemberApprovalEmail(email: string, name: string | null, orgName: string = 'Your Club') {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'
   const dashboardUrl = `${appUrl}/dashboard`
   const introduceYourselfUrl = `${appUrl}/discussions?category=introduce_yourself`
 
   return sendEmail({
     to: email,
-    subject: 'Your TIPA Membership Has Been Approved!',
+    subject: `Your ${orgName} Membership Has Been Approved!`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h1 style="color: #1f2937; margin-bottom: 20px;">Welcome to TIPA, ${name || 'Member'}!</h1>
+        <h1 style="color: #1f2937; margin-bottom: 20px;">Welcome to ${orgName}, ${name || 'Member'}!</h1>
         <p style="color: #374151; line-height: 1.6;">
-          Great news! Your membership application has been approved. You now have full access to the Toronto Island Pilots Association platform.
+          Great news! Your membership application has been approved. You now have full access to the ${orgName} lounge.
         </p>
         <p style="color: #374151; line-height: 1.6;">
           As an approved member, you can now:
         </p>
         <ul style="color: #374151; line-height: 1.8; margin-left: 20px;">
           <li>Access member resources and exclusive content</li>
-          <li>Browse and post in Hangar Talk</li>
+          <li>Browse and post in the lounge discussions</li>
           <li>View and RSVP to events</li>
-          <li>Connect with other GA pilots in Toronto</li>
-          <li>Stay informed on advocacy efforts for GA at CYTZ</li>
+          <li>Connect with fellow members</li>
         </ul>
         <p style="margin: 30px 0;">
           <a href="${dashboardUrl}"
              style="display: inline-block; padding: 12px 24px; background-color: #0d1e26; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
-            Access Your Dashboard
+            Access Your Lounge
           </a>
         </p>
         <div style="margin: 30px 0; padding: 20px; background-color: #f0f9ff; border-left: 4px solid #0d1e26; border-radius: 4px;">
-          <p style="color: #1f2937; font-weight: 600; margin: 0 0 8px 0;">✈️ Say hello to the community!</p>
+          <p style="color: #1f2937; font-weight: 600; margin: 0 0 8px 0;">👋 Say hello to the community!</p>
           <p style="color: #374151; line-height: 1.6; margin: 0 0 16px 0;">
-            Introduce yourself in Hangar Talk — tell us about your flying background, what you fly, and what brings you to CYTZ.
+            Introduce yourself in the lounge — let your fellow members know who you are.
           </p>
           <a href="${introduceYourselfUrl}"
              style="display: inline-block; padding: 10px 20px; background-color: #ffffff; color: #0d1e26; text-decoration: none; border-radius: 6px; font-weight: 600; border: 2px solid #0d1e26;">
             Post an Introduction
           </a>
         </div>
-        <p style="margin-top: 30px; color: #374151; line-height: 1.6;">
-          We look forward to seeing you at our events and working together to support general aviation at Billy Bishop Toronto City Airport.
-        </p>
         <p style="margin-top: 20px; color: #374151; line-height: 1.6;">
           Best regards,<br>
-          <strong>The TIPA Team</strong>
+          <strong>The ${orgName} Team</strong>
         </p>
       </div>
     `,
@@ -712,7 +694,8 @@ export async function sendEventNotificationEmail(
     location?: string | null
     start_time: string
     end_time?: string | null
-  }
+  },
+  orgName: string = 'Your Club'
 ) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'
   const eventUrl = `${appUrl}/events`
@@ -739,13 +722,13 @@ export async function sendEventNotificationEmail(
 
   return sendEmail({
     to: email,
-    subject: `New TIPA Event: ${event.title}`,
+    subject: `New ${orgName} Event: ${event.title}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h1 style="color: #1f2937; margin-bottom: 20px;">New TIPA Event</h1>
+        <h1 style="color: #1f2937; margin-bottom: 20px;">New ${orgName} Event</h1>
         <p style="color: #374151; line-height: 1.6;">Hi ${name},</p>
         <p style="color: #374151; line-height: 1.6;">
-          A new event has been scheduled for the Toronto Island Pilots Association:
+          A new event has been scheduled:
         </p>
         <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h2 style="color: #1f2937; margin-top: 0;">${event.title}</h2>
@@ -782,7 +765,7 @@ export async function sendEventNotificationEmail(
         </p>
         <p style="margin-top: 20px; color: #374151; line-height: 1.6;">
           Best regards,<br>
-          <strong>The TIPA Team</strong>
+          <strong>The ${orgName} Team</strong>
         </p>
       </div>
     `,
@@ -892,21 +875,21 @@ export async function sendReplyNotificationEmail(
   })
 }
 
-export async function sendMembershipExpiredEmail(email: string, name: string | null) {
+export async function sendMembershipExpiredEmail(email: string, name: string | null, orgName: string = 'Your Club') {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://clublounge.local:3000'
   const renewUrl = `${appUrl}/membership`
 
   return sendEmail({
     to: email,
-    subject: 'Your TIPA Membership Has Expired',
+    subject: `Your ${orgName} Membership Has Expired`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h1 style="color: #1f2937; margin-bottom: 20px;">Your TIPA Membership Has Expired</h1>
+        <h1 style="color: #1f2937; margin-bottom: 20px;">Your ${orgName} Membership Has Expired</h1>
         <p style="color: #374151; line-height: 1.6;">
           Hi ${name || 'Member'},
         </p>
         <p style="color: #374151; line-height: 1.6;">
-          Your Toronto Island Pilots Association membership has expired. To continue enjoying access to member resources, events, and the Hangar Talk community, please renew your membership.
+          Your ${orgName} membership has expired. To continue enjoying access to member resources, events, and the lounge, please renew your membership.
         </p>
         <p style="margin: 30px 0;">
           <a href="${renewUrl}"
@@ -919,7 +902,7 @@ export async function sendMembershipExpiredEmail(email: string, name: string | n
         </p>
         <p style="margin-top: 20px; color: #374151; line-height: 1.6;">
           Best regards,<br>
-          <strong>The TIPA Team</strong>
+          <strong>The ${orgName} Team</strong>
         </p>
       </div>
     `,

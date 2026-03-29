@@ -1,4 +1,5 @@
 import { requireAdmin } from '@/lib/auth'
+import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
 import { sendInvitationReminderEmail } from '@/lib/resend'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
@@ -31,6 +32,13 @@ export async function POST(
     const orgId = request.headers.get('x-org-id')
     if (!orgId) {
       return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
+    }
+    const billingStatus = await getOrgBillingActivationStatus(orgId)
+    if (billingStatus.requiresActivation) {
+      return NextResponse.json(
+        { error: `Activate ${billingStatus.planLabel} in Billing before sending invite reminders.` },
+        { status: 402 },
+      )
     }
     const { id: memberId } = await params
     if (!memberId) {

@@ -1,6 +1,7 @@
 import { createClient, createServiceRoleClient } from './supabase/server'
 import { headers } from 'next/headers'
 import { getPlanDef, DEFAULT_PLAN } from './plans'
+import { TIPA_ORG_ID } from '@/types/database'
 import {
   DEFAULT_SIGNUP_FIELDS,
   LEGACY_SIGNUP_FIELD_KEYS,
@@ -20,22 +21,17 @@ async function getOrgId(override?: string): Promise<string | null> {
   }
 }
 
-/**
- * Effective SaaS plan for feature gating (includes hobby → starter during org free trial).
- */
+/** Effective SaaS plan for feature gating. */
 async function getEffectiveOrgPlanKey(orgIdOverride?: string): Promise<string> {
   try {
     const supabase = await createClient()
     const orgId = await getOrgId(orgIdOverride)
     const { data } = await supabase
       .from('organizations')
-      .select('plan, trial_ends_at')
+      .select('plan')
       .eq('id', orgId)
       .maybeSingle()
     const plan = (data?.plan as string) || DEFAULT_PLAN
-    if (plan === 'hobby' && data?.trial_ends_at && new Date(data.trial_ends_at) > new Date()) {
-      return 'starter'
-    }
     return plan
   } catch {
     return DEFAULT_PLAN
@@ -177,7 +173,7 @@ export async function getMembershipFee(): Promise<number> {
 
 export type TrialConfigItem = { type: TrialType; months?: number }
 
-/** Load trial config keyed by level key. `months` trials apply only on Club Pro (`memberTrials` plan feature). */
+/** Load trial config keyed by level key. `months` trials apply when the org plan enables `memberTrials`. */
 export async function getTrialConfig(orgIdOverride?: string): Promise<Record<string, TrialConfigItem>> {
   const levels = await getMembershipLevels(orgIdOverride)
   const plan = await getEffectiveOrgPlanKey(orgIdOverride)
@@ -250,6 +246,30 @@ export async function setTrialConfigForLevel(level: string, item: TrialConfigIte
 /** Returns the plan key for the current org. Falls back to DEFAULT_PLAN on error. */
 export async function getOrgPlan(orgIdOverride?: string): Promise<string> {
   return getEffectiveOrgPlanKey(orgIdOverride)
+}
+
+/**
+ * Resolve the monthly SaaS price for a plan for a specific org.
+ * Supports per-org overrides via settings keys like `plan_price_monthly_override_club_pro`.
+ */
+export async function getPlanPriceMonthly(plan: string, orgIdOverride?: string): Promise<number> {
+  const overrideKey = `plan_price_monthly_override_${plan}`
+  const rawOverride = await getSetting(overrideKey, orgIdOverride)
+  if (rawOverride !== null) {
+    const parsed = Number(rawOverride)
+    if (!Number.isNaN(parsed) && parsed >= 0) return parsed
+  }
+
+  if (orgIdOverride === TIPA_ORG_ID && plan === 'club_pro') {
+    return 0
+  }
+
+  return getPlanDef(plan).priceMonthly
+}
+
+export async function getOrgPlanPriceMonthly(orgIdOverride?: string): Promise<number> {
+  const plan = await getOrgPlan(orgIdOverride)
+  return getPlanPriceMonthly(plan, orgIdOverride)
 }
 
 // ─── Org Feature Flags ───────────────────────────────────────────────────────
@@ -557,4 +577,3 @@ export function getMembershipExpiresAtFromSubscription(
 ): string {
   return stripeCurrentPeriodEnd.toISOString()
 }
-

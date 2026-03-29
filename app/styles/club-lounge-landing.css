@@ -1,17 +1,18 @@
-/* Club Lounge landing — light theme, Inter Tight (scoped to .club-lounge-landing) */
+/* Club Lounge landing — dark theme, Space Grotesk logo (scoped to .club-lounge-landing) */
 
 .club-lounge-landing {
-  --cl-primary: #0d1e26;
-  --cl-primary-hover: #1a3040;
-  --cl-ink: #111827;
-  --cl-body: #374151;
-  --cl-muted: #6b7280;
-  --cl-faint: #9ca3af;
-  --cl-border: #e5e7eb;
-  --cl-bg: #f8f9fa;
-  --cl-surface: #ffffff;
-  --cl-surface-2: #f3f4f6;
+  --cl-primary: #ffffff;
+  --cl-primary-hover: #e8e8e8;
+  --cl-ink: #f9fafb;
+  --cl-body: #a1a1aa;
+  --cl-muted: #71717a;
+  --cl-faint: #52525b;
+  --cl-border: rgba(255,255,255,0.07);
+  --cl-bg: #080808;
+  --cl-surface: #111111;
+  --cl-surface-2: #1c1c1c;
   --cl-radius: 14px;
+  --cl-accent: #2cdbb0;
 
   font-family: var(--font-inter-tight), 'Inter', system-ui, sans-serif;
   background: var(--cl-bg);
@@ -39,22 +40,23 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(8, 8, 8, 0.88);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--cl-border);
 }
 
 .club-lounge-landing .cl-nav-logo {
-  font-size: 1.125rem;
+  font-family: var(--font-space-grotesk), 'Space Grotesk', var(--font-inter-tight), system-ui, sans-serif;
+  font-size: 1.2rem;
   font-weight: 700;
-  color: var(--cl-primary);
+  color: var(--cl-ink);
   text-decoration: none;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.5px;
 }
 
 .club-lounge-landing .cl-nav-logo span {
-  color: #2cdbb0;
+  color: inherit;
 }
 
 .club-lounge-landing .cl-nav-links {
@@ -80,7 +82,7 @@
 
 .club-lounge-landing .cl-nav-cta {
   background: var(--cl-primary) !important;
-  color: #fff !important;
+  color: #080808 !important;
   padding: 0.4rem 1.1rem;
   border-radius: 8px;
   font-weight: 600 !important;
@@ -129,7 +131,7 @@
   display: inline-block;
   width: 20px;
   height: 2px;
-  background: var(--cl-primary);
+  background: var(--cl-accent);
   border-radius: 2px;
   flex-shrink: 0;
 }
@@ -139,14 +141,14 @@
   font-weight: 700;
   line-height: 1.08;
   letter-spacing: -0.04em;
-  color: var(--cl-primary);
+  color: var(--cl-ink);
   margin: 0 0 1.5rem;
   animation: cl-fade-up 0.5s 0.06s ease both;
 }
 
 .club-lounge-landing .cl-hero-h1 em {
   font-style: italic;
-  color: var(--cl-primary);
+  color: var(--cl-accent);
 }
 
 .club-lounge-landing .cl-hero-sub {
@@ -160,7 +162,7 @@
 }
 
 .club-lounge-landing .cl-hero-sub strong {
-  color: var(--cl-primary);
+  color: var(--cl-ink);
   font-weight: 600;
 }
 
@@ -174,7 +176,7 @@
 
 .club-lounge-landing .cl-btn-primary {
   background: var(--cl-primary);
-  color: #fff;
+  color: #080808;
   padding: 0.75rem 1.5rem;
   border-radius: 10px;
   font-size: 0.9375rem;
@@ -199,8 +201,8 @@
   font-size: 0.9375rem;
   font-weight: 500;
   text-decoration: none;
-  border: 1px solid var(--cl-border);
-  background: var(--cl-surface);
+  border: 1px solid rgba(255,255,255,0.14);
+  background: transparent;
   transition: background 0.15s, border-color 0.15s;
   display: inline-flex;
   align-items: center;
@@ -208,8 +210,8 @@
 }
 
 .club-lounge-landing .cl-btn-ghost:hover {
-  background: var(--cl-surface-2);
-  border-color: #d1d5db;
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.25);
 }
 
 .club-lounge-landing .cl-hero-proof {
@@ -226,7 +228,7 @@
 .club-lounge-landing .cl-proof-num {
   font-size: 1.75rem;
   font-weight: 700;
-  color: var(--cl-primary);
+  color: var(--cl-ink);
   line-height: 1;
   letter-spacing: -0.04em;
 }
@@ -257,6 +259,31 @@
   min-height: 400px;
 }
 
+.club-lounge-landing .cl-photo-card {
+  grid-area: 1 / 1;
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  border: 1px solid var(--cl-border);
+  background: #101010;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+}
+
+.club-lounge-landing .cl-photo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.club-lounge-landing .cl-photo-card-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(8, 8, 8, 0.02) 0%, rgba(8, 8, 8, 0.08) 50%, rgba(8, 8, 8, 0.34) 100%);
+  pointer-events: none;
+}
+
 .club-lounge-landing .cl-mockup-frame {
   background: var(--cl-surface);
   border-radius: 16px;
@@ -264,7 +291,7 @@
   width: 100%;
   max-width: 380px;
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(13, 30, 38, 0.1), 0 4px 16px rgba(13, 30, 38, 0.06);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 4px 16px rgba(255, 255, 255, 0.03);
   transform: rotate(-2deg) translateY(6px);
   animation: cl-fade-up 0.6s 0.15s ease both;
 }
@@ -297,7 +324,7 @@
   font-size: 0.6875rem;
   color: var(--cl-muted);
   font-family: ui-monospace, monospace;
-  background: var(--cl-surface);
+  background: var(--cl-bg);
   border: 1px solid var(--cl-border);
   padding: 0.2rem 0.65rem;
   border-radius: 6px;
@@ -322,7 +349,7 @@
   width: 38px;
   height: 38px;
   background: var(--cl-primary);
-  color: #fff;
+  color: #080808;
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -361,12 +388,12 @@
 
 .club-lounge-landing .cl-mock-pill.cl-active {
   background: var(--cl-primary);
-  color: #fff;
+  color: #080808;
   border-color: var(--cl-primary);
 }
 
 .club-lounge-landing .cl-mock-post {
-  background: var(--cl-surface);
+  background: var(--cl-surface-2);
   border: 1px solid var(--cl-border);
   border-radius: 10px;
   padding: 0.75rem;
@@ -446,7 +473,7 @@
 .club-lounge-landing .cl-mock-event-day {
   font-size: 0.875rem;
   font-weight: 700;
-  color: var(--cl-primary);
+  color: var(--cl-accent);
   line-height: 1.1;
 }
 
@@ -466,7 +493,9 @@
 
 .club-lounge-landing .cl-marquee-wrap {
   overflow: hidden;
-  background: var(--cl-primary);
+  background: #101010;
+  border-top: 1px solid var(--cl-border);
+  border-bottom: 1px solid var(--cl-border);
   padding: 0.875rem 0;
 }
 
@@ -480,7 +509,7 @@
   padding: 0 2.5rem;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.65);
+  color: rgba(255, 255, 255, 0.35);
   white-space: nowrap;
   letter-spacing: 0.04em;
 }
@@ -488,7 +517,7 @@
 .club-lounge-landing .cl-marquee-item::after {
   content: "·";
   margin-left: 2.5rem;
-  color: rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.15);
 }
 
 @keyframes cl-marquee {
@@ -502,6 +531,13 @@
   max-width: 1100px;
   margin: 0 auto;
   padding: 5rem 3rem;
+}
+
+.club-lounge-landing [id="features"],
+.club-lounge-landing #pricing,
+.club-lounge-landing #verticals,
+.club-lounge-landing #faq {
+  scroll-margin-top: 92px;
 }
 
 .club-lounge-landing .cl-section-eyebrow {
@@ -521,7 +557,7 @@
   display: inline-block;
   width: 20px;
   height: 2px;
-  background: var(--cl-primary);
+  background: var(--cl-accent);
   border-radius: 2px;
   flex-shrink: 0;
 }
@@ -531,12 +567,13 @@
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: -0.03em;
-  color: var(--cl-primary);
+  color: var(--cl-ink);
   margin: 0 0 1.25rem;
 }
 
 .club-lounge-landing .cl-section-title em {
   font-style: italic;
+  color: var(--cl-accent);
 }
 
 .club-lounge-landing .cl-section-sub {
@@ -558,7 +595,7 @@
   flex-direction: column;
   gap: 0.5rem;
   margin-bottom: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .club-lounge-landing .cl-url-label {
@@ -577,7 +614,7 @@
 }
 
 .club-lounge-landing .cl-org {
-  color: var(--cl-primary);
+  color: var(--cl-ink);
 }
 
 .club-lounge-landing .cl-domain {
@@ -604,13 +641,13 @@
   border: 1px solid var(--cl-border);
   border-radius: 14px;
   padding: 1.75rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   transition: box-shadow 0.15s, border-color 0.15s;
 }
 
 .club-lounge-landing .cl-feature-cell:hover {
-  box-shadow: 0 4px 16px rgba(13, 30, 38, 0.08);
-  border-color: #d1d5db;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  border-color: rgba(255,255,255,0.15);
 }
 
 .club-lounge-landing .cl-feature-icon {
@@ -664,17 +701,41 @@
   justify-content: center;
 }
 
+.club-lounge-landing .cl-feature-scene {
+  width: 100%;
+  max-width: 520px;
+  display: grid;
+  align-items: end;
+}
+
+.club-lounge-landing .cl-feature-photo-card {
+  width: min(74%, 340px);
+  aspect-ratio: 4 / 5;
+  justify-self: end;
+  transform: translate(0.5rem, -1.5rem);
+}
+
+.club-lounge-landing .cl-feature-scene-window {
+  grid-area: 1 / 1;
+  justify-self: start;
+  margin-top: 5.75rem;
+  position: relative;
+  z-index: 1;
+  width: min(82%, 380px);
+}
+
 .club-lounge-landing .cl-feat-h2 {
   font-size: clamp(1.75rem, 3vw, 2.5rem);
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: -0.03em;
-  color: var(--cl-primary);
+  color: var(--cl-ink);
   margin: 0 0 1rem;
 }
 
 .club-lounge-landing .cl-feat-h2 em {
   font-style: italic;
+  color: var(--cl-accent);
 }
 
 .club-lounge-landing .cl-feat-sub {
@@ -704,7 +765,7 @@
 }
 
 .club-lounge-landing .cl-fb-check {
-  color: #2cdbb0;
+  color: var(--cl-accent);
   font-weight: 700;
   flex-shrink: 0;
   width: 16px;
@@ -719,7 +780,7 @@
   width: 100%;
   max-width: 400px;
   overflow: hidden;
-  box-shadow: 0 16px 48px rgba(13, 30, 38, 0.1), 0 2px 8px rgba(13, 30, 38, 0.05);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .club-lounge-landing .cl-app-topbar {
@@ -738,68 +799,19 @@
   gap: 0.75rem;
 }
 
-/* ── Membership card ─────────────────────────────────────── */
+/* ── Membership visual (no browser chrome) ───────────────── */
 
-.club-lounge-landing .cl-mc-card {
-  background: linear-gradient(135deg, var(--cl-primary) 0%, #1a3a4c 100%);
-  border-radius: 12px;
-  padding: 1.125rem;
-  color: #fff;
+.club-lounge-landing .cl-membership-visual {
+  width: 100%;
+  max-width: 420px;
 }
 
-.club-lounge-landing .cl-mc-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 0.625rem;
+.club-lounge-landing .cl-membership-card-wrap {
+  margin-bottom: 0.75rem;
 }
 
-.club-lounge-landing .cl-mc-org {
-  font-size: 0.5625rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  opacity: 0.65;
-  line-height: 1.3;
-}
-
-.club-lounge-landing .cl-mc-badge {
-  font-size: 1.125rem;
-  opacity: 0.85;
-}
-
-.club-lounge-landing .cl-mc-name {
-  font-size: 1.0625rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  margin-bottom: 0.5rem;
-}
-
-.club-lounge-landing .cl-mc-level-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.625rem;
-}
-
-.club-lounge-landing .cl-mc-level {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  background: rgba(255, 255, 255, 0.15);
-  padding: 0.175rem 0.5rem;
-  border-radius: 999px;
-}
-
-.club-lounge-landing .cl-mc-since {
-  font-size: 0.625rem;
-  opacity: 0.55;
-}
-
-.club-lounge-landing .cl-mc-id {
-  font-size: 0.5625rem;
-  font-family: ui-monospace, monospace;
-  opacity: 0.4;
-  letter-spacing: 0.08em;
+.club-lounge-landing .cl-membership-card-wrap > div {
+  width: 100%;
 }
 
 /* ── Mini directory ──────────────────────────────────────── */
@@ -847,13 +859,48 @@
 }
 
 .club-lounge-landing .cl-badge-active {
-  background: #dcfce7;
-  color: #15803d;
+  background: #052e16;
+  color: #4ade80;
 }
 
 .club-lounge-landing .cl-badge-pending {
-  background: #fef9c3;
-  color: #854d0e;
+  background: #422006;
+  color: #fbbf24;
+}
+
+/* ── Dues card (no browser chrome) ──────────────────────── */
+
+.club-lounge-landing .cl-dues-card {
+  background: var(--cl-surface);
+  border-radius: 14px;
+  border: 1px solid var(--cl-border);
+  width: 100%;
+  max-width: 400px;
+  overflow: hidden;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.club-lounge-landing .cl-dues-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.625rem;
+  border-bottom: 1px solid var(--cl-border);
+}
+
+.club-lounge-landing .cl-dues-card-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--cl-ink);
+}
+
+.club-lounge-landing .cl-dues-card-sub {
+  font-size: 0.6875rem;
+  color: var(--cl-muted);
 }
 
 /* ── Dues visual ─────────────────────────────────────────── */
@@ -874,7 +921,7 @@
 .club-lounge-landing .cl-dues-stat-num {
   font-size: 1.1875rem;
   font-weight: 700;
-  color: var(--cl-primary);
+  color: var(--cl-ink);
   letter-spacing: -0.03em;
   line-height: 1;
 }
@@ -945,7 +992,7 @@
 .club-lounge-landing .cl-disc-new {
   font-size: 0.6875rem;
   font-weight: 600;
-  color: var(--cl-primary);
+  color: var(--cl-accent);
   background: none;
   border: 1px solid var(--cl-border);
   border-radius: 6px;
@@ -1083,7 +1130,7 @@
 .club-lounge-landing .cl-event-day {
   font-size: 1.0625rem;
   font-weight: 700;
-  color: var(--cl-primary);
+  color: var(--cl-accent);
   line-height: 1.1;
 }
 
@@ -1113,7 +1160,7 @@
   padding: 0.25rem 0.6rem;
   border-radius: 6px;
   border: 1px solid var(--cl-border);
-  background: var(--cl-surface);
+  background: var(--cl-surface-2);
   color: var(--cl-muted);
   cursor: pointer;
   flex-shrink: 0;
@@ -1121,9 +1168,84 @@
 }
 
 .club-lounge-landing .cl-rsvp-going {
-  background: #dcfce7;
-  color: #15803d;
-  border-color: #bbf7d0;
+  background: #052e16;
+  color: #4ade80;
+  border-color: #14532d;
+}
+
+/* ── Domain section ──────────────────────────────────────── */
+
+.club-lounge-landing .cl-domain-section {
+  border-top: 1px solid var(--cl-border);
+  border-bottom: 1px solid var(--cl-border);
+  max-width: 100% !important;
+  padding: 5rem 0 !important;
+}
+
+.club-lounge-landing .cl-domain-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 3rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: center;
+}
+
+.club-lounge-landing .cl-domain-visual {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 380px;
+}
+
+.club-lounge-landing .cl-domain-url-card {
+  background: var(--cl-surface-2);
+  border: 1px solid var(--cl-border);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+}
+
+.club-lounge-landing .cl-domain-url-card.cl-dom-custom {
+  border-color: rgba(44, 219, 176, 0.3);
+  background: rgba(44, 219, 176, 0.04);
+}
+
+.club-lounge-landing .cl-domain-url-label {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--cl-faint);
+  margin-bottom: 0.5rem;
+}
+
+.club-lounge-landing .cl-dom-custom .cl-domain-url-label {
+  color: var(--cl-accent);
+}
+
+.club-lounge-landing .cl-domain-url-val {
+  font-family: ui-monospace, 'Courier New', monospace;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.club-lounge-landing .cl-dom-slug {
+  color: var(--cl-ink);
+}
+
+.club-lounge-landing .cl-dom-root {
+  color: var(--cl-muted);
+}
+
+.club-lounge-landing .cl-domain-arrow {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--cl-faint);
+  text-align: center;
+  letter-spacing: 0.04em;
 }
 
 /* ── Pricing ─────────────────────────────────────────────── */
@@ -1158,20 +1280,20 @@
 }
 
 .club-lounge-landing .cl-price-col {
-  background: var(--cl-surface);
+  background: var(--cl-surface-2);
   border: 1px solid var(--cl-border);
   border-radius: 16px;
   padding: 1.75rem;
   display: flex;
   flex-direction: column;
   position: relative;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .club-lounge-landing .cl-price-col.cl-featured {
-  background: var(--cl-primary);
-  border-color: var(--cl-primary);
-  box-shadow: 0 8px 32px rgba(13, 30, 38, 0.18);
+  background: #ffffff;
+  border-color: #ffffff;
+  box-shadow: 0 8px 32px rgba(255, 255, 255, 0.1);
 }
 
 .club-lounge-landing .cl-featured-badge {
@@ -1179,15 +1301,15 @@
   top: -13px;
   left: 50%;
   transform: translateX(-50%);
-  background: #fff;
-  color: var(--cl-primary);
+  background: var(--cl-accent);
+  color: #080808;
   font-size: 0.6875rem;
   font-weight: 700;
   padding: 0.2rem 0.75rem;
   border-radius: 999px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  border: 1px solid var(--cl-border);
+  border: none;
   white-space: nowrap;
 }
 
@@ -1201,20 +1323,31 @@
 }
 
 .club-lounge-landing .cl-price-col.cl-featured .cl-price-tier {
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(0, 0, 0, 0.45);
 }
 
 .club-lounge-landing .cl-price-amount {
   font-size: 2.75rem;
   font-weight: 700;
-  color: var(--cl-primary);
+  color: var(--cl-ink);
   line-height: 1;
   letter-spacing: -0.04em;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.25rem;
 }
 
 .club-lounge-landing .cl-price-col.cl-featured .cl-price-amount {
-  color: #fff;
+  color: #080808;
+}
+
+.club-lounge-landing .cl-price-billed {
+  font-size: 0.75rem;
+  color: var(--cl-faint);
+  margin-bottom: 0.3rem;
+  line-height: 1.35;
+}
+
+.club-lounge-landing .cl-price-col.cl-featured .cl-price-billed {
+  color: rgba(0, 0, 0, 0.5);
 }
 
 .club-lounge-landing .cl-price-period {
@@ -1225,7 +1358,7 @@
 }
 
 .club-lounge-landing .cl-price-col.cl-featured .cl-price-period {
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(0, 0, 0, 0.45);
 }
 
 .club-lounge-landing .cl-price-features {
@@ -1248,18 +1381,18 @@
 }
 
 .club-lounge-landing .cl-price-col.cl-featured .cl-price-features li {
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(0, 0, 0, 0.7);
 }
 
 .club-lounge-landing .cl-check {
-  color: var(--cl-primary);
+  color: var(--cl-accent);
   font-weight: 700;
   flex-shrink: 0;
   width: 16px;
 }
 
 .club-lounge-landing .cl-price-col.cl-featured .cl-check {
-  color: #fff;
+  color: #059669;
 }
 
 .club-lounge-landing .cl-cross {
@@ -1278,24 +1411,24 @@
   text-decoration: none;
   border: 1px solid var(--cl-border);
   background: var(--cl-surface);
-  color: var(--cl-primary);
+  color: var(--cl-ink);
   transition: background 0.15s, border-color 0.15s;
   cursor: pointer;
 }
 
 .club-lounge-landing .cl-price-btn:hover {
-  background: var(--cl-surface-2);
-  border-color: #d1d5db;
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.18);
 }
 
 .club-lounge-landing .cl-price-col.cl-featured .cl-price-btn {
-  background: #fff;
-  color: var(--cl-primary);
+  background: #080808;
+  color: #ffffff;
   border-color: transparent;
 }
 
 .club-lounge-landing .cl-price-col.cl-featured .cl-price-btn:hover {
-  background: #f3f4f6;
+  background: #1a1a1a;
 }
 
 .club-lounge-landing .cl-pricing-footnote {
@@ -1324,7 +1457,7 @@
 .club-lounge-landing .cl-testimonial-quote {
   font-size: clamp(1.0625rem, 2vw, 1.3rem);
   font-style: italic;
-  color: var(--cl-primary);
+  color: var(--cl-ink);
   line-height: 1.65;
   max-width: 44rem;
   margin: 0 auto 2rem;
@@ -1341,8 +1474,9 @@
 .club-lounge-landing .cl-test-av {
   width: 44px;
   height: 44px;
-  background: var(--cl-primary);
-  color: #fff;
+  background: var(--cl-surface-2);
+  color: var(--cl-ink);
+  border: 1px solid var(--cl-border);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1377,13 +1511,13 @@
   border: 1px solid var(--cl-border);
   border-radius: 14px;
   padding: 1.75rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   transition: box-shadow 0.15s, border-color 0.15s;
 }
 
 .club-lounge-landing .cl-vert-card:hover {
-  box-shadow: 0 4px 16px rgba(13, 30, 38, 0.08);
-  border-color: #d1d5db;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  border-color: rgba(255,255,255,0.15);
 }
 
 .club-lounge-landing .cl-vert-icon {
@@ -1461,7 +1595,7 @@
 /* ── CTA ─────────────────────────────────────────────────── */
 
 .club-lounge-landing .cl-cta-section {
-  background: var(--cl-primary);
+  background: #ffffff;
   max-width: 100% !important;
   text-align: center;
 }
@@ -1471,7 +1605,7 @@
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: -0.03em;
-  color: #fff;
+  color: #080808;
   margin-bottom: 1rem;
   max-width: 580px;
   margin-left: auto;
@@ -1480,7 +1614,7 @@
 
 .club-lounge-landing .cl-cta-sub {
   font-size: 1.0625rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: #6b7280;
   margin-bottom: 2rem;
 }
 
@@ -1496,41 +1630,86 @@
   padding: 0.75rem 1rem;
   border-radius: 10px;
   font-size: 0.9375rem;
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
+  background: #f3f4f6;
+  color: #111;
   width: 240px;
   outline: none;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid #e5e7eb;
   transition: background 0.15s, border-color 0.15s;
 }
 
 .club-lounge-landing .cl-cta-input::placeholder {
-  color: rgba(255, 255, 255, 0.4);
+  color: #9ca3af;
 }
 
 .club-lounge-landing .cl-cta-input:focus {
-  background: rgba(255, 255, 255, 0.18);
-  border-color: rgba(255, 255, 255, 0.4);
+  background: #ffffff;
+  border-color: #d1d5db;
 }
 
 .club-lounge-landing .cl-cta-section .cl-btn-primary {
-  background: #fff;
-  color: var(--cl-primary);
+  background: #080808;
+  color: #ffffff;
 }
 
 .club-lounge-landing .cl-cta-section .cl-btn-primary:hover {
-  background: #f3f4f6;
+  background: #1a1a1a;
 }
 
 .club-lounge-landing .cl-cta-note {
   font-size: 0.8125rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: #9ca3af;
+}
+
+.club-lounge-landing .cl-bottom-trust {
+  margin: 1rem auto 0;
+  padding: 0;
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  text-decoration: none;
+  transition: opacity 0.15s;
+  opacity: 0.82;
+}
+
+.club-lounge-landing .cl-bottom-trust:hover {
+  opacity: 1;
+}
+
+.club-lounge-landing .cl-bottom-trust-logo {
+  flex-shrink: 0;
+  width: 52px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.club-lounge-landing .cl-bottom-trust-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.club-lounge-landing .cl-bottom-trust-copy {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--cl-body);
+  text-align: center;
+}
+
+.club-lounge-landing .cl-bottom-trust-copy strong {
+  color: var(--cl-ink);
+  font-weight: 600;
 }
 
 /* ── Footer ─────────────────────────────────────────────── */
 
 .club-lounge-landing footer {
-  background: var(--cl-surface);
+  background: var(--cl-bg);
   border-top: 1px solid var(--cl-border);
   padding: 3rem;
   display: flex;
@@ -1541,15 +1720,16 @@
 }
 
 .club-lounge-landing .cl-footer-logo {
-  font-size: 1.125rem;
+  font-family: var(--font-space-grotesk), 'Space Grotesk', var(--font-inter-tight), system-ui, sans-serif;
+  font-size: 1.2rem;
   font-weight: 700;
-  color: var(--cl-primary);
+  color: var(--cl-ink);
   text-decoration: none;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.5px;
 }
 
 .club-lounge-landing .cl-footer-logo span {
-  color: #2cdbb0;
+  color: inherit;
 }
 
 .club-lounge-landing .cl-footer-links {
@@ -1591,6 +1771,26 @@
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .club-lounge-landing *,
+  .club-lounge-landing *::before,
+  .club-lounge-landing *::after {
+    animation: none !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+
+  .club-lounge-landing .cl-mockup-frame {
+    transform: none;
+  }
+
+  .club-lounge-landing .cl-marquee-track {
+    transform: none !important;
+  }
+}
+
 /* ── Responsive ──────────────────────────────────────────── */
 
 @media (max-width: 1024px) {
@@ -1601,12 +1801,17 @@
 
 @media (max-width: 768px) {
   .club-lounge-landing nav {
-    padding: 0 1.25rem;
+    height: auto;
+    padding: 1rem 1.25rem 0.9rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
   }
 
-  /* Hide all nav links except the last two (Log in + Get started) */
-  .club-lounge-landing .cl-nav-links li:not(:nth-last-child(-n+2)) {
-    display: none;
+  .club-lounge-landing .cl-nav-links {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 0.65rem 1rem;
   }
 
   .club-lounge-landing .cl-hero {
@@ -1617,7 +1822,32 @@
   }
 
   .club-lounge-landing .cl-hero-right {
-    display: none;
+    display: flex;
+    min-height: unset;
+    padding: 0;
+  }
+
+  .club-lounge-landing .cl-feature-scene {
+    max-width: 100%;
+  }
+
+  .club-lounge-landing .cl-feature-photo-card {
+    width: calc(100% - 4.5rem);
+    transform: translate(0, -1rem);
+  }
+
+  .club-lounge-landing .cl-mockup-frame {
+    transform: none;
+    max-width: 100%;
+  }
+
+  .club-lounge-landing .cl-feature-scene-window {
+    width: calc(100% - 2rem);
+    margin-top: 3.5rem;
+  }
+
+  .club-lounge-landing .cl-feature-scene-window {
+    margin-right: auto;
   }
 
   .club-lounge-landing section {
@@ -1644,6 +1874,10 @@
   }
 
   .club-lounge-landing .cl-app-window {
+    max-width: 100%;
+  }
+
+  .club-lounge-landing .cl-dues-card {
     max-width: 100%;
   }
 
@@ -1690,6 +1924,11 @@
     margin-right: auto;
   }
 
+  .club-lounge-landing .cl-bottom-trust {
+    width: 100%;
+    max-width: 360px;
+  }
+
   .club-lounge-landing footer {
     padding: 2.5rem 1.5rem;
   }
@@ -1697,9 +1936,32 @@
   .club-lounge-landing .cl-footer-links {
     gap: 1.25rem;
   }
+
+  .club-lounge-landing .cl-domain-inner {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    padding: 0 1.5rem;
+  }
+
+  .club-lounge-landing .cl-domain-visual {
+    max-width: 100%;
+  }
+
+  .club-lounge-landing .cl-domain-section {
+    padding: 3.5rem 0 !important;
+  }
 }
 
 @media (max-width: 480px) {
+  .club-lounge-landing .cl-bottom-trust {
+    align-items: center;
+  }
+
+  .club-lounge-landing .cl-bottom-trust-logo {
+    width: 48px;
+    height: 31px;
+  }
+
   .club-lounge-landing .cl-proof-divider {
     display: none;
   }

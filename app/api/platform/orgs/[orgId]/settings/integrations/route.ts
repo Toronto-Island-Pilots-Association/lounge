@@ -1,6 +1,9 @@
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
 import { getPlatformStripeInstance } from '@/lib/stripe'
 import { addDomainToProject, checkDomainVerification } from '@/lib/vercel'
+import { getOrgPlan } from '@/lib/settings'
+import { getPlanDef } from '@/lib/plans'
 import { NextResponse } from 'next/server'
 
 async function verifyAdmin(orgId: string) {
@@ -29,6 +32,11 @@ export async function GET(
   const { searchParams } = new URL(req.url)
 
   if (searchParams.get('check') === 'domain') {
+    const plan = await getOrgPlan(orgId)
+    if (!getPlanDef(plan).features.customDomain) {
+      return NextResponse.json({ error: 'Custom domains require Growth plan or higher' }, { status: 403 })
+    }
+
     const db = createServiceRoleClient()
     const { data: org } = await db
       .from('organizations')
@@ -48,6 +56,9 @@ export async function GET(
   }
 
   const db = createServiceRoleClient()
+  const plan = await getOrgPlan(orgId)
+  const customDomainEnabled = getPlanDef(plan).features.customDomain
+  const billingStatus = await getOrgBillingActivationStatus(orgId)
   const { data: org, error } = await db
     .from('organizations')
     .select(
@@ -57,7 +68,13 @@ export async function GET(
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ org })
+  return NextResponse.json({
+    org: {
+      ...org,
+      billing_activated: billingStatus.activated,
+      custom_domain_enabled: customDomainEnabled,
+    },
+  })
 }
 
 // POST — initiate Stripe Connect onboarding
@@ -68,6 +85,13 @@ export async function POST(
   const { orgId } = await params
   const user = await verifyAdmin(orgId)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const billingStatus = await getOrgBillingActivationStatus(orgId)
+  if (billingStatus.requiresActivation) {
+    return NextResponse.json(
+      { error: `Activate ${billingStatus.planLabel} in Billing before connecting Stripe.` },
+      { status: 402 },
+    )
+  }
 
   const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
   const baseUrl = `${protocol}://${process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? 'clublounge.app'}`
@@ -136,6 +160,11 @@ export async function PATCH(
   const user = await verifyAdmin(orgId)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const plan = await getOrgPlan(orgId)
+  if (!getPlanDef(plan).features.customDomain) {
+    return NextResponse.json({ error: 'Custom domains require Growth plan or higher' }, { status: 403 })
+  }
+
   const { customDomain } = await request.json() as { customDomain?: string }
   if (typeof customDomain !== 'string')
     return NextResponse.json({ error: 'customDomain is required' }, { status: 400 })
@@ -158,5 +187,10 @@ export async function PATCH(
     .single()
 
   if (fetchError) return NextResponse.json({ error: fetchError.message }, { status: 500 })
-  return NextResponse.json({ org })
+  return NextResponse.json({
+    org: {
+      ...org,
+      custom_domain_enabled: true,
+    },
+  })
 }

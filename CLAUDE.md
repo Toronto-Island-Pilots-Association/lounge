@@ -76,6 +76,10 @@ import { ROOT_DOMAIN } from '@/lib/org'
 ## Plans (`lib/plans.ts`)
 Single source of truth for what each plan allows. `getOrgPlan()` in `lib/settings.ts` returns `'starter'` during an active 14-day trial.
 
+- Marketing, pricing, and plan naming must match the actual app behavior.
+- When changing plan labels, pricing copy, or feature availability, update all app-facing surfaces consistently instead of patching only the landing page.
+- Do not market a feature or limit unless it matches the current product implementation or an explicitly custom/high-touch offering.
+
 ---
 
 ## TIPA legacy notes

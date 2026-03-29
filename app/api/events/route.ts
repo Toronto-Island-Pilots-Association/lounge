@@ -1,4 +1,5 @@
 import { requireAuth, isOrgPublic } from '@/lib/auth'
+import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { getFeatureFlags } from '@/lib/settings'
 import { headers } from 'next/headers'
@@ -134,6 +135,13 @@ export async function POST(request: Request) {
         { status: 403 }
       )
     }
+    const billingStatus = await getOrgBillingActivationStatus(orgId)
+    if (billingStatus.requiresActivation) {
+      return NextResponse.json(
+        { error: `Activate ${billingStatus.planLabel} in Billing before publishing events.` },
+        { status: 402 },
+      )
+    }
 
     const { title, description, location, start_time, end_time, image_url, send_notifications } = await request.json()
 
@@ -221,4 +229,3 @@ export async function POST(request: Request) {
     )
   }
 }
-

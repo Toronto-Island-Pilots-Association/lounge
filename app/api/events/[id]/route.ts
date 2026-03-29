@@ -1,4 +1,5 @@
 import { requireAuth } from '@/lib/auth'
+import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
 import { createClient } from '@/lib/supabase/server'
 import { getFeatureFlags } from '@/lib/settings'
 import { NextResponse } from 'next/server'
@@ -22,6 +23,13 @@ export async function PATCH(
       return NextResponse.json(
         { error: 'Forbidden: Admin access required' },
         { status: 403 }
+      )
+    }
+    const billingStatus = await getOrgBillingActivationStatus(orgId)
+    if (billingStatus.requiresActivation) {
+      return NextResponse.json(
+        { error: `Activate ${billingStatus.planLabel} in Billing before publishing events.` },
+        { status: 402 },
       )
     }
 
@@ -109,6 +117,13 @@ export async function DELETE(
         { status: 403 }
       )
     }
+    const billingStatus = await getOrgBillingActivationStatus(orgId)
+    if (billingStatus.requiresActivation) {
+      return NextResponse.json(
+        { error: `Activate ${billingStatus.planLabel} in Billing before publishing events.` },
+        { status: 402 },
+      )
+    }
 
     const supabase = await createClient()
 
@@ -130,4 +145,3 @@ export async function DELETE(
     )
   }
 }
-

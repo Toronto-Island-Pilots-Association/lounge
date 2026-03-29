@@ -12,6 +12,7 @@ import {
   getEnabledLevels,
   getSignupFieldsConfig,
   getAllMembershipFees,
+  getPlanPriceMonthly,
 } from '@/lib/settings'
 import { getPlanDef, DEFAULT_PLAN } from '@/lib/plans'
 import { NextResponse } from 'next/server'
@@ -26,6 +27,7 @@ export async function GET() {
 
     const plan = (branding.plan as string) || DEFAULT_PLAN
     const planDef = getPlanDef(plan)
+    const priceMonthly = await getPlanPriceMonthly(plan, orgId)
 
     const [features, identity, levels, signupFields, fees] = await Promise.all([
       getFeatureFlags(),
@@ -55,7 +57,7 @@ export async function GET() {
       plan,
       planDef: {
         label:        planDef.label,
-        priceMonthly: planDef.priceMonthly,
+        priceMonthly,
         maxMembers:   planDef.maxMembers,
         features:     planDef.features,
       },

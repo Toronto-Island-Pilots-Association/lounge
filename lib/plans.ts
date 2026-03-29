@@ -26,7 +26,7 @@ export type PlanFeatures = {
   analytics: boolean
   customDomain: boolean
   membershipTiers: boolean
-  /** Time-limited trials on membership levels (Stripe + portal). Club Pro only. */
+  /** Time-limited trials on membership levels (Stripe + portal). */
   memberTrials: boolean
   // Branding: when false, "Powered by ClubLounge" badge is shown
   hideBranding: boolean
@@ -34,8 +34,10 @@ export type PlanFeatures = {
 
 export type PlanDefinition = {
   label: string
-  priceMonthly: number    // CAD
+  priceMonthly: number
   maxMembers: number | null  // null = unlimited
+  recommendedMembers: string
+  recommendedAdmins: string
   features: PlanFeatures
 }
 
@@ -44,6 +46,8 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
     label: 'Hobby',
     priceMonthly: 5,
     maxMembers: 20,
+    recommendedMembers: 'Up to 20 members',
+    recommendedAdmins: '1 admin',
     features: {
       memberDirectory: true,
       events: true,
@@ -51,7 +55,7 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
       discussions: true,
       requireMemberApproval: true,
       allowMemberInvitations: false,
-      stripeDues: false,
+      stripeDues: true,
       digestEmails: false,
       analytics: false,
       customDomain: false,
@@ -61,9 +65,11 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
     },
   },
   starter: {
-    label: 'Starter',
+    label: 'Core',
     priceMonthly: 49,
     maxMembers: null,
+    recommendedMembers: 'Up to 200 members',
+    recommendedAdmins: 'Up to 2 admins',
     features: {
       memberDirectory: true,
       events: true,
@@ -74,16 +80,18 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
       stripeDues: true,
       digestEmails: false,
       analytics: false,
-      customDomain: true,
+      customDomain: false,
       membershipTiers: false,
       memberTrials: false,
-      hideBranding: true,
+      hideBranding: false,
     },
   },
   community: {
-    label: 'Community',
+    label: 'Growth',
     priceMonthly: 99,
     maxMembers: null,
+    recommendedMembers: 'Up to 500 members',
+    recommendedAdmins: 'Up to 5 admins',
     features: {
       memberDirectory: true,
       events: true,
@@ -95,15 +103,17 @@ export const PLANS: Record<PlanKey, PlanDefinition> = {
       digestEmails: true,
       analytics: true,
       customDomain: true,
-      membershipTiers: false,
-      memberTrials: false,
+      membershipTiers: true,
+      memberTrials: true,
       hideBranding: true,
     },
   },
   club_pro: {
-    label: 'Club Pro',
+    label: 'Pro',
     priceMonthly: 199,
     maxMembers: null,
+    recommendedMembers: 'Custom member volume',
+    recommendedAdmins: 'Custom admins',
     features: {
       memberDirectory: true,
       events: true,

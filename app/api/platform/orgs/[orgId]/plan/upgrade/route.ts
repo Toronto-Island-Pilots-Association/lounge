@@ -8,6 +8,7 @@
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { getPlatformStripeInstance } from '@/lib/stripe'
 import { PLAN_KEYS, PLANS, type PlanKey } from '@/lib/plans'
+import { getPlanPriceMonthly } from '@/lib/settings'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
@@ -73,6 +74,19 @@ export async function POST(
     if (!org) return NextResponse.json({ error: `Organization not found (orgId=${orgId})` }, { status: 404 })
 
     const orgName = (org.name ?? 'Club').trim()
+    const priceMonthly = await getPlanPriceMonthly(planKey, orgId)
+
+    if (priceMonthly <= 0) {
+      if (org.stripe_subscription_id) {
+        return NextResponse.json(
+          { error: `${planDef.label} has custom billing for this organization. Contact ClubLounge to change plans.` },
+          { status: 400 }
+        )
+      }
+
+      await db.from('organizations').update({ plan: planKey }).eq('id', orgId)
+      return NextResponse.json({ ok: true })
+    }
 
     // Ensure we have a Stripe Customer for the org on the platform account.
     let customerId: string | null = org.stripe_customer_id
@@ -104,7 +118,7 @@ export async function POST(
     if (!org.stripe_subscription_id) {
       const price = await stripe.prices.create({
         currency: 'cad',
-        unit_amount: Math.round(planDef.priceMonthly * 100),
+        unit_amount: Math.round(priceMonthly * 100),
         recurring: { interval: 'month' },
         product_data: { name: productName },
       })
@@ -143,7 +157,7 @@ export async function POST(
 
     const price = await stripe.prices.create({
       currency: 'cad',
-      unit_amount: Math.round(planDef.priceMonthly * 100),
+      unit_amount: Math.round(priceMonthly * 100),
       recurring: { interval: 'month' },
       product_data: { name: productName },
     })
@@ -163,4 +177,3 @@ export async function POST(
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
-

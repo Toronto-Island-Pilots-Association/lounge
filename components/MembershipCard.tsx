@@ -121,13 +121,7 @@ export default function MembershipCard({
             </div>
             {/* Logo in Chip Area */}
             <div className="relative flex-shrink-0">
-              <div className={`w-[clamp(2.5rem,8vw,3rem)] h-[clamp(2rem,6.5vw,2.5rem)] bg-gradient-to-br rounded-md border flex items-center justify-center p-1 ${
-                isRejected ? 'border-red-400/50' :
-                isPending ? 'border-yellow-400/50' :
-                isExpired ? 'border-red-400/50' :
-                user.profile.status === 'approved' ? 'border-green-400/50' :
-                'border-yellow-400/30'
-              }`}>
+              <div className="w-[clamp(2.5rem,8vw,3rem)] h-[clamp(2rem,6.5vw,2.5rem)] bg-gradient-to-br rounded-md border border-white/20 flex items-center justify-center p-1">
                 <div className="relative w-full h-full flex items-center justify-center">
                   {orgLogoUrl ? (
                     <Image

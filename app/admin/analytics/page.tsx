@@ -24,7 +24,7 @@ export default async function AnalyticsPage() {
 
   if (!planDef.features.analytics) {
     const requiredPlan = getRequiredPlan('analytics')
-    const requiredLabel = requiredPlan ? getPlanDef(requiredPlan).label : 'Community'
+    const requiredLabel = requiredPlan ? getPlanDef(requiredPlan).label : 'Growth'
     const orgId = user.profile.org_id
     const billingUrl = `${platformBase}/platform/dashboard/${orgId}/billing`
 

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { getPlatformStripeInstance } from '@/lib/stripe'
 
@@ -38,6 +39,13 @@ export async function POST(request: Request) {
     }
 
     if (!membership) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const billingStatus = await getOrgBillingActivationStatus(orgId)
+    if (billingStatus.requiresActivation) {
+      return NextResponse.json(
+        { error: `Activate ${billingStatus.planLabel} in Billing before connecting Stripe.` },
+        { status: 402 },
+      )
+    }
 
     // Get the org
     const { data: org } = await db

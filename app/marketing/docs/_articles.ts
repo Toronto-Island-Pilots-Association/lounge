@@ -20,7 +20,7 @@ export const ARTICLES: Article[] = [
     sections: [
       {
         heading: 'Create your lounge',
-        body: 'Sign up at clublounge.app/platform/signup. Choose a subdomain (e.g. ottawacycling.clublounge.app) — this is your club\'s permanent address. You\'ll be on a 14-day free trial of the Community plan automatically, no credit card required.',
+        body: 'Sign up at clublounge.app/platform/signup. Choose a subdomain (e.g. ottawacycling.clublounge.app) — this is your club\'s permanent address. New lounges start on Hobby at $5/month.',
       },
       {
         heading: 'Configure your club identity',
@@ -36,11 +36,11 @@ export const ARTICLES: Article[] = [
       },
       {
         heading: 'Invite your first members',
-        body: 'Share your lounge URL directly, or use the member invite feature (Community plan and above) to send email invitations. New signups land in a pending queue — review and approve them from the Members section of your admin panel. You can also turn off approval if you want open registration.',
+        body: 'Share your lounge URL directly, or use the member invite feature (Core plan and above) to send email invitations. New signups land in a pending queue — review and approve them from the Members section of your admin panel. You can also turn off approval if you want open registration.',
       },
       {
         heading: 'Go live',
-        body: 'Your lounge is live from day one. Members can access it at your subdomain immediately. When you\'re ready, connect a custom domain under Settings → Integrations (Starter plan and above).',
+        body: 'Your lounge is live from day one. Members can access it at your subdomain immediately. When you\'re ready, connect a custom domain under Settings → Integrations (Growth plan and above).',
       },
     ],
   },
@@ -68,7 +68,7 @@ export const ARTICLES: Article[] = [
       },
       {
         heading: 'Dues and payments',
-        body: 'Existing Wild Apricot payment records are not transferred. If you collect dues through Club Lounge (Starter plan and above), members will set up a new payment method the first time dues are collected. Annual dues cycles can be configured to align with your existing renewal dates.',
+        body: 'Existing Wild Apricot payment records are not transferred. If you collect dues through Club Lounge (Core plan and above), members will set up a new payment method the first time dues are collected. Annual dues cycles can be configured to align with your existing renewal dates.',
       },
       {
         heading: 'After migration',
@@ -84,7 +84,7 @@ export const ARTICLES: Article[] = [
     sections: [
       {
         heading: 'How it works',
-        body: 'Club Lounge uses Stripe Connect Express. Your club gets its own Stripe account connected through Club Lounge — money goes directly to your bank account, never through us. Club Lounge does not take a percentage of your dues.',
+        body: 'Club Lounge uses Stripe Connect Express. Your club gets its own Stripe account connected through Club Lounge — money goes directly to your bank account, never through us. Stripe processes the payment, and Club Lounge applies a 2% platform fee on dues payments.',
       },
       {
         heading: 'Setting up payments',
@@ -104,19 +104,19 @@ export const ARTICLES: Article[] = [
       },
       {
         heading: 'Stripe fees',
-        body: 'Stripe charges their standard processing fee (typically 2.9% + 30¢ per transaction in Canada/US). You can choose to absorb this or pass it on to members. Club Lounge does not add any additional transaction fees on top of Stripe\'s.',
+        body: 'Stripe charges their standard processing fee (typically 2.9% + 30¢ per transaction in Canada/US). Club Lounge also applies a 2% platform fee on dues payments. You can choose to absorb these fees or pass them on to members.',
       },
     ],
   },
   {
     slug: 'custom-domain',
     title: 'Setting up a custom domain',
-    description: 'Point your own domain (e.g. lounge.yourclub.com) at your Club Lounge — available on Starter plan and above.',
+    description: 'Point your own domain (e.g. lounge.yourclub.com) at your Club Lounge — available on Growth plan and above.',
     category: 'Features',
     sections: [
       {
         heading: 'Requirements',
-        body: 'Custom domains are available on the Starter plan and above. You\'ll need access to your domain\'s DNS settings (typically through your registrar — GoDaddy, Namecheap, Google Domains, Cloudflare, etc.).',
+        body: 'Custom domains are available on the Growth plan and above. You\'ll need access to your domain\'s DNS settings (typically through your registrar — GoDaddy, Namecheap, Google Domains, Cloudflare, etc.).',
       },
       {
         heading: 'Enter your domain',
@@ -148,7 +148,7 @@ export const ARTICLES: Article[] = [
       },
       {
         heading: 'Member roles',
-        body: 'Every member is either a standard Member or an Admin. Admins can approve members, manage settings, post announcements, and access the admin dashboard. Standard members can read and post in discussions, RSVP to events, view the member directory, and manage their own profile. There is no limit on admin seats on Community plan and above.',
+        body: 'Every member is either a standard Member or an Admin. Admins can approve members, manage settings, post announcements, and access the admin dashboard. Standard members can read and post in discussions, RSVP to events, view the member directory, and manage their own profile. Larger clubs on Growth and above can support broader admin teams.',
       },
       {
         heading: 'Membership tiers',

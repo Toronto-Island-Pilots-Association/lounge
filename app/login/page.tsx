@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
+  const [pendingMessage, setPendingMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [checkingAuth, setCheckingAuth] = useState(true)
   const [isDemoLounge, setIsDemoLounge] = useState(false)
@@ -89,6 +90,8 @@ export default function LoginPage() {
 
       if (data.requiresPasswordChange) {
         window.location.href = '/change-password?required=true'
+      } else if (data.requiresApproval) {
+        setPendingMessage('Your membership is pending approval. You\'ll receive an email once an admin approves your account.')
       } else {
         window.location.href = safeRedirect
       }
@@ -154,6 +157,11 @@ export default function LoginPage() {
             {successMessage && (
               <div className="rounded-md bg-green-50 p-4">
                 <div className="text-sm text-green-800">{successMessage}</div>
+              </div>
+            )}
+            {pendingMessage && (
+              <div className="rounded-md bg-blue-50 border border-blue-200 p-4">
+                <div className="text-sm text-blue-800">{pendingMessage}</div>
               </div>
             )}
             <div className="space-y-4">

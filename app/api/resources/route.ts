@@ -1,4 +1,5 @@
 import { requireAuth, requireAdmin, isOrgPublic } from '@/lib/auth'
+import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { getFeatureFlags } from '@/lib/settings'
 import { headers } from 'next/headers'
@@ -100,6 +101,13 @@ export async function POST(request: Request) {
     if (!orgId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const billingStatus = await getOrgBillingActivationStatus(orgId)
+    if (billingStatus.requiresActivation) {
+      return NextResponse.json(
+        { error: `Activate ${billingStatus.planLabel} in Billing before publishing announcements.` },
+        { status: 402 },
+      )
+    }
     const body = await request.json()
 
     if (body.category && !VALID_ANNOUNCEMENT_CATEGORIES.includes(body.category)) {
@@ -139,4 +147,3 @@ export async function POST(request: Request) {
     )
   }
 }
-

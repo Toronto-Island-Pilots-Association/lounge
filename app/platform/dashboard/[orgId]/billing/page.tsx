@@ -3,7 +3,9 @@ import Link from 'next/link'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { orgStripeDuesUiStatus } from '@/lib/org-stripe-dues-status'
 import { syncOrgStripeOnboardingFromStripe } from '@/lib/platform-stripe-onboarding'
+import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
 import { PLANS, PLAN_KEYS, type PlanKey } from '@/lib/plans'
+import { getPlanPriceMonthly } from '@/lib/settings'
 import ConnectStripeButton from '../../ConnectStripeButton'
 import PlanSelector from './PlanSelector'
 import DeleteOrgButton from './DeleteOrgButton'
@@ -72,6 +74,12 @@ export default async function BillingPage({
 
   const currentPlan: PlanKey = (org.plan as PlanKey) ?? 'hobby'
   const currentPlanDef = PLANS[currentPlan]
+  const billingStatus = await getOrgBillingActivationStatus(orgId)
+  const planPrices = Object.fromEntries(
+    await Promise.all(
+      PLAN_KEYS.map(async (planKey) => [planKey, await getPlanPriceMonthly(planKey, orgId)] as const),
+    ),
+  ) as Record<PlanKey, number>
 
   const stripeStatus = orgStripeDuesUiStatus(org)
 
@@ -100,26 +108,33 @@ export default async function BillingPage({
             <div className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Current plan</div>
             <div className="flex items-center gap-3">
               <span className="text-xl font-bold">{currentPlanDef.label}</span>
-              <span className="text-sm text-gray-400">${currentPlanDef.priceMonthly}/mo CAD</span>
+              <span className="text-sm text-gray-400">${planPrices[currentPlan]}/mo CAD</span>
             </div>
-            <div className="text-sm text-gray-500 mt-1">
-              {currentPlanDef.maxMembers
-                ? `Up to ${currentPlanDef.maxMembers} members`
-                : 'Unlimited members'}
-            </div>
+            <div className="text-sm text-gray-500 mt-1">{currentPlanDef.recommendedMembers}</div>
+            <div className="text-sm text-gray-500">{currentPlanDef.recommendedAdmins}</div>
           </div>
-          {org.stripe_subscription_id && (
+          {billingStatus.requiresActivation ? (
+            <div className="flex items-center gap-1.5 text-sm text-amber-900 bg-amber-50 px-3 py-1.5 rounded-full">
+              <div className="w-2 h-2 rounded-full bg-amber-500" />
+              Activation required
+            </div>
+          ) : org.stripe_subscription_id ? (
             <div className="flex items-center gap-1.5 text-sm text-green-700 bg-green-50 px-3 py-1.5 rounded-full">
               <div className="w-2 h-2 rounded-full bg-green-500" />
               Subscription active
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* Plan selector */}
         <div className="space-y-4">
           <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Change plan</h2>
-          <PlanSelector orgId={orgId} currentPlan={currentPlan} />
+          <PlanSelector
+            orgId={orgId}
+            currentPlan={currentPlan}
+            planPrices={planPrices}
+            billingActivated={billingStatus.activated}
+          />
         </div>
 
         {/* Feature comparison */}
@@ -150,15 +165,23 @@ export default async function BillingPage({
                   <td className="px-4 py-2.5 text-gray-600">Price / month</td>
                   {PLAN_KEYS.map((planKey) => (
                     <td key={planKey} className={`text-center px-3 py-2.5 font-medium ${planKey === currentPlan ? 'text-[var(--color-primary)]' : 'text-gray-700'}`}>
-                      ${PLANS[planKey].priceMonthly}
+                      ${planPrices[planKey]}
                     </td>
                   ))}
                 </tr>
                 <tr className="border-b">
-                  <td className="px-4 py-2.5 text-gray-600">Members</td>
+                  <td className="px-4 py-2.5 text-gray-600">Recommended club size</td>
                   {PLAN_KEYS.map((planKey) => (
                     <td key={planKey} className={`text-center px-3 py-2.5 ${planKey === currentPlan ? 'text-[var(--color-primary)] font-medium' : 'text-gray-500'}`}>
-                      {PLANS[planKey].maxMembers ?? '∞'}
+                      {PLANS[planKey].recommendedMembers}
+                    </td>
+                  ))}
+                </tr>
+                <tr className="border-b">
+                  <td className="px-4 py-2.5 text-gray-600">Recommended admin team</td>
+                  {PLAN_KEYS.map((planKey) => (
+                    <td key={planKey} className={`text-center px-3 py-2.5 ${planKey === currentPlan ? 'text-[var(--color-primary)] font-medium' : 'text-gray-500'}`}>
+                      {PLANS[planKey].recommendedAdmins}
                     </td>
                   ))}
                 </tr>
@@ -220,14 +243,18 @@ export default async function BillingPage({
                         : 'Connect Stripe to collect membership dues from your members.'}
                 </p>
               </div>
-              {(stripeStatus === 'not_connected' || stripeStatus === 'pending') && (
+              {billingStatus.requiresActivation ? (
+                <div className="mt-4 pt-4 border-t text-sm text-amber-700 bg-amber-50 rounded-lg px-4 py-3">
+                  Activate your plan from billing before connecting Stripe and collecting dues.
+                </div>
+              ) : (stripeStatus === 'not_connected' || stripeStatus === 'pending') && (
                 <ConnectStripeButton orgId={orgId} isPending={stripeStatus === 'pending'} />
               )}
             </div>
             {(stripeStatus === 'not_connected' || stripeStatus === 'pending') &&
               !currentPlanDef.features.stripeDues && (
               <div className="mt-4 pt-4 border-t text-sm text-amber-700 bg-amber-50 rounded-lg px-4 py-3">
-                Stripe dues collection requires the <strong>Starter</strong> plan or higher.
+                Stripe dues collection requires the <strong>Core</strong> plan or higher.
               </div>
             )}
           </div>

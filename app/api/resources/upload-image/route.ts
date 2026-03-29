@@ -1,4 +1,5 @@
 import { requireAdmin } from '@/lib/auth'
+import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
@@ -9,6 +10,17 @@ const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'
 export async function POST(request: Request) {
   try {
     const user = await requireAdmin()
+    const orgId = user.profile.org_id
+    if (!orgId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const billingStatus = await getOrgBillingActivationStatus(orgId)
+    if (billingStatus.requiresActivation) {
+      return NextResponse.json(
+        { error: `Activate ${billingStatus.planLabel} in Billing before uploading announcement assets.` },
+        { status: 402 },
+      )
+    }
     const supabase = await createClient()
     
     // Verify the session is valid for storage operations

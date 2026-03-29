@@ -33,12 +33,11 @@ const jsonLd = {
       operatingSystem: 'Web',
       url: BASE_URL,
       description:
-        'Private community software for clubs and associations. Member directory, discussions, events, and dues collection — all on your own URL.',
+        'Membership ops for clubs and associations. Dues collection, member directory, events, and discussions — plug in without changing your existing website or tools.',
       offers: [
         { '@type': 'Offer', name: 'Hobby', price: '5', priceCurrency: 'CAD', billingIncrement: 'P1M' },
-        { '@type': 'Offer', name: 'Starter', price: '49', priceCurrency: 'CAD', billingIncrement: 'P1M' },
-        { '@type': 'Offer', name: 'Community', price: '99', priceCurrency: 'CAD', billingIncrement: 'P1M' },
-        { '@type': 'Offer', name: 'Club Pro', price: '199', priceCurrency: 'CAD', billingIncrement: 'P1M' },
+        { '@type': 'Offer', name: 'Core', price: '49', priceCurrency: 'CAD', billingIncrement: 'P1M' },
+        { '@type': 'Offer', name: 'Growth', price: '99', priceCurrency: 'CAD', billingIncrement: 'P1M' },
       ],
     },
     {
@@ -49,7 +48,7 @@ const jsonLd = {
           name: 'How much does Club Lounge cost?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: 'Plans start at $5/month for small clubs (up to 20 members). Starter is $49/month for unlimited members with dues collection. Community is $99/month with digest emails and analytics. All plans include a 14-day free trial.',
+            text: 'Plans start at $5/month for clubs of up to 20 members. Core is $49/month and is best for clubs with up to 200 members and up to 2 admins. Growth is $99/month and is best for clubs with up to 500 members and up to 5 admins. Pro is $199/month for larger clubs that need higher-touch support.',
           },
         },
         {
@@ -65,7 +64,15 @@ const jsonLd = {
           name: 'Do members get their own URL?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: 'Every club gets its own subdomain (yourclub.clublounge.app). Starter plan and above can use a fully custom domain like lounge.yourclub.com.',
+            text: 'Every club gets its own subdomain (yourclub.clublounge.app). Growth plan and above can use a fully custom domain like lounge.yourclub.com.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'Do you support clubs in the US and Canada?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Yes. Club Lounge supports clubs in both the US and Canada. Payments go directly to your club through Stripe, and we can onboard clubs in either market.',
           },
         },
         {
@@ -81,7 +88,7 @@ const jsonLd = {
           name: 'How does dues collection work?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: 'Club Lounge uses Stripe Connect. Set your annual or monthly dues amount, and members pay directly. Automatic renewals, instant payment records, and a clear view of who has paid — all from your admin dashboard. Available on Starter plan and above.',
+            text: 'Club Lounge uses Stripe Connect. Set your annual or monthly dues amount, and members pay directly. Automatic renewals, instant payment records, and a clear view of who has paid — all from your admin dashboard. Stripe processing fees apply, plus a 2% ClubLounge platform fee on dues payments.',
           },
         },
       ],

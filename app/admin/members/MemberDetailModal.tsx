@@ -1179,7 +1179,7 @@ export default function MemberDetailModal({
 
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Amount (CAD)
+                        Amount
                       </label>
                       <input
                         type="number"

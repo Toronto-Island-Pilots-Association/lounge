@@ -108,7 +108,7 @@ export default function CreateOrgPage() {
               type="text"
               value={form.name}
               onChange={e => handleNameChange(e.target.value)}
-              placeholder="Toronto Island Pilots Association"
+              placeholder="Ottawa Cycling Club"
               required
               className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
             />

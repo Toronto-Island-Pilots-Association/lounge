@@ -1,4 +1,5 @@
 import { requireAdmin } from '@/lib/auth'
+import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
 import { sendInvitationWithPasswordEmail } from '@/lib/resend'
 import { createClient } from '@/lib/supabase/server'
 import { getFeatureFlags } from '@/lib/settings'
@@ -33,11 +34,18 @@ export async function POST(request: Request) {
     await requireAdmin()
     const flags = await getFeatureFlags()
     if (!flags.allowMemberInvitations) {
-      return NextResponse.json({ error: 'Member invitations require Starter plan or higher' }, { status: 403 })
+      return NextResponse.json({ error: 'Member invitations require Core plan or higher' }, { status: 403 })
     }
     const orgId = request.headers.get('x-org-id')
     if (!orgId) {
       return NextResponse.json({ error: 'Missing org context' }, { status: 400 })
+    }
+    const billingStatus = await getOrgBillingActivationStatus(orgId)
+    if (billingStatus.requiresActivation) {
+      return NextResponse.json(
+        { error: `Activate ${billingStatus.planLabel} in Billing before inviting members.` },
+        { status: 402 },
+      )
     }
 
     const { createServiceRoleClient } = await import('@/lib/supabase/server')
@@ -235,4 +243,3 @@ export async function POST(request: Request) {
     )
   }
 }
-

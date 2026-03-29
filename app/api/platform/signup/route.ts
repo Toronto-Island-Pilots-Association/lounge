@@ -108,8 +108,9 @@ export async function POST(request: Request) {
       resolvedFirstName = 'Admin'
     }
 
-    // Create org — 14-day free trial at Starter tier
-    const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
+    if (typeof customDomain === 'string' && customDomain.trim()) {
+      return NextResponse.json({ error: 'Custom domains require the Growth plan or higher' }, { status: 400 })
+    }
 
     const { data: org, error: orgError } = await supabase
       .from('organizations')
@@ -119,7 +120,6 @@ export async function POST(request: Request) {
         subdomain: slug,
         custom_domain: customDomain?.trim() || null,
         plan: 'hobby',
-        trial_ends_at: trialEndsAt,
       })
       .select()
       .single()
@@ -135,6 +135,7 @@ export async function POST(request: Request) {
 
     // Upsert identity fields into user_profiles
     const { error: profileError } = await supabase.from('user_profiles').upsert({
+      id: userId,
       user_id: userId,
       email: resolvedEmail,
       first_name: resolvedFirstName,

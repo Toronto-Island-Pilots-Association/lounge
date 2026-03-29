@@ -1,4 +1,5 @@
 import { requireAuth, requireAdmin } from '@/lib/auth'
+import { getOrgBillingActivationStatus } from '@/lib/org-billing-activation'
 import { createClient } from '@/lib/supabase/server'
 import { getFeatureFlags } from '@/lib/settings'
 import { NextResponse } from 'next/server'
@@ -98,6 +99,13 @@ export async function PATCH(
     if (!orgId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const billingStatus = await getOrgBillingActivationStatus(orgId)
+    if (billingStatus.requiresActivation) {
+      return NextResponse.json(
+        { error: `Activate ${billingStatus.planLabel} in Billing before publishing announcements.` },
+        { status: 402 },
+      )
+    }
     const { id } = await params
     const body = await request.json()
 
@@ -148,6 +156,13 @@ export async function DELETE(
     if (!orgId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const billingStatus = await getOrgBillingActivationStatus(orgId)
+    if (billingStatus.requiresActivation) {
+      return NextResponse.json(
+        { error: `Activate ${billingStatus.planLabel} in Billing before publishing announcements.` },
+        { status: 402 },
+      )
+    }
     const { id } = await params
     const supabase = await createClient()
 
@@ -169,4 +184,3 @@ export async function DELETE(
     )
   }
 }
-

@@ -6,9 +6,13 @@ import { PLAN_KEYS, PLANS, type PlanKey } from '@/lib/plans'
 export default function PlanSelector({
   orgId,
   currentPlan,
+  planPrices,
+  billingActivated,
 }: {
   orgId: string
   currentPlan: string
+  planPrices: Record<PlanKey, number>
+  billingActivated: boolean
 }) {
   const [processing, setProcessing] = useState<PlanKey | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -48,6 +52,7 @@ export default function PlanSelector({
           const planIdx = PLAN_KEYS.indexOf(planKey)
           const isUpgrade = planIdx > currentIdx
           const isDowngrade = planIdx < currentIdx
+          const canActivateCurrent = isCurrent && !billingActivated && planPrices[planKey] > 0
 
           return (
             <div
@@ -61,7 +66,7 @@ export default function PlanSelector({
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <span className={`text-xs font-semibold uppercase tracking-wide ${isCurrent ? 'text-blue-300' : 'text-gray-400'}`}>
-                    {planKey.replace('_', ' ')}
+                    {plan.label}
                   </span>
                   {isCurrent && (
                     <span className="text-xs bg-white text-[var(--color-primary)] font-semibold px-2 py-0.5 rounded-full">
@@ -70,11 +75,14 @@ export default function PlanSelector({
                   )}
                 </div>
                 <div className={`text-2xl font-bold ${isCurrent ? 'text-white' : 'text-gray-900'}`}>
-                  ${plan.priceMonthly}
-                  <span className={`text-sm font-normal ml-1 ${isCurrent ? 'text-gray-300' : 'text-gray-400'}`}>/mo CAD</span>
+                  ${planPrices[planKey]}
+                  <span className={`text-sm font-normal ml-1 ${isCurrent ? 'text-gray-300' : 'text-gray-400'}`}>/mo</span>
                 </div>
                 <div className={`text-xs mt-1 ${isCurrent ? 'text-gray-300' : 'text-gray-500'}`}>
-                  {plan.maxMembers ? `Up to ${plan.maxMembers} members` : 'Unlimited members'}
+                  {plan.recommendedMembers}
+                </div>
+                <div className={`text-xs ${isCurrent ? 'text-gray-300' : 'text-gray-500'}`}>
+                  {plan.recommendedAdmins}
                 </div>
               </div>
 
@@ -94,7 +102,17 @@ export default function PlanSelector({
                   {isProcessing ? 'Processing…' : isUpgrade ? `Upgrade to ${plan.label}` : `Downgrade to ${plan.label}`}
                 </button>
               )}
-              {isCurrent && <div className="h-8" />}
+              {canActivateCurrent && (
+                <button
+                  type="button"
+                  disabled={!!processing}
+                  onClick={() => handleSelect(planKey)}
+                  className="w-full py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-[var(--color-primary)] text-white hover:bg-[#0a171c]"
+                >
+                  {isProcessing ? 'Processing…' : `Activate ${plan.label}`}
+                </button>
+              )}
+              {isCurrent && !canActivateCurrent && <div className="h-8" />}
             </div>
           )
         })}
